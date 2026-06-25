@@ -1,0 +1,860 @@
+                                               VQ-DSC-R: Robust Vector Quantized-Enabled
+                                               Digital Semantic Communication With OFDM
+                                                               Transmission
+                                        Jianqiao Chen, Nan Ma, Member, IEEE, Xiaodong Xu, Senior Member, IEEE, Tingting Zhu, Huishi Song, Chen
+                                                               Dong, Wenkai Liu, Rui Meng and Ping Zhang, Fellow, IEEE
+
+
+
+                                           Abstract—Digital mapping of semantic features is essential              [4], [5]. The convergence of communication and AI (ComAI)
+                                        for achieving interoperability between semantic communication              framework is recently proposed to envision a co-evolving
+                                        and practical digital infrastructure. However, current research
+arXiv:2602.15045v1 [cs.IT] 5 Feb 2026
+
+
+
+
+                                                                                                                   system where AI is embedded into the core communication
+                                        efforts predominantly concentrate on analog semantic commu-
+                                        nication with simplified channel models. To bridge these gaps,             processes, and communication infrastructures are inherently
+                                        we develop a robust vector quantized-enabled digital semantic              built to support intelligent functions [6]. In particular, it
+                                        communication (VQ-DSC-R) system built upon orthogonal fre-                 leverages semantic-level information to simplify and restruc-
+                                        quency division multiplexing (OFDM) transmission. Our work                 ture signal processing, information cognition, and network
+                                        encompasses the framework design of VQ-DSC-R, followed by                  organization. Therefore, semantic-level communication shifts
+                                        a comprehensive optimization study. Firstly, we design a Swin
+                                        Transformer-based backbone for hierarchical semantic feature               the focus from precise bit delivery to conveying only the
+                                        extraction, integrated with VQ modules that map the features               most relevant meaning, which provides a crucial advantage
+                                        into a shared semantic quantized codebook (SQC) for efficient              in extremely bandwidth-limited and power-constrained envi-
+                                        index transmission. Secondly, we propose a differentiable vector           ronments.
+                                        quantization with adaptive noise-variance (ANDVQ) scheme to
+                                        mitigate quantization errors in SQC, which dynamically adjusts                One of the enabling technologies for semantic commu-
+                                        the quantization process using K-nearest neighbor statistics,
+                                                                                                                   nication is the deep joint source-channel coding (DJSCC),
+                                        while exponential moving average mechanism stabilizes SQC
+                                        training. Thirdly, for robust index transmission over multipath            which employs artificial intelligence (AI) technologies to
+                                        fading channel and noise, we develop a conditional diffusion               synergistically unify source coding and channel coding into
+                                        model (CDM) to refine channel state information, and design an             a unified optimization framework [7]. Initial research efforts
+                                        attention-based module to dynamically adapt to channel noise.              have studied that semantic features extracted by deep neural
+                                        The entire VQ-DSC-R system is optimized via a three-stage
+                                                                                                                   networks (DNNs) inherently adopt continuous magnitude rep-
+                                        training strategy. Extensive experiments demonstrate superiority
+                                        of VQ-DSC-R over benchmark schemes, achieving high compres-                resentations (e.g., 32-bit floating-point values). In this way,
+                                        sion ratios and robust performance in practical scenarios.                 it has revealed enhanced compression efficiency compared
+                                                                                                                   to conventional separated source channel coding (SSCC)
+                                           Index Terms—Digital semantic communication, Swin Trans-
+                                        former, vector quantization, channel estimation, SNR adaption              approaches that combine source codecs with practical chan-
+                                                                                                                   nel codecs [8]-[10]. However, transmitting such continuous-
+                                                                                                                   valued representations is either infeasible or highly inefficient
+                                                                                                                   in digital communication, which stems from the fundamental
+                                                                I. I NTRODUCTION
+                                                                                                                   mismatch between continuous feature spaces and discrete
+                                        A. Background and Significance                                             digital signaling paradigms.
+
+                                        W        ITH the large-scale interconnection of intelligent de-
+                                                 vices and the surge in wireless data traffic, the chal-
+                                        lenge of spectrum scarcity has become increasingly pressing,
+                                                                                                                      Unlike the analog semantic communication, digital seman-
+                                                                                                                   tic communication (DSC) that considers digital mapping of
+                                        which poses significant obstacles for 6G wireless communi-                 semantic features has been actively explored in recent studies.
+                                        cation [1], [2]. To some extent, it is crucial to balance sustain-         One of the widely-adopted approaches is scalar quantiza-
+                                        ability and performance for moving the 6G era [3]. However,                tion (SQ), which independently maps semantic features to
+                                        existing communication technologies predominantly prioritize               a finite set of discrete values for practical deployment [11]-
+                                        the precise transmission of each symbol, often overlooking the             [13]. However, the predefined SQ-based DSC is difficult to
+                                        ultimate tasks and the intrinsic meaning conveyed by the data              exploit correlations among different semantic features, which
+                                                                                                                   therefore hinders effective adaptation to the specific statistical
+                                          Jianqiao Chen, TingTing Zhu and HuiShi Song are with the ZGC Institute   distributions of the semantic features. To deal with it, a non-
+                                        of Ubiquitous-X Innovation and Applications, and Beijing Key Laboratory    linear quantization module is proposed to efficiently quantize
+                                        of 6G DOICT converged and Cloud-Native Mobile Information Networks,
+                                        Beijing 100876, China. Nan Ma, Xiaodong Xu, Chen Dong, Wenkai Liu,         semantic features with trainable quantization levels [14]. In
+                                        Rui Meng and Ping Zhang are with the State Key Laboratory of Networking    this case, the trainable quantization level requires additional
+                                        and Switching Technology, Beijing University of Posts and Telecommuni-     parameter learning and gradient calculation, and the param-
+                                        cations, Beijing 100876, China. (Corresponding author: Nan Ma.) (e-mail:
+                                        {chenjianqiao, zhutingting, songhuishi}@zgc-xnet.com, {liuwenkai, manan,   eters need to be finely adjusted to avoid quantization error
+                                        xuxiaodong, dongchen, liuwenkai, buptmengrui, pzhang}@bupt.edu.cn)         oscillation and confront non-convergence of training.
+B. Related Works and Contributions                               studies have investigated the impacts of multipath fading
+   Another research direction, centered on vector quantized      channels on semantic communication, such as the semantic
+(VQ)-enabled DSC, has received increasing interests [15]-        importance-aware reordering-enhanced semantic communica-
+[18]. In this way, it has the potential to adopt a train-        tion system (SIARE-SC) based on estimated channel [27]
+able codebook for efficient representation of semantic fea-      and channel denoising diffusion model (CDDM) for semantic
+tures, which simultaneously enhances the interpretability of     communication [28]. However, they haven’t integrated with
+semantic communication. The core commonality of these            the VQ-enable architecture.
+studies lies in jointly training a codebook with the seman-         Motivated by these issues, this paper aims to resolve three
+tic encoder and decoder for different modalities. However,       pivotal questions:
+they face fundamental issues of training codebook that need         Question1: How to design an efficient VQ-enabled DSC
+further consideration. Firstly, the continuous distribution of   scheme that is compatible with practical communication sys-
+latent vectors is clustered into a finite codebook by VQ         tems?
+mechanism, which introduces the additional distortion termed        Question2: How to train a VQ codebook for efficient
+quantization error. Secondly, the non-differentiable nature of   quantitative mapping related to semantic features?
+widely-adopted nearest-neighbor assignment hinders gradient         Question3: How to achieve end-to-end optimization of dig-
+flow during backpropagation, causing the gradient collapse       ital semantic encoder, VQ codebook, and decoder in complex
+issue. Meanwhile, the codebook collapse, where a substantial     communication scenarios?
+fraction of the codebook’s vectors converges to zero norm           In this paper, we develop a robust VQ-enabled DSC (VQ-
+and remain unused, significantly degrades the representational   DSC-R) system with OFDM transmission. Especially, the VQ-
+ability of the codebook.                                         DSC-R scheme is optimized over multipath fading channel
+   Some studies have been conducted on these issues in           and noise in OFDM-based system, where the issues of seman-
+the fields of computer science (CV) and natural language         tic feature extraction/reconstruction, quantification and trans-
+processing (NLP). We partition these efforts into two cate-      mission are simultaneously considered. Our key contributions
+gories: (1) schemes that improve gradient backpropagation        are outlined as follows:
+and (2) schemes that improve codebook capacity. For the             • Multi-Stage Vector Quantization Framework for Se-
+former, a common solution to address the non-differentiability         mantic Feature Extraction and Quantitative Mapping:
+issue in quantization operations is to approximate gradients           We propose a cascaded architecture that consists of a
+using the straight-through estimator (STE) [19]. However,              Swin Transformer-based backbone [29] for hierarchical
+it causes errors due to directly copying gradients from the            semantic feature extraction, followed by VQ modules that
+decoder’s input and pasting them into the encoder’s output.            project these features into vectors in a shared semantic
+Several recent studies have pursued solutions to the problem           quantized codebook (SQC) of transceiver. The trainable
+of gradient backpropagation of STE through the avoidance               SQC enhances the interpretability of semantic communi-
+of deterministic quantization [20]-[22]. For the latter, the           cation. The index sequence related to extracted features
+approaches to mitigate codebook collapse or under-utilization          is transmitted using adaptive modulation over a practical
+involve modifying the codebook lookup mechanism, including             OFDM system, resilient to multipath fading and additive
+the improvement of distance calculation of quantitative map-           noise. This addresses the Question 1.
+ping [23], and development of learning strategies of codebook       • SQC Update Scheme for Efficient Quantitative Map-
+[24]. Overall, the above studies mainly focus on quantitative          ping of Semantic Features: We develop a SQC update
+mapping performance, based on which the reconstruction and             scheme, named the differentiable vector quantization
+generation tasks are carried out.                                      with adaptive noise variance (ANDVQ). Specifically, it
+   For semantic communication, another important aspect is to          introduces the K-nearest neighbor adaptive noise variance
+ensure the effective transmission of codewords after quantita-         to dynamically adjust quantization process. Meanwhile,
+tive mapping. The index sequence of codewords is inevitably            exponential moving averages (EMA) mechanism is inte-
+influenced by wireless fading channel and additive noise,              grated to stabilize SQC training. In this way, the issues
+which results in incorrect decoding. In [17], the proposed             of gradient collapse and codebook collapse are solved,
+scheme adopts the perfect channel state information (CSI) and          thereby mitigating quantization errors related to semantic
+channel coding to ensure the accuracy of index transmission.           features. This addresses the Question 2.
+In [25], established on a discrete memoryless channel (DMC),        • Channel Distortion Reduction and Training Strategy
+the channel-aware vector quantization (CAVQ) method de-                for VQ-DSC-R: We first analyze the impacts of CSI
+signs a loss function that explicitly incorporates the channel         accuracy on end-to-end training process. To mitigate it,
+transition probability and aggregates the codewords with high          the conditional diffusion model (CDM)-based scheme for
+error probabilities in the semantic space to minimize the              CSI refinement is proposed, which can generate accurate
+transmission error. In [26], the parallel binary symmetric             CSI data within few reverse sampling. Additionally, the
+channels (BSCs) with trainable bit-flip probabilities model            signal-to-noise ratio (SNR) adaptive module is designed
+binary output transmission and reception, where the multiple           and merged into semantic decoder to counter different
+VQ codebooks and their associated bit-flip probabilities are           SNR conditions. Finally, a three-stage training strategy
+jointly optimized. These studies provide insights into VQ-             is developed to achieve optimal overall performance of
+enabled DSC system with simplified channel models. Recent              VQ-DSC-R system. This addresses the Question 3.
+Fig. 1: Architecture of VQ-DSC-R system with OFDM transmission. (a) Overall system architecture; (b) Illustration of time-
+frequency grids of OFDM symbols.
+
+
+   • Experimental Validation: To verify the performance of          improving efficiency. The semantic decoder (SD) reconstructs
+       the proposed VQ-DSC-R system, we have conducted a            the original content with the aid of SQC. Note that the SQC
+       large number of experimental validations under the 3GPP      is trained along with the SE and SD.
+       standard channel model and OFDM transmission, and
+       compared with those of popular SQC update schemes            A. System Model
+       and channel estimation schemes. Utilizing the transmis-
+       sion index sequence of codebook related to quantitative         Without loss of generality, the source dataset consists of
+       mapping of semantic features, the results show that the      images. Let the image dataset be 𝝌, with each image S ∈
+       proposed scheme can achieve effective transmission with      R 𝐻 ×𝑊 ×𝑂 ⊂ 𝝌, where 𝐻, 𝑊 and 𝑂 are the height, width, and
+       an extremely high compression rate in terms of peak SNR      the channel size of each image, respectively. The trainable
+       (PSNR) and multiscale structural similarity (MS-SSIM)        SQC is given by C = [𝒄 1 , ..., 𝒄 𝑘 , ..., 𝒄 𝐾 ] 𝑇 ∈ R𝐾 × 𝑁 , where 𝐾
+       metrics. Meanwhile, the results comprehensively present      is the codebook size, and each element 𝒄 𝑘 ∈ R 𝑁 is called
+       the influence of multipath fading channels and SNRs on       a semantic codeword with dimension size 𝑁 and index 𝑘.
+       overall performance.                                         The SQC serves as a consistently shared semantic knowledge
+                                                                    base for the transmitter and the receiver. The SE and SD are
+   The remainder of this paper is organized as follows. Section
+                                                                    combined with the SQC that jointly completes the semantic
+II provides an overview of the system model and problem
+                                                                    extraction, quantification and reconstruction of images. The
+formulation. Section III elaborates the proposed VQ-DSC-
+                                                                    extracted semantic feature vector Z = [𝒛1 , ..., 𝒛 𝑘 , ..., 𝒛 𝐾 ] 𝑇 ∈
+R system, including the framework design and its system
+                                                                    R𝐾 ×𝑀 of the input image can be expressed as
+optimization study. Section IV presents experimental results
+that validate the performance of the proposed scheme. Section                                Z = 𝑓𝑆𝐸 (S, 𝜶) ,                         (1)
+V concludes the paper.
+   Notation: Boldface small letters denote vectors and bold-        where 𝑓𝑆𝐸 (·, 𝜶) denotes the SE module built on DNN with
+face capital letters denote matrices. R, Z and C denote the         the parameter set 𝜶.
+real number field, the integer number field, and the complex          Then, the semantic feature element 𝒛 𝑘 is mapped into the
+number field, respectively. [·] 𝑇 denotes matrix transpose.         SQC by the nearest-neighbor operation, i.e., 𝑞 (𝒛 𝑘 ), and the
+∥ · ∥ 2 denotes the Euclidean norm. ∗ denotes the convolution       quantized feature can be expressed as
+operation. CN (·|𝜇, Γ) denotes the complex Gaussian distri-                𝒛ˆ 𝑘 = 𝑞 (𝒛 𝑘 ) ≜ argmin 𝒛 𝑘 − 𝒄 𝑗 2 , 𝑗 = 1, 2, ..., 𝐾.   (2)
+bution with mean 𝜇 and covariance Γ. E 𝑝 ( 𝑥 ) [·] denotes the                                𝒄𝑗
+expectation with respect to the distribution 𝑝(𝑥).                     After all the semantic features are mapped into the discrete
+                                                                    space, the corresponding index sequence of semantic features
+    II. S YSTEM MODEL AND PROBLEM FORMULATION                       of Z is obtained, which is denoted as 𝑰 𝑠 ∈ Z 𝑀 . SQC-enabled
+   To address the limitations of conventional SSCC, this work       quantization operation transforms the float-point semantics
+proposes a digital DJSCC framework that synergizes DNNs             to discrete integer indices through a trained codebook map-
+with digital communication principles. Fig. 1(a) illustrates        ping, effectively establishing a discrete semantic space that
+the proposed VQ-DSC-R system with OFDM transmission,                approximates the original continuous distribution of semantic
+where the black arrow and blue arrow represent the data             features. By using the Modulation module, 𝑰 𝑠 is turned into a
+stream at the transmitting side and receiving side, respectively.   symbol vector 𝒙 ∈ C 𝐵 for transmission, where 𝐵 denotes the
+The semantic encoder (SE) first extracts key features of            length of modulated symbols.
+the source, which are mapped into discrete vectors within              The DJSCC framework integrated with an OFDM-based
+a shared SQC. Then the corresponding index sequence of              system is developed with considering the multipath fading
+those vectors are transmitted to the receiver through wireless      channel and additive channel noise. For each physical resource
+channel, rather than the features themselves, substantially         block (PRB) defined in digital communication systems (such
+as the 3GPP standard [30]), it consists of 𝑁 𝑓 subcarriers of           meticulous architectural design. On the other hand, the in-
+each OFDM symbol and 𝑁𝑡 OFDM symbols. To improve                        dex transmission of vectors in SQC is susceptible to the
+spectral efficiency, the uniform grid-type pilot-aided channel          effects of nultipath fading channel and additive channel noise,
+estimation where the 𝑁 𝑝𝑓 subcarriers and 𝑁𝑡𝑝 symbols are used          which therefore significantly reduces the overall decoding
+for pilot transmission, as shown in Fig.   1(b). Assumethe set        performance. Considering the constraints of SQC and index
+                                            𝑓    𝑓        𝑓
+of subcarriers that carry pilots 𝒑 𝑓 = 𝑝 1 , 𝑝 2 , ..., 𝑝 𝑁 𝑝 under     transmission in wireless communication scenarios, the seman-
+                                                           𝑓           tic encoder-decoder parameter set {𝜶, 𝜷}, channel processing
+𝒑 𝑓 ⊂ n 1, 2, ..., 𝑁 𝑓 , ando the set of symbols   that  carry pilots   parameter set 𝜸 and trainable codebook C are optimized by
+𝒑 𝑡 = 𝑝 1 , 𝑝 2 , ..., 𝑝 𝑁 𝑝 under 𝒑 𝑡 ⊂ {1, 2, ..., 𝑁𝑡 }. The pilot
+          𝑡    𝑡        𝑡                                               minimizing the expectation as follows:
+                       𝑡                                                                                                             h      i
+symbols 𝒙 𝑝 ∈ C 𝑁 𝑝 are known to both the transmitter and re-              (𝜶∗ , 𝜷∗ , 𝜸 ∗ , C∗ ) = argmin E 𝑝 ( 𝜎) E 𝑝 (𝒉) E 𝑝 (S,Ŝ) 𝑑 S, Ŝ ,
+ceiver, where 𝑁 𝑝 = 𝑁 𝑝𝑓 +𝑁𝑡𝑝 . The symbol vector 𝒙 is reshaped                                 𝜶,𝜷,𝜸,C
+                                                                                                                                       (6)
+to 𝒙 ∈ C ( 𝑁 𝑓 × 𝑁𝑠 − 𝑁 𝑝 ) , where 𝑁 𝑠 denotes the number of OFDM
+                                                                        where 𝜶∗ is the optimal parameter set of SQC-SE, 𝜷∗ is
+information symbols. In the case, the 𝑁 𝑠 = ⌈ 𝑁 𝑓 𝐵× 𝑁𝑡 ⌉, where
+                                                                        the optimal parameter set of SQC-SD, 𝜸 ∗ is the optimal
+⌈·⌉ denotes the ceiling operation. Next, we apply the inverse           parameter set of Channel Processing module, C∗ is the
+discrete Fourier transform (IDFT) to each OFDM symbol and               optimal codebook, 𝑝(𝜎) denotes the probability distribution
+append the cyclic-prefix (CP). Assume that the transmitter and          of channel noise, 𝑝(𝒉) denotes the probability distribution of
+receiver are synchronized with the cyclic-prefix length 𝑁 𝑐 𝑝 .         multipath fading channel, 𝑝(S, Ŝ) denotes the joint probability
+The transmitted signal X̃ ∈ C (( 𝑁 𝑓 +𝑁𝑐 𝑝 ) × 𝑁𝑠 ) × 𝑁𝑡 propagates     distribution of the original image S and the reconstructed
+through the multipath fading channel, and the received signal
+                                                                                                
+                                                                        image Ŝ, and 𝑑 S, Ŝ denotes the distortion between S
+can be expressed as                                                                            
+                                                                        and Ŝ, namely 𝑑 S, Ŝ = 𝑛1 𝑖=1      (𝑠𝑖 − 𝑠ˆ𝑖 ) 2 , where 𝑠𝑖 and
+                                                                                                        Í𝑛
+                           Ỹ = 𝒉 ∗ X̃ + W,                      (3)
+                                                                        𝑠ˆ𝑖 represent the intensity of the color component of each
+where the ∗ denotes the convolution operator, 𝒉 ∈ C 𝐿 denotes           pixel corresponding to S and Ŝ, respectively. The subsequent
+the channel impulse response with 𝐿 denoting the number of              work is to develop a SQC integrated with DSC system to
+delays, W denotes  the additive Gaussian noise that satisfies           minimize source reconstruction errors with considering the
+CN 0, 𝜎 2 I , and 𝜎 2 denotes noise power.
+            
+                                                                        aforementioned Questions 1-3.
+n After oremoving the CP, the frequency signals Ỹ =
+                                                       𝑓
+    𝑓     𝑓
+ Ỹ 𝑝 , Ỹ𝑑 can be obtained by discrete Fourier transform                            III. P ROPOSED VQ-DSC-R S YSTEM
+                 𝑓                                𝑓
+(DFT), where Ỹ 𝑝 denotes the pilot signals and Ỹ𝑑 denotes                In this section, we provide the detailed description of VQ-
+                              𝑓
+the data signals. By using Ỹ 𝑝 and pre-inserted pilots 𝒙 𝑝 ,           DSC-R system, which mainly includes the semantic feature
+the Channel Processing module is developed to obtain the                extraction/reconstruction, quantitative mapping, and transmis-
+whole frequency CSI of PRBs. To mitigate the bad impacts                sion with considering multipath fading channel and noise.
+of inaccurate estimated CSI on index transmission and end-
+to-end training, we propose a Channel Processing module                 A. VQ-enabled Semantic Feature Extraction, Quantization,
+for estimated CSI refinement. Specifically, the conditional             Transmission and Reconstruction
+diffusion model (CDM)-based CSI reconstruction scheme is                   This subsection details our proposed architectures of SQC-
+developed, which can provide accurate CSI with very few                 SE and SQC-SD for DSC, where the Swin Transformer-
+sampling steps. The estimated frequency channel can be                  based backbone is integrated with VQ mechanism for joint
+expressed as                n         o                               semantic feature extraction, quantization and reconstruction.
+                                𝑓
+                   Ĥ = 𝑓𝑐 𝑝 Ỹ 𝑝 , 𝒙 𝑝 , 𝜸 ,           (4)             For the SQC-SE, we design a two-stage architecture to
+                                                                        extract semantic features and mitigate quantization errors,
+where 𝑓𝑐 𝑝 (·, 𝜸) denotes the Channel Processing module built           where each stage aligns with distinct feature dimensions and
+on DNN with the parameter set 𝜸.                                        dedicated quantized codebooks. For the SQC-SD, the features
+   The Channel Equalization module is used to recover data              are gradually reconstructed, and the SNR adaptive module is
+symbols X̂𝑑 by using Ŷ𝑑 and Ĥ. The indices 𝑰ˆ𝑠 is demodu-
+           𝑓               𝑓
+               𝑓
+                                                                        designed to reduce the impact of different SNR conditions
+lated from X̂𝑑 by Demodulation module, based on which the               on index transmission. The designed SNR adaptive module
+quantitated vectors Ẑ mapped by SQC can be obtained. The               is not deployed at the transmitter side, which is different
+original image can be finally reconstructed as                          from other works [31]. This is because the model with dual-
+                                     
+                        Ŝ = 𝑓𝑆𝐷 Ẑ, 𝜷 ,                 (5)            end deployment is not applicable for the three-stage training
+                                                                        strategy (described in Section III-D).
+where 𝑓𝑆𝐷 (·, 𝜷) denotes the SD module built on DNN with                   An overview of the proposed architectures of SQC-SE
+the parameter set 𝜷.                                                    and SQC-SD for wireless image transmission is presented
+                                                                        in Fig. 2(a) and Fig. 2(b), respectively. As to the SQC-SE,
+B. Problem Formulation                                                  the source S is first partitioned into 𝐻𝑛 × 𝑊
+                                                                                                                    𝑛 non-overlapping
+   To effectively characterize continuous semantic features             patches by Patch Partition layer, which are regarded as
+by limited codebook capacity, the DNN for semantic fea-                 tokens and arranged in a sequence by following a left-to-
+ture extraction integrated with quantization mapping requires           right and top-to-bottom order. In this case, 𝑛 denotes the
+Fig. 2: Architectures of SQC-SE and SQC-SD for DSC. (a) Architecture of SQC-SE; (b) Architecture of SQC-SD; (c) Feature
+Fusion layer; (d) Up-sampling layer; (e) SNR ModNet layer.
+
+
+integer factor of down-sampling. Then it is followed by Linear   𝑰ˆ1𝑆 ∈ R 𝑀1 . Similarly, 𝑰ˆ2𝑆 ∈ R 𝑀2 can be obtained in “Stage
+Embedding layer to map the patches into a semantic latent        2”. These indices are cascaded to form an index vector and
+representation with size 𝐻𝑛 × 𝑊𝑛 × 𝑂 1 . Subsequently, a Swin    turned into a bit sequence for transmission by Concatenate &
+Transformer Block layer is applied to these features. Within     Bit Conversion layer. Given the critical impact of quantized
+Swin Transformer framework, it employs two key attention         codebook expressiveness on semantic communication fidelity,
+mechanisms, namely the window multi-head self-attention          Section II-C details our proposed SQC update scheme.
+(W-MSA) and shifted window multi-head self-attention (SW-           As to the SQC-SD shown as Fig. 2(b), the Feature Fusion
+MSA). The core idea is brief summarized: 1) W-MSA restricts      layer first aligns multi-scale feature Ẑ1 and Ẑ2 via combined
+self-attention computation to non-overlapping local windows,     ConV and Interpolation, and then synthesizes them through
+dramatically reducing computational complexity compared to       element-wise summation. The architecture of Feature Fusion
+global attention; 2) To overcome the limited cross-window        layer is shown in Fig. 2(c), where the ConV denotes the
+connectivity, SW-MSA applies self-attention within windows       convolutional operator and Interpolation denotes the nearest
+shifted by half the window size relative to W-MSA. It enables    neighbor interpolation operator. The Up-sampling layer, Swin
+communication between adjacent windows from the previous         Transformer Block layer and SNR ModNet layer are cascaded
+layer, which therefore allows the model to capture long-range    to gradually reconstruct semantic features as well as adapt
+dependencies. For a detailed explanation of W-MSA and SW-        to different channel conditions. By Up-sampling layer, the
+MSA, please refer to [29].                                       dimension of features is Upsampled by a factor of 2, and
+   To build a hierarchical representation with SQC, each         the embedding of size 𝑂 4 is reduced to size 𝑂 5 . The archi-
+stage incorporates a Patch Merging layer followed by Swin        tecture of Up-sampling layer is shown in Fig. 2(d), where the
+Transformer Block layer. Taking “Stage 1” as an example,         PixelShuffle denotes the operator that rearranges elements in
+neighboring embeddings are merged by a Patch Merging layer,      a tensor according to an upscaling factor [32]. Subsequently,
+                                                                  𝐻   𝑊
+resulting in concatenated embeddings of size 𝑂 1 upgrading        𝑛 × 𝑛 patch embedding tokens with lower-resolution are fed
+                             𝐻
+to size 𝑂 2 . Subsequently, 2𝑛    𝑊
+                                × 2𝑛 patch embedding tokens      into Swin Transformer Block layer for feature reconstruction,
+with higher-resolution are fed into Swin Transformer Block       and then a SNR ModNet layer is followed to improve the
+layer. In this way, the complex details of embedded features     channel adaptive ability.
+can be learned by capturing long-range dependencies and             As shown in Fig. 2(e), the SNR ModNet layer is designed
+exploiting global information. As to the extracted semantic      to improve its adaptive ability to changing channel condi-
+feature Z1 , it mapped into the codebook C1 based on Eq. (2),    tions. By leveraging channel-wise soft attention mechanism,
+and the corresponding index sequence is obtained, namely         it dynamically generates scaling parameters conditioned on
+the instantaneous SNR. Firstly, the SNR is input into SNR            calculated by the arithmetic mean of 𝐾𝑐 nearest neighbor
+Extraction module to balance the wide SNR range. Specifi-            distances in terms of 𝒛, which is calculated as
+cally, the SNR Extraction module consists of Linear operator                               1     ∑︁
+and ReLU operator. Secondly, the feature is processed by                            𝜎𝑞 =                  𝒛 − 𝒄 𝑖𝑘 2 .   (11)
+                                                                                          𝐾𝑐 𝒄 ⊆C
+using a global average pooling function, denoted as Pooling                                       𝑖𝑘      𝐾𝑐 − 𝑁 𝑁
+
+operator, which is followed by the Factor Prediction module             By using Eq. (7) during training, 𝒛 𝑞 is differentiable func-
+to predict the scaling factor based on the concatenated feature      tion of feature 𝒛 and codeword 𝒄 𝑘 , and the gradients can be
+and SNR information. The Factor Prediction module consists           calculated as
+of Linear operator and Sigmoid operator. In addition, the                                        "            #
+Feature Enhancement module is adopted as a residual link                           𝜕𝒛 𝑞               𝒅 𝑎𝑣𝑔          𝒅 𝑎𝑣𝑔
+                                                                                        = 1 − sg                ·            ,   (12)
+for feature enhancement, which consists of ConV and ReLU                           𝜕𝒛                𝒅 𝑎𝑣𝑔 2         𝒅 𝑎𝑣𝑔 2
+operators. Finally, the features that have been superimposed                                   "            #
+with SNR information are obtained.                                                   𝜕𝒛 𝑞          𝒅 𝑎𝑣𝑔          𝒅 𝑎𝑣𝑔
+                                                                                          = sg                ·            .     (13)
+                                                                                     𝜕𝒄 𝑘         𝒅 𝑎𝑣𝑔 2         𝒅 𝑎𝑣𝑔 2
+B. Proposed ANDVQ Scheme for SQC Update                                During 𝑒-th training epoch, the cumulative number of
+                                                                     semantic features assigned to the quantized vector 𝒄 𝑘 in SQC
+   Joint optimization of the SQC with SE and SD requires
+                                                                     can be calculated as
+addressing two fundamental issues, as mentioned in Section
+I-B. The proposed ANDVQ scheme is inspired by noise sub-                            𝜑 𝑘(𝑒) = 𝛾0 𝜑 𝑘(𝑒−1) + (1 − 𝛾0 )𝜓 𝑘(𝑒) ,      (14)
+stitution in vector quantization (NSVQ) scheme proposed in
+[22]. The main idea of NSVQ is to simulate the VQ distortion         where 𝜑 𝑘(𝑒) denotes the number of semantic features mapped
+by adding Gaussin noise N (0, 1) to the latent vector, which         to 𝒄 𝑘 in the 𝑒-th training epoch, 𝜓 𝑘(𝑒) denotes the current
+makes the quantization operation be differentiable in terms          frequency usage of 𝒄 𝑘 in the codebook, and 𝛾0 ∈ [0, 1)
+of the latent feature and selected codeword. However, as the         denotes a hyper-parameter that represents the decay rate.
+noise is sampled randomly, it introduces arbitrary quanti-              The cumulative sum of the features assigned to the quan-
+zation errors and challenges for the codebook to converge            tized vector 𝒄 𝑘 can be calculated as
+to optimum location. To deal with it, the ANDVQ scheme                                                             ∑︁
+introduces the K-nearest neighbor adaptive noise variance                         Φ 𝑘(𝑒) = 𝛾0 Φ 𝑘(𝑒−1) + (1 − 𝛾0 )    𝒛𝑞 .     (15)
+                                                                                                                       𝒄 𝑘 ←𝒛 𝑞
+to dynamically adjust the quantization process through local
+codebook statistics. Specifically, it approximates the quantized     The codebook in the 𝑒-th epoch can be updated as
+vector 𝒛 𝑞 as the addition of the quantization error 𝝐 𝑞 to the
+input vector 𝒛, i.e., 𝒛 𝑞 = 𝒛 + 𝝐 𝑞 , which can be calculated as                                 Φ 𝑘(𝑒)
+                                                                                    𝒄 𝑘(𝑒) =                , 𝑛 = 1, 2, ..., 𝑁,   (16)
+                                                                                             𝜑 𝑘(𝑒) + 𝜖
+                                            𝒗𝑑
+                𝒛 𝑞 = 𝒛 + 𝒅 𝑎𝑣𝑔 2 · sg                ,        (7)   where 𝜖 is a hyperparameter that prevents division by zero.
+                                           ∥𝒗 𝑑 ∥ 2
+
+                          𝒗 𝑑 = 𝒅 𝑎𝑣𝑔 + 𝒗 𝑛 ,                 (8)    C. Proposed CDM-based Scheme for CSI Refinement
+where sg[·] denotes the stop gradient operation, 𝒗 𝑑 denotes            The impacts of multipath fading channel need to be mit-
+the constructed direction vector, in which 𝒅 𝑎𝑣𝑔 provides the        igated by channel equalization in traditional communication
+deterministic direction guidance aligned with the nearest code-      systems. Next, we will analyze the role of CSI in our end-
+word, and 𝒗 𝑛 provides random exploration. In this way, 𝒗 𝑑          to-end training system. If the perfect frequency channel H0 is
+can balance quantization accuracy and model generalization           known, the received symbol can be processed by
+ability. Specifically, 𝒅 𝑎𝑣𝑔 is calculated based on the average                                  −1
+offset direction of all 𝐾𝑐 nearest neighbors relative to 𝒛, which                 X̃ 𝑓 = H0𝐻 H0       H0𝐻 Ỹ 𝑓 = X 𝑓 + W̃,     (17)
+can be expressed as
+                                                                     where X 𝑓 denotes the original transmitted signal, and W̃ =
+                                                                              −1 𝐻
+                         1          ∑︁                               H0𝐻 H0     H0 W.
+               𝒅 𝑎𝑣𝑔 =                           𝒛 − 𝒄 𝑖𝑘 ,   (9)
+                         𝐾𝑐 𝒄                                           From Eq. (17), if the channel is perfectly estimated, the
+                                𝑖 𝑘 ⊆C𝐾𝑐 − 𝑁 𝑁
+                                                                     channel effect is transferred from multiplicative interference
+                     
+where C𝐾𝑐 − 𝑁 𝑁 = 𝒄 𝑖1 , 𝒄 𝑖2 , ..., 𝒄 𝑖𝑘 ⊆ C denotes the 𝐾 𝑐        to additive noise W̃, which provides the possibility of stable
+nearest neighbors with respect to 𝒛, which is calculated based       back-propagation as well as the stronger capability of network
+on Euclidean distance, i.e.,                                         representation. In this case, the back-propagation and forward-
+                                         ∑︁                          propagation can be performed by setting H0 being equal to the
+          C𝐾𝑐 − 𝑁 𝑁 = argmin                𝒛 − 𝒄 𝑖𝑘 2 .  (10)       identity matrix. However, the perfect CSI cannot be obtained
+                         C𝑠 ⊆C, |C𝑠 |=𝐾𝑐 𝒄 ⊆C
+                                          𝑖𝑘  𝑠                      in practice. Pilot-aided channel estimation includes two steps
+                                                                     as follows: the CSI at pilot positions is first estimated, and
+Meanwhile, 𝒗 𝑛 denotes the adaptive noise
+                                         adapted
+                                                  to local          then the interpolation operation is adopted to obtain the whole
+                                             2
+density in terms of 𝒛, which satisfies N 0, 𝜎𝑞 . The 𝜎𝑞 is           CSI of PRBs. Specifically, the rough CSI at pilot positions is
+estimated by the channel estimator with few inserted pilot                    The reverse sampling process intends to sample the original
+signals, which can be expressed as                                         data distribution from 𝒉𝑟0 . The equivalent posterior distribution
+                                                                           estimation can be expressed as
+                        H𝑟𝑝 = H 𝑝 + WX 𝐻
+                                       𝑝,                          (18)                     
+                                                                             𝑝 𝒉0 |𝒉𝑟0 , 𝑣 𝑠 =
+where H 𝑝 denotes the perfect frequency channel at pilot                            ∫                     𝑇
+positions, and X 𝑝 denotes the frequency pilot signals. Then                                             Ö                         
+                                                                                         𝑝 𝒉𝑇 |𝒉𝑟0 , 𝑣 𝑠    𝑝𝜸 𝒉𝑡 −1 |𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 𝑑 𝒉1:𝑇 . (26)
+the whole CSI (including pilot channel and data channel) can                                                𝑡=1
+be obtained by                                                           with
+                    H𝑟 = 𝑓𝑖𝑛𝑡𝑒𝑟 𝑝 H𝑟𝑝 ,                  (19)                                                                  
+                                                                                               𝑝 𝒉𝑇 |𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑇 |𝒉𝑟0 , 𝑣 𝑠 ,                 (27)
+where 𝑓𝑖𝑛𝑡𝑒𝑟 𝑝 (·) denotes the interpolation function.                                                  
+                                                                                𝑝𝜸 𝒉𝑡 −1 |𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 ∼
+   From (19), H𝑟 is inaccurate due to channel noise and                                                                                  
+interpolation error. Next, we develop a CDM-based method                                   N 𝒉𝑡 −1 | 𝝁𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 , 𝚺𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 .       (28)
+to refine H𝑟 . Specifically, in the forward diffusion process,             where 𝑝𝜸 (·) denotes the inverse transition kernel from 𝒉𝑡 to
+it gradually adds noise to the training data. Then, in the                 𝒉𝑡 −1 with a learnable parameter set 𝜽, and 𝝁𝜸 (·) and 𝚺𝜸 (·)
+reverse sampling process, it learns to recover the true data               denote the mean and variance, respectively.
+from the perturbed data. By adding well-planed noise, our                     Based on variational inference (VI) framework,               the evi-
+proposed scheme can significantly reduce the number of                                                                      
+                                                                           dence lower bound (ELBO) of 𝑝 𝒉0 |𝒉𝑟0 , 𝑣 𝑠 can be calculated
+reverse sampling.                                                          as
+    1) Forward Diffusion Process:                                                              
+   Assume that the real part and imaginary      part of H0 (H𝑟 ) are        log 𝑝 𝒉0 |𝒉𝑟0 , 𝑣 𝑠 ≥
+                                           
+extracted to form a real vector 𝒉0 𝒉0 . In this case, we regard
+                                         𝑟                                        
+                                                                                                          𝑇                               
+𝒉0 as the label data, and gradually add noise conditioned on
+                                                                                                       ∑︁     𝑝 𝜸 𝒉 𝑡 −1 |𝒉 𝑡 , 𝒉 𝑟, 𝑣 
+                                                                                                                                    0   𝑠
+                                                                              𝐸 𝑞 log 𝑝 𝒉𝑇 |𝒉𝑟0 , 𝑣 𝑠 +     log                          , (29)
+                                                                                                                                          
+𝒉𝑟0 and SNR value 𝑣 𝑠 . The transformed distribution can be                       
+                                                                                                        𝑡=1    𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 
+modeled as                                                                                                                                
+                                                                         where 𝐸 𝑞 [·] denotes the expectation for the joint distribution
+     𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑡 |𝒉𝑡 −1 + 𝛼𝑡 Δℎ , 𝜅 2𝑠 𝛼𝑡 I ,
+                            
+                                                                 (20)                                                                   
+                                                                           of latent variables with respect to 𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 . Ignoring
+                                                                           the constant term, the optimization function in terms of Eq.
+where {𝜂𝑡 }𝑇𝑡=1 denotes the sequence of transformation with                (29) is derived as
+satisfying 𝜂1 → 0 and 𝜂𝑇 → 1, Δℎ denotes the difference
+                                                                                     𝑇
+between 𝒉𝑟0 and 𝒉0 , i.e., Δℎ = 𝒉𝑟0 − 𝒉0 , 𝜅 𝑠 denotes noise                        ∑︁                                                           
+                                                                              min         𝐷 𝐾 𝐿 𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 || 𝑝𝜸 𝒉𝑡 −1 |𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 ,
+adjustment parameter, 𝛼𝑡 = 𝜂1 under 𝑡 = 1 and 𝛼𝑡 = 𝜂𝑡 − 𝜂𝑡 −1                  𝜸
+                                                                                    𝑡=1
+under 𝑡 ≥ 1.                                                                                                                                      (30)
+   By using reparameterization trick, 𝒉𝑡 can be obtained by                where 𝐷 𝐾 𝐿 (·||·) denotes the Kullback-Leibler (KL) diver-
+                                 √                                         gence operation.
+         𝒉𝑡 = 𝒉𝑡 −1 + 𝛼𝑡 Δℎ + 𝜅 𝑠 𝛼𝑡 𝝃𝑡 , 𝝃𝑡 ∼ N (0, 1) . (21)
+                                                                             According to  Bayes theorem and Markov property,
+Through recursive derivation, 𝒉𝑡 can be further rewritten as               𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 can be calculated as
+                                         √                                                                                                           
+                𝒉 𝑡 = 𝒉 0 + 𝜂 𝑡 Δ ℎ + 𝜅 𝑠 𝛼𝑡 𝝃 𝑡 .       (22)                              𝑟       𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 · 𝑞 𝒉𝑡 −1 |𝒉0 , 𝒉𝑟0 , 𝑣 𝑠
+                                                                           𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉0 , 𝑣 𝑠 =                                                   ,
+So, 𝒉𝑡 satisfies the Gaussian distribution as follows                                                            𝑞 𝒉𝑡 |𝒉0 , 𝒉𝑟0 , 𝑣 𝑠
+                                                                                                                                                (31)
+        𝑞 𝒉𝑡 |𝒉0 , 𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑡 |𝒉0 + 𝜂𝑡 Δℎ , 𝜅 2𝑠 𝜂𝑡 I .
+                            
+                                                                   (23)    where
+                                                                                                                                        
+                                                                               𝑞 𝒉𝑡 |𝒉𝑡 −1 , 𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑡 |𝒉𝑡 −1 + 𝛼𝑡 Δℎ , 𝜅 2𝑠 𝛼𝑡 I ,
+                                                                                                      
+  From Eq. (23), it indicates that the added noise level of                                                                                       (32)
+                              √
+𝒉𝑡 is determined by 𝜅 𝑠 and 𝜂𝑡 . By properly planning the                                                                                  
+                                                                             𝑞 𝒉𝑡 −1 |𝒉0 , 𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑡 −1 |𝒉0 + 𝜂𝑡 −1 Δℎ , 𝜅 2𝑠 𝜂𝑡 −1 I , (33)
+                                                                                                    
+method of adding noise, it is possible to cover the range from
+low noise to high noise, which benefits reducing the number                                                                             
+                                                                                    𝑞 𝒉𝑡 |𝒉0 , 𝒉𝑟0 , 𝑣 𝑠 ∼ N 𝒉𝑡 |𝒉0 + 𝜂𝑡 Δℎ , 𝜅 2𝑠 𝜂𝑡 I .
+                                                                                                        
+of processing steps required for adding noise and removing                                                                                        (34)
+noise to generate the actual channel data distribution. The 𝜅 𝑠
+    √                                                                      Substituting Eqs. (32)-(34) into Eq. (31), the derivation yields
+and 𝜂𝑡 are calculated as follows:                                                                                                                  
+                      √      √                                                             𝑟                  𝜂𝑡 −1      𝛼𝑡           2 𝜂 𝑡 −1
+                        𝜂𝑡 = 𝜂1 × 𝜆 𝛽𝑡 ,                   (24)             𝑞 𝒉𝑡 −1 |𝒉0 , 𝒉0 , 𝑣 𝑠 ∼ N 𝒉𝑡 −1 |       𝒉𝑡 + 𝒉0 , 𝜅 𝑠              𝛼𝑡 I .
+                                                                                                                𝜂𝑡         𝜂𝑡              𝜂𝑡
+                                        𝑣𝑠                                                                                                         (35)
+                             𝜅 𝑠 = 𝜅0 𝑒 − 10 ,                      (25)                        
+                                          𝜌0                             So 𝜇𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 can be expressed as
+where 𝜆 0 = 2(𝑇 −1)1log 𝜂𝑇 , 𝛽𝑡 = 𝑇𝑡 −1−1      × (𝑇 − 1), 𝜅 0 and 𝜌0 are                           𝜂𝑡 −1       𝛼𝑡                       
+             𝑒          𝜂1
+                                                                  √             𝜇𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 =       𝒉𝑡 +      𝑓𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 , 𝑡 ,        (36)
+hyper-parameters. Note that the calculation method of 𝜂𝑡 is                                           𝜂𝑡        𝜂𝑡
+similar to [33].                                                           where 𝑓𝜸 (·) denotes the model built on DNN with parameter
+  2) Reverse Sampling Process:                                             set 𝜸 that aims to predict 𝒉0 .
+                                                                             Algorithm 1 Training Process of the CDM-based Scheme
+                                                                                                       
+                                                                             1: Input: Training dataset 𝒉0 , 𝒉𝑟0 , and epoch number 𝐸 𝑘
+                                                                             2: for 𝑒 = 1 : 𝐸 𝑘 do
+                                                                             3: Sample 𝑡 from the uniform distribution 𝑡 ∼ 𝑈 [1, 𝑇];
+                                                                             4: Obtain noisy channel data 𝒉𝑡 by (22);
+                                                                             5: Fuse the time-step embedding and SNR embedding by (40);
+                                                                             6: Train the conditional U-Net in terms of (37);
+                                                                             7: end for
+                                                                             8: Output: Trained model 𝑓𝜸 (·) with the parameter sets 𝜸 and 𝜽
+
+                                                                             Algorithm 2 Inference Process of the CDM-based Scheme
+         Fig. 3: The architecture of designed conditional U-Net.             1: Input: 𝒉𝑟0 , 𝑇, 𝑣 𝑠 , 𝑓𝜸 (·)
+                                                                             2: for 𝑡 = 𝑇 : 1 do
+                                                                             3: Obtain 𝒉𝑡 −1 by   (35); 
+   So the optimization function shown in Eq. (30) can be                     4: Calculate 𝜇𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 by (36);
+equivalently expressed as training a neural network to fit the               7: end for
+real channel distribution, i.e.,                                             8: Output: Estimated channel 𝒉ˆ 0
+                𝑇
+               ∑︁       𝛼𝑡                                     2
+         min          2
+                                     𝑓𝜸 𝒉𝑡 , 𝒉𝑟0 , 𝑣 𝑠 , 𝑡 − 𝒉0 2 .   (37)
+           𝜸       2𝜅 𝑠 𝜂𝑡 𝜂𝑡 −1
+               𝑡=1                                                           continuously. Finally, during the expansive path, the down-
+   3) Designed Conditional U-Net for Channel Prediction                      sampled feature maps are progressively up-sampled to match
+   As shown in Fig. 3, the conditional U-Net is designed to                  the resolution of their corresponding layers on the left side.
+predict 𝒉0 along with the embedded time-step 𝑡 and SNR 𝑣 𝑠 .                 Concatenating features from both the left and right paths
+Next, we introduce the gate fusion mechanism to adaptively                   facilitates the effective integration of low-level and high-level
+adjust the weight of the time and SNR information. The                       features. For clarity, the training process and inference process
+embedding of both the time-step and SNR value employs                        of the proposed scheme for CSI refinement are summarized
+the positional encoding method proposed in Transformer                       in Algorithm 1 and Algorithm 2, respectively.
+framework [34]. As to the time-step, the embedding can be
+expressed as                                                                 D. Training Strategy
+      𝑇𝑒𝑚𝑏 (𝑡) = [cos (𝑡 · 𝑓0 ) , sin (𝑡 · 𝑓0 ) , ...] ∈ R𝑑𝑇 ,        (38)      The proposed VQ-DSC-R system is trained by using a
+                                                                             three-stage strategy. In the first stage, we train the SE and
+                      − 2𝑘                                                   SD along with the SQC directly, where the multipath fading
+where 𝑓 𝑘 = 10000 𝑑𝑇 , 𝑘 = 0, 1, ..., 𝑑2𝑇 − 1, and 𝑑𝑇 denotes the
+embedded dimension of time information.                                      channel and noise are not considered. The loss function can
+  As to the SNR value, the embedding can be expressed as                     be represented as
+                                                                                                                      
+                                                                                              L S, Ŝ, 𝜶, 𝜷, C = 𝑑 S, Ŝ .             (41)
+                                                      
+ 𝑆 𝑒𝑚𝑏 (𝑣 𝑠 ) = cos 𝑣 𝑛𝑜𝑟
+                      𝑠
+                          𝑚
+                            · 𝛾0 , sin 𝑣 𝑛𝑜𝑟
+                                         𝑠
+                                             𝑚
+                                               · 𝛾0 , ... ∈ R𝑑𝑆 ,
+                                                              (39)
+            𝑚 =
+                       (𝑣    )
+                    log10 𝑠 +𝜖 − log10
+                                    𝜖                                        Since the SQC update scheme (described in Section III-B)
+where 𝑣 𝑛𝑜𝑟
+        𝑠              𝑣 𝑚𝑎𝑥      𝜖
+                                          with 𝑣 𝑚𝑎𝑥
+                                                 𝑠   denoting the maxi-      enables the gradient to be back-propagated, there is no need
+                    log10𝑠   − log10
+                                         − 2𝑖                                for specially designed item with respect to codebook loss.
+mum SNR value, 𝛾𝑖 = 10000 𝑑𝑆 , 𝑖 = 0, 1, ..., 𝑑2𝑆 − 1, and 𝑑 𝑆
+                                                                             In this way, the optimal model parameters {𝜶∗ , 𝜷∗ , C∗ } can
+denotes the embedded dimension of SNR information.
+                                                                             be obtained with considering the semantic feature extraction,
+  To adaptively fuse the time-step embedding and SNR
+                                                                             quantization and reconstruction.
+embedding, the gating mechanism function is expressed as
+                                                                                In the second stage, the CDM-based scheme is introduced
+         𝑔𝜽 (𝑡, 𝑣 𝑠 ) = 𝜔𝑡 ⊙ 𝑇𝑒𝑚𝑏 (𝑡) + 𝜔 𝑣𝑠 ⊙ 𝑆 𝑒𝑚𝑏 (𝑣 𝑠 ),          (40)   to refine CSI for mitigate multipath fading channel inference.
+                                                                             The initial estimated channel and conditional information
+where 𝜔𝑡 and 𝜔 𝑣𝑠 denote the weights trained along the model                 are used as the inputs to train CDM, and then the actual
+with parameter set 𝜽.                                                        channel distribution can be predicted. So, the optimal model
+                                                                             parameters 𝜸 ∗ of CDM can be obtained.
+                                                       
+   Along the contracting path of the U-Net, the 𝒉𝑡 , 𝒉𝑟0
+are stacked as the training data, and 𝑔𝜽 (𝑡, 𝑣 𝑠 ) is added as                  In the third stage, the entire scheme is jointly retrained.
+the conditional information of embedding time and SNR                        Specifically, the parameters of SE, SQC and CDM are frozen,
+information. Then, 3 × 3 convolutional kernels along with                    while the parameters of SD are updated with considering
+the sigmoid linear unit (SiLu) are adopted for feature ex-                   multipath fading channel and noise. The loss function in the
+traction and non-linear transformation. Meanwhile, residual                  first stage is adopted to renew the model parameters 𝜷 of SD
+connection is introduced to exploit the spatial correlation                  under {𝜶∗ , 𝜸 ∗ , C∗ }. Through the three-stage training strategy,
+of the feature maps. Furthermore, the 2 × 2 max-pooling is                   it balances semantic-feature learning, quantization alignment,
+adopted to reduce the resolution of feature maps by half                     and channel adaptation, enabling the system to generalize
+while the corresponding number of feature maps increases                     effectively across diverse practical scenarios.
+      IV. E XPERIMENTS AND R ESULTS D ISCUSSION                                   TABLE I: Parameter Configurations
+
+  This section evaluates the performance of the proposed VQ-        Parameters                             Values
+                                                                    Training epoch                         100
+DSC-R system considering OFDM-based transmission over               Training equipment                     GTX 4090Ti GPU
+wireless channels.                                                  Number of OFDM subcarriers             1024
+                                                                    Number of OFDM symbols                 14
+                                                                    Pilot Pattern                          Uniform grid-type
+A. Experiments Setup                                                Pilot interval along the subcarriers   9
+                                                                    Pilot interval along the symbols       5
+   1) Datasets, Training Environments and Evaluation Met-           EPA Channel Delays (ns)                [0, 30, 70, 90, 110, 190, 410]
+rics: To verify the effectiveness of VQ-DSC-R system, the           EPA Channel Powers (dB)                [0, -1.0, -2.0, -3.0, -8.0, -17.2,
+widely representative datasets are selected for training and                                               -20.8]
+testing. Specifically, the images from the OpenImage dataset
+[35] cropped to 256 × 256-pixel size constitute the training
+                                                                       with the reconstruction loss to optimize the encoder,
+dataset. Since it covers a wide range of scene and object
+                                                                       codebook and decoder. The NSVQ scheme simulates the
+types, it can ensure the model’s ability to generalize. The
+                                                                       VQ distortion by adding noise to the latent vector to
+images from the DIV2K (DIVerse 2K) dataset [36] cropped to
+                                                                       mimic the original quantization error. In this way, the
+1024 × 1024-pixel size constitute the testing dataset, including
+                                                                       quantized vector is a differentiable function of the latent
+100 high-resolution images. Note that the proposed model
+                                                                       vector and the selected codeword. These two typical
+can be applied to image transmission with various resolutions.
+                                                                       schemes represent the main ideas for handling quantita-
+The proposed scheme is implemented in PyTorch framework
+                                                                       tive mapping, whose impacts on image transmission are
+and optimized via AdamW optimizer with a learning rate of
+                                                                       thoroughly studied in our VQ-DSC-R system.
+2 × 10−4 and weight decay of 10−4 . The AdamW optimizer is
+                                                                     • Channel Estimation Schemes: The least square (LS)
+worked with a batch size of 16 and a maximum iteration count
+                                                                       scheme is widely used to obtain CSI at pilot position,
+of 100. All our experiments are performed on a Linux server
+                                                                       based on which the linear interpolation is used to obtain
+with GTX 4090Ti GPU. Reconstruction fidelity is quantified
+                                                                       the CSI at data position [40]. The deep residual channel
+to measure divergence between original and reconstructed
+                                                                       estimation network (ReEsNet) is proposed in [41] for
+images, including the PSNR for pixel-level accuracy [37] and
+                                                                       channel estimation, which outperforms many other deep
+MS-SSIM for perceptual quality assessment [38]. Bit com-
+                                                                       learning-based estimation schemes. The performance of
+pression ratio (BCR) is adopted to measure the required com-
+                                                                       these two schemes are compared with that of our pro-
+munication transmission costs. Specifically, BCR is defined as
+                                                                       posed CDM-based scheme in terms of the normalized
+the ratio of the number of bits required for the transmission
+                                                                       mean squared error (NMSE) and bit error rate (BER).
+related to the original images, i.e., BCR= 𝐻 ×𝑊𝐵×𝑂×8
+                                                   𝑠
+                                                         , where
+                                                                       Meanwhile, the impacts of CSI on image transmission
+𝐵𝑠 denotes transmission bits of the index sequence in terms
+                                                                       of VQ-DSC-R system are studied. The performance of
+of quantitative mapping.
+                                                                       image transmission under the perfect CSI is considered
+   2) OFDM Symbol Structure and Channel Model: The PRB
+                                                                       as the upper limit for comparson. The 4 quadrature
+of OFDM-based system encompasses a total of 1024 sub-
+                                                                       amplitude modulation (4-QAM) is considered as the
+carriers of each OFDM symbol and 14 OFDM symbols. The
+                                                                       modulation scheme without loss of generality.
+uniform grid-type pilot pattern is adopted, where the pilot
+                                                                     • Conventional SSCC Scheme and DJSCC Scheme: As a
+intervals along the OFDM subcarriers and the OFDM symbols
+                                                                       conventional baseline for comparison, the popular joint
+are set to be 9 and 5, respectively. To mitigate inter-symbol
+                                                                       photographic experts group (JPEG) and low density par-
+inference effectively, the CP length is set to be 256, ensuring
+                                                                       ity check (LDPC) are used for source encoding and chan-
+it exceeds the delay spread of the multi-path channel. The
+                                                                       nel encoding, respectively. As the conventional SSCC
+3GPP standard channel model is adopted to generate channel
+                                                                       scheme fails to recover images under imperfect channel
+coefficients and added as multipath channel interference when
+                                                                       estimation, it is considered with perfect CSI. Addition-
+training and testing our proposed model. Specifically, the EPA
+                                                                       ally, the ADJSCC model [31] is adopted for comparison
+(extended pedestrian A) channel model [39] is designed for
+                                                                       in terms of SNR adaptation. To enable compatibility with
+low-speed mobile scenarios, which can practically simulate
+                                                                       our proposed VQ-DSC-R system, we redesign ADJSCC
+the multipath fading of signals through scatterers such as
+                                                                       by fusing its SNR-adaptive module with our VQ-DSC-
+buildings and trees in urban micro or indoor hotspots. Table I
+                                                                       R system for joint semantic extraction and quantization,
+lists some other parameter configurations in the system, where
+                                                                       which is referred to as VQ-ADJSCC.
+ns denotes the delay in nanosecond unit.
+   3) Comparison Schemes: To validate the advantages of VQ-
+DSC-R, different scenarios and schemes are implemented for         B. Performance of SQC Update Schemes
+comparison with other baseline schemes.                               In this part, numerical simulations are provided to inves-
+    • SQC Update Schemes: The popular STE scheme is                tigate the performance of the proposed SQC update scheme,
+      proposed to deal with issue of the non-differentiable        i.e., the ANDVQ scheme, as well as compare with the STE
+      nearest-neighbor assignment, which copies the gradients      scheme and NSVQ scheme. To evaluate the performance of
+      through a non-differentiable VQ function. In this case,      trained SQC, the multipath fading channel and additive noise
+      the codebook loss and commitment loss are integrated         are ignored. For the two-level quantitative mapping design
+                                (a)                                                                     (a)
+
+
+
+
+                                (b)                                                                     (b)
+
+Fig. 4: CUR performance curves for the ANDVQ scheme versus the number   Fig. 5: NMSE and BER performance curves for different schemes versus
+of training epoches. (a) BCR=0.006; (b) BCR=0.02.                       different SNR conditions. (a) NMSE Performance; (b) BER Performance.
+
+TABLE II: PSNR and MS-SSIM Performance Comparison of SQC Update
+Schemes With Different Codebook Sizes and BCRs.                         tion of the actual number of codebook entries used in the
+                                                                        quantization process to the total codebook capacity, reflects
+  Method       K         BCR=0.006              BCR=0.02
+                      PSNR MS-SSIM           PSNR MS-SSIM               the representational capability of the codebook to a certain
+  ANDVQ        64     24.62       0.872       27.88       0.944
+                                                                        extent. As to different codebook sizes 𝐾 = {64, 128, 256}
+              128     25.66       0.888       29.22       0.959         and BCR={0.006, 0.02}, the CURs increase as the number
+              256     25.33       0.887       28.57       0.950         of training epochs, and all of them have achieved very high
+  STE          64     20.71       0.726       21.07       0.782         CURs. It’s worth noting that the CUR with 𝐾 = 64 is
+              128     20.75       0.726       22.73       0.850         approaching a saturated state, which may result in codebook
+              256     20.32       0.691       22.41       0.832
+                                                                        capacity overfitting. Additionally, Table II presents the PSNR
+  NSVQ         64     21.25       0.736       22.78       0.834         and MS-SSIM performance achieved by different SQC update
+              128     22.59       0.840       23.57       0.856
+              256     22.02       0.800       23.24       0.832         schemes with different codebook sizes and BCRs. It can be
+                                                                        observed that: 1) Compared with the STE scheme and NSVQ
+                                                                        scheme, the ANDVQ scheme obtains the best performance
+                                                                        in terms of PSNR and MS-SSIM. As to BCR=0.006, the
+presented in Fig. 2(a), each codebook’s size 𝐾 is manually set
+                                                                        PSNR and MS-SSIM obtain 25.66 and 0.888, respectively.
+and each codebook’s semantic codeword dimension 𝑁 is con-
+                                                                        As to BCR=0.02, the PSNR and MS-SSIM are increased to
+figured to match the channel dimension of the feature maps.
+                                                                        29.22 and 0.959, respectively. 2) As the number of codebook
+So the BCR can be calculated accordingly. The BCR=0.006
+                                                                        size increases, the performance of codebook capacity doesn’t
+and BCR=0.02 are chosen for simulation. Note that these two
+                                                                        always improve consistently. Meanwhile, the codebook with
+BCR values are approximations. As to the BCR=0.006, the
+                                                                        𝐾 = 128 obtains the best performance compared to those
+parameters of SE and SD are set as 𝑛 = 4, 𝑂 1 = 16, 𝑂 2 =
+                                                                        with other codebook sizes. So it means that the codebook size
+64, 𝑂 3 = 256, 𝑂 4 = 256, 𝑂 5 = 64, 𝑂 6 = 32 and 𝑂 7 = 16.
+                                                                        and CUR should be considered simultaneously for evaluating
+As to the BCR=0.02, 𝑛 = 2 is set without changing other
+                                                                        codebook capacity.
+parameters of SE and SD. Other hyperparameters of ANDVQ
+scheme are set as 𝐾𝑐 = 5, 𝛾0 = 0.9 and 𝜖 = 10−5 .
+   Fig. 4 presents the codebook utilization ratio (CUR) of              C. Performance of Channel Estimation Schemes
+our proposed SQC update scheme versus the number of                       Fig. 5 presents the NMSE and BER performance of the
+training epochs. The CUR, which is defined as the propor-               proposed CDM-based scheme under various SNRs compared
+                   (a)                                         (b)                                              (c)
+
+
+
+
+                  (d)                                        (e)                                          (f)
+
+Fig. 6: PSNR and MS-SSIM performance of SQC update schemes under different channel estimation schemes and BCRs. (a)
+and (d) present the performance of STE scheme; (b) and (e) present the performance of NSVQ scheme; (c) and (f) present
+the performance of ANDVQ scheme.
+
+
+with those of LS-based scheme and ReEsNet-based scheme.              parison. Fig. 7 shows the PSNR and MS-SSIM comparison
+The hyperparameters of CDM-based scheme are set as 𝜅 0 = 1,          for VQ-DSC-R, VQ-ADJSCC, and traditional scheme with
+𝜌0 = 0.5, 𝐸 𝑘 = 100, 𝑣 𝑚𝑎𝑥
+                        𝑠   = 20𝑑𝐵, 𝑑𝑇 = 𝑑 𝑆 = 104 . For the         different BCRs. Specifically, the BCR of traditional scheme
+forward diffusion process, the step of adding noise is set as        is 0.1, and BCRs of other DL-based schemes are 0.02 and
+20. For the reverse sampling process, the step of inference          0.006. It can be observed that: 1) VQ-DSC-R outperforms
+is set as 5. Fig. 5(a) shows that the CDM-based scheme               traditional methods in PSNR and MS-SSIM, particularly at
+can significantly decrease NMSE compared with the LS-                medium-low SNRs. Meanwhile, it exhibits a smooth perfor-
+based scheme under various SNRs. Meanwhile, it outperforms           mance degradation and avoids the cliff effect. 2) VQ-DSC-
+the ReEsNet-based scheme due to its powerful ability of              R surpasses VQ-ADJSCC in performance by leveraging the
+noise reduction. Additionally, Fig. 5(b) provides the BER            proposed SNR ModNet. 3) Higher SNRtest improves VQ-
+performances under various SNRs, which clearly indicate the          DSC-R’s performance monotonically, and the VQ-DSC-R
+impacts of inaccurate CSI on index transmission.                     with SNR ModNet maintains significant advantages over the
+   By setting codebook size 𝐾 = 128, Fig. 6 provides the             SNR ModNet-free baseline regardless of deviations between
+PSNR and MS-SSIM performance of SQC update schemes                   SNRtrain and SNRtest .
+under different channel estimation schemes and BCRs. It can             Fig. 8 presents some visualized examples of comparison
+be observed that: 1) As the SNR increases, the PSNR and              between the reconstructed images of VQ-DSC-R schemes and
+MS-SSIM performance increase, and the ANDVQ scheme                   original images under multipath fading channel model and
+obtains much better performance compared with those of STE           different SNRs. Two different types of images are selected.
+scheme and NSVQ scheme. 2) Compared with the model                   From left to right are the reconstructed images of the original
+trained with LS-based CSI, the performance with CDM-based            image with the increasing of SNRs, and from the top to
+CSI is better, and the performance with perfect CSI is the           bottom are the reconstructed images of the original image
+best. The results clearly demonstrate the impact of channel          with the increasing the BCRs. Compared with other schemes,
+estimation error on end-to-end training and testing, which           the proposed VQ-DSC-R scheme not only improves the PSNR
+should be considered in practical scenarios.                         and MS-SSIM performance but also makes certain progress
+                                                                     in visual perception.
+D. Performance of SNR adaption
+                                                                                           V. C ONCLUSION
+   The VQ-DSC-R model integrating SNR ModNet is trained
+on signals with SNR uniformly sampled from range [0dB,                 This paper introduces VQ-DSC-R, a robust digital semantic
+15dB]. For benchmarking purposes, we employ three stan-              communication scheme that bridges semantic and digital
+dalone VQ-DSC-R models lacking SNR ModNet, and each                  communication via leveraging VQ mechanism for efficient
+model is trained specifically at one fixed SNR level (0dB, 6dB,      image transmission over OFDM systems in wireless fading
+or 12dB). Additionally, the traditional SSCC model (i.e., JPEG       channels. Within the DJSCC framework, a Swin Transformer-
+and LDPC) and popular ADJSCC model are chosen for com-               based backbone extracts multi-scale semantic features, which
+                                                                            are projected by VQ modules into a trainable SQC for efficient
+                                                                            index-based transmission. The proposed ANDVQ scheme for
+                                                                            SQC update dynamically adjusts quantization mapping by
+                                                                            using K-nearest neighbor noise-variance statistics, which is
+                                                                            integrated with EMA to ensure stable training. Furthermore,
+                                                                            leveraging a CDM-based CSI refinement and an attention-
+                                                                            guided channel adaptation module, the system adaptively
+                                                                            optimizes index transmission over multipath fading chan-
+                                                                            nel and noisy environments. A three-stage training strategy
+                                                                            jointly optimizes feature learning, quantization, and channel
+                                                                            adaptation, ensuring generalization across scenarios. Extensive
+                                                                            experiments demonstrate that VQ-DSC-R achieves superior
+                                                                            semantic performance with high compression ratios under
+                                  (a)                                       practical OFDM transmission conditions.
+
+                                                                                                         R EFERENCES
+                                                                            [1] C. Wang et al., “On the Road to 6G: Visions, Requirements, Key
+                                                                                Technologies, and Testbeds,” IEEE IEEE Commun. Surv. Tutor., vol. 25,
+                                                                                no. 2, pp. 905-974, Sep. 2025.
+                                                                            [2] M. Na, J. Lee, G. Choi, T. Yu, J. Choi, J. Lee, and S. Bahk, “Operator’s
+                                                                                Perspective on 6G: 6G Services, Vision, and Spectrum,” IEEE Commun.
+                                                                                Mag., vol. 63, no. 8, pp. 178-184, Aug. 2024.
+                                                                            [3] E. Hossain, and A. Vera-Rivera, “6G Cellular Networks: Mapping the
+                                                                                Landscape for the IMT-2030 Framework,” IEEE Trans. Technol. Soc.,
+                                                                                vol. 6, no. 4, pp. 377-392, Dec. 2025.
+                                                                            [4] P. Zhang, et al., “Intellicise Wireless Networks from Semantic Com-
+                                                                                munications: A Survey, Research Issues, and Challenges,” IEEE IEEE
+                                                                                Commun. Surv. Tutor., vol. 27, no. 3, pp. 2051-2084, Jun. 2025.
+                                                                            [5] K. Niu, J. Dai, S. Yao, S. Wang, Z. Si, X. Qin, and P. Zhang, “A Paradigm
+                                                                                Shift toward Semantic Communications,” IEEE Commun. Mag., vol. 60,
+                                  (b)                                           no. 11, pp. 113-119, Nov. 2022.
+                                                                            [6] P. Zhang, et al, “ComAI: The Convergence of Communication and
+                                                                                Artificial Intelligence,” IEEE Commun. Surv. Tutor., vol. 28, pp. 2163-
+                                                                                2197, Sep. 2025.
+                                                                            [7] D. Gunduz, M. Wigger, T. Tung, P. Zhang, and Y. Xiao, “Joint Source-
+                                                                                Channel Coding: Fundamentals and Recent Progress in Practical De-
+                                                                                signs,” Proceedings of the IEEE, Early Access, Nov. 2024.
+                                                                            [8] E. Bourtsoulatze, D. Kurka, and D. Gunduz, “Deep Joint Source-Channel
+                                                                                Coding for Wireless Image Transmission,” IEEE Trans. Cognit. Commun.
+                                                                                Networking, vol. 5, no.3, pp. 567-579, Sep. 2019.
+                                                                            [9] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+                                                                                Transform Source-Channel Coding for Semantic Communications,” IEEE
+                                                                                J. Sel. Areas Commun., vol. 40, no.8, pp. 2300-2316, Jun. 2022.
+                                                                            [10] K. Yang, S. Wang, J. Dai, X. Qin, K. Niu, and P. Zhang, “SwinJSCC:
+                                                                                Taming Swin Transformer for Deep Joint Source-Channel Coding,” IEEE
+                                                                                Trans. Cognit. Commun. Networking, vol. 11, no.1, pp. 90-104, Jul. 2024.
+                                                                            [11] T. Tung, D. Kurka, M. Jankowski, and D. Gunduz, “DeepJSCC-Q:
+                                                                                Constellation Constrained Deep Joint Source-Channel Coding,” IEEE J.
+                                  (c)                                           Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720-731, Dec. 2022.
+                                                                            [12] L. Shen, N. Ma, J. Chen, M. Song, and C. Dong, “Digital Image Seman-
+                                                                                tic Communications with Joint Source-Channel Coding and Constellation
+                                                                                Optimization,” IEEE WCSP, Oct. 2024.
+                                                                            [13] Y. Hua, Y. He, Q. Chen, and Y. Fang, “Constellation Design and Joint
+                                                                                Optimization of Analog Joint Source-Channel Coding,” IEEE Trans.
+                                                                                Commun., vol. 73, no. 11, pp. 10072-10086, Jun. 2025.
+                                                                            [14] L. Guo, W. Chen, Y. Sun, and B. Ai, “Digital-SC: Digital Semantic
+                                                                                Communication with Adaptive Network Split and Learned Non-Linear
+                                                                                Quantization,” IEEE Trans. Cognit. Commun. Networking, vol. 11, no.
+                                                                                4, pp. 2499-2511, Aug. 2025.
+                                                                            [15] Y. Zhou, et al., “MOC-RVQ: Multilevel Code-book-Assisted Digital
+                                                                                Generative Semantic Communication,” IEEE Globecom, Dec. 2024.
+                                                                            [16] M. Nemati, J. Park, and J. Choi, “VQ-VAE Empowered Wireless
+                                                                                Communication for Joint Source-Channel Coding and Beyond,” IEEE
+                                                                                Globecom, Dec. 2023.
+                                                                            [17] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector Quantized
+                                  (d)                                           Semantic Communication System,” IEEE Wireless Commun. Lett., vol.
+                                                                                12, no. 6, pp. 982-986, Jun. 2023.
+                                                                            [18] P. Si, R. Liu, L. Qian, J. Zhao, and K. Lam, “Post-Deployment Fine-
+Fig. 7: Channel adaptive performance of VQ-DSC-R under different SNR
+                                                                                Tunable Semantic Communication,” IEEE Trans. Wireless Commun., vol.
+and BCRs. (a) and (b) present the performance with BCR=0.006; (c) and (d)
+                                                                                24, no. 1, pp. 35-50, Jan. 2025.
+present the performance with BCR=0.02;
+                                                                            [19] A. Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete represen-
+                                                                                tation learning,” NIPS, vol. 30, pp. 1-10, Nov. 2017.
+Fig. 8: Two examples of comparison between the reconstructed images of VQ-DSC-R scheme and original images under
+EPA channel model and different SNR conditions. From left to right are the reconstructed images of the original image with
+increasing of SNR, and from the top to bottom are the reconstructed images of the original image with increasing of BCR.
+
+
+[20] M. Huh, B. Cheung, P. Agrawal, and P. Isola, “Straightening Out          [31] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+    the Straight-Through Estimator: Overcoming Optimization Challenges in         Image Transmission Using Deep Source Channel Coding With Atten-
+    Vector Quantized Networks,” PMLR, 2023.                                       tion,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, pp. 2315-
+[21] J. Zhang, F. Zhan, C. Theobalt, and S. Lu, “Regularized Vector               2328, Apr. 2022.
+    Quantization for Tokenized Image Synthesis,” IEEE/CVF CVPR, 2023.         [32] W. Shi, J. Caballero, F. Huszar, J. Totz, A. P. Aitken, and R. Bishop,
+[22] M. Vali, and T. Backstrom, “NSVQ: Noise Substitution in Vector               “Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Quantization for Machine Learning,” IEEE Access, vol. 10, pp. 13598-          Sub-Pixel Convolutional Neural Network,” IEEE CVPR, 2026.
+    13610, Jan. 2022.                                                         [33] Z. Yue, J. Wang, and C. Loy, “ResShift: Efficient Diffusion Model for
+[23] D. Lee, C. Kim, S. Kim, M. Cho, and W. Han, “Autoregressive Image            Image Super-Resolution by Residual Shifting,” arXiv:2307.12348, 2023.
+    Generation Using Residual Quantization,” IEEE/CVF CVPR, 2022.             [34] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
+[24] Y. Zhao, Y. Xiong, and P. Krahenbuhl, “Image and Video Tokenization          L. Kaiser, and I. Polosukhin, “Attention is All you Need,” NIPS, 2017.
+    With Binary Spherical Quantization,” arXiv:2406.07548, 2024.              [35] O. Russakovsky, J. Deng, H. Su, and et al., “ImageNet Large Scale
+[25] Z. Meng, Q. Li, W. Tang, M. Yan, and X. Ge, “Channel-Aware                   Visual Recognition Challenge,” arXiv:1409.0575, 2014.
+    Vector Quantization for Robust Semantic Communication on Discrete         [36] E. Agustsson and R. Timofte, “NTIRE 2017 Challenge on Single Image
+    Channels,” arXiv:2510.18604, 2025.                                            Super-Resolution: Dataset and Study,” IEEE CVPR Workshops, 2017.
+[26] J. Shin, Y. Oh, J. S. Park, J. H. Park, and Y. Jeon, “ESC-MVQ: End-      [37] J. Korhonen and J. You, “Peak Signal-to-Noise Ratio Revisited: Is
+    to-End Semantic Communication with Multi-Codebook Vector Quanti-              Simple Beautiful?” 4th Int. Workshop Qual. Multimedia Exp., 2012.
+    zation,” IEEE Trans. Wireless Commun., vol. 25, pp. 3785-3800, Sep.       [38] Z. Wang, E. P. Simoncelli, and A. C. Bovik, “Multiscale Structural
+    2025.                                                                         Similarity for Image Quality Assessment,” 37th Asilomar Conf. Signals,
+[27] Y. Liu, C. Dong, H. Liang, W. Li, Z. Bao, and Z. Zheng, “Semantic-           Syst. Comput., 2003.
+    Importance-Aware Reordering-Enhanced Semantic Communication Sys-          [39] 3GPP, “Evolved Universal Terrestrial Radio Access (E-UTRA); User
+    tem With OFDM Transmission,” IEEE Internet Things J., vol. 12, no. 7,         Equipment (UE) Radio Transmission and Reception,” 3GPP TS 36.101
+    pp. 7938-7954, Jan. 2025.                                                     V17.4.0, 2022.
+[28] T. Wu, Z. Chen, D. He, L. Qian, Y. Xu, and M. Tao, “CDDM: Channel        [40] R. Steele, “Mobile Radio Communications,” New York: IEEE Press,
+    Denoising Diffusion Models for Wireless Semantic Communications,”             1992.
+    IEEE Trans. Wireless Commun., vol. 23, no. 9, pp. 11168-11183, Mar.       [41] L. Li, H. Chen, H. Chang, and L. Liu, “Deep Residual Learning Meets
+    2024.                                                                         OFDM Channel Estimation,” IEEE Wireless Commun. Lett., vol. 9, no.
+[29] Z. Liu, Y. Lin, Y. Gao, et al., “Swin Transformer: Hierarchical Vision       5, pp. 615-618, May 2020.
+    Transformer Using Shifted Windows,” IEEE/CVF ICCV, 2021.
+[30] 3GPP, “NR: Physical channels and modulation,” 3GPP TS 38.211
+    V17.4.0, 2022.
+

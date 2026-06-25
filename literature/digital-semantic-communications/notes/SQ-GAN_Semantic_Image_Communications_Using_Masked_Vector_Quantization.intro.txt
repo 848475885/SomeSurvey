@@ -1,0 +1,120 @@
+﻿IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026                                                                            3363
+
+
+
+
+  SQ-GAN: Semantic Image Communications Using
+          Masked Vector Quantization
+            Francesco Pezone, Sergio Barbarossa , Life Fellow, IEEE, and Giuseppe Caire , Fellow, IEEE
+
+
+
+   Abstract鈥?This work introduces Semantically Masked Vec-                      communications. The use of generative AI for next generation
+tor Quantized Generative Adversarial Network (SQ-GAN),                          networks has been recently proposed in [7], [8], and [9].
+a novel approach integrating semantically driven image coding                   A key innovation in this domain is the integration of deep
+and vector quantization to optimize image compression for
+semantic/task-oriented communications. The method only acts                     generative models that can synthesize, with proper condition-
+on source coding and is fully compliant with legacy systems. The                ing, high-fidelity multimedia contents. This capability changes
+semantics is extracted from the image computing its semantic                    the communication paradigm: instead of transmitting full-
+segmentation map using off-the-shelf software. A new specifically               resolution data, the transmitter encodes and sends only the
+developed semantic-conditioned adaptive mask module (SAMM)                      most relevant features, which are used at the receiver side
+selectively encodes semantically relevant features of the image.
+The relevance of the different semantic classes is task-specific,               to trigger the generative model to reproduce a representation
+and it is incorporated in the training phase by introducing                     semantically equivalent to the transmitted one [10]. The rel-
+appropriate weights in the loss function. SQ-GAN outperforms                    evance of the features is dictated by the application running
+state-of-the-art image compression schemes such as JPEG2000,                    on top of the exchange of information. This communication
+BPG, and deep-learning based methods across multiple metrics,                   modality enables a drastic reduction in transmission rates,
+including perceptual quality and semantic segmentation accuracy
+on the reconstructed image, at extremely low compression rates.                 because it takes advantage of application-specific knowledge
+The code is available at https://github.com/frapez1/SQ-GAN                      incorporated in the generative models.
+                                                                                   To illustrate this concept, consider a vehicular commu-
+  Index Terms鈥?Semantic communication, VQ-GAN, data aug-
+mentation, semantic-aware discriminator.                                        nication scenario, where one or more autonomous vehicles
+                                                                                transmit visual information from their onboard cameras to a
+                     I. I NTRODUCTION                                           roadside unit (RSU) responsible for taking real-time context-
+
+T    HE recent surge of intelligent and interconnected
+     devices is leading the transition to new communication
+paradigms. The upcoming sixth generation (6G) of wireless
+                                                                                aware safety decisions, possibly integrating data from multiple
+                                                                                vehicles or RSU sensors. Rather than transmitting full video
+                                                                                streams, each transmitter extracts key semantic attributes,
+networks is poised to redefine the communication paradigm                       such as the presence, shape, and locations of pedestrians,
+by integrating advanced Artificial Intelligence (AI) and net-                   vehicles, traffic signs, and road boundaries, and transmits
+working [1]. One of the most promising advancements in this                     only compressed feature representations, achieving data rates
+context is semantic communication, which shifts the focus                       substantially lower than those needed for conventional image
+from universal coding to task-oriented coding, exploiting suit-                 or video encoding. At the receiver side, a generative model
+able knowledge representation systems, typically relying on                     reconstructs an application-specific representation, with an
+deep neural networks [2], [3], [4], [5], and [6]. Recent break-                 accuracy sufficient only to enable the RSU to take rapid
+throughs in deep learning, generative AI, and self-supervised                   decisions within strict latency constraints.
+learning have further strengthened the potential of semantic                       In recent years, deep learning has played a pivotal role in
+                                                                                both improving image compression and advancing semantic
+  Received 11 February 2025; revised 3 July 2025 and 27 August 2025;
+accepted 2 October 2025. Date of publication 13 October 2025; date of
+                                                                                communication systems [3], [11], [12]. The development of
+current version 31 December 2025. This work was supported by the Gottfried      end-to-end learning frameworks enables the joint optimization
+Wilhelm Leibniz-Preis 2021 of the German Science Foundation (DFG), Joint        of the encoding and decoding processes, allowing the overall
+Project 6G-RIC (Project IDs 16KISK030), the Italian National Recovery and
+Resilience Plan (NRRP) of NextGenerationEU, partnership on 鈥淭elecommuni-
+                                                                                encoding system to learn a joint source/channel coding (JSCC)
+cations of the Future鈥?(PE00000001-program RESTART), Huawei Technology          technique [13] or to learn efficient representations of seman-
+France SASU, under agreement N.TC20220919044, and the SNS-JU-2022               tic content directly from data [3], [14]. Lately, generative
+project ADROIT6G under agreement n. 101095363. The associate editor
+coordinating the review of this article and approving it for publication was    models, such as Variational-Autoencoders (VAE), Generative
+L. Zhou. (Corresponding author: Sergio Barbarossa.)                             Adversarial Networks (GANs), and Denoising Diffusion Prob-
+  Francesco Pezone is with National Inter-University Consortium                 abilistic Models (DDPM) [15], have been instrumental in
+for Telecommunications (CNIT), 43124 Parma, Italy (e-mail:
+francesco.pezone.ds@gmail.com).                                                 improving the quality and efficiency of data representation and
+  Sergio Barbarossa is with the Sapienza University of Rome, 00185 Rome,        transmission [7], [10], [16], [17].
+Italy (e-mail: sergio.barbarossa@uniroma1.it).                                     A key step in the integration of generative models within a
+  Giuseppe Caire is with the Technical University of Berlin, 10587 Berlin,
+Germany (e-mail: caire@tu-berlin.de).                                           digital communication scheme, possibly compliant with legacy
+  Digital Object Identifier 10.1109/TCCN.2025.3620819                           systems, is to merge generative models and vector quantization
+               2332-7731 漏 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3364                                                          IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+to learn discrete latent representations that are both compact                driving scenarios, the relevant object classes include pedestri-
+and semantically rich [18], [19]. Models like the Vector                      ans, cars, traffic lights, and similar entities.
+Quantized VAE (VQ-VAE), the Vector Quantized GAN (VQ-                            ii) The assumption that the SSM s is extracted from the
+GAN) and the Masked VQ-VAE (MQ-VAE) [20] have already                         raw image x in real-time at the encoder is fully realistic.
+demonstrated remarkable capabilities in image synthesis and                   For example, in the autonomous driving scenario, there are
+compression tasks.                                                            algorithms able to extract the SSM in real time, see, e.g. [22].
+   Given this context, in this paper we propose the Seman-                    In particular, Tesla has already deployed the technology to
+tic Masked VQ-GAN (SQ-GAN) model, a novel approach                            analyze raw images and perform semantic segmentation and
+that merges the strengths of generative models, vector                        object detection in their per-camera networks in real time,
+quantization, and semantic segmentation for efficient and                     as reported in [23].
+semantic-preserving image transmission. We choose the GAN                        iii) Our scheme treats only source coding (i.e., image
+paradigm because it provides a good tradeoff between sim-                     compression/reconstruction), unlike several works on semantic
+plicity and accuracy. In the proposed scheme, semantic infor-                 communications that have considered a JSCC setting. This
+mation is extracted from the image x to be transmitted                        makes our approach completely compatible with any under-
+by computing its Semantic Segmentation Map (SSM) s,                           lying legacy network protocol, where source coding/decoding
+using some suitable state-of-the-art (SOTA) algorithm (in our                 takes place at the application layer and the source-coded bits
+implementation we used INTERN-2.5 [21]). Then, SQ-GAN                         are transmitted to the destination via some standard protocol
+applies a semantically-guided vector quantization strategy to                 stack (e.g., a 3GPP wireless network).
+encode both x and s. In particular, SQ-GAN learns a vector                       This work is organized as follows. Section II introduces
+quantization codebook from the data and applies a newly                       the scope and general overview of the proposed architec-
+designed and trained adaptive selective masking to dynami-                    ture. Section III introduces in more detail the different parts
+cally adjust the compression rate, ensuring that semantically                 of the proposed SQ-GAN model. Section IV discusses the
+important features are retained. This is obtained by a specif-                training method with data augmentation for the enhance-
+ically designed semantic-conditioned variant of the masked                    ment of semantically relevant classes and the semantic-aware
+vector quantization introduced in [20] to prioritize semanti-                 discriminator employed to optimize the SQ-GAN. Finally,
+cally significant information, thus reducing redundancy while                 Section V presents numerical experiments demonstrating the
+preserving the relevant semantic content. The new adaptive                    effectiveness of SQ-GAN compared to state-of-the-art (SOTA)
+masking mechanism is trained to select the elements in the                    image compression techniques such as (JPEG2000), Better
+latent space tensor that are most significant for the preservation            Portable Graphics (BPG) and the GAN based High-Fidelity
+of the image鈥檚 semantic content. Only these selected elements                 Generative Image Compression (HiFiC) [11] and Fidelity-
+are then quantized, using vector quantization with the learned                Controllable extreme image Compression (FCC) [12].
+codebook. Finally, the decoder part of the scheme is formed by
+some learned blocks, trained to reconstruct the original image                 II. P ROBLEM S TATEMENT AND G ENERAL A RCHITECTURE
+by minimizing an error function that includes the SSM. The                       The objective of this work is to develop an image encoder
+key innovations in the proposed SQ-GAN scheme are: (i) a                      that efficiently compresses an image x, while preserving its
+novel GAN-based model that integrates semantic conditioning                   semantic content as much as possible, even at extremely
+and compression directly into its architecture, (ii) the Semantic             high compression rates. In this work, the semantic content
+conditioned Adaptive Mask Module (SAMM) that selects                          is identified with the SSM s, extracted in real-time from x
+and encodes the most semantically relevant features of the                    using a SOTA Semantic Segmentation Model (SSModel) [21]
+input data based on the SSM, (iii) a specifically designed                    with pre-defined semantic classes that depend on the task at

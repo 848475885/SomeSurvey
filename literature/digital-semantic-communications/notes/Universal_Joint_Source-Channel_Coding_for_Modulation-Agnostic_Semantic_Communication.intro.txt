@@ -1,0 +1,120 @@
+﻿2560                                                                  IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+
+        Universal Joint Source-Channel Coding for
+       Modulation-Agnostic Semantic Communication
+  Yoon Huh , Graduate Student Member, IEEE, Hyowoon Seo, Member, IEEE, and Wan Choi , Fellow, IEEE
+
+
+
+   Abstract鈥擣rom the perspective of joint source-channel coding                  demands, heralding an anticipated paradigm shift from data-
+(JSCC), there has been significant research on utilizing semantic                oriented to service (or task)-oriented communication [1].
+communication, which inherently possesses analog characteris-                       A pivotal driver of this transition is semantic communication
+tics, within digital device environments. However, a single-model
+approach that operates modulation-agnostically across various                    [2], [3], [4], evolving in tandem with advancements in machine
+digital modulation orders has not yet been established. This                     learning (ML). Semantic communication targets the resolution
+article presents the first attempt at such an approach by                        of Level B (semantic) and Level C (effectiveness) communi-
+proposing a universal joint source-channel coding (uJSCC)                        cation issues [5], [6], with task-oriented joint source-channel
+system that utilizes a single-model encoder-decoder pair and                     coding (JSCC) at its core [7], [8], [9], [10]. Unlike traditional
+trained vector quantization (VQ) codebooks. To support various
+modulation orders within a single model, the operation of                        communication systems, which segregate source coding and
+every neural network (NN)-based module in the uJSCC system                       channel coding modules, often with some loss of optimality,
+requires the selection of modulation orders according to signal-                 semantic communication, geared towards enhancing task per-
+to-noise ratio (SNR) boundaries. To address the challenge of                     formance, underscores an undeniable optimality gap in such
+unequal output statistics from shared parameters across NN                       modular separation. Consequently, current research in seman-
+layers, we integrate multiple batch normalization (BN) layers,
+selected based on modulation order, after each NN layer. This                    tic communication focuses on harnessing ML capabilities to
+integration occurs with minimal impact on the overall model size.                jointly optimize task execution, source coding, and channel
+Through a comprehensive series of experiments, we validate that                  coding, culminating in the implementation of neural network
+the modulation-agnostic semantic communication framework                         (NN)-based JSCC encoder-decoder pairs.
+demonstrates superiority over existing digital semantic communi-                    The challenge lies in the nature of NN training reliant
+cation approaches in terms of model complexity, communication
+efficiency, and task effectiveness.                                              on backpropagation, necessitating the exploration of JSCC
+                                                                                 techniques to facilitate the exchange of feature vectors within
+   Index Terms鈥擲emantic communication, modulation-agnostic,                      a continuous vector space between encoders and decoders.
+joint source-channel coding, vector quantization, batch normal-
+ization.                                                                         Although the implementation of semantic communication
+                                                                                 through analog transceivers might appear straightforward, it
+                      I. I NTRODUCTION                                           faces significant compatibility issues with the prevailing digital
+                                                                                 device infrastructure. An alternative strategy involves encoding
+W       E NOW have access to intelligent services encom-
+        passing smart X (e.g., home, city, vehicle factory,
+healthcare, etc.) and extended (augmented and virtual) reality,
+                                                                                 the entries of feature vectors at the bit level and utilizing tradi-
+                                                                                 tional digital modulation techniques. However, this approach
+previously confined to the realm of imagination. However,                        is often inefficient, diminishing the benefits associated with
+the widespread adoption of such services faces a significant                     semantic communication. Therefore, for effective semantic
+obstacle from the perspective of communication engineer-                         communication within a digital context, it is essential to incor-
+ing. This challenge pertains to meeting user demands, often                      porate digital modulation into the JSCC design considerations.
+referred to as quality of experience (QoE), by efficiently and                      In the contemporary research landscape, innovative methods
+swiftly transmitting vast amounts of data. In response, sixth-                   have been developed, notably the application of vector quanti-
+generation (6G) communication has emerged to address these                       zation (VQ) to the output feature vectors of encoders, followed
+                                                                                 by conventional digital modulation schemes (e.g., BPSK,
+   Received 15 May 2024; revised 15 December 2024; accepted 15 January           4QAM, 16QAM) or machine learning (ML)-based modula-
+2025. Date of publication 10 April 2025; date of current version 19 June 2025.
+This work was supported by the Institute of Information and Communications       tion utilizing a trained constellation map. These approaches,
+Technology Planning and Evaluation (IITP) Grant funded by Korea Govern-          cited in recent studies [11], [12], [13], demonstrate robust
+ment (MSIT) (Next Generation Semantic Communication Network Research
+Center) under Grant RS-2024-00398948. (Corresponding authors: Hyowoon
+                                                                                 performance within a specific modulation order. Yet, the
+Seo; Wan Choi.)                                                                  goal of achieving consistent semantic communication perfor-
+   Yoon Huh and Wan Choi are with the Department of Electrical and               mance across various modulation orders鈥?a concept termed
+Computer Engineering and the Institute of New Media and Communica-               modulation-agnostic semantic communication1 鈥?requires a
+tions, Seoul National University (SNU), Seoul 08826, South Korea (e-mail:
+mnihy621@snu.ac.kr; wanchoi@snu.ac.kr).
+   Hyowoon Seo is with the Department of Electrical and Computer Engi-              1 Throughout the article, the modulation techniques discussed all pertain to
+neering, Sungkyunkwan University, Suwon 16419, South Korea (e-mail:              digital modulation, and modulation-agnostic semantic communication refers
+hyowoonseo@skku.edu).                                                            to a digital semantic communication system designed to transmit or receive
+   Digital Object Identifier 10.1109/JSAC.2025.3559138                           information without being constrained by any specific modulation scheme.
+              0733-8716 漏 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                       2561
+
+
+
+                                                                                in this context is clearly verified through ablation studies.
+                                                                                Additionally, DeepJSCC-Q [13] and conventional separate
+                                                                                source-channel coding (SSCC) methods are employed as
+                                                                                benchmark schemes. Furthermore, experiments demonstrate
+                                                                                that the proposed method consistently delivers excellent per-
+                                                                                formance across different encoder-decoder model sizes, with a
+                                                                                higher volume of symbol transmission, and for various datasets
+                                                                                including low and high-resolution images.
+
+
+                                                                                A. Related Works
+                                                                                   1) Digital Semantic Communication: A recent study [11]
+                                                                                introduced a deterministic encoder-decoder pair in a digi-
+                                                                                tal semantic communication system using a VQ-variational
+                                                                                autoencoder (VQ-VAE) [14] trained with a straight-through
+Fig. 1. An illustration of (a) dedicated JSCC encoders/decoders and (b) uni-
+                                                                                estimator and a vision transformer [15] backbone. The system
+versal encoder/decoder for semantic communication with channel-adaptive         enhances robustness against semantic noise through adver-
+modulation.                                                                     sarial training and selective masking of non-critical image
+                                                                                patches, identified via a feature importance module. However,
+                                                                                there is a mismatch between codebook cardinality and mod-
+comprehensive suite of JSCC encoder-decoder pairs, as                           ulation order, requiring two 16QAM symbols to transmit one
+depicted in the blue boxes of Fig. 1(a). This approach can                      index from a 256-cardinality codebook.
+certainly optimize the task performance under varying channel                      In [12], the authors proposed a VQ-based JSCC system
+conditions, which is a core objective of consistent semantic                    employing digital modulation and an information bottleneck
+communication, as the optimal modulation order is typically                     (IB) [16] loss function. The loss function鈥檚 hyperparameter
+dependent on the channel environment. However, maintaining                      regulates the balance between task-relevant information and
+such flexibility is often inefficient in terms of learning and                  coded redundancy, thereby adjusting codebook robustness.
+hardware costs, including memory usage. Consequently, the                       During training, they utilized Gumbel-softmax [17], using
+pursuit of a universal framework capable of operating seam-                     the inner product between feature vectors and codewords as
+lessly across different modulation orders remains crucial for                   logits. This results in stochastic encoding, where codeword
+enhancing efficiency.                                                           indices are sampled based on logits. However, despite the IB-
+   In response to the outlined challenges, as illustrated                       optimized number of encoded bits, the actual transmission did
+in Fig. 1(b), this article introduces a novel framework                         not reflect it because both codebook cardinality and modula-
+for modulation-agnostic semantic communication, which is                        tion order were fixed. Similarly, the encoder in [13] generates
+anchored in a single-model universal JSCC scheme that                           complex values, with symbols sampled based on logits from
+is adept at functioning across various modulation orders.                       distances between complex output values and constellation
+To realize this, an NN-based uJSCC encoder-decoder pair                         map symbols. Another approach in [18] involved a stochastic
+in conjunction with a VQ codebook is developed to uti-                          encoder trained with a mutual information-based loss function,
+lize conventional digital modulation schemes. Notably, our                      also utilizing Gumbel-softmax during training. In this system,
+proposed single-model encoder-decoder system demonstrates                       symbols are directly sampled from output logits, eliminating
+effective communication and task performance while maintain-                    the need for a learned codebook. However, these studies [12],

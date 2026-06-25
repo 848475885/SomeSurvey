@@ -1,0 +1,1025 @@
+5626                                                                            IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+
+         Joint Coding-Modulation for Digital Semantic
+         Communications via Variational Autoencoder
+                 Yufei Bo , Yiheng Duan, Shuo Shao , Member, IEEE, and Meixia Tao , Fellow, IEEE
+
+
+
+   Abstract— Semantic communications have emerged as a new                        [2], [3], [4], [5], [6]. Unlike traditional communications which
+paradigm for improving communication efficiency by trans-                         deal with transmitting a source message to be exactly or
+mitting the semantic information of a source message that is                      approximately reconstructed at the destination, semantic com-
+most relevant to a desired task at the receiver. Most existing
+approaches typically utilize neural networks (NNs) to design                      munications focus on extracting and transmitting the semantic
+end-to-end semantic communication systems, where NN-based                         information of the source so as to enable the destination
+semantic encoders output continuously distributed signals to be                   to make the right decision and execute the desired task.
+sent directly to the channel in an analog fashion. In this work,                  It can hence significantly improve the performance and effi-
+we propose a joint coding-modulation (JCM) framework for                          ciency of data transmission especially when the communi-
+digital semantic communications by using variational autoen-
+coder (VAE). Our approach learns the transition probability                       cation resources are limited. Semantic communications are
+from source data to discrete constellation symbols, thereby                       promising to enable a variety of intelligent services such as
+avoiding the non-differentiability problem of digital modulation.                 extended reality, metaverse, smart surveillance, and robotic
+Meanwhile, by jointly designing the coding and modulation                         collaboration.
+process together, we can match the obtained modulation strategy                      By leveraging the advances in deep learning, semantic
+with the operating channel condition. We also derive a matching
+loss function with information-theoretic meaning for end-to-end                   communications often use neural networks (NNs) to extract
+training. Experiments on image semantic communication validate                    and encode the semantic information and can transmit various
+the superiority of our proposed JCM framework over the state-                     types of sources, such as speeches [7], [8], texts [9], [10],
+of-the-art quantization-based digital semantic coding-modulation                  [11], images [12], [13], [14], [15], videos [16], [17] as well
+methods across a wide range of channel conditions, transmission                   as multi-modal data [18]. Specifically, the Transformer [19]
+rates, and modulation orders. Furthermore, its performance gap
+to analog semantic communication reduces as the modulation                        architecture is typically adopted for processing text data [9],
+order increases while enjoying the hardware implementation                        whereas convolutional neural networks (CNNs) are commonly
+convenience.                                                                      seen in the transmission of images [13], [20] or videos [16].
+  Index Terms— Semantic communications, mutual information,                       Generative adversarial networks (GANs) [21] are also a com-
+variational autoencoder, digital modulation.                                      mon architecture for image data [22], [23]. All in all, through
+                                                                                  the usage of NNs, semantic communications are suitable for
+                          I. I NTRODUCTION                                        various intelligent tasks such as classification [12], translation
+                                                                                  [24], and object recognition [25].
+S   EMANTIC communications are emerging as a beyond-
+    Shannon-type communication paradigm and are envi-
+sioned to be a key technology in future 6G wireless networks
+                                                                                     However, using NN-based semantic encoders also makes
+                                                                                  it difficult to deploy semantic communication systems on
+                                                                                  modern digital communication devices. Most existing semantic
+   Manuscript received 10 October 2023; revised 29 January 2024;                  communication system designs, especially those with end-to-
+accepted 30 March 2024. Date of publication 9 April 2024; date of current
+version 18 September 2024. This work is supported in part by the Natural          end framework, utilize analog modulation instead [7], [8], [9],
+Science Foundation of China under Grant 62125108, Grant 62231022; in part         [10], [12], [18], [23], [26]. That is, the NN-based seman-
+by the Fundamental Research Funds for the Central Universities of China;          tic encoders usually output continuously distributed signals,
+in part by the Natural Science Foundation of China under Grant 12031011;
+in part by the National Key Research and Development Program of China             which are directly sent into the communication channel
+under Grant 2020YFA0712300. An earlier version of this paper was presented        without being modulated into discrete constellation symbols.
+at the 2022 14th International Conference on Wireless Communications and          Such analog transmission approach, however, is difficult to
+Signal Processing (WCSP) [DOI: 10.1109/WCSP55476.2022.10039447]. The
+associate editor coordinating the review of this article and approving it for     implement in practice, due to the non-ideal characteristics of
+publication was D. Gunduz. (Corresponding authors: Meixia Tao; Shuo Shao.)        hardware components including power amplifier. Thus, con-
+   Yufei Bo, Yiheng Duan, and Meixia Tao are with the Department of               sidering the complexity of hardware implementation as well
+Electronic Engineering and the Cooperative Medianet Innovation Center
+(CMIC), Shanghai Jiao Tong University, Shanghai 200240, China (e-mail:            as the compatibility with existing digital communication proto-
+boyufei01@sjtu.edu.cn; duanyiheng@sjtu.edu.cn; mxtao@sjtu.edu.cn).                cols, to design digital semantic communication systems now
+   Shuo Shao is with the School of Cyber Science and Engineering, Shang-          becomes a key for enabling the smooth shifting from tradi-
+hai Jiao Tong University, Shanghai 200240, China (e-mail: shuoshao@
+sjtu.edu.cn).                                                                     tional communication paradigm to semantic communications.
+   Data is available on-line at https://github.com/SJTU-mxtao/Joint-Coding-          In spite of the undoubted importance of digital semantic
+Modulation-for-Digital-Semantic-Communication.                                    communication, it is seldom considered in existing NN-based
+   Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCOMM.2024.3386577.                                       semantic communication systems due to its intrinsic mecha-
+   Digital Object Identifier 10.1109/TCOMM.2024.3386577                           nism. Specifically, the process of digital modulation requires
+                       0090-6778 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                               5627
+
+
+
+a mapping from the continuous real-world source data to                       effectively extract information from the received sequence,
+discrete constellation symbols, which is equivalent to a non-                 resulting in improved decoding performance.
+differentiable function [27]. Therefore, NNs cannot achieve                      Extensive experiments conducted on image transmission
+such functions due to the stochastic gradient descent (SGD)                   validate three major advantages of our JCM framework. First,
+algorithms they use for optimization. Though some existing                    the proposed JCM framework outperforms the existing sep-
+works can realize digital modulation in semantic commu-                       arate coding-modulation design via quantization, as well as
+nications, they do not match the modulation process with                      the hard quantization-based joint design over a wide range of
+channel states, which results in some performance loss. For                   signal-to-noise ratios (SNRs), modulation orders, and trans-
+example, in [24], the continuous outputs of the NN encoder are                mission rates. Second, JCM with higher modulation order
+first uniformly quantized into discrete number sequences, then                results in better performances, which provides a convenient
+modulated into constellation symbol sequences. As another                     way to conduct digital modulation in a semantic communi-
+example, Jiang et al. [28] train a multi-layer perceptron (MLP)               cation system, namely by using the highest modulation order
+network with the Sigmoid function to get a non-uniform quan-                  that the transmission device could support to achieve the best
+tizer that has the minimum quantization error, and further use                performance. Third, JCM can attain a probabilistic shaping of
+BPSK to transmit these bits. As can be seen, the quantization                 an approximate Gaussian distribution for the AWGN channel
+process in the aforementioned works [24], [28] is conducted                   without the need for explicit instructions to the NNs regarding
+separately without considering the channel condition, which                   the probability distribution of the output signal, which demon-
+results in unsatisfactory performance. On the other hand, the                 strates its ability to match with the channel conditions.
+work [27] optimizes coding and modulation jointly through a                      The rest of the paper is organized as follows. In Section II,
+hard-to-soft quantizer. It uses hard-decision quantization in the             we introduce our JCM framework and the objective function
+forward pass to map the NN output to the nearest constellation                principles. Section III details the training process of the
+symbol. This non-differentiable operation is approximated by                  JCM framework, including the derivation of the loss function
+the Softmax function in the backward pass, enabling end-to-                   and the generation of differentiable constellation sequences.
+end training. However, there is still room for improvement                    We also present the formulation of the transition probability
+since hard decisions lead to information loss and a decline in                model in this section. In Section IV, we evaluate the per-
+performance. Overall, the problems of the non-differentiability               formance of our proposed JCM framework through extensive
+of the digital modulation process and the mismatch between                    experiments. Finally, we conclude the paper in Section V.
+digital modulation and channel states still remain to be solved                  Notation: Throughout this paper, we use H(X) to denote
+in realizing digital modulation in semantic communications.                   the entropy of the variable X and H(X|Y ) to denote the con-
+   To tackle the above challenges in NN-based digital semantic                ditional entropy of X given Y . I(X; Y ) refers to the mutual
+communications, we propose a joint coding-modulation (JCM)                    information between X and Y . The statistical expectation of X
+framework as a novel end-to-end design for digital semantic                   with probability distribution p(x) is denoted as Ep(x) [X]. The
+communication based on variational autoencoder (VAE). This                    Kullback-Leibler (KL) divergence between two probability
+framework comprises two main design methodologies. First,                     distributions p(x) and q(x) is denoted as KL[p(x)||q(x)].
+we address the issue of the non-differentiablility of the digital             We use N (µ, σ 2 ) and CN (µ, σ 2 ) to respectively denote the
+modulation process by using the NNs at the transmitter to learn               real and complex Gaussian distribution with mean µ and
+the likelihood of constellation symbols instead of generating                 variance σ 2 . Ik×k refers to an identity matrix of dimension
+deterministic constellation symbols. More specifically, we first              k × k. Moreover, Cn and Rn represent sets of complex and
+train NNs to learn the optimal transition probability from the                real vectors of dimension n, respectively.
+source data to the constellation symbols. Then, we randomly
+generate the constellation symbol sequence based on this
+                                                                                               II. P ROPOSED JCM F RAMEWORK
+transition probability and send it to the receiver. Second,
+we address the issue of the mismatch between digital modu-                       In this section, the proposed JCM framework is presented,
+lation and channel states by designing a joint training process               including its system model, architecture design and the objec-
+that combines coding, modulation and decoding together.                       tive function principles.
+More specifically, the NN at the transmitter and the NNs at
+the receiver are jointly trained with channel noise taken into
+consideration. This approach enables us to learn the optimal                  A. System Model
+transition probability that matches the channel states.                          The system model of the proposed JCM framework as
+   For the end-to-end training of the JCM framework, we lever-                an end-to-end design for digital semantic communications
+age the technique of variational learning and derive a matching               is shown in Fig. 1. The JCM framework is based on the
+loss function with physical meanings under the guidance of                    probabilistic encoder-decoder architecture of the VAE [30] and
+the information theory. More specifically, using the principle                includes a joint coding-modulation block at the transmitter
+of Info-Max [29], we obtain a variational inference lower                     and two probabilistic decoders at the receiver. The joint
+bound of the intractable mutual information objective function,               coding-modulation block is responsible for generating the
+which serves as the loss function for the JCM framework.                      channel input, while two probabilistic decoders recover the
+By optimizing this loss function, the encoder-modulator can                   source data and the semantic information from the received
+maximize the mutual information, and the decoders can more                    signal. The details are stated as follows.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5628                                                                          IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+
+Fig. 1.   The proposed JCM system model.
+
+
+                                                                                                                                             2
+   At the transmitter, there is a source data denoted as a vari-                 transmit power constraint P , i.e., P = ∥Z∥        n . We model
+able X ∈ Rk with dimension k, associated with its unknown                        the channel as an additive white Gaussian noise (AWGN)
+semantic information, denoted as S, to be transmitted through                    channel. As such, the received sequence Ẑ can be written
+a noisy channel. The definition of semantic information S                        as Ẑ = Z + ε, where ε ∼ CN (0, σ 2 I) is the channel noise,
+depends on the specific task at the receiver. We model the                       of which each element is drawn independently from a complex
+source X as being generated by the semantic information                          Gaussian distribution with zero mean and variance σ 2 . The
+S from an unknown and complicated transition probability                         channel condition is characterized by the channel SNR, which
+p(x|s). Following the setup of semantic communications for                       is defined as σP2 .
+image data [13], [14], the receiver needs to recover both the                       The receiver consists of two decoders to respectively
+semantic information and the original source data, which is an                   reconstruct source data and semantic information. Given the
+abstraction of the practical requirements in many real-world                     received sequence Ẑ, the two NNs respectively estimate the
+scenarios where both humans and machines are involved in                         posterior distribution pde,o (x|ẑ, ψ) and pde,s (s|ẑ, ϕ), where ψ
+the task decision. We denote the recovery of the source                          and ϕ denote their respective NN parameters. Then, at the test
+data as X̂ and the recovery of semantic information as Ŝ.                       stage, we recover the source data and the semantic information
+Both the transmitter and the receiver can access to a shared                     via maximum a posteriori (MAP) decoding:
+knowledge base, which is essentially a dataset containing
+different samples of the source data X and its corresponding                                           x̂ = argmax pde,o (x|ẑ, ψ),                     (1)
+                                                                                                                 x
+semantic information S.
+                                                                                                       ŝ = argmax pde,s (s|ẑ, ϕ).                     (2)
+   The joint coding-modulation block, which consists of a                                                        s
+probabilistic encoder-modulator and a constellation symbol
+generator, generates channel input Z ∈ Cn from source X,                         Notably, we employ a parallel architecture to recover both X
+with n being the number of channel uses. Specifically,                           and S from Ẑ. An alternative design could be a cascading
+parameterized by an NN with parameters θ, the probabilistic                      architecture, where X is first recovered as X̂, followed by
+encoder-modulator is designed to learn the transition prob-                      inferring S from X̂. The latter would incur inevitable informa-
+ability pen (z|x, θ). According to this transition probability,                  tion loss when inferring S from X̂ due to the data processing
+a channel input z is randomly generated and then sent through                    inequality [32, Theorem 2.8.1]. As such, we choose the former
+a communication channel. As a side note, we use the Gumbel-                      architecture.
+Softmax method [31] to generate differentiable constellation
+symbols. We will provide a detailed discussion on the formu-
+lation of the transition probability model and the generation                    B. Objective Function
+of the constellation symbol sequence in Section III.                                We apply Info-Max [29] as the design principle for the JCM
+   Different from most semantic communication systems,                           framework. The principle of Info-Max, employed in many
+a mandatory requirement of digital modulation is placed in                       works [29], [33], aims to maximize the mutual information.
+our system. We consider an M -order digital modulation with                      Specifically, our goal for the encoder-modulator NN is that it
+constellation symbols denoted as C = {c1 , c2 , . . . , cM }. That               can preserve as much information about the semantic informa-
+is, each element of the channel input Z takes values from C and                  tion and the source data as possible in the received sequence
+thus we call Z a constellation symbol sequence. Note that Z                      Ẑ. Therefore, we define our objective function based on
+is scaled before actual transmission so that it meets an average                 mutual information, abbreviated as “MI-OBJ”, and establish
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                                5629
+
+
+
+the optimization problem as:                                                   These probabilities should be updated in a way to approach
+                                                                               the true posterior probabilities p(x|ẑ), p(s|ẑ) under the fixed
+                  max Iθ (S; Ẑ) + λ · Iθ (X; Ẑ),                      (3)    pen (z|x, θ). According to the performance of the decoder NNs
+                    θ
+
+where λ is a trade-off hyperparameter to balance the impor-                    updated in the last step, we then update the encoder-modulator
+tance of the two mutual information terms, and θ represents                    NN at the transmitter. These two steps together make up a full
+the parameters of the probabilistic encoder-modulator. As a                    training iteration. We find that updating the NN at the transmit-
+remark, the above objection function is different from the                     ter is relatively easy, as long as we can find the best decoder
+objective function of the information bottleneck (IB) princi-                  under this given transition probability pen (z|x, θ). Therefore,
+ple [34] as applied in [12]. The IB principle aims to find the                 our main problem is to find a way to train the decoding NNs
+best coding scheme of the source data that preserves maximal                   so that the NN parameterized posterior distributions approach
+semantic information under the constraint of the code rate.                    the true posterior distributions. Thus, our efforts mainly focus
+Therefore, its objective function is the subtraction of two                    on designing a reasonable and efficient loss function for the
+mutual information terms, whereas ours is the sum of two                       NNs at the receiver.
+mutual information terms.                                                         To address this problem, we apply the technique of vari-
+   To use MI-OBJ as our loss function, however, there are                      ational inference. Variational inference is a technique used
+two main challenges. First, MI-OBJ is hard to estimate due                     in machine learning to approximate complex posterior prob-
+to the mutual information terms. These high dimensional                        ability distributions in Bayesian models for which exact
+variables with complicated distributions make it hard to                       inference is computationally intractable [35]. In JCM, we fit
+estimate their joint distributions and marginal distributions,                 an approximate inference model to the true posterior distri-
+which consequently makes the direct optimization of MI-OBJ                     butions p(x|ẑ), p(s|ẑ) and then use variational inference to
+difficult. Second, MI-OBJ only considers the optimization of                   derive a tractable lower bound of MI-OBJ that includes a
+the encoder-modulator parameters θ. However, the decoders at                   distance measure between the true posterior distributions and
+the receiver require joint training with the encoder-modulator                 the NN parameterized posterior distributions pde,o (x|ẑ, ψ),
+at the transmitter. Thus, we need to design a loss function that               pde,s (s|ẑ, ϕ). This lower bound is stated in Theorem 1.
+takes the optimization of the two decoders pde,o (x|ẑ, ψ) and                    Theorem 1 (VILB): A variational inference lower bound of
+pde,s (s|ẑ, ϕ) into consideration as well.                                    MI-OBJ is given by (4), shown at the bottom of the page,
+   Therefore, MI-OBJ cannot be directly used as the loss                       where K = H(S) + λ · H(X) is a constant.
+function for our NNs. A solution is hence given in Section III,                   To prove Theorem 1, first we expand the decoder probabil-
+which gives a lower bound of MI-OBJ for the joint opti-                        ities pde,s (s|ẑ, ϕ) and pde,o (x|ẑ, ψ) as variational approxima-
+mization of the encoder-modulator and the decoders, so that                    tions to the true posterior distributions, and merge them into
+the constellation symbol sequence that preserves the most                      MI-OBJ. In this way, for each mutual information term we get
+information can be decoded by the optimal decoder.                             a lower bound, respectively
+                                                                                              Ep(ẑ) Ep(s|ẑ) log pde,s (s|ẑ, ϕ) + H(S),             (5)
+ III. VARIATIONAL L EARNING OF THE JCM F RAMEWORK
+                                                                               and
+   This section focuses on the training process of the JCM
+framework. As mentioned, in JCM we need to optimize the                                      Ep(ẑ) Ep(x|ẑ) log pde,o (x|ẑ, ψ) + H(X).              (6)
+probabilities of pen (z|x, θ), pde,o (x|ẑ, ψ) and pde,s (s|ẑ, ϕ),
+which falls in the field of variational learning. Consequently,                Then, we obtain VILB by using the Markov chain to expand
+new loss function and different gradient estimation methods                    p(ẑ). The complete proof of Theorem 1 can be found in
+are required for the variational learning of these probabilities.              Appendix A.
+                                                                                  Theorem 1 gives an operational lower bound of MI-OBJ,
+                                                                               which we define as the general loss function Lgen (θ, ϕ, ψ).
+A. Loss Function Design Based on Variational Inference                         Through maximizing the lower bound, the NNs, namely the
+Lower Bound                                                                    parameters of θ, ϕ and ψ, can be trained over the optimization
+   In this subsection we derive a general loss function                        process. Specifically, in Theorem 1, MI-OBJ is lower bounded
+for the training of the JCM framework to jointly optimize                      by the sum of a constant and an expectation of two terms
+the transition probability pen (z|x, θ) at the transmitter, and                Ep(s|ẑ) log pde,s (s|ẑ, ϕ) and Ep(x|ẑ) log pde,o (x|ẑ, ψ). These
+the probabilities pde,o (x|ẑ, ψ), pde,s (s|ẑ, ϕ) at the receiver.            two terms serve as a distance measure between the true
+In general, we use an iterative strategy for this joint training               posterior distribution and the NN parameterized approximate
+process. Specifically, we first fix the transition probability                 posterior distribution. As the true posterior distribution is fixed,
+of the encoder-modulator NN pen (z|x, θ), and then update                      the maximization of these two terms enables the approximate
+the probabilities at the receiver pde,o (x|ẑ, ψ), pde,s (s|ẑ, ϕ).            posterior distributions to keep approaching their respective
+
+
+       Iθ (S; Ẑ) + λ · Iθ (X; Ẑ) ≥ Ep(ẑ|z) Epen (z|x,θ) Ep(s,x) {Ep(s|ẑ) log pde,s (s|ẑ, ϕ) + λ · Ep(x|ẑ) log pde,o (x|ẑ, ψ)} + K
+                                      def
+                                      = Lgen (θ, ϕ, ψ)                                                                                                (4)
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5630                                                                            IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+true posterior distribution, namely the best possible decoder.                      Since BPSK with C = {+1, −1} and rectangular
+                                                                                                                           √     M-QAM
+                                                                                                                                  √
+When the approximate posterior distribution is equal to the                       with C = { √2r+1  + j · √2s+1 }, r, s = − M , − M +
+                                                                                          √    M −1         M −1            2      2
+true posterior distribution, the equality in (4) will hold and
+                                                                                  1, . . . , 2M −1 (we use j to denote the imaginary unit) are two
+VILB will reach its maximum. Therefore, through maximizing
+                                                                                  commonly used modulation schemes, we give the transition
+VILB, the encoder-modulator can learn to maximize the
+                                                                                  probability of BPSK and rectangular M-QAM as two special
+mutual information, and the decoders can learn to better extract
+                                                                                  cases in the following propositions.
+information from the received sequence and therefore improve
+                                                                                     Proposition 1 (Transition probability of BPSK): Let qi|x,θ
+their decoding performances.
+                                                                                  denote the NN output probability of Zi = 1. Then, the PMF
+   As a remark, VILB is indeed tractable. In the training
+                                                                                  of the probabilistic encoder-modulator of BPSK is:
+stage when we have the true semantic information and the
+                                                                                                     Qn           1                       1
+true source data, we can use the empirical distribution to                           pen (z|x, θ) = i=1 (qi|x,θ ) 2 (1+zi ) (1 − qi|x,θ ) 2 (1−zi ) . (9)
+substitute the true posterior distribution. The approximate
+posterior distributions are obtained through the decoder NNs.                        Proposition 2 (Transition probability of M-QAM): Let
+                                                                                   I             Q
+Consequently, VILB can be computed using these probabil-                          qir|x,θ and qis|x,θ respectively denote the probability of I
+ities. On a side note, we can use sampling methods such                           channel amplitude ZIi = √2r+1 M −1
+                                                                                                                      and Q channel amplitude
+                                                                                            2s+1
+as Monte Carlo sampling [36] to estimate the expectation.                         ZQi = √M −1 , where Zi = ZIi + j · ZQi . The PMF of the
+Therefore, we use VILB as our tractable loss function for                         probabilistic encoder-modulator of rectangular M-QAM can
+the joint optimization of the encoder-modulator and the two                       be written as in (10), shown at the bottom of the page.
+decoders.                                                                            For BPSK, the transition probability degrades to a Bernoulli
+                                                                                  distribution. For M-QAM, we consider the I channel and the
+B. Transition Probability Model of the Encoder-Modulator                          Q channel to be conditionally independent as well. There-
+                                                                                  fore, for each Zi ,√we only need to learn two probability
+   In JCM, the constellation symbol sequence is generated                         distributions with M categories instead of one probability
+from the transition probability, which is parameterized by the                    distribution with M categories, which considerably decreases
+encoder-modulator NN. However, for an n-length constellation                      the computation complexity. The proof for Proposition 1 and 2
+symbol sequence of an M -order modulation, there are a total                      can be found in Appendix B and C, respectivley. Need to
+of M n categories of probability that need to be learned.                         mention that, our loss function can be generalized to arbitrary
+To simplify the learning, we therefore introduce a model of                       constellation maps, including non-uniform constellation maps.
+the transition probability in this subsection.
+   We formulate the general transition probability model
+pen (z|x, θ) of an M -order modulation as such. For an                            C. Loss Function for Image Semantic Communications
+n-length         constellation    symbol    sequence      Z     =                    VILB derived in Section III-A is a general lower bound
+(Z1 , Z2 , . . . , Zn ), as a common simplification [37], we model                for MI-OBJ. In this subsection, based on this general lower
+the components as conditionally independent variables, where                      bound, we derive a specific loss function for image semantic
+a component Zi takes values in the M symbols of the                               communications. We first introduce some widely recognized
+constellation C. This assumption decreases the number of                          assumptions of the image source data. Then, we derive the loss
+probability categories to be learnt from M n to M · n, greatly                    function by applying these assumptions to VILB and replacing
+reducing the computation complexity. The NN outputs the                           the probability function with the empirical distribution.
+categorical distribution of each symbol Zi , and we denote                           The assumptions we take are as follows. As pointed out
+the probability of Zi being one of the constellation symbol                       in [37], for image source, the source data X and its reconstruc-
+cm ∈ C as:                                                                        tion X̂ can be modeled as multivariate factorized Gaussian
+                                                                                  variables with isotropic covariance. Thus, we can assume that
+                  qim|x,θ = P (Zi = cm |x, θ).                            (7)
+                                                                                                          p(x|ẑ) = N (µ, σ12 Ik×k ),                (11)
+Due to the assumed conditional independence, the joint prob-
+ability mass function (PMF) of the encoder-modulator can be                                      pde,o (x̂|ẑ, ψ) = N (fψ (ẑ), σ22 Ik×k ),          (12)
+expressed as:                                                                     where µ is the true pixel value of the source data (usually
+               Qn                Qn QM        I{zi =cm }
+ pen (z|x, θ) = i=1 p(zi |x, θ) = i=1 m=1 qim|x,θ        , (8)                    normalized between 0 and 1); σ1 and σ2 are precision param-
+                                                                                  eters treated as constants [37]; k represents the dimension of
+where I{·} denotes the indicator function.                                        the image data X. The decoder NN outputs the mean fψ (ẑ)
+
+                                                   √            √                       n            o               n            o
+                                        Qn       Q 2M −1 Q 2M −1              I        I zIi = √2r+1         Q      I zQi = √2s+1
+                      pen (z|x, θ) =       i=1
+                                                         √
+                                                         M
+                                                                      √
+                                                                          M
+                                                                            (qir|x,θ )         M −1      · (qis|x,θ )       M −1      .              (10)
+                                                   r=−   2      s=−   2
+
+
+
+                                       N
+                                         " L                                          !                         #
+                              N     1 X X
+                                    N                   n                       n                        n 2
+               L(θ, ϕ, ψ; X , S ) =          p(sn = l|ẑθ ) log pde,s (sn = l|ẑθ , ϕ) − λ · ||xn −fψ (ẑθ )||2                                      (13)
+                                    N n=1
+                                                         l=1
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                               5631
+
+
+
+of the Gaussian distributed approximate posterior distribution.               as ∇θ Ep(x,s) Epen (z|x,θ) [hϕ,ψ (z)]. The general principle is to
+As for the semantic information S, we set the image clas-                     rewrite such gradients in a form that allows for the Monte
+sification labels as the semantic information, which makes                    Carlo estimator, so that they can be easily and effectively
+S ∈ {1, . . . , L} a discrete variable where L represents the                 computed [38]. The commonly used score function estimator
+number of categories. Bringing these additional assumptions                   solves this problem by using the identity ∇θ pen (z|x, θ) =
+into VILB, we further derive a loss function for image seman-                 pen (z|x, θ)∇θ log pen (z|x, θ). Apply this identity, and we can
+tic communications as a corollary of Theorem 1, where we                      get
+                                   N
+denote (XN , SN ) = {(xn , sn )}n=1 as the batch of training
+data with N being the number of training samples in the                        ∇θ Ep(x,s) Epen (z|x,θ) [hϕ,ψ (z)]
+dataset.                                                                            = Ep(x,s) Epen (z|x,θ) [hϕ,ψ (z)∇θ log pen (z|x, θ)] .           (14)
+    Corollary 1 (Loss function for image semantic communica-
+                                                                              Then, this expectation can be stochastically approximated by
+tions): Consider image semantic communications with L-class
+                                                                              the Monte Carlo estimator. However, this method suffers from
+classification labels as the semantic information. Let ẑnθ be the
+                                                                              high variance as well as slow convergence [31], and is often
+received sequence for the nth training sample. Then, the loss
+                                                                              used with other variance reduction techniques [39], [40], which
+function for image semantic communications can be written
+                                                                              increases the computation complexity of the training.
+as in (13), shown at the bottom of the previous page.
+                                                                                 The reparameterization trick popularized in VAE [30] pro-
+    The loss function (13) is a weighted sum of two terms. The
+                                                                              vides a simple yet effective solution to the gradient estimation
+first term is the cross entropy (CE), a commonly used loss
+                                                                              of θ. In VAE, to update the parameters of a Gaussian variable
+function for image classification, which measures the distance
+                                                                              whose distribution is integrated in the expectation, the authors
+between the true posterior distribution and the NN parameter-
+                                                                              reparameterize the Gaussian variable as a deterministic func-
+ized approximate posterior for the semantic information. The
+                                                                              tion of an independent random variable and the parameters to
+second term is the mean square error (MSE) between the true
+                                                                              be updated. In this way, an unbiased gradient estimator for
+source image and the recovered source image. By minimizing
+                                                                              the parameters can be obtained and easily optimized, enabling
+the distance between the NN parameterized approximate pos-
+                                                                              the backpropagation through one sample of the Gaussian
+terior distributions and the true posterior distributions using
+                                                                              variable. Empirical results show that the reparameterization
+CE and MSE, the decoders can better infer the semantic
+                                                                              trick effectively reduces the estimation variance [30], and
+information and the source data from the received sequence
+                                                                              allows for the efficient training of the NN.
+ẑnθ respectively.
+                                                                                 We adopt the reparameterization trick to generate the
+    The derivation of Corrollary 1 consists of two steps.
+                                                                              constellation symbols that involves a method called the
+First, we apply the assumptions of the semantic information
+                                                                              Gumbel-Softmax method [31]. Unlike Gaussian variables in
+and the source data into VILB. Since in this scenario the
+                                                                              VAE, constellation symbols in our considered digital seman-
+semantic information is the classification label and thus a
+                                                                              tic communications are discrete variables with a categor-
+discrete variable, the corresponding term in VILB becomes
+                                                                              ical distribution. The Gumbel-Softmax method allows us
+the commonly used CE loss. As for the source data, the term
+                                                                              to generate constellation symbol sequences during the for-
+Ep(x|ẑ) log pde,o (x|ẑ, ψ) between two Gaussian distributions
+                                                                              ward propagation and estimate the gradients with respect to
+can be reduced to the MSE. Then, we use law of large numbers
+                                                                              the encoder-modulator NN parameters during backpropaga-
+to replace the probability distributions with the empirical
+                                                                              tion. Specifically, during the forward propagation, we use
+distributions, and get the loss function in (13). Through
+                                                                              the Gumbel-Max sampling method [41] to reparameter-
+maximizing this loss function, or equivalently minimizing its
+                                                                              ize the sampling process. During backpropagation, we replace
+negative, the NN parameters of θ, ϕ and ψ can be optimized
+                                                                              the non-differentiable argmax function used in Gumbel-Max
+in the training process. The complete proof of Corrollary 1
+                                                                              with the differentiable softmax function for gradient estima-
+can be found in Appendix D.
+                                                                              tion. The general Gumbel-Max sampling method, which repa-
+                                                                              rameterizes a discrete variable using an independent Gumbel
+D. Differentiable Constellation Symbol Generation                             variable, can be summarized as follows: P    Consider a one-hot
+                                                                                                                      a      a
+                                                                              variable t = (t1 , . . . , ta ) ∈ {0, 1} with i=1 ti = 1 where
+   Using the SGD algorithm to optimize the NN parameters θ,                   the element 1 indicates different categories. Its categorical
+ϕ and ψ requires the estimation of their gradients for the loss               probability distribution is denoted by π = (π1 , . . . , πa ). Let
+function. For the decoder parameters ϕ, ψ, by interchanging                   τi denote a random variable with Gumbel distribution τi ∼
+the differentiation and expectation in the general loss function              Gumbel(0, 1). Variable t can be sampled from π via:
+in (4), we can directly use the Monte Carlo estimator to                                                                       !
+estimate their gradients [38]. However, estimating the gra-
+dients of the encoder-modulator parameters θ causes prob-                                    t = one-hot       argmax [τi + log πi ] ,               (15)
+                                                                                                              i∈{1,...,a}
+lems, since θ defines the distribution that is integrated in the
+expectation, which prevents the direct application of the Monte               where one-hot(x) converts the index x into its one-hot form,
+Carlo estimator. To further explain this point, we rewrite the                in which the x-th element is equal to 1, and the rest are equal
+general loss function as Ep(x,s) Epen (z|x,θ) [hϕ,ψ (z)], where               to 0, respectively standing for “on” and “off”.
+hϕ,ψ (z) denotes the function of z that is not dependant on θ.                   We use the Gumbel-Max sampling method to generate the
+Therefore, the gradients with respect to θ can be written                     constellation symbol sequence in the forward propagation.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5632                                                                         IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+Specifically, we sample from the transition probability                                    TABLE I
+pen (z|x, θ) to get a constellation symbol sequence, so that N EURAL N ETWORK A RCHITECTURE OF THE P ROPOSED M ETHOD , W HERE
+                                                                        n I S THE N UMBER OF C HANNEL U SES AND M I S
+its empirical distribution matches its probability distribution.                  THE O RDER OF M ODULATION
+In an M -order modulation, the sampling process of zi from
+the transition probability pen (z|x, θ) can be expressed as:
+                                                              !
+zi = yθi (x, τ ) = cT · one-hot
+                                                            
+                                 argmax τim +log qim|x,θ ,
+                                   m∈{1,...,M }
+
+                                                                      (16)
+where c = (c1 , . . . , cM ) is the vector composed of all the
+constellation symbols, τim is a random variable with Gumbel
+distribution and qim|x,θ is the probability as in (7). The length
+of the one-hot vector corresponds to the total number of the
+constellation symbols M . When the x-th element is equal to 1,
+it means that the x-th constellation symbol has been sampled.
+The dot product of cT and the one-hot vector samples the
+                                                                                                           TABLE II
+constellation symbol for zi .
+                                                                               T HE S PECIFIC VALUES OF λ FOR VARYING C HANNEL SNR S AND THE
+   In the Gumbel-Softmax reparameterization trick, to estimate                         M ODULATION M ETHODS , W ITH C HANNEL U SE n = 128
+the gradients with respect to θ in backpropagation, the non-
+differentiable argmax function is approximated by the differ-
+entiable softmax function. Hence, the one-hot vector obtained
+by the Gumbel-Max sampling method is substituted by a
+vector vi = (vi1 , . . . , viM ) whose mth entry is:
+                  exp((log qim|x,θ + τim )/ρ)
+           vim = PM                               ,                   (17)        2) Neural Network Architecture and Hyper-Parameters:
+                  k=1 exp((log qik|x,θ + τik )/ρ)
+                                                                               Table I describes the detailed NN architecture of our method.
+where ρ represents the temperature hyperparameter to control                   The probabilistic encoder-modulator employs Resnet [43] as
+the hardness of the approximation. Therefore, different from                   the backbone, and its output is√ then sent into an MLP
+the forward propagation, in backpropagation we have z =                        with an output dimension of 2 M × n, the number of
+ỹθ (x, τ ), whose ith entry is determined by                                  probability categories required for an n-length constellation
+                                                                               symbol sequence with M -order modulation. We adopt Spinal-
+                      zi = ỹθi (x, τ ) = cT · vi .                   (18)
+                                                                               net [44] for the semantic information reconstruction. For the
+In this way, the loss function is differentiable everywhere,                   source data reconstruction, we use Resnet combined with the
+and the gradients with respect to the parameters θ can be                      depth-to-space operation to perform the upsampling. We use
+easily obtained through samples of Z in backpropagation. The                   a batchsize of 32 samples and employ the Adam optimizer
+gradient estimator of θ can thus be obtained as                                for the training. We use a cosine annealing schedule with an
+                                                                               initial learning rate as 5×10−4 , which then gradually decreases
+       ∇θ Ep(x,s) Epen (z|x,θ) [hϕ,ψ (z)]
+                                                                               to 10−6 in the duration of 300 epochs according to lr(t) =
+               = ∇θ Ep(x,s) Ep(τ ) [hϕ,ψ (ỹθ (x, τ ))]                        10−6 + 21 (5 × 10−4 − 10−6 )(1 + cos 300t
+                                                                                                                         π), where t represents
+               = Ep(x,s) Ep(τ ) [∇θ hϕ,ψ (ỹθ (x, τ ))] .             (19)     the current epoch number. The temperature hyperparamter ρ
+                                                                               is set to be 1.5. Moreover, we select the value of the tradeoff
+                   IV. E XPERIMENT R ESULTS                                    hyperparameter λ in the loss function (13) to strike a balance
+                                                                               where classification accuracy is maintained at a consistently
+   In this section, we provide comprehensive experiments
+                                                                               high level while maximizing the image recovery performance.
+to validate the advantage of the proposed JCM framework
+                                                                               The value of λ varies with the system parameters such as the
+at various channel states, transmission rates and modulation
+                                                                               channel SNR, the modulation order and the transmission rate.
+orders. The experiments are performed on an Intel Xeon Silver
+                                                                               The specific values of λ used in our simulation are presented
+4214R CPU, and a 24 GB Nvidia GeForce RTX 3090 Ti
+                                                                               in Table II.
+graphics card with Pytorch powered with CUDA 11.4.
+                                                                                  3) Benchmarks: We compare the performance of our pro-
+                                                                               posed JCM framework with four benchmarks: the conven-
+A. Experiment Settings                                                         tional NN-based analog modulation (abbreviated as “Analog”)
+   1) Datasets: If not mentioned otherwise, the experiments                    [20], and three quantization-based digital semantic coding-
+are conducted on the CIFAR10 dataset [42], where the classi-                   modulation methods respectively via the end-to-end hard-to-
+fication label is set as the semantic information. The CIFAR10                 soft quantizer [27], the non-learning-based uniform quantiza-
+dataset consists of 60,000 32 × 32 color images in 10 classes,                 tion (abbreviated as “Uniform”) [24] and the learning-based
+among which 50,000 images are used as training data and                        quantization (abbreviated as “NN”) [28]. Two performance
+10,000 images are used as test data.                                           criteria are used, namely peak-signal-to-noise ratio (PSNR)
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                                5633
+
+
+
+
+Fig. 2. Performances of the classification accuracy and the image recovery with varying channel SNRs and three different modulation schemes: BPSK,
+4QAM and 16QAM. The number of channel uses is set at 128.
+
+
+for the image recovery task and accuracy for the image                              serves as the performance upperbound for all digital
+classification task. The details of the baseline methods are                        methods [27].
+listed as follows.                                                                • DeepJSCC-Q method: This method jointly trains cod-
+   • “Analog” method: In this method, the output of the                             ing and modulation through the soft-to-hard quantizer
+      NN-based semantic encoder is directly sent into the chan-                     designed in [27]. In this method, a hard-decision quan-
+      nel without digitalization. Therefore, this method is called                  tization is applied in the forward pass to map the
+      the analog modulation method. The output dimension of                         real-valued output of the semantic encoder to the near-
+      the analog method matches that of the digital methods.                        est symbol in the constellation. In the backward pass,
+      In BPSK modulations, the output of the analog method is                       this non-differentiable operation is approximated by a
+      a one dimensional (1D) sequence with the same channel                         Softmax weighted sum. The whole system is trained in
+      use as other methods, while in QAM modulations, the                           an end-to-end manner using the loss function proposed
+      output of the analog method is two dimensional (2D),                          in [27] while adding an additional term of cross entropy
+      mapped to I and Q channels, respectively. In terms of                         for classification.
+      the NN architecture, the NN-based semantic encoder also                     • “Uniform” method: In this method, the output of the
+      adopts Resnet as the backbone. The two decoders use the                       NN-based semantic encoder is first uniformly quantized
+      same architecture as in the proposed method as well. As a                     into a discrete number sequence, then modulated and
+      remark, with unconstrained channel input, this method                         sent into channel. Consequently, this method is termed
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5634                                                                       IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+                                                                              study the relationship between the modulation order and the
+                                                                              performances more closely in Section IV-D.
+                                                                                 Moreover, the proposed method surpasses all the
+                                                                              quantization-based digital benchmark methods in all
+                                                                              modulation schemes especially in high SNR region. For
+                                                                              BPSK modulation with SNR = 18 dB, the JCM method
+                                                                              outperforms the DeepJSCC-Q method, the NN method, and
+                                                                              the Uniform method by 0.4 dB, 0.7 dB, and 1.3 dB respectively
+                                                                              at PSNR performance. For 16QAM at SNR = 18 dB, the
+                                                                              JCM can provide up to 0.3 dB, 0.4 dB, and 0.6 dB gain,
+                                                                              respectively over the three digital benchmarks. Note that the
+                                                                              advantage of the proposed JCM over DeepJSCC-Q, which
+                                                                              also jointly optimizes coding and modulation, stems from
+Fig. 3. PSNR vs. SNR on Tiny Imagenet with 1024 channel uses. The
+                                                                              our probability-based soft-decision modulation approach.
+modulation schemes are set as 16QAM and 64QAM.                                The JCM method directly learns the probability distribution
+                                                                              from the source to the constellation symbols, then samples
+                                                                              the constellation sequence for transmission, thereby avoiding
+    as “Uniform” method. The NN-based semantic encoder                        the information loss due to hard decisions. This advantage
+    and decoders are the same as those in the analog                          can also be understood as the advantage of Variational
+    method. Additionally, we match the quantization order                     Autoencoders (VAE) over Autoencders (AE). By explicitly
+    with the modulation order. For example, we use 1 bit                      modeling probabilistic distributions and introducing a level
+    quantization in BPSK, 2 bit quantization in 4QAM, and                     of uncertainty into NNs, VAEs prove more advantageous for
+    so on.                                                                    tasks involving uncertainty, such as handling channel noise.
+  • “NN” method: In this method, the system model is                             For a more comprehensive comparison of our JCM method
+    the same as the uniform method, except that the uni-                      and the DeepJSCC-Q method, we further evaluate their per-
+    form quantizer and dequantizer are replaced by their                      formance on Tiny Imagenet [45], a larger-scale image dataset
+    NN counterparts. Therefore, we call this method “NN”                      consisting of 100,000 64 × 64 colored images. On a side
+    method. The NN quantizer and dequantizer utilize a                        note, on Tiny Imagenet, we exclusively focus on the PSNR
+    one-layer MLP each, and they are trained to minimize                      performance comparison shown in Fig. 3, since as shown
+    the quantization error, using MSE as the loss function.                   on the CIFAR10 dataset, all methods exhibit comparable
+    Also, same as the uniform method, the quantization order                  classification accuracy, and their performance disparities are
+    is matched with the modulation order.                                     mainly reflected through PSNR. From Fig. 3, we can see that
+                                                                              the proposed method outperforms the DeepJSCC-Q method
+                                                                              with both 16QAM and 64QAM. With 16QAM, for example,
+B. Performances Against Varying SNRs                                          the proposed method outperforms the DeepJSCC-Q method
+   In this subsection, the performances of our method and                     by 0.66 dB at SNR = 18 dB. With 64QAM, the proposed
+the benchmark methods are evaluated at different SNRs and                     method outperforms the DeepJSCC-Q method by 0.15 dB at
+different modulation schemes. If not specified otherwise, the                 SNR = 18 dB.
+SNR ranges from -18 dB to 18 dB with n = 128 channel uses                        In conclusion, the proposed method has a performance
+and the modulation schemes are BPSK, rectangular 4QAM                         advantage over other digital benchmark methods, especially in
+and rectangular 16QAM.                                                        high SNR region, and is upperbounded by the analog method.
+   Fig. 2(a) and Fig. 2(b) respectively plot the classification               The performance gap between the proposed method and the
+accuracy and image recovery performances versus SNR in                        analog method decreases with increasing modulation order.
+different modulation schemes. We can observe that all methods
+achieve nearly identical classification accuracy performances                 C. Performances Against Varying Transmission Rates
+across various SNRs and modulation schemes. This is due to
+                                                                                 In this subsection, we study the relationship between the
+the relatively simple nature of 10-class classification, which
+                                                                              transmission rate and the performances, where the transmis-
+makes the recovery of the semantic information easier com-
+                                                                              sion rate r is defined as the ratio between the number of
+pared to that of the source data. As for PSNR performances,
+                                                                              channel uses n and the dimension of each image data k. For
+first, we can see that in the low SNR region of SNR ≤
+                                                                              CIFAR 10 dataset, the transmission rate is computed as
+−6 dB, the proposed method has a close performance with
+                                                                                                             n
+the analog method for all three modulation schemes. The                                              r=              .                (20)
+performance gap widens as SNR increases. Nevertheless, it can                                           32 × 32 × 3
+                                                                                                             1
+be observed that the performance gap between the proposed                     We range the rate r from 48      to 13 , and fix channel SNR at
+method and the upperbound analog method decreases as the                      0 dB. As a remark, the fixed 128 channel use in the previous
+                                                                                                                                 1
+modulation order increases. For example, at SNR = 12 dB,                      section is equivalent to a transmission rate of 24   .
+the analog method outperforms JCM with 4QAM by 3.2 dB,                           In Fig. 4 we plot the performance of classification and image
+and outperforms JCM with 16QAM only by 1.9 dB. We will                        recovery at different transmission rates with 16QAM. First,
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                                  5635
+
+
+
+
+Fig. 4.   Performance comparison with varying transmission rates in 16QAM. SNR is set at 0 dB.
+
+
+
+                                                                                 Therefore, in this subsection, we study more closely the effects
+                                                                                 of the modulation order on the proposed method.
+                                                                                    In Fig. 6, we plot the accuracy and PSNR performance of
+                                                                                 the proposed method versus the channel SNR in three rect-
+                                                                                 angular M-QAM modulation: 4QAM, 16QAM and 64QAM.
+                                                                                                                     1
+                                                                                 The transmission rate is set at 24    , which is equivalent to
+                                                                                 128 channel uses. First, in low SNR region, the three mod-
+                                                                                 ulations 4QAM, 16QAM and 64QAM perform almost the
+                                                                                 same. In particular, when SNR ≤ −12 dB, their curves of
+                                                                                 the classification accuracy and PSNR coincides. As the chan-
+                                                                                 nel SNR increases, higher order modulation begins to show
+                                                                                 advantages over lower order modulation. At SNR = 6 dB, with
+                                                                                 the same accuracy, 64QAM outperforms 16QAM by 0.3 dB
+Fig. 5. Examples of recovered images at SNR = 0 dB with 1024 channel
+uses. The modulation scheme is set as 16QAM.                                     in image recovery, and outperforms 4QAM by 1.8 dB. These
+                                                                                 gaps respectively widen to 1.4 dB and 3.5 dB at SNR = 18 dB.
+it can be observed that the classification accuracy remains                      Additionally, the performance gap between the analog method
+steady at around 87% across all transmission rates for all                       and the JCM method reduces with increasing modulation
+methods, while the PSNR can be increased by up to 6 dB                           order. For example, at SNR = 18 dB, with the same accuracy,
+                          1
+when r increases from 48    to 31 . This shows that the recovery                 the gap in PSNR performance between 4QAM and the analog
+of semantic information requires much less channel resources                     method is 4.8 dB. This gap decreases to 2.8 dB and 1.4 dB
+than the recovery of source data. Second, for image recov-                       respectively when the modulation changes to 16QAM and
+ery, the proposed method always maintains a performance                          64QAM. As such, the JCM method provides a convenient way
+advantage among all the digital benchmark methods and has                        to conduct digital modulation in a semantic communication
+a close performance with the analog method. For example,                         system, namely, by using the highest modulation order that the
+when r = 16 , the JCM method outperforms the DeepJSCC-Q                          transmission device could support for the best performance it
+method by 0.4 dB, the NN method by 0.6 dB and outperforms                        can offer.
+the Uniform method by 1.7 dB. At the same time, the analog                          To provide more insights into the JCM framework, in Fig. 7,
+method has an performance advantage of 0.7 dB over the                           we plot the empirical distributions of the constellation points
+proposed method.                                                                 output by the JCM method with 16QAM at SNR = −12 dB,
+   Fig. 5 illustrates visual examples of the image recovery                      0 dB and 18 dB with the average power constrain P = 1.
+for all methods. We set the SNR at 0 dB and use 16QAM                            We can observe that the probability distribution has the
+modulation. We can observe that compared to other digital                        appearance of a two-dimensional Gaussian distribution at low
+methods, the recovered images of the proposed method are                         SNR and gradually changes towards a uniform distribution
+clearer with more discernible features and outlines, which                       as the channel SNRs increase. The same can be said for
+shows its advantage in recovering the source data.                               the empirical distribution of the 64QAM constellation points
+                                                                                 plotted in Fig. 8. This phenomenon coincides with the tradi-
+D. Performances Against Different Modulation Orders                              tional work on probabilistic shaping in coded modulation [46],
+  In previous subsections, we find that the performance of the                   [47], as well as the more recent work on the optimization of
+proposed method improves with increasing modulation order.                       probabilistic shaping for physical layer using NNs [48], [49].
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5636                                                                          IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+
+Fig. 6.   Performance comparison of 4QAM, 16QAM and 64QAM of the proposed method.
+
+
+
+
+Fig. 7. The empirical distributions of the constellation points output by the JCM method with 16QAM at different channel SNRs. The sizes of the points
+are proportional to their probabilities of occurrence.
+
+
+
+
+Fig. 8. The empirical distributions of the constellation points output by the JCM method with 64QAM at different channel SNRs. The sizes of the points
+are proportional to their probabilities of occurrence.
+
+
+
+Probabilistic shaping approaches the Shannon limit by trading                    of the output signal, which underscores its impressive ability
+off bit rate with average power, resulting in larger Euclidean                   to match with the channel conditions.
+distance among constellation points at the same power level                         To further find out whether higher order modulation will
+[46], [47]. It is a well-known fact that the optimal shaping                     slow down the training, we plot in Fig. 9 the convergence
+distribution for AWGN channels comes from the Maxwell-                           rates when training the JCM framework with 4QAM, 16QAM
+Boltzmann family [46]. Notably, JCM can approximately                            and 64QAM, and also list in Table III their specific numbers of
+achieve this probabilistic shaping without the need for explicit                 floating point operations (FLOPs), the number of parameters
+instructions to the NNs regarding the probability distribution                   as well as the per-epoch training time. It can be observed
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                                  5637
+
+
+
+
+Fig. 9.   Convergence rates of the three modulation schemes. Channel use is set at 128. SNR is set at 18 dB.
+
+
+
+                             TABLE III                                             As a final note, this work has investigated how to perform
+T HE N UMBER OF FLOP S , THE N UMBER OF PARAMETERS AND T RAINING                 digital modulation using existing modulation methods, such
+  T IME OF THE JCM M ETHOD FOR D IFFERENT M ODULATION M ETHODS
+                                                                                 as BPSK, 4QAM and 16QAM, as well as their probabilistic
+                                                                                 shaping. Looking ahead, our future efforts will focus on the
+                                                                                 design and optimization of constellation geometry shaping to
+                                                                                 enhance the system’s performance.
+
+                                                                                                             A PPENDIX A
+that the convergence rate of 64QAM is almost the same as                                                 P ROOF OF T HEOREM 1
+that of lower order modulation, though bigger NNs with more                         To prove Theorem 1, we first consider the decoding block,
+parameters are needed. These results validate the training                       then merge the encoder-modulator into MI-OBJ. Specifically,
+efficiency and scalability of the JCM framework.                                 for fixed transition probability, we want to find the best
+                                                                                 decoders in the sense that the NN parameterized probabilities
+                                                                                 pde,s (s|ẑ, ϕ) and pde,o (x|ẑ, ψ) are closest to the true posterior
+                            V. C ONCLUSION                                       distributions. Therefore, we use variational inference to derive
+   In this paper, we propose a joint coding-modulation frame-                    a lower bound of MI-OBJ so that in the process of maximizing
+work for digital semantic communications based on the VAE                        this lower bound, the NN parameterized probabilities can
+architecture. In the JCM framework, the coding and mod-                          approach the true posterior distributions. This lower bound
+ulation are jointly designed and learned, and thus are able                      is presented in Lemma 1.
+to match with different channel conditions. Following this                       Lemma 1. A simpler lower bound of MI-OBJ is given by (21)
+design, we successfully solve the non-differentiability problem                             Iθ (S; Ẑ) + λ · Iθ (X; Ẑ)
+of the digital modulation process using probabilistic models
+under the VAE architecture. Furthermore, aiming at the JCM                                      ≥ Ep(ẑ) {Ep(s|ẑ) log pde,s (s|ẑ, ϕ)
+framework, we employ variational inference and derive a loss                                       + λ · Ep(x|ẑ) log pde,o (x|ẑ, ψ)} + K              (21)
+function that can optimize the performance of both source                        where K = H(S) + λ · H(X).
+reconstruction and semantic task execution.                                            Proof: Considering the term Iθ (S; Ẑ), we first expand
+   Extensive experimental results validate the performance                       it then add the NN parameterized approximate probability
+advantage of the JCM framework. It is found that the JCM                         pde,s (s|ẑ, ϕ) into the equation. We split the term and get a KL
+framework outperforms separate design of semantic coding                         divergence term between the true posterior distribution p(s|ẑ)
+and modulation under various channel conditions, transmission                    and the approximate posterior distribution pde,s (s|ẑ, ϕ). Since
+rates, and modulation orders. Furthermore, its performance gap                   the KL divergence is always non-negative, we can obtain a
+to analog semantic communication reduces as the modulation                       lower bound of Iθ (S; Ẑ). Specifically, we have
+order increases while enjoying the hardware implementation
+convenience. Additionally, the JCM framework in higher order                          Iθ (S; Ẑ) = −H(S|Ẑ) + H(S)
+modulation achieves a better performance than in lower order                                      = Ep(s,ẑ) log p(s|ẑ) + H(S)
+modulation. Therefore, the JCM framework provides a conve-                                                       
+                                                                                                                          pde,s (s|ẑ, ϕ)
+                                                                                                                                          
+nient way of conducting digital modulation, namely by using                                       = Ep(s,ẑ) log p(s|ẑ)                    + H(S)
+                                                                                                                          pde,s (s|ẑ, ϕ)
+the highest modulation order that the transmission device can
+                                                                                                  (a)
+support.                                                                                          = Ep(ẑ) KL [p(s|ẑ)||pde,s (s|ẑ, ϕ)]
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5638                                                                          IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+                   + Ep(s,ẑ) log pde,s (s|ẑ, ϕ) + H(S)                                                    A PPENDIX B
+                (b)                                                                                   P ROOF OF P ROPOSITION 1
+                ≥ Ep(s,ẑ) log pde,s (s|ẑ, ϕ) + H(S)
+                                                                                   For BPSK modulation, the categorical distribution of Zi
+                = Ep(ẑ) Ep(s|ẑ) log pde,s (s|ẑ, ϕ) + H(S),          (22)     is degraded to a Bernoulli distribution. We denote the two
+                                                                                constellation symbols as c1 = 1 and c2 = −1. Therefore, the
+where (a) follows the definition of the KL divergence,
+                                                                                transition probability of Z can be expressed as
+and pde,s (s|ẑ, ϕ) is expanded as a variational approxima-
+                                                                                                 Qn
+tion to the true posterior distribution p(s|ẑ); (b) follows the                  pen (z|x, θ) = i=1 p(zi |x, θ)
+non-negativity of the KL divergence.                                                             Qn Q2
+                                                                                               = i=1 m=1 (qim|x,θ )I{zi =cm }
+   Similarly, for Iθ (X; Ẑ) we have                                                             Qn
+                                                                                               = i=1 (qi1|x,θ )I{zi =1} (qi2|x,θ )I{zi =−1}
+   Iθ (X; Ẑ) = −H(X|Ẑ) + H(X)                                                                  Qn            1                       1
+                                                                                               = i=1 (qi|x,θ ) 2 (1+zi ) (1 − qi|x,θ ) 2 (1−zi ) , (26)
+               = Ep(x,ẑ) log p(x|ẑ) + H(X)
+                                                                              where to simplify the notation, we denote the probability
+                                       pde,o (x|ẑ, ψ)
+               = Ep(x,ẑ) log p(x|ẑ)                    + H(X)                 qi1|x,θ as qi|x,θ and correspondingly qi2|x,θ as (1 − qi|x,θ ).
+                                       pde,o (x|ẑ, ψ)
+               = Ep(ẑ) KL [p(x|ẑ)||pde,o (x|ẑ, ψ)]
+                                                                                                            A PPENDIX C
+                  + Ep(x,ẑ) log pde,o (x|ẑ, ψ) + H(X)                                               P ROOF OF P ROPOSITION 2
+               ≥ Ep(x,ẑ) log pde,o (x|ẑ, ψ) + H(X)
+                                                                                   For rectangular M-QAM where M = 22a , a = 1, 2, . . .,
+               = Ep(ẑ) Ep(x|ẑ) log pde,o (x|ẑ, ψ) + H(X).           (23)     we also consider the I channel and Q channel to be condi-
+                                                                                tionally independent. Each constellation symbol cm ∈ C, m =
+   Putting (22) and (23) together finishes the proof of                         1, 2, . . . , M , can be expressed as cIr +j·cQs , where we use j to
+Lemma 1.                                                  □                     denote the imaginary unit, cIr to denote      the
+                                                                                                                       √       √ amplitude √   of the I
+   Then, We further prove Theorem 1 by expanding the                                                                  − M
+                                                                                channel with cIr = √2r+1   M −1
+                                                                                                                , r =   2  , −  M
+                                                                                                                                2  +1, . . . ,  M
+                                                                                                                                                2 −1,
+probability of the received sequence p(ẑ). By the Markov
+                                                                                and cQs to denote √the amplitude   √
+                                                                                                                           of the
+                                                                                                                                √
+                                                                                                                                   Q channel with
+Chain S → X → Z → Ẑ → (Ŝ, X̂), the probability of ẑ                                      2s+1         − M        M             M
+                                                                                cQs = M −1 , s = 2 , − 2 + 1, . . . , 2 − 1.
+                                                                                           √
+is determined by the NN parameterized transition probability
+of the encoder-modulator                                                           Therefore, the probability P (Zi = cm |x, θ) can be written
+              Z                                                                 as
+      p(ẑ) =        p(s, x, z, ẑ)dsdxdz                                         P (Zi = cm |x, θ) = P (ZIi + j · ZQi = cIr + j · cQs |x, θ)
+              Zs,x,z
+                                                                                                        = P (ZIi = cIr |x, θ) · p(ZQi = cQs |x, θ)
+            =        p(s, x)pen (z|x, θ)p(ẑ|z)dsdxdz. (24)                                                I         Q
+                  s,x,z                                                                                 = qir|x,θ · qis|x,θ ,                          (27)
+Then, we introduce (24) into Lemma 1, getting                                   where to simplify the notation, we use qir|x,θI
+                                                                                                                                   to denote
+                                                                                                         Q
+  Iθ (S; Ẑ) + λ · Iθ (X; Ẑ)                                                   P (ZIi = cIr |x, θ) and qis|x,θ to denote P (ZQi = cQs |x, θ).
+                                                                                Correspondingly, I {zi = cm } can be written as
+       ≥ Ep(ẑ) {Ep(s|ẑ) log pde,s (s|ẑ, ϕ)
+         + λ · Ep(x|ẑ) log pde,o (x|ẑ, ψ)} + K                                 I {zi = cm } = I {zIi + j · zQi = cIr + j · cQs }
+       = Ep(ẑ|z) Epen (z|x,θ) Ep(s,x) {Ep(s|ẑ) log pde,s (s|ẑ, ϕ)                             = I {zIi = cIr } · I {zQi = cQs }
+                                                                                                                                         
+         + λ · Ep(x|ẑ) log pde,o (x|ẑ, ψ)} + K,                      (25)                                   2r + 1                 2s + 1
+                                                                                                 = I zIi = √              · I zQi = √         .
+                                                                                                               M −1                   M −1
+which finishes the proof of Theorem 1. Thereby, we get the                                                                                  (28)
+variational inference lower bound with encoder parameters θ
+and decoder parameters ϕ and ψ.                                                 Substituting (27) and (28) into (8) obtains (10).
+
+
+                 Iθ (X; Ẑ) = −H(X|Ẑ) + H(X)
+                             (a)
+                             ≥ Ep(ẑ) Ep(x|ẑ) log pde,o (x|ẑ, ψ) + H(X)
+                                 Z            Z
+                             (b)                    1       − 1 (x−µ)T 12 I(x−µ)        1       − 1 (x−fψ (ẑ))T 12 I(x−fψ (ẑ))
+                             =       p(ẑ)dẑ         k    e 2         σ1
+                                                                                 log      k    e 2               σ2
+                                                                                                                                 dx
+                                  ẑ           x (2π) 2 σ1                           (2π) 2 σ2
+                                 + H(X)
+                                 Z
+                             (c)
+                                     p(ẑ)(b − d (µ − fψ (ẑ))T (µ − fψ (ẑ)) dẑ + H(X)
+                                                                              
+                             =
+                                   ẑ
+                             = −d · Ep(ẑ) ||µ − fψ (ẑ)||22 + b + H(X),                                                                               (29)
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+BO et al.: JOINT CODING-MODULATION FOR DIGITAL SEMANTIC COMMUNICATIONS                                                                                    5639
+
+
+
+                              A PPENDIX D                                         [9] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+                         P ROOF OF C OROLLARY 1                                       semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+                                                                                      pp. 2663–2675, 2021.
+   In image semantic communications, for the source data,                        [10] Q. Zhou, R. Li, Z. Zhao, C. Peng, and H. Zhang, “Semantic commu-
+                                                                                      nication with adaptive universal transformer,” IEEE Wireless Commun.
+we take the Gaussian assumptions (11) and (12) into con-                              Lett., vol. 11, no. 3, pp. 453–457, Mar. 2022.
+sideration, and further obtain (29), shown at the bottom of                      [11] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+the previous page, where in (a) pde,o (x|ẑ, ψ) is the NN                             control in semantic communication with incremental knowledge-based
+parameterized variational approximation to the true posterior                         HARQ,” IEEE Open J. Commun. Soc., vol. 3, pp. 1076–1089, 2022.
+                                                                                 [12] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+distribution p(x|ẑ); (b) follows the expansion of the expec-                         for edge inference: An information bottleneck approach,” IEEE J. Sel.
+tation; (c) follows the repeated use of the equation xT Ax =                          Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+tr(AxxT ) with d and b being two constants.                                      [13] K. Liu, D. Liu, L. Li, N. Yan, and H. Li, “Semantics-to-signal scalable
+   As for the semantic information, since it is set as the                            image compression with learned revertible representations,” Proc. Int. J.
+                                                                                      Comput. Vis., vol. 129, no. 9, pp. 2605–2621, Sep. 2021.
+classification label of the images, it is a discrete variable with               [14] H. Zhang, S. Shao, M. Tao, X. Bi, and K. B. Letaief, “Deep learning-
+a categorical distribution. Therefore, we have                                        enabled semantic communication systems with task-unaware transmitter
+                                                                                      and dynamic data,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+   Iθ (S; Ẑ) = −H(S|Ẑ) + H(S)                                                       pp. 170–185, Jan. 2023.
+                                                                                 [15] J. Dai et al., “Nonlinear transform source-channel coding for seman-
+                ≥ Ep(ẑ) Ep(s|ẑ) log pde,s (s|ẑ, ψ) + H(S)                          tic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,
+                            L
+                                                                       !              pp. 2300–2316, Aug. 2022.
+                            X
+                = Ep(ẑ)          p(s = l|ẑ) log pde,s (s = l|ẑ, ϕ)            [16] S. Wang et al., “Wireless deep video semantic transmission,” IEEE J.
+                                                                                      Sel. Areas Commun., vol. 41, no. 1, pp. 214–229, Jan. 2023.
+                            l=1                                                  [17] P. Jiang, C. Wen, S. Jin, and G. Y. Li, “Wireless semantic communi-
+                   + H(S).                                              (30)          cations for video conferencing,” IEEE J. Sel. Areas Commun., vol. 41,
+                                                                                      no. 1, pp. 230–244, Jan. 2023.
+   Then, by replacing probability distributions with empirical                   [18] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+                                                                                      communications for VQA,” IEEE Wireless Commun. Lett., vol. 11, no. 3,
+distributions, we have                                                                pp. 553–557, Sep. 2022.
+           N    L
+                                                              !                  [19] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural
+       1 X X                                                                          Inform. Process. Syst. (NIPS), 2017, pp. 5998–6008.
+ lim               p(sn = l|ẑnθ ) log pde,s (sn = l|ẑnθ , ϕ)
+N →∞ N                                                                           [20] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+          n=1 l=1                                                                     channel coding for wireless image transmission,” IEEE Trans. Cogn.
+                L
+                                                      !
+               X                                                                      Commun. Netw., vol. 5, no. 3, p. 567, Sep. 2019.
+     = Ep(ẑ)      p(s = l|ẑ) log pde,s (s = l|ẑ, ϕ) ,        (31)             [21] I. J. Goodfellow et al., “Generative adversarial networks,” Commun.
+                   l=1
+                                                                                      ACM, vol. 63, no. 11, pp. 139–144, 2020.
+              N
+                                                                                 [22] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic
+            1 X                                                                       communications: Deep learning-based image semantic coding,” IEEE
+    lim              ||xn −fψ (ẑnθ )||22 = Ep(ẑ) ||µ − fψ (ẑ)||22 . (32)           J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, Jan. 2023.
+   N →∞ N
+               n=1                                                               [23] J. Wang, S. Wang, J. Dai, Z. Si, D. Zhou, and K. Niu, “Perceptual
+                                                                                      learned source-channel coding for high-fidelity image semantic transmis-
+Taking (31) and (32) into VILB (4), we get the loss function                          sion,” in Proc. GLOBECOM IEEE Global Commun. Conf., Dec. 2022,
+for image semantic communications and complete the proof                              pp. 3959–3964.
+of Corollary 1.                                                                  [24] H. Xie and Z. Qin, “A lite distributed semantic communication system
+                                                                                      for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+                                                                                      pp. 142–153, Jan. 2021.
+                              R EFERENCES                                        [25] C.-H. Lee, J.-W. Lin, P.-H. Chen, and Y.-C. Chang, “Deep learning-
+                                                                                      constructed joint transmission-recognition for Internet of Things,” IEEE
+ [1] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Learning based joint coding-               Access, vol. 7, pp. 76547–76561, 2019.
+     modulation for digital semantic communication systems,” in Proc. IEEE       [26] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+     Int. Conf. Wireless Commun. Signal Process. (WCSP), Nov. 2022,                   semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+     pp. 1–6.                                                                         pp. 2584–2597, Sep. 2022.
+ [2] M. Kalfa, M. Gok, A. Atalik, B. Tegin, T. M. Duman, and O. Arikan,          [27] T. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+     “Towards goal-oriented semantic signal processing: Applications and              Constellation constrained deep joint source-channel coding,” IEEE J.
+     future challenges,” Digit. Signal Process., vol. 119, Dec. 2021,                 Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+     Art. no. 103134.                                                            [28] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+ [3] X. Luo, H. Chen, and Q. Guo, “Semantic communications: Overview,                 for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+     open issues, and future research directions,” IEEE Wireless Commun.,             vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+     vol. 29, no. 1, pp. 210–219, Feb. 2022.                                     [29] R. Linsker, “Towards an organizing principle for a layered perceptual
+ [4] Q. Lan et al., “What is semantic communication? A view on conveying              network,” in Proc. Adv. Neural Inf. Process. Syst., 1987, pp. 1–12.
+     meaning in the era of machine intelligence,” J. Commun. Inf. Netw.,         [30] D. P Kingma and M. Welling, “Auto-encoding variational Bayes,” 2013,
+     vol. 6, no. 4, pp. 336–371, 2021.                                                arXiv:1312.6114.
+ [5] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and        [31] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with
+     task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,              Gumbel–Softmax,” 2016, arXiv:1611.01144.
+     no. 1, pp. 5–41, Jan. 2023.                                                 [32] T. M. Cover, Elements of Information Theory. Hoboken, NJ, USA:
+ [6] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Ye Li, “Semantic communica-               Wiley, 1999.
+     tions: Principles and challenges,” 2021, arXiv:2201.01389.                  [33] D. Barber and F. Agakov, “Kernelized infomax clustering,” in Proc. Adv.
+ [7] Z. Weng and Z. Qin, “Semantic communication systems for speech                   Neural Inf. Process. Syst., 2005, pp. 1–14.
+     transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,                  [34] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+     pp. 2434–2444, Aug. 2021.                                                        method,” 2000, arXiv:physics/0004057.
+ [8] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-preserved           [35] D. M. Blei, A. Kucukelbir, and J. D. McAuliffe, “Variational inference:
+     communication system for highly efficient speech transmission,” IEEE             A review for statisticians,” J. Amer. Stat. Assoc., vol. 112, no. 518,
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 245–259, Jan. 2023.                   pp. 859–877, Apr. 2017.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+5640                                                                             IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 9, SEPTEMBER 2024
+
+
+
+[36] C. Andrieu, N. De Freitas, A. Doucet, and M. I. Jordan, “An introduction                               Yiheng Duan received the B.S. degree in com-
+     to MCMC for machine learning,” Mach. Learn., vol. 50, no. 1, pp. 5–43,                                 munication engineering from Shanghai Jiao Tong
+     Jan. 2003.                                                                                             University, Shanghai, China, in 2022, where he
+[37] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural                                   is currently pursuing the M.S. degree with the
+     joint source-channel coding,” in Proc. Int. Conf. Mach. Learn., vol. 97.                               Department of Electronic Engineering. His research
+     Long Beach, CA, USA, Jun. 2019, pp. 1182–1192.                                                         interests include semantic communications and
+[38] S. Mohamed, M. Rosca, M. Figurnov, and A. Mnih, “Monte Carlo                                           intelligence-generated content. He received the Inter-
+     gradient estimation in machine learning,” J. Mach. Learn. Res., vol. 21,                               national Conference on Wireless Communications
+     no. 1, pp. 5183–5244, Dec. 2020.                                                                       and Signal Processing (WCSP) 2022 Best Paper
+[39] A. Mnih and K. Gregor, “Neural variational inference and learning in                                   Awards.
+     belief networks,” in Proc. 31th Int. Conf. Mach. Learn. (ICML), Beijing,
+     China, vol. 32, Jun. 2014, pp. 1791–1799.
+[40] K. Gregor, I. Danihelka, A. Mnih, C. Blundell, and D. Wierstra, “Deep
+     autoregressive networks,” in Proc. 31st Int. Conf. Mach. Learn., vol. 32,
+     2014, pp. 1242–1250.
+[41] E. J. Gumbel, Statistical Theory of Extreme Values and Some Practical                                  Shuo Shao (Member, IEEE) received the B.S.
+     Applications: A Series of Lectures. Washington, DC, USA: U.S. Gov-                                     degree in information science from Southeast Uni-
+     ernment Printing Office, 1954.                                                                         versity, China, in 2011, the M.A.Sc. degree in
+[42] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from                                electrical and computer engineering from McMaster
+     tiny images,” Univ. Toronto, Toronto, ON, Canada, Tech. Rep., 2009.                                    University, Canada, in 2013, and the Ph.D. degree
+[43] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for                                       from Texas A&M University, USA, in 2017. He is
+     image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.                                 currently an Associate Professor with the School
+     (CVPR), Jun. 2016, pp. 770–778.                                                                        of Electronic Information and Electrical Engineer-
+[44] H. D. Kabir et al., “SpinalNet: Deep neural network with gradual input,”                               ing, Shanghai Jiao Tong University, China. His
+     IEEE Trans. Artif. Intell., vol. 1, no. 1, pp. 1–13, Jun. 2022.                                        research interests include network information the-
+[45] Y. Le and X. Yang, “Tiny imagenet visual recognition challenge,” CS                                    ory, algebraic code, machine learning, and semantic
+     231N, vol. 7, no. 7, p. 3, 2015.                                                                       communications.
+[46] F. R. Kschischang and S. Pasupathy, “Optimal nonuniform signaling
+     for Gaussian channels,” IEEE Trans. Inf. Theory, vol. 39, no. 3,
+     pp. 913–929, May 1993.
+[47] Z. Qu and I. B. Djordjevic, “On the probabilistic shaping and geomet-
+     ric shaping in optical communication systems,” IEEE Access, vol. 7,
+                                                                                                            Meixia Tao (Fellow, IEEE) received the B.S. degree
+     pp. 21454–21464, 2019.
+                                                                                                            in electronic engineering from Fudan University,
+[48] M. Stark, F. A. Aoudia, and J. Hoydis, “Joint learning of geometric and                                Shanghai, China, in 1999, and the Ph.D. degree
+     probabilistic constellation shaping,” in Proc. IEEE Globecom Workshops                                 in electrical and electronic engineering from The
+     (GC Wkshps), Dec. 2019, pp. 1–6.                                                                       Hong Kong University of Science and Technology
+[49] F. A. Aoudia and J. Hoydis, “Joint learning of probabilistic and geo-                                  in 2003. She is currently a Professor with the Depart-
+     metric shaping for coded modulation systems,” in Proc. GLOBECOM                                        ment of Electronic Engineering, Shanghai Jiao
+     IEEE Global Commun. Conf., Dec. 2020, pp. 1–6.                                                         Tong University, China. Her current research inter-
+                                                                                                            ests include wireless edge learning, coded caching,
+                                                                                                            reconfigurable intelligence surfaces, and semantic
+                                                                                                            communications.
+                         Yufei Bo received the B.S. degree in communication
+                                                                                     Dr. Tao received the 2019 IEEE Marconi Prize Paper Award, the 2013 IEEE
+                         engineering from Xi’an Jiao Tong University, Xi’an,
+                                                                                   Heinrich Hertz Award for Best Communications Letters, the IEEE/CIC
+                         China, in 2021. She is currently pursuing the Ph.D.
+                                                                                   International Conference on Communications in China (ICCC) 2015 Best
+                         degree with the Department of Electronic Engi-
+                                                                                   Paper Award, and the International Conference on Wireless Communications
+                         neering, Shanghai Jiao Tong University, Shanghai,
+                                                                                   and Signal Processing (WCSP) 2012 and 2022 Best Paper Awards. She also
+                         China. Her research interests include semantic com-
+                                                                                   received the 2009 IEEE ComSoc Asia-Pacific Outstanding Young Researcher
+                         munications, deep learning, and information the-
+                                                                                   Award. She served as a member for the Executive Editorial Committee
+                         ory. She received the International Conference on
+                                                                                   of IEEE T RANSACTIONS ON W IRELESS C OMMUNICATIONS from 2015 to
+                         Wireless Communications and Signal Processing
+                                                                                   2019, and as the TPC Co-Chair for IEEE ICC 2023. She is an Associate
+                         (WCSP) 2022 Best Paper Awards.
+                                                                                   Editor of IEEE T RANSACTIONS ON I NFORMATION T HEORY.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:14:39 UTC from IEEE Xplore. Restrictions apply.
+

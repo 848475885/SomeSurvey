@@ -1,0 +1,517 @@
+                                                                                                                                                                                       2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+
+                                                                                                                                                          MaskDSC: Resilient Digital Semantic Communication with
+                                                                                                                                                             Masked Transformer and Unequal Error Protection
+                                                                                                                                                                               Jun Wang∗ , Kailin Tan∗ , Sixian Wang∗ , Xiaoqi Qin† , Zhenyu Liu‡ , Jincheng Dai∗§
+                                                                                                                                                                                 ∗ Key Laboratory of Universal Wireless Communications, Ministry of Education
+                                                                                                                                                                                          † State Key Laboratory of Networking and Switching Technology
+                                                                                                                                                                                       ∗† Beijing University of Posts and Telecommunications, Beijing, China
+                                                                                                                                                                                  ‡ Institute for Communication Systems, University of Surrey, United Kingdom
+                                                                                                                                                                                               § Corresponding author, email: daijincheng@bupt.edu.cn
+2025 IEEE Wireless Communications and Networking Conference (WCNC) | 979-8-3503-6836-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/WCNC61545.2025.10978821
+
+
+
+
+                                                                                                                                                        Abstract—We propose ”MaskDSC”, a novel system designed to                      networks to map source visual data directly to analog channel
+                                                                                                                                                     facilitate robust visual data transmission over unreliable wireless               symbols. This approach eliminates the need for reliable bit
+                                                                                                                                                     channels. MaskDSC effectively balances compression efficiency                     transmission and enables robust performance across varying
+                                                                                                                                                     and transmission resilience by leveraging contextual modeling
+                                                                                                                                                     within the semantic latent space, complemented by unequal error                   signal-to-noise ratios (SNR) [4]–[6]. However, the operation
+                                                                                                                                                     protection mechanism at the physical layer, ensuring compatibil-                  of analog or semi-analog source-channel mappings renders
+                                                                                                                                                     ity with existing digital communication systems. The novelty of                   neural JSCC schemes incompatible with existing digital com-
+                                                                                                                                                     our approach lies in a dual-functional masked Transformer archi-                  munication systems. Moreover, source compression is typically
+                                                                                                                                                     tecture that exploits causal-order contextual dependencies among                  separated from channel transmission in current digital com-
+                                                                                                                                                     visual tokens. This architecture not only enhances compression
+                                                                                                                                                     efficiency through improved contextual entropy modeling but                       munication protocols, making it challenging to deploy neural
+                                                                                                                                                     also provides robust error concealment capabilities to address                    JSCC schemes in RTC systems.
+                                                                                                                                                     diverse transmission error patterns inherent in volatile wireless                    To address these challenges, we propose an error-resilient
+                                                                                                                                                     channels. Our experimental evaluations conducted on image                         visual data transmission approach that is compatible with cur-
+                                                                                                                                                     datasets demonstrate that MaskDSC outperforms state-of-the-
+                                                                                                                                                     art transmission systems, especially in terms of efficiency and                   rent communication systems while enhancing the resilience of
+                                                                                                                                                     resilience under dynamic wireless channel conditions.                             end-to-end visual communication. Our approach integrates an
+                                                                                                                                                        Index Terms—Semantic features, masked Transformer, error-                      error-resilient module into the data encoding/decoding process
+                                                                                                                                                     resilience, unequal error protection, digital communication.                      in a plug-and-play manner, allowing for the transmission of
+                                                                                                                                                                                                                                       packets with tolerable bit errors. In addition, our approach
+                                                                                                                                                                               I. I NTRODUCTION                                        employs an unequal error protection (UEP) mechanism to
+                                                                                                                                                        The emergence of immersive technologies, such as virtual                       guarantee reliable transmission of partial critical packets, even
+                                                                                                                                                     reality and video conferencing, is intensifying demands on                        under fluctuating channel conditions. Both methodologies can
+                                                                                                                                                     real-time communication (RTC) systems [1], [2], which must                        relax reliance on flawless channel transmission thus reducing
+                                                                                                                                                     ensure high-quality, seamless transmission of visual data with                    the need for retransmission, and are well compatible with
+                                                                                                                                                     low latency and high reliability. Current wireless systems are                    current channel coding and digital modulation protocols.
+                                                                                                                                                     challenged by time-varying channel conditions that often lead                        Specifically, in this paper, we propose ”MaskDSC”, an end-
+                                                                                                                                                     to bit errors, which can disrupt source decoder synchronization                   to-end digital semantic communication system engineered to
+                                                                                                                                                     and cause severe error propagation if not corrected before                        balance efficiency and resilience through advanced contextual
+                                                                                                                                                     reaching the application layer. Common solutions like auto-                       modeling and a complementary UEP mechanism. Drawing on
+                                                                                                                                                     matic repeat request (ARQ) introduce unacceptable latency                         the capabilities of masked Transformers [7], [8], MaskDSC
+                                                                                                                                                     due to its retransmission mechanism. While forward error                          leverages a dual-functional masked Transformer (DFMT) to
+                                                                                                                                                     correction (FEC) avoids delays with one-shot transmission, it                     jointly address entropy modeling (EM) and latent error con-
+                                                                                                                                                     relies heavily on accurate real-time channel state estimations,                   cealment (latent EC). DFMT performs two crucial transceiver
+                                                                                                                                                     making it susceptible to fluctuations in channel conditions.                      functionalities with a single module: it generates conditional
+                                                                                                                                                        Recent advances have explored integrating source compres-                      probability distributions for quantized visual tokens to enhance
+                                                                                                                                                     sion and channel transmission based on the joint source-                          compression efficiency in the transmitting end, and it predicts
+                                                                                                                                                     channel coding (JSCC) theorem [3], utilizing deep neural                          missing latent values to bolster resilience against channel
+                                                                                                                                                                                                                                       errors in the receiving end. Additionally, the UEP mechanism
+                                                                                                                                                       This work was supported in part by the National Natural Science Foundation      can guarantee the correct reception of partial tokens, thereby
+                                                                                                                                                     of China under Grant 62371063, Grant 62321001, Grant 62293481, Grant
+                                                                                                                                                     92267301, Grant 62201089, and Grant 62001049, in part by the National Key         amplifying resilience against channel variation. Our integrated
+                                                                                                                                                     Research and Development Program of China under Grant 2024YFF0509700,             approach markedly improves system efficiency and error han-
+                                                                                                                                                     in part by the Beijing Municipal Natural Science Foundation under Grant           dling capabilities and eliminates the need for retransmissions,
+                                                                                                                                                     L232047, and Grant 4222012, in part by Program for Youth Innovative
+                                                                                                                                                     Research Team of BUPT No. 2023YQTD02, in part by BUPT Excellent Ph.D.             thereby making MaskDSC particularly adept for the rigorous
+                                                                                                                                                     Students Foundation CX2023118.                                                    demands of real-time communication environments.
+
+
+
+                                                                                                                                                     979-8-3503-6836-9/25/$31.00 ©2025 IEEE
+                                                                                                                                                               Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+                                              2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+       Visual Token              Mask Token      Predicted Token                            Context Mode                                               Wireless Digital Network
+  Input Image                          Visual Semantic Tokens
+                                                                                                                                                                        Unequal Error Protection
+
+
+
+
+                                                                                                                          Packetization
+                      Encoder
+
+
+
+
+                                                              Partition
+
+
+
+
+                                                                                                                                                        CB seg.
+                                                               Group
+                                                                                             Contextual
+
+
+
+
+                                                                                                                     EE
+                                                                                                                                                                           Channel Encoding
+                                                                                          Entropy Modeling
+
+                                                                                                                                                                            Digital Modulation
+                                                                                             For efficiency
+                                                                                                                                            Packets
+                                                                            Dual-Functional                                                                                     Wireless
+                                                                          Masked Transformer                                                                                    Channel
+                                                                                                                                            Received
+                                Recon. Visual Tokens                            Masked Tokens Received Tokens                               Packets
+  Recon. Image                                         For resilience
+
+
+
+
+                                                                                                                          Depacketization
+                                                                                                                                                                          Digital Demodulation
+
+
+
+
+                                                                                                                                                        CB rearrange.
+                      Decoder
+
+
+
+
+                                                           Contextual
+
+
+
+
+                                                                                                                     ED
+                                                                                                                                                                           Channel Decoding
+                                                       Error Concealment
+
+                                                                                               Replace Lost Tokens
+                                                                                                with Mask Tokens
+
+                 Fig. 1.          The overall architecture of MaskDSC, where EE and ED denote entropy encoding and entropy decoding, respectively.
+
+                                       II. OVERVIEW                                                 model ŝ = W (s|h) = s ⊙ h + n, where ⊙ denotes the
+   The overall architecture of our MaskDSC for end-to-end                                           element-wise product, h denotes channel gain vector, and n
+image transmission is shown in Fig. 1. Given an RGB image                                           denotes noise.
+x ∈ R3×H×W , a neural encoder ga (·) first maps it into latent                                         During the decompression phase, received packets are de-
+representation y ∈ RC×h×w . In the semantic latent space, we                                        packetized and entropy decoded to recover token groups. When
+further model y as a sequence of tokens, comprising N =                                             ŷ is recovered losslessly, MaskDSC reconstructs x̂ = gs (ŷ)
+h × w tokens each with a channel dimension C. These tokens                                          using the decoder gs (·). However, recovery failure of one
+are then element-wised quantized to discrete-valued form ŷ =                                       token group may occur due to two primary factors: (a) loss of
+Q (ga (x)) with standard rounding.                                                                  the corresponding packet resulting from block errors; and (b)
+   To guide entropy coding, a learnable contextual entropy                                          loss of its conditional groups required for entropy decoding,
+model fe (·) is used to estimate the conditional probability                                        both of which cause tokens incomplete. To address this issue,
+density function (PDF) for pŷ of ŷ. Moreover, to mitigate bit                                     we propose a contextual latent EC model fc (·) to predict lost
+error propagation during entropy decoding, we use a partitioner                                     tokens based on masked tokens ŷ m and output reconstructed
+based on a QLDS schedule [8] to divide ŷ into L token groups                                       tokens ỹ, which are then used to reconstruct x̃ = gs (ỹ).
+{Y1 , . . . , YL }, confining potential error separately to each                                       The end-to-end transmission rate can be measured by the
+token group. In this way, each token group is easily encoded                                        channel bandwidth ratio (CBR), i.e., ρ = k/ (H × W × 3),
+and packetized independently, yielding a sequence of packets                                        where k is the total number of channel symbols. To simplify
+{P1 , . . . , PL }. To further enhance accuracy of PDF prediction,                                  the analysis, the overheads of packet headers are not discussed
+we define a chained context mode that establishes contextual                                        in our system as well as all the compared schemes.
+dependencies between groups, whereby entropy modeling of                                                                                    III. M ETHODS
+group Yl is based on preceding groups Yi<l .
+   During transmission, each packet is treated as one transport                                     A. Dual-Functional Masked Transformer
+block (TB), which is then segmented into multiple code blocks                                          To achieve a better trade-off between efficiency and re-
+(CBs) of equal size for channel coding. In this paper, we use                                       silience, we design a simple but efficient dual-functional
+low-density parity check (LDPC) channel coding in 5G NR                                             masked Transformer (DFMT) as a shared context extractor,
+systems [9] with a fixed CB size Kcb . Due to the chained                                           serving for both contextual EM and latent EC, as shown in Fig.
+mode employed, preceding groups Yi<l are pivotal to entropy                                         2. This idea stems from the intrinsic alignments between gen-
+decoding of next group Yl . Thus, preceding packets are more                                        erative contextual modeling and compression [10], grounded
+important, meriting enhanced protection to handle dynamic                                           in the principle that both contextual entropy model fe (·) and
+channel condition. Therefore, we design a new unequal er-                                           latent EC model fc (·) essentially leverage partial tokens as a
+ror protection (UEP) mechanism, where CBs from different                                            prior to predict others, either for parameterized distributions or
+packets are assigned varying modulation-and-coding schemes                                          direct values. Thus, our DFMT facilitates joint optimization for
+(MCS) to ensure reliable transmission of preceding packets.                                         compression efficiency and error-resilience. And, our simple
+   Next, all CBs are encoded into sequences of channel sym-                                         and reusable design supports practical deployment.
+bols s ∈ Rk by channel encoder and digital modulator with                                              1) Masked Transformer for Latent Error Concealment:
+code rate Rc and modulation order Qm . At the receiver, the                                         When incomplete tokens are recovered from received packets,
+demodulator and channel decoder recover the noised sequences                                        we first pad each location of lost tokens with a learnable mask
+ŝ = W (s) into bits, which are subsequently rearranged into                                        token M ∈ R1×C , yielding masked tokens ŷ m . The sequence-
+packets {P1′ , . . . , PL′ }. We adopt the general fading channel                                   to-sequence bi-directional Transformer f (·) then takes ŷ m as
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+                                                  2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+                       Dual-functional Masked Transformer                                               C = 192 proposed in [12] to remove redundancy of input
+                                                                                                        image for better efficiency. The bi-directional Transformer
+
+
+
+                           Bi-directional
+                                                          Density Head
+
+
+
+
+                           Transformer
+                                                                             …                    …     consists of a linear embedding layer followed by 12 Swin
+                                                                                  Predicted PDF
+                                                                                                        Transformer blocks proposed in [13]. The density head and
+                                                           Concealment
+                                                              Head                                      concealment head that are respectively concatenated after
+ Latent Masked                                                                    Recon. Tokens
+ Tokens Tokens
+                                                                                                        DFMT have a similar structure, both consisting of 3 convolu-
+                                                                                                        tion layers with GELU activation function.
+                   Fig. 2. The training pipeline of DFMT.
+                                                                                                           2) Training Principle: During training, input image x is
+input and outputs an intermediate token sequence ȳ = f (ŷ m ),                                        first processed by encoder ga and outputs latent representation
+containing rich contextual information. Subsequently, ȳ is                                             y. To maintain gradients for updating ga , the straight-through
+fed into a concealment head hconceal that directly predicts                                             rounding (STR) is used to quantize y into ŷ. Then, recon-
+the values for all positions. Finally, the recovered tokens are                                         structed image x̂ is obtained by feeding ŷ into decoder gs .
+combined with these predicted values at the positions of lost                                              Inspired by [8], we employ a mask learning mechanism
+tokens to form the final reconstructed tokens ỹ, i.e.,                                                 for entropy model fe where we break the group form and
+                                                                                                        randomly select tokens from ŷ as conditions at each train-
+         ỹ = hconceal (f (ŷ m )) ⊙ M + ŷ ⊙ (1 − M) ,                                           (1)
+                                                                                                        ing step. This mechanism allows fe to capture causal-order
+where the binary mask M ∈ {0, 1}N represents the locations                                              contextual relationships among tokens and improve contextual
+of lost tokens. In M, a value of 1 indicates a lost token and                                           entropy modeling. Thus, it fits seamlessly with the training of
+0 denotes a recovered token at the corresponding locations.                                             fc , enabling fc to adapt to various loss patterns of tokens.
+   2) Masked Transformer for Entropy Modeling: Given con-                                                  As depicted in Fig. 2, given visual tokens ŷ, we impose a
+ditional token groups Y cond of Yl , i.e. Yi<l , we pad locations                                       mask ratio γ randomly sampled from a uniform distribution
+of remaining lost tokens with the same M, yielding input                                                U (0, 1) on M, then masking out ⌈N × γ⌉ tokens in ŷ based
+sequence ŷ cond . Then we use the shared Transformer f (·)                                             on M to place mask token M. Taking resulting masked
+to extract contextual information, utilized for predicting dis-                                         tokens ŷ m and binary mask M as input of (1), we can get
+tribution parameters via a density head hdensity . The entropy                                          reconstructed tokens ỹ from concealment head. After feeding
+modeling process can be formulated as                                                                   ỹ into same decoder gs , resilient image x̃ is obtained. Then,
+                                                                                                        we treat ŷ m as ŷ cond and replace ⌊ŷi,c ⌉ with ŷi + u in (4).
+            Φ = fe ŷ cond = hdensity f ŷ cond ,
+                                                  
+                                                              (2)
+                                                                                                        Subsequently, p (ŷi |ŷ m ) is output from density head, such that
+where Φ is a set containing all conditional distribution param-                                         total bitrate for training based on (3) can be calculated as
+eters. For inference, we only care about the distributions      of                                                                   X
+                                                    
+tokens in a specific group Yl , i.e., p ŷi |ŷ cond with ŷi ∈ Yl                                                        r=−               log2 p (ŷi |ŷ m ).        (5)
+                                                                                                                                ∀i,Mi =1
+and Yl ∈/ Y cond . For training, we focus on the total bitrate of
+all tokens except conditional tokens, which is calculated as                                            C. System Optimization
+                         X
+                                  log2 p ŷi |ŷ cond .
+                                                     
+             r=−                                               (3)                                         Firstly, we consider the optimization for compression effi-
+                                             / cond
+                                   ∀ŷi ,ŷi ∈Y                                                         ciency, discussed on a reliable transmission scenario. Given
+  To more accurately predict the parametric distribution, we                                            the input image distribution px , the encoder ga , the decoder
+use a K-mixture Gaussian mixed model (GMM) prior [11].                                                  gs , and the contextual entropy model fe (·), the goal of
+The density head predicts 3KC parameters (first KC for                                                  compression efficiency is to find the optimal trade-off between
+means µi , second KC for scales σi , and last KC for prob-                                              compression bitrate and distortion quality, formulated as
+abilities wi ), interpreted as C scalar GMMs for each token.                                                           LE = Ex∼px [r + λd (x, gs (ŷ))] ,              (6)
+Then the conditional distribution of token ŷi is expressed as
+                                                                                                        where r is the rate loss, i.e., the bitrate calculated by (5), the
+                                      C
+                cond
+                                     Y
+                                                          cond
+                                                                                                       second term is the distortion loss LD , and λ is the Lagrange
+    p ŷi |ŷ               =               p ŷi,c |ŷ
+                                                                                                        multiplier that controls the desired rate-distortion (RD) trade-
+                                     c=1
+        C
+              "   K
+                                                                             !            #       (4)   off. Notably, mean squared error (MSE) loss function is
+                                                                        
+                                                                                                        utilized for all distortion loss.
+        Y         X                                                  2
+    =                        ωi,c,k N µi,c,k , (σi,c,k )                         (⌊ŷi,c ⌉) ,
+        c=1       k=1                                                                                      Resilience is discussed in the case of unreliable transmis-
+                                                                                                        sion. Following Section III-A, the objective of resilience is to
+where 1 ≤ c ≤ C specifics channel index, and duringtraining,
+                                                                                                        recover high-quality image from masked tokens ŷ m with the
+a uniformly-noised proxy ŷi + u with u ∼ U − 21 , 12 is used
+                                                                                                        help of the latent EC model fc (·) and the decoder gs . Thus
+to replace ⌊ŷi,c ⌉ (standard rounding used during inference).
+                                                                                                        the resilience loss function can be formulated as
+B. Implementation of MaskDSC
+                                                                                                                   LR = Ex∼px Eŷm ∼pŷm |ŷ [d (x, gs (ỹ))] ,        (7)
+   1) System Architecture: For the implementation of ga and
+gs , we adopt the strong ELIC autoencoder architecture with                                             where ỹ is given by (1). By integrating (6) and (7), the total
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+                                     2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+Algorithm 1 Training procedure of MaskDSC                                              Algorithm 2 UEP mechanism of MaskDSC
+Input: Training dataset D, training data size Hd × Wd , batch                          Input: Estimated SNR SE , table of MCS T MCS , number of
+    size B, training steps S, lagrange multiplier λ, weighted                              packets l1 , l2 and l3 , target BLER B1T and B2T for level
+    factor α, and initialized (ga , gs , M, f, hdensity , hconceal )                       1 and 2 (default values are 10−5 and 10−4 )
+Output: Trained (ga , gs , M, f, hdensity , hconceal )                                 Output: S1 , S2 and S3 denoting MCS for level 1, 2 and 3
+ 1: for s ∈ {1, . . . , S} do                                                           1: for i ∈ {1, . . . , Size of T MCS } do
+ 2:     x ← images of batch B from D randomly cropped                                   2:     ▷ TiMCS means the i-th MCS in T MCS , TiMCS (SE )
+    into Hd × Wd pixels                                                                    means corresponding BLER of TiMCS at given SE
+ 3:     ŷ ← STR (ga (x))            ▷ Straight-through rounding                        3:     if TiMCS (SE ) ≤ B1T then           ▷ Choosing MCS with
+ 4:     M ← randomly set ⌈N × γ⌉ values as 1 based on                                      lower error rate and higher protection for UEP
+    γ ∼ U (0, 1), others as 0                 ▷ Random masking                          4:          S1 , S2 ← TiMCS
+ 5:     ŷ m ← place M in ŷ based on M                                                 5:     else if B1T < TiMCS (SE ) ≤ B2T then          ▷ Choosing
+ 6:     ỹ ← hconceal (f (ŷ m )) ⊙ M + ŷ ⊙ (1 − M)                                       MCS with medium error rate and medium protection
+ 7:     ▷ GMM parameters estimation                                                     6:          S2 ← TiMCS
+                                                    m
+ 8:              i (∀i, Mi = 1) ← hdensity (f (ŷ ))
+        µi ,σi ,wP                                                                      7:     end if
+                                                 m
+ 9:     r ← − ∀i,Mi =1 log2 pµi ,σi ,wi (ŷi |ŷ )                                      8:     ▷ φ(·) denotes spectral efficiency of MCS
+10:     L ← r + λ · MSE(x, gs (ŷ)) + α · MSE(x, gs (ỹ))                               9:     if l1 · φ(S1 ) + l2 · φ(S2 ) + l3 · φ(TiMCS ) = L · φ(S2 )
+11:     UPDATE (ga , gs , M, f, hdensity , hconceal ) with L                               then                ▷ Maintaining average spectral efficiency
+12: end for                                                                            10:          S3 ← TiMCS
+13: return Trained (ga , gs , M, f, hdensity , hconceal )                              11:     end if
+                                                                                       12: end for
+                                                                                       13: return S1 , S2 and S3
+loss function for MaskDSC is defined as:
+                                                                                                                   TABLE I
+                             L = LE + α · LR ,                                  (8)           MCS TABLE , AND φ DENOTES THE SPECTRAL EFFICIENCY.
+
+where α is the weighted factor that balances the efficiency-                            MCS Index         1        2        3          4        5         6
+resilience trade-off. As α increases, the whole model in-
+                                                                                        Rc ×[1024]       378      434      490       553       616       658
+creasingly prioritizes resilience over lossy wireless digital
+                                                                                           Qm             4        4        4          4        4         4
+networks, at the sacrifice of efficiency over lossless wireless
+                                                                                            φ            1.47     1.70     1.91      2.16      2.41      2.57
+digital networks, and vice versa. The pseudo-code for training
+procedure of our MaskDSC is shown in Algorithm 1.
+                                                                                       since higher protection of level 1 requires MCS of smaller
+D. Mechanism of Unequal Error Protection                                               index and thus lower φ. Furthermore, we experimentally find
+                                                                                       that at certain estimated SNRs, MCS for level 2 has a very
+   Due to the chained mode employed, loss of token group                               low BLER even beneath the target set for level 1. Thus, MCS
+Yl will render entropy decoding of subsequent groups failed.                           for level 2 can be used across all packets. The pseudo-code
+Besides, practical time-varying wireless channel causes devi-                          for UEP mechanism of MaskDSC is shown in Algorithm 2.
+ations between estimated SNRs and real ones, further neces-
+sitating enhanced protection for preceding packets. Thus, we                                           IV. E XPERIMENTAL R ESULTS
+design a complementary mechanism of UEP, where preceding
+packets use same MCS of smaller index to ensure their reliable                         A. Experimental Setup
+transmission even under dynamic channel conditions.                                       1) Datasets and Training Details: We train our model on
+   Given the order of token groups in chained mode, packets                            the DIV2K dataset [14]. During training, images are randomly
+{P1 , . . . , PL } are classified into three protection levels from 1                  cropped into 384 × 384 pixels. For evaluation, we use the
+to 3 which respectively denote higher protection, medium pro-                          widely used Kodak dataset [15]. We trained five models
+tection
+ 1 and lower              protection, forming into hierarchical packets               (α = 0.1) with different compression rate ranges by adjusting
+                                                    3
+  P1 , . . . , Pl11 , Pl21 +1 , . . . , Pl21 +l2 , PL−l3 +1
+                                                            , . . . , PL3 where l1 ,   the factor λ ∈ {0.0017, 0.0025, 0.0035, 0.005, 0.007}. Specif-
+l2 and l3 mean number of packets of corresponding level.                               ically, we adopt the Adam optimizer where the learning rate
+   In the case of no retransmission, and given estimated SNR,                          is set to 10−4 in the initial 1M steps and 10−5 for another
+when UEP is not used, MCS for all packets is usually chosen                            100k steps, and we warm up these models by setting λ to
+based on achieving a target block error rate (BLER) no more                            10× higher during the first 15% steps.
+than 10−4 and maximizing spectral efficiency φ. We adpot the                              2) Comparison Schemes: We combine two mainstream
+same operation in choosing MCS for level 2. But for packets                            engineered image codecs including JPEG2000 and BPG (intra-
+of level 1, we set target BLER as 10−5 for higher protection                           frame codec of HEVC) [16] with 5G LDPC channel coding
+in case real SNR is worse than estimated. MCS for level 3                              and digital modulation following the 3GPP standard [17] as
+is irrelevant to target BLER and solely based on average φ,                            the digital transmission method, labeled as “JPEG2000/BPG +
+
+
+
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+                                   2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+
+               Failure Threshold
+
+
+
+
+Fig. 3. BLER-PSNR performance with the average CBR ρ = 0.05 on Kodak              Fig. 4. RD performance comparison in a lossless wireless network on the
+dataset, where the dashed line is the transmission failure threshold (PSNR =      Kodak dataset.
+25 dB). l1 , l2 and l3 are respectively set as 1, 8 and 1 in UEP scenario.
+
+
+LDPC”. We use the maximum CB size in 5G LDPC (Kcb =
+3840 [17]) for every digital scheme. In scenarios without                                                 Failure Threshold
+UEP, a proper MCS is adaptively selected according to the
+channel SNR, following the principle of adaptive modulation
+and coding (AMC) [17]. All used MCSs are listed in Table
+I from 3GPP TS 38.214 standard. Moreover, we discuss the
+RD performance compared with SOTA neural image codec,
+“ELIC” [12]. Besides, we contrast with an advanced version
+of JSCC, called “Deep JSCC (ViT)” [6], which also uses the
+Transformer architecture. For ablation study, we conjoin ELIC
+with 5G LDPC, which is named “ELIC + LDPC”. Then we
+use a post-processing EC algorithm [18] to repair the image                       Fig. 5. Comparison of the image quality between the “BPG + LDPC” and
+                                                                                  MaskDSC under a practical wireless fading channel sampled from COST2100
+transmitted by “ELIC + LDPC”, called “Post EC”.                                   channel model, where the channel SNR varies with the frame number. The top
+   3) Metrics: The transmission rate is measured by CBR, and                      figure shows the PSNR of each frame under the CBR constraint ρ = 0.05,
+the distortion performance is evaluated under peak signal-to-                     the middle figure presents the corresponding transmission failure ratio, and
+                                                                                  the bottom figure plots the instant channel SNR. The black dashed lines in
+noise ratio (PSNR). We also simulate the BLER performance                         the bottm figure denote that the channel SNR is estimated every 4 frames, and
+of all MCSs used.                                                                 each estimated channel SNR is used for AMC/UEP in the next three frames.
+                                                                                  l1 , l2 and l3 are respectively set as 2, 8 and 2 in UEP scenario.
+B. Results Analysis
+   Fig. 3 illustrates the PSNR performance as a function of                       information, ELIC represents the state-of-the-art scheme in
+BLER with an average CBR ρ = 0.05. To observe a gen-                              neural image codecs. The minimal gap between MaskDSC
+eralized resilience performance against channel SNRs under                        and ELIC proves that MaskDSC has a comparable context
+different MCSs, we conducted CB-level simulations where a                         extractor and offers sufficient capability in entropy modeling.
+given BLER represents the error rate of each CB. A PSNR                              In Fig. 5, we consider a practical fading channel sampled
+of 25 dB is set as the transmission failure threshold. The                        from the COST2100 channel model [19], assuming perfect
+results demonstrate that our MaskDSC w/o UEP significantly                        channel estimation to obtain estimated SNR for the AMC/UEP
+outperforms all the traditional digital schemes in terms of                       mechanism at the sender. In practice, channel estimation can
+resilience against block errors. As BLER increases, the PSNR                      not be performed for each frame, and thus we estimate the
+of “BPG + LDPC” rapidly degrades to the threshold at BLER                         channel SNR every 4 frames. MaskDSC w/o UEP obviously
+= 1.22 × 10−2 , while MaskDSC w/o UEP extends this cut-                           reduces the decoding failure ratio and improves PSNR com-
+off BLER to 4.97 × 10−2 . At low BLERs, the performance                           pared to “BPG + LDPC”. When frames are inadequately
+of our MaskDSC w/ UEP drops compared to MaskDSC w/                                protected due to deviations between estimated SNRs and real
+UEP but still exceeds other conventional schemes. Moreover,                       SNRs, MaskDSC w/o UEP and “BPG + LDPC” may drop
+MaskDSC w/ UEP extends the cut-off BLER to 1.95 × 10−1 ,                          below the threshold. However, MaskDSC w/ UEP can fix the
+which proves the error-resilience of our UEP mechanism.                           problem with small sacrifice in performance, yet still exceeds
+   To evaluate the efficiency of our model, in Fig. 4, we show                    “BPG + LDPC” for most frames. Additionally, MaskDSC
+the rate-distortion performance of MaskDSC which signifi-                         significantly exceeds “Deep JSCC (ViT)” in PSNR across most
+cantly surpasses JPEG2000 and BPG and quite approaches                            frames, although “Deep JSCC (ViT)” is more stable.
+ELIC. Known for its robust ability to extract contextual                             To visualize the resilience of MaskDSC, we provide some
+
+
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+                                                      2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+
+
+              BPG + 5G LDPC
+                                                 ELIC+LDPC                            Post EC              functional masked Transformer was proposed to capture and
+                                           22.2dB                        24.3dB
+                                                                                                           utilize the causal-order contextual dependencies among visual
+                 Decoding                                                                                  tokens, which not only enhances contextual entropy modeling
+                                     10%
+                  Failure
+                                                                                                           for improved compression efficiency but also strengthens error
+                                                                                                           concealment capabilities to handle various error patterns dur-
+                      Packet loss increases as channel SNR decreases
+                                                                                                           ing unreliable channel transmissions. Additionally, a comple-
+                                                                                                           mentary mechanism of unequal error protection was designed
+  10%                                  30%                             70%
+                                                                                                           to further improve error-resilience against fluctuations in time-
+                                                                                                           varying channels. Our results verified that our MaskDSC has
+             31.5dB                          28.8dB                          24.8dB
+                                                                                                           achieved transmission efficiency superior to SOTA engineered
+   MaskDSC
+
+
+
+
+                                                                                                           image transmission scheme while significantly bolstering the
+                                                                                                           resilience against dynamics of time-varying channels.
+
+      End-to-end transmission quality (PSNR) of our MaskDSC degrades gracefully as packet loss increases                                R EFERENCES
+Fig. 6. Visual results of transmitting the image kodim21. All schemes employ                                [1] IMT-2030 (6G) Promotion Group, “White paper on 6g overall
+a similar compression rate and the same MCS (CBR ≈ 0.07). The channel                                           vision and potential key technologies,” White Paper, June 2021,
+SNR is adjusted from high to low to observe packet loss and source decoding                                     [Online]. Available: http://www.caict.ac.cn/kxyj/qwfb/ztbg/202106/
+                                                                                                                                 1
+
+results. For “BPG + LDPC” scheme, any packets missing will cause decoding                                       P020210604552573543918.pdf.
+failure. For our MaskDSC, typical error patterns of tokens are shown in                                     [2] A. Nistico, D. Markudova, M. Trevisan et al., “A comparative study of
+the middle row where blue squares represent lost tokens, and the bottom                                         rtc applications,” in 2020 IEEE International Symposium on Multimedia
+row shows the corresponding reconstructed images. Additionally, images are                                      (ISM). IEEE, 2020, pp. 1–8.
+transmitted by “ELIC + LDPC” scheme under 10% loss, and “Post EC” repairs                                   [3] M. Fresia, F. Peréz-Cruz, H. V. Poor, and S. Verdú, “Joint source and
+damaged images. PSNR values are placed in the upper left corner of each                                         channel coding,” IEEE Signal Processing Magazine, vol. 27, no. 6, pp.
+image, and red number indicates the packet loss for each case.                                                  104–113, 2010.
+                                                                                                            [4] D. Gündüz, Z. Qin, I. E. Aguerri et al., “Beyond transmitting bits:
+                          TABLE II                                                                              Context, semantics, and task-oriented communications,” IEEE Journal
+ AVERAGED SOURCE PROCESSING LATENCY INCLUDING ENCODING AND                                                      on Selected Areas in Communications, vol. 41, no. 1, pp. 5–41, 2022.
+ DECODING WITH A SIMILAR COMPRESSION RATE ON KODAK DATASET.                                                 [5] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+                                                                                                                image transmission using deep source channel coding with attention
+                                                        Source processing latency (s)                           modules,” IEEE Transactions on Circuits and Systems for Video Tech-
+   Transmission scheme                                                                                          nology, vol. 32, no. 4, pp. 2315–2328, 2021.
+                                                      Encoding Decoding         Total                       [6] K. Yang, S. Wang, J. Dai, X. Qin, K. Niu, and P. Zhang, “Swinjscc:
+           Our MaskDSC                                  0.41        0.29        0.70                            Taming swin transformer for deep joint source-channel coding,” IEEE
+                                                                                                                Transactions on Cognitive Communications and Networking, pp. 1–1,
+           BPG + LDPC                                   4.21        0.52        4.73                            2024.
+         JPEG2000 + LDPC                                0.58        0.30        0.88                        [7] H. Chang, H. Zhang, and others., “Maskgit: Masked generative image
+                                                                                                                transformer,” in Proceedings of the IEEE/CVF Conference on Computer
+                                                                                                                Vision and Pattern Recognition (CVPR), June 2022, pp. 11 315–11 325.
+visual results of transmitting the image kodim21 under varying                                              [8] F. Mentzer, E. Agustson, and M. Tschannen, “M2t: Masking transform-
+channel SNRs in Fig. 6. As SNR decreases, “BPG + LDPC”                                                          ers twice for faster decoding,” in Proc. of the IEEE/CVF International
+is quite sensitive to the rising packet loss that missing even a                                                Conference on Computer Vision, 2023, pp. 5340–5349.
+                                                                                                            [9] T. Richardson and S. Kudekar, “Design of low-density parity check codes
+single packet causes decoding failure. In contrast, MaskDSC                                                     for 5g new radio,” IEEE Communications Magazine, vol. 56, no. 3, pp.
+still can recovers acceptable images with just three packets                                                    28–34, 2018.
+received. When “ELIC + LDPC” is used, image quality sharply                                                [10] G. Delétang, A. Ruoss, P.-A. Duquenne et al., “Language modeling is
+                                                                                                                compression,” arXiv preprint arXiv:2309.10668, 2023.
+falls from 31.5 dB to 22.2 dB under a 10% loss. Although                                                   [11] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image com-
+“Post EC” [18] partially mitigates this degradation, it only                                                    pression with discretized gaussian mixture likelihoods and attention
+achieves 24.3 dB which is inferior to MaskDSC under a 70%                                                       modules,” in Proc. of the IEEE/CVF conference on computer vision and
+                                                                                                                pattern recognition, 2020, pp. 7939–7948.
+loss. These findings underscore the vital role of our latent EC                                            [12] D. He, Z. Yang, W. Peng et al., “Elic: Efficient learned image compres-
+model in significantly bolstering MaskDSC’s resilience.                                                         sion with unevenly grouped space-channel contextual adaptive coding,”
+   Finally, we list the source processing latency of all digital                                                in Proc. of the IEEE/CVF Conference on CVPR, 2022, pp. 5718–5727.
+                                                                                                           [13] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and B. Guo,
+schemes in Table II, where we do not consider the latency of                                                    “Swin transformer: Hierarchical vision transformer using shifted win-
+channel transmission and entropy coding. From the results, we                                                   dows,” in Proc. of the IEEE/CVF international conference on computer
+can observe that the source codec of MaskDSC has the shortest                                                   vision, 2021, pp. 10 012–10 022.
+                                                                                                           [14] E. Agustsson and R. Timofte, “Ntire 2017 challenge on single image
+latency in all aspects. In contrast, BPG experiences prolonged                                                  super-resolution: Dataset and study,” in Proc. of the IEEE conference on
+encoding delays due to its complex coding structures, which                                                     CVPR workshops, 2017, pp. 126–135.
+does not satisfy the requirements of RTC.                                                                  [15] “Kodak PhotoCD dataset,” URL: http://r0k.us/graphics/kodak/, 1993.
+                                                                                                           [16] F. Bellard, “Bpg image format.” URL: https://bellard.org/bpg/.
+                                           V. C ONCLUSION                                                  [17] 3GPP, “NR; Physical layer procedures for data,” 3rd Generation Part-
+                                                                                                                nership Project (3GPP), Technical Specification (TS) 38.214, 2018.
+   In this paper, we have proposed ”MaskDSC”, a novel                                                      [18] M. Kazemi, M. Ghanbari et al., “A review of temporal video error con-
+                                                                                                                cealment techniques and their suitability for hevc and vvc,” Multimedia
+error-resilient system designed for end-to-end wireless visual                                                  Tools and Applications, vol. 80, no. 8, pp. 12 685–12 730, 2021.
+data transmission for immersive RTC, which jointly optimizes                                               [19] L. Liu, C. Oestges, J. Poutanen et al., “The cost 2100 mimo channel
+efficiency and resilience. Crucially, a simple but efficient dual-                                              model,” IEEE Wireless Communications, vol. 19, no. 6, pp. 92–99, 2012.
+
+
+
+
+                  Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:37 UTC from IEEE Xplore. Restrictions apply.
+

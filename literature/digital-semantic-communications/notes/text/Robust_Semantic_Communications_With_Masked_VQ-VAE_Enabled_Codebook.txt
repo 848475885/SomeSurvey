@@ -1,0 +1,1044 @@
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023                                                                           8707
+
+
+
+
+      Robust Semantic Communications With Masked
+               VQ-VAE Enabled Codebook
+Qiyu Hu , Student Member, IEEE, Guangyi Zhang , Student Member, IEEE, Zhijin Qin , Senior Member, IEEE,
+Yunlong Cai , Senior Member, IEEE, Guanding Yu , Senior Member, IEEE, and Geoffrey Ye Li , Fellow, IEEE
+
+
+   Abstract— Although semantic communications have exhibited                                               I. I NTRODUCTION
+satisfactory performance on a large number of tasks, the impact
+of semantic noise and the robustness of the systems have not been
+well investigated. Semantic noise refers to the misleading between
+the intended semantic symbols and received ones, thus causes the
+                                                                                  T     RADITIONAL communication systems focus on efficient
+                                                                                        symbol transmission and accurate symbol recovery [1],
+                                                                                  where symbol-error rate (SER) and bit-error rate (BER) are
+failure of tasks. In this paper, we first propose a framework for                 usually used as the performance metrics. Various new appli-
+the robust end-to-end semantic communication systems to combat                    cations generate unprecedented amounts of data for serving
+the semantic noise. In particular, we analyze sample-dependent
+and sample-independent semantic noise. To combat the seman-
+                                                                                  different types of tasks while the conventional communication
+tic noise, the adversarial training with weight perturbation is                   system is facing the bottleneck to support such massive
+developed to incorporate the samples with semantic noise in the                   amount of data [2]. Moreover, it causes critical challenges for
+training dataset. Then, we propose to mask a portion of the                       conventional communications to support massive connectivity
+input, where the semantic noise appears frequently, and design                    over limited spectrum resources but with low latency [3].
+the masked vector quantized-variational autoencoder (VQ-VAE)
+with the noise-related masking strategy. We use a discrete
+codebook shared by the transmitter and the receiver for encoded                   A. Prior Work
+feature representation. To further improve the system robustness,                    With the development of deep neural networks (DNNs) [3]
+we develop a feature importance module (FIM) to suppress the
+noise-related and task-unrelated features. Thus, the transmit-                    and end-to-end learning [4], [5], [6], semantic communica-
+ter simply needs to transmit the indices of these important                       tions, which extract and transmit the task-related meanings
+task-related features in the codebook. Simulation results show                    of data [7], [8], [9], [10], have emerged as a key technology
+that the proposed method can be applied in many downstream                        and received great attention. For example, in the image trans-
+tasks and significantly improve the robustness against semantic                   mission for object detection task, the location and shape of an
+noise with remarkable reduction on the transmission overhead.
+                                                                                  object are task-related while the background is unrelated to the
+   Index Terms— Adversarial training, feature importance mod-                     task and unnecessary to transmit. Moreover, semantic commu-
+ule (FIM), masked vector quantized-variational autoencoder                        nication is robust to unfriendly channel environments, i.e., low
+(VQ-VAE), robust semantic communications, semantic noise.
+                                                                                  signal-to-noise ratio (SNR), which fits well the applications
+  Manuscript received 8 June 2022; revised 18 October 2022 and                    requiring high reliability [11]. These advantages motivate us to
+20 January 2023; accepted 28 March 2023. Date of publication 12 April             develop communication systems by considering the semantic
+2023; date of current version 12 December 2023. This work was supported
+in part by the National Natural Science Foundation of China under Grant           meaning beyond digital bits to enhance transmission accuracy
+61971376, Grant U22A2004, Grant 61831004, Grant 62293484, and Grant               and efficiency.
+61925105; in part by the Tsinghua University–China Mobile Communi-                   The existing works on semantic communications can be
+cations Group Company Ltd. Joint Institute; in part by the Fundamental
+Research Funds for the Central Universities under Grant 226-2022-00195;           divided into two categories: data reconstruction [10], [11],
+and in part by the Defense Industrial Technology Development Program              [12], [13], [14], [15], [16] and task execution [17], [18], [19],
+under Grant JCKY2020210B021. An earlier version of this paper was                 [20], [21]. For the data reconstruction, the semantic informa-
+presented in part at the 96th IEEE Vehicular Technology Conference
+(VTC2022-Fall), London/Beijing, September 2022 [DOI: 10.1109/VTC2022-             tion behind the data is extracted and only the related data is
+Fall57202.2022.10012843]. The associate editor coordinating the review of         reconstructed based on the received semantic information. The
+this article and approving it for publication was S. Bi. (Corresponding author:   joint semantic-channel coding (JSCC) scheme in [11] extracts
+Yunlong Cai.)
+  Qiyu Hu, Guangyi Zhang, Yunlong Cai, and Guanding Yu are with the Col-          the semantic information from text. In [13], reinforcement
+lege of Information Science and Electronic Engineering, Zhejiang University,      learning is exploited to recover the text. The semantic com-
+Hangzhou 310027, China, and also with the Zhejiang Provincial Key Labora-         munication system in [14] with channel feedback can improve
+tory of Information Processing, Communication and Networking (IPCAN),
+Hangzhou 310027, China (e-mail: qiyhu@zju.edu.cn; zhangguangyi@                   the quality of image reconstruction. The attention-based
+zju.edu.cn; ylcai@zju.edu.cn; yuguanding@zju.edu.cn).                             semantic communication system in [15] focuses on speech
+  Zhijin Qin is with the Department of Electronic Engineering, Tsinghua           signals.
+University, Beijing 100084, China (e-mail: qinzhijin@tsinghua.edu.cn).
+  Geoffrey Ye Li is with the Department of Electrical and Electronic                 For the task-specific applications, the task-related semantic
+Engineering, Imperial College London, SW7 2AZ London, U.K. (e-mail:               information encoded at the transmitter is directly applied
+geoffrey.li@imperial.ac.uk).                                                      for task execution at the receiver. In particular, the image
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TWC.2023.3265201.                                         classification-oriented semantic communications in [17] can
+  Digital Object Identifier 10.1109/TWC.2023.3265201                              improve the recognition accuracy. The task of image
+                       1536-1276 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8708                                                           IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+re-identification for a person in [18] can enhance the retrieval              algorithm [29]. The existing DL-enabled systems are vulner-
+accuracy. The semantic communication system in [19] con-                      able and particularly unstable to these adversarial samples,
+siders edge inference with classification task. The semantic                  where small and imperceptible perturbations of the data sam-
+communication system in [20] is designed for the multi-modal                  ples are sufficient to fool them and would result in incorrect
+data task: the visual question answering.                                     results [25]. To improve the robustness of DL models against
+   Though the aforementioned deep learning (DL)-based                         adversarial samples, there have been some methods, such
+semantic communication systems have exhibited very impres-                    as input denoising [32], defensive distillation [33], gradient
+sive performance in certain tasks, the impact of noise and                    regularization [34], weight perturbation [35], and adversarial
+the system robustness still need to be further investigated.                  training [36].
+There have been studies on analyzing the generation and
+characteristics of different kinds of image and text noise and
+a number of denoising algorithms have been proposed [22].                     B. Motivation and Contributions
+However, there exists a particular type of noise in semantic                     It is foreseen that the robustness of semantic communica-
+communications that has not been well studied [8]. More or                    tions in terms of security and reliability is important in future
+less similar to the noise in the conventional systems, semantic               applications, such as self-driving vehicles and medical diagno-
+noise causes misunderstanding of semantic information and                     sis. Although there have been a number of methods for gener-
+decoding errors, which results in misleading between the                      ating adversarial perturbations in the field of image processing,
+intended semantic meaning and the reconstructed one at the                    the semantic noise model in wireless communications has not
+receiver. The semantic noise can be generated in different                    been well investigated. Moreover, the performance of these
+stages, including semantic encoding, data transmission, and                   methods against adversarial perturbations is unsatisfactory and
+decoding [9]. In the semantic encoding stage, the semantic                    even deteriorates in the clean samples without noise. More
+noise corresponds to the mismatch between the original signal                 importantly, the impacts of wireless channels and transmission
+and the encoded signal after semantic encoding, which is                      overhead in communications are usually ignored. Therefore,
+related to the representational capability of the encoder. In the             in this paper, we model the semantic noise in the communica-
+data transmission stage, the signal distortion caused by channel              tion field and design a robust semantic communication system
+fading and some well-designed signals sent by malicious                       that can effectively combat semantic noise with lower trans-
+attackers both introduce semantic noise. In the decoding stage,               mission overhead. We propose a DL-enabled end-to-end robust
+the misinterpretation, incorrect representation, and confusion                semantic communication system to combat the semantic noise.
+of meanings introduce semantic noise to the receiver. For                     Both the transmitter and receiver are represented by DNNs.
+example, in the process of semantic symbol recognition,                       Since it is a data-driven method without pre-assumed channel
+the same semantic symbol is employed to represent different                   models as a prerequisite, it can potentially provide a solution
+sets of data with different meanings when the reconstructed                   with high generalization capability to various communication
+symbols are ambiguous.                                                        scenarios.
+   Semantic noises for different categories of sources, e.g., text               We firstly model the semantic noise in practical wireless
+and image, are generally different [23]. The semantic noise                   communication environments. In particular, we employ the
+in text refers to semantic ambiguity, where slight changes to                 iterative FGSM method to generate the sample-dependent
+words in the sentence, e.g., synonym replacement or randomly                  semantic noise at the transmitter instantly, which adds different
+reverse alphabetical order, may make the DL model misunder-                   semantic noise at each image. Since it is difficult to acquire
+stand the semantic meaning of the sentence [24]. The semantic                 each channel and the transmitted signal, we further propose an
+noise in the image can be modeled based on the adversarial                    iterative method to generate the sample-independent semantic
+samples [25], which is different from that in the text. Due to                noise at the receiver. It adds the same semantic noise to
+the discrete nature of text, it is impossible to add perturbation             different transmitted images and fools most images without
+to the text without being noticed by humans. However, some                    requiring the channel state information (CSI) and the trans-
+subtle modification can be added to the images that is barely                 mitted images. To combat the semantic noise, we propose an
+noticeable to humans. Adversarial samples mislead DL models                   adversarial training method with weight perturbation, which
+and cause significant performance degradation, but they look                  incorporates the samples with semantic noise in the training
+identical to the original images for humans.                                  dataset to solve a complicated min-max optimization prob-
+   In this paper, we focus on the semantic noise in the                       lem. Then, the masked vector quantized-variational autoen-
+image domain and that in the text domain can be handled                       coder (VQ-VAE) with vision Transformer (ViT) blocks [37],
+in a similar way. The methods for generating adversarial                      [38] is designed as the architecture of the robust seman-
+samples in the image domain can be classified into two                        tic communication system. A novel strategy is proposed to
+categories: (i) the sample-dependent method, which fools                      mask a portion of the original image, where the seman-
+a DNN on a single image [26], [27], [28], [29]; (ii) the                      tic noise appears with a high probability. Moreover, a dis-
+sample-independent universal method, which fools a DNN on                     crete codebook shared by the transmitter and the receiver is
+any image with a high probability [30], [31]. In particular, the              designed for encoded feature representation. It focuses on the
+methods on the first category include the fast gradient sign                  task-related feature representation and neglects imperceptible
+method (FGSM) [26], projected gradient descent (PGD) [27],                    noise-related details, which reduces the impact of semantic
+Jacobian-based saliency map attack (JSMA) [28], and deepfool                  noise.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                        8709
+
+
+
+   To further improve the system robustness, we design a                      tion systems for stronger robustness by designing the FIM
+feature importance module (FIM) that dynamically learns and                   with dynamic SNR. The simulation results are presented in
+incorporates the feature importance to the masked VQ-VAE.                     Section V. Finally, the paper is concluded in Section VI.
+It inherently suppresses the task-unrelated and noise-related                    Notations: Scalars, vectors, and matrices are respectively
+features. Thus, the transmitter only needs to send the indices                denoted by lower case, boldface lower case, and boldface
+of the important task-related features in the codebook. Fur-                  upper case letters. Notation I represents an identity matrix and
+thermore, the SNR is incorporated into the FIM, which                         0 denotes an all-zero matrix. For a matrix A, AT , A∗ , AH ,
+ensures that the proposed system can successfully operate                     A−1 , A† , and ∥A∥ are its transpose, conjugate, conjugate
+in a wide range of SNR levels. Moreover, existing works                       transpose, inversion, pseudo-inversion, and Frobenius norm,
+in semantic communications focus on mapping the source                        respectively. For a vector a, ∥a∥ is its Euclidean norm.
+data directly into channel symbols for transmission. It is                    Finally, Cm×n (Rm×n ) are the space of m × n complex (real)
+called full-resolution constellation because the constellation                matrices.
+points can appear anywhere in the constellation. However,
+this is difficult to realize for practical systems due to the                             II. F RAMEWORK OF ROBUST S EMANTIC
+finite precision and might be impractical in the current digital                                    C OMMUNICATIONS
+communication systems [10], [11], [12]. Our proposed masked                      In this section, we model the semantic noise and propose
+VQ-VAE model with FIM can design a discrete codebook-                         the framework of robust end-to-end semantic communication
+based system, which is more practical and can be easily                       systems with adversarial training to combat the semantic noise.
+realized in the current digital communication systems since the
+indices of the features can be directly mapped into symbols via               A. Semantic Communication Systems
+employing the existing constellation. Simulation results show                    As shown in Fig. 1, the transmitter maps the source, s, into
+that our proposed method can be applied in many downstream                    a symbol stream, x, and then passes it through the physical
+tasks and can significantly improve the robustness of semantic                channel with transmission impairments. The received symbol
+communication systems against semantic noise with much                        stream, y, is decoded at the receiver to obtain an estimation of
+reduced transmission overhead. The main contributions of this                 the source, ŝ. Both the transmitter and receiver are represented
+paper are summarized as follows:                                              by DNNs, which are jointly designed. In particular, the DNNs
+   • Based      on adversarial perturbations in computer                      at the transmitter consist of the semantic encoder and the
+      vision [30], taking into account the modulation,                        channel encoder while the DNNs at the receiver consist of
+      channel, and demodulation in communication systems,                     the channel decoder and the semantic decoder. The semantic
+      we model the sample-dependent and sample-independent                    encoder learns to extract the semantic information from the
+      semantic noise added at the transmitter and receiver,                   transmitted data and transforms it into an encoded feature
+      respectively.                                                           vector while the semantic decoder learns to recover the trans-
+   • Based on the basic adversarial training method [27] and                  mitted data from the received signals. Moreover, the channel
+      optimization theory, we propose an adversarial training                 encoder and channel decoder aim at eliminating the signal
+      method with weight perturbation to combat the semantic                  distortion caused by wireless channels.
+      noise, with the consideration of the effects caused by                     Assuming that the input is an image, we consider a system
+      channel impairments in wireless communication systems.                  with Nt transmit antennas and Nr receive antennas. The
+   • We develop a masked VQ-VAE model with a masking                          encoded symbol stream can be represented by
+      strategy as the architecture of the robust semantic com-                                                              
+                                                                                                    x = f2 f1 (s; θ 1 ); θ 2 ,              (1)
+      munication system. A discrete codebook shared by the
+      transmitter and receiver is designed for encoded feature                where x ∈ CNt ×1 , θ 1 and θ 2 denote the trainable parameters
+      representation, which fits the current digital communica-               of the semantic encoder, f1 (·), and the channel encoder, f2 (·),
+      tion system well.                                                       respectively. Subsequently, the received signal, y ∈ CNr ×1 ,
+   • We provide performance analysis and propose a novel                      is given by
+      loss function to improve system robustness based on
+                                                                                                            y = Hx + n,                              (2)
+      semantic similarity.
+   • To further improve the system robustness, we design                      where H ∈ CNr ×Nt denotes the channel matrix and n ∈
+      the FIM to suppress the noise-related and task-unrelated                CNr ×1 ∼ CN (0, σ 2 I) is the additive white Gaussian noise
+      features.                                                               (AWGN). Correspondingly, the decoded signal is given as
+                                                                                                                      
+                                                                                              ŝ = g1 g2 (y; Θ2 ); Θ1 ,               (3)
+C. Organization and Notations                                                 where Θ1 and Θ2 denote the trainable parameters of the
+   The rest of paper is structured as follows. Section II models              semantic decoder, g1 (·), and the channel decoder, g2 (·),
+the semantic noise and proposes a general framework of the                    respectively. For clarity, we denote θ as the trainable param-
+semantic communication system to combat the semantic noise.                   eters and fθ (·) as the DNNs in the considered semantic
+Section III designs the masked VQ-VAE with a masking                          communication systems. Thus, we have ŝ = fθ (s). The goal
+strategy and a discrete codebook for encoded feature rep-                     of this system is to minimize the semantic error while reducing
+resentation. Section IV improves the semantic communica-                      the number of symbols to be transmitted.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8710                                                              IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+
+Fig. 1.   The framework of the robust semantic communication system with semantic noise.
+
+B. Generation of Semantic Noise                                                  where si and fθ (si + ∆si ) denote the i-th input image and
+                                                                                 the output of the DNN, respectively, ∆si is the semantic noise
+   We consider the semantic noise generated at the transmitter
+                                                                                 generated for the i-th image, and L(·) denotes the loss function
+and the receiver.
+                                                                                 of DNN for a specific task. In addition, zi denotes the target
+   1) Semantic Noise at Transmitter: This kind of semantic
+                                                                                 associated with si , e.g., the true label for classification task and
+noise is generated in the encoding stage. Consider the scenario
+                                                                                 the original image for image reconstruction task, etc. Note that
+where a malicious attacker downloads the image dataset, adds
+                                                                                 ∥ · ∥p is the p-norm and constraint (4b) limits the power of
+semantic noise to each image, and then uploads the modified
+                                                                                 semantic noise to avoid being observed by humans. Unless
+dataset. The semantic noise has serious impact on the encoding
+                                                                                 otherwise stated, we select p = ∞, i.e., infinite norm, in this
+process and will mislead the DL models to generate wrong
+                                                                                 paper.
+results for tasks. However, since the semantic noise is so subtle
+                                                                                    To solve this problem, we employ the FGSM in [26], which
+that the legitimate users barely notice it, they will use these
+                                                                                 linearizes the loss function as
+contaminated images as usual. Semantic noise also exists in
+the nature. For example, images obtained by taking pictures of                   L(fθ (si + ∆si ), zi ) ≈ L(fθ (si ), zi ) + (∆si)T ∇siL(fθ (si ), zi ).
+the adversarial samples could also cause misclassification [39].                                                                                    (5)
+   The goal of the semantic communication system is to mini-
+mize the loss function for serving a specific task, e.g., the mean               It is minimized by setting ∆si = −α∇si L(fθ (si ), zi ), where
+square error for image reconstruction and the cross entropy                      α is a scaling factor to constrain the power of semantic noise
+for classification task, etc. In contrast, the semantic noise                    to ϵ in (4b). Then, we obtain the semantic noise with power
+aims to maximize the loss function. Let S = {s1 , s2 , · · · , sI }              ϵ as
+be a set of images sampled from the training dataset. Then,                                                                     
+the generation of semantic noise for the i-th image, si , can                                   ∆si = ϵsign ∇si L(fθ (si ), zi ) ,          (6)
+be modeled as the solution of the following optimization
+problem,                                                                         where sign(x) = 1 for x ≥ 0 and sign(x) = −1 for x < 0.
+                                                                                 Then, the contaminated sample with semantic noise becomes
+                 P1 :     max      L(fθ (si + ∆si ), zi )                (4a)    s′i = si + ∆si . This semantic noise is only generated with
+                           ∆si
+                                                                                 one-step iteration of the gradient descent method. To increase
+                          s.t. ∥∆si ∥p ≤ ϵ,                             (4b)     the impact of ∆si on the system, we propose to employ the
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                             8711
+
+
+
+  Algorithm 1 Generation of the Sample-Independent                                      To generate the sample-dependent semantic noise as
+ Semantic Noise at the Receiver                                                      in Section II-B.1, we need to assume that the attacker
+   Input : The generated channel samples                                             knows: (i) the exact channel between the attacker and the
+                   (1)   (2)         (N )
+               {Ha , Ha , · · · , Ha } and a set of collected                        receiver, Ha ; and (ii) the received signal at the receiver,
+                                    (1)
+               received signals {x̃ , x̃(2) , · · · , x̃(N ) } with                  x̃, in advance, which are not always practical in real wire-
+               their true labels {z(1) , z(2) , · · · , z(N ) }. The                 less communication systems. Therefore, we aim to find a
+               number of iterations K, the power constraint                          sample-independent semantic noise, ∆x, that fools most
+               ϵ, the scaling factor α, the weighting                                images in the dataset, S, by assuming that the attacker
+               coefficient ρ, and the model of decoder.                              only knows the channel statistics rather than the exact chan-
+   Output : The sample-independent semantic noise ∆x.                                nel. In particular, we first generate N channel realizations
+                                                                                         (1)   (2)         (N )
+   Initialize: δ 1 = 0, ∆x(n) = 0, and δ norm = 0.                                   {Ha , Ha , · · · , Ha } based on the channel statistics and
+1 for n ← 1 to N do                                                                  collect a set of received signals {x̃(1) , x̃(2) , · · · , x̃(N ) }. Then,
+2      % Generate the sample-dependent semantic noise for                            we generate the sample-independent semantic noise, ∆x(n) ,
+                                                                                                            (n)
+       the n-th sample.                                                              by using x̃(n) and Ha for n = 1, 2, · · · , N, instead of using
+3      for k ← 1 to K do                                                             the real channel. Specifically, we select the scaling factor, α,
+                           (n)∗                   (n)                                satisfying Kα > ϵ to ensure that we can take full advantage
+                        Ha ∇x̃(n) L(gdθ (x̃k ), z(n) )
+                                  k
+4          δ norm =       (n)∗                   (n)
+                                                                  ;                  of the noise power, ϵ. To maximize the received power of
+                       ∥Ha ∇x̃(n) L(gdθ (x̃k ), z(n) )∥2                             semantic noise and effectively fool the decoder, the attacker
+                                        k
+                (n)       (n)          (n)                                           has to fully utilize channel Ha . Thus, if semantic noise ∆x
+ 5           x̃k+1 = x̃k + αHa δ norm ;
+ 6           δ k+1 = δ k + αδ norm ;                                                 is multiplied by the conjugate of the channel, H∗a , then the
+ 7        end                                                                        received power of semantic noise after going through the chan-
+                                                                    δK               nel is maximized. The generated semantic noise vectors for all
+ 8        Weighted average: ∆x(n) = ∆x(n−1) + ρ                            ;         the samples, {∆x(n) }, are weighted averaged and normalized.
+                                                                   ∥δ K ∥2
+                                              ∆x(n)                                  The details are presented in Algorithm 1, where θ d denotes
+ 9        Normalization: ∆x(n) = ϵ                     ;                             the parameters of the decoder gθd (·) and gθd (x̃(n) ) is the
+                                             ∥∆x(n) ∥2
+10   end                                                                             output of the decoder for the n-th sample. In the following,
+11   Output the sample-independent semantic noise                                    we design the robust semantic communication systems based
+     ∆x = ∆x(N ) .                                                                   on the sample-dependent semantic noise model proposed in
+                                                                                     Section II-B.1 and the sample-independent semantic noise can
+                                                                                     be handled in a similar way.
+                                                                                        Remark 1: There exists semantic noise in the original
+iterative process
+                                                                                     images naturally. Here we take the image classification task as
+      ′(k+1)             ′(k)                              ′(k)           
+     si        = Πϵ si          + α · sign(∇si L(fθ (si           ), zi )) ,   (7)   an example, where the “misunderstanding” caused by seman-
+                                                                                     tic noise refers to the “misclassification”, e.g., the transmitter
+where k denotes the iteration index and Π is the projection                          sends an image with a dog but the receiver classifies it as
+operator. α is selected to satisfy Kα > ϵ to ensure the full                         a cat. The misclassification rate would never become zero,
+advantage of the noise power ϵ, where K denotes the number                           due to the inevitable semantic noise that exists in the original
+of iterations.                                                                       images naturally. Moreover, the semantic noise of different
+   2) Semantic Noise at the Receiver: It corresponds to the                          datasets is generally different. In particular, the semantic noise
+semantic noise generated in the transmission and decoding                            power of some simple datasets is low, e.g., MNIST, which
+stages, which leads to the failure of decoding and the mis-                          is easy to achieve high classification accuracy, while many
+understanding caused by the interpretation of the receivers.                         complicated datasets are with high-power semantic noise, e.g.,
+It may come from the non-ideal characteristics of hardware,                          ImageNet. Besides, the capabilities of deep learning models in
+the signal distortion caused by channel fading, or malicious                         handling semantic noise are different. The powerful model with
+attackers [9], [31]. Consider a legitimate transmitter that                          complicated structures can effectively eliminate the semantic
+transmits the encoded signal, x, to the receiver and a malicious                     noise to achieve better classification accuracy, e.g., ResNet-
+attacker that sends the semantic noise, ∆x, for attacking. Then,                     101. Our proposed semantic noise model strengthens such
+the received signal at the receiver is given by                                      kind of misunderstanding and requires higher robustness for
+               y = Ht x + n + Ha ∆x ≜ x̃ + Ha ∆x,                              (8)   system.
+
+where x̃ ≜ Ht x + n denotes the received signal without
+semantic noise, Ht is the channel between the legitimate                             C. Adversarial Training
+transmitter and receiver, Ha denotes the channel between                                1) Basic Adversarial Training: The key idea of adversarial
+the attacker and receiver, and n is the AWGN. Note that                              training against semantic noise is to add the samples cor-
+the semantic noise model in (8) at the receiver is a general                         rupted by the semantic noise into the training dataset [26].
+model, where Ha can be removed when studying the effects of                          In particular, the trainable parameters, θ, and semantic
+non-ideal characteristics of hardware and the signal distortion                      noise, ∆si , are updated iteratively to improve the model
+caused by channel fading.                                                            robustness. It can be formulated as solving the following
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8712                                                             IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+  Algorithm 2 Proposed Adversarial Training Algorithm for                       noise with reduced transmission overhead. We provide some
+  Solving P3                                                                    performance analysis and propose a novel loss function to
+   Input : The training dataset that consists of the input                      improve system robustness based on semantic similarity. The
+              images, si , with their true labels, zi .                         proposed codebook is different from that of channel feed-
+   Output : The parameters of the trained model, θ.                             back [1] in two aspects: (i) we propose a novel masked
+1 for m ← 1 to M do                                                             VQ-VAE to train the codebook together with the encoder and
+2      Compute s′i based on (7) or Algorithm 1 and obtain                       decoder at the transceiver while that of channel feedback is
+       the semantic noise by ∆si = s′i − si . Note that θ and                   designed by conventional algorithms, e.g., dictionary learning;
+       ν are fixed in this step and the computed samples, s′i ,                 (ii) we design the codebook for source compression to combat
+       are added into the training dataset.                                     the semantic noise in semantic communications while that of
+3      Update ν to maximize L(·) by one step forward and                        channel feedback is for channel compression in conventional
+       backward propagation in (11) with fixed θ and ∆si .                      communication systems.
+4      Update θ to minimize L(·) by the SGD with fixed ν
+       based on the training samples s′i .
+5 end                                                                           A. Masked VQ-VAE
+                                                                                   There exists information redundancy in various kinds of
+                                                                                sources. The image has heavy spatial redundancy and a miss-
+min-max optimization problem,                                                   ing patch in the image can be recovered from its neighboring
+                                  I                                             patches with the understanding of parts, objects, and scenes.
+                           1X                                                   Thus, the strategy of randomly masking partial patches is an
+          P2 :    min           max L(fθ (si + ∆si ), zi )              (9a)
+                      θ    I i=1 ∆si                                            efficient approach to create a challenging task that requires
+                  s.t. ∥∆si ∥p ≤ ϵ,                                    (9b)     the model to build a comprehensive understanding of image
+                                                                                statistics and semantic information, which also reduces the
+where I denotes the number of training samples.                                 information redundancy. Moreover, since the semantic noise
+   To solve (P2), the following two steps are executed itera-                   is added in the patches of the image, the masking operation
+tively: (i) compute s′i based on (7) or Algorithm 1 and obtain                  can eliminate the effects of semantic noise to some extent.
+the semantic noise by ∆si = s′i − si . Note that θ is fixed in                     1) The Architecture of Masked VQ-VAE: As in Fig. 2(a),
+this step and we add the samples, s′i , into the training dataset;              we employ the masked VQ-VAE with the ViT structure, where
+(ii) update θ by the SGD based on the training samples, s′i ,                   we randomly mask patches from the input images and aim to
+to minimize the loss function.                                                  reconstruct the missing patches. The masked VQ-VAE belongs
+   2) Adversarial Training With Weight Perturbation: To fur-                    to the autoencoder, but can reconstruct the original image
+ther improve the robustness against the semantic noise, we add                  from partial observations. Unlike conventional autoencoders,
+the weight perturbation, ν, on the trainable parameters and                     we adopt an asymmetric encoder-decoder architecture.
+reformulate the problem as                                                         In particular, the encoder only needs to process a small
+                              I                                                 portion of the unmasked patches and maps them to the encoded
+                          1X
+  P3 :    min max              max L(fθ+ν (si + ∆si ), zi ) (10a)               features for transmission, which significantly reduces the train-
+            θ     ν       I i=1 ∆si                                             ing time and memory consumption. It removes the masked
+          s.t. ∥∆si ∥p ≤ ϵ,           ∥ν∥p ≤ γ∥θ∥p .                  (10b)     patches and embeds the unmasked patches with their positional
+                                                                                information in the original image, and then processes them
+Intuitively, the semantic noise, ∆si , and weight perturbation,                 via a series of ViT blocks [37]. In contrast, the input to
+ν, lead to the increase of loss function L(·) for the i-th                      the decoder is the full set of tokens consisting of (i) the
+sample and all the samples, respectively. Thus, the two “max”                   encoded features of the unmasked patches and (ii) the mask
+operations make solving the inner maximization problem                          tokens, as shown in Fig. 2(a). Each mask token is a shared
+effectively, which results in a better solution of the whole                    and learned vector that indicates the presence of a missing
+min-max problem [35]. We solve (P3) by Algorithm 2, where                       patch to be predicted. We add positional embeddings to all
+the update of weight perturbation ν is                                          tokens in this full set. Without this, mask tokens would have
+                                                                                no information about their location in the image. Moreover,
+                                                           
+                         PI
+                   ∇ν I1 i=1 L(fθ+ν (si + ∆si ), zi )                           the decoder is only used during pre-training to perform the
+ν ← Πγ ν + η            PI                            ∥θ∥ ,
+                   ∇ν I1 i=1 L(fθ+ν (si + ∆si ), zi )                           image reconstruction task while the encoder is employed to
+                                                           (11)                 extract the features of the input images. Thus, the decoder
+                                                                                architecture, which is independent of the encoder design,
+which can be derived in a similar way to (7).                                   can be flexibly designed. Compared with the conventional
+                                                                                autoencoder in communication systems, the masked VQ-VAE
+ III. M ASKED VQ-VAE E NABLED D ISCRETE C ODEBOOK                               has the following advantages:
+   In this section, we design the robust semantic communica-                       •   With such an asymmetrical design, the encoder only pro-
+tion systems with masked VQ-VAE. A novel masking strategy                              cesses the unmasked patches and the lightweight decoder
+and a discrete codebook are designed to combat semantic                                reconstructs the image from the encoded features and the
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                           8713
+
+
+
+
+Fig. 2.   (a) The architecture of the masked VQ-VAE with discrete codebook; (b) The discrete codebook against semantic noise.
+
+     mask tokens. In this way, the computational complexity                         •  The transmitter simply needs to transmit the indices of
+     and training time can be significantly reduced.                                   the basis vectors, which significantly reduces the trans-
+   • The pre-trained masked VQ-VAE can be employed for                                 mission overhead.
+     different downstream tasks, e.g., classification, simply by                    1) Codebook Design: As in Fig. 2(a), we    denote the code-
+     changing the structure of the lightweight decoder and
+                                                                                                                                             
+                                                                                 book of the encoded features as E ≜ e1 , e2 , · · · , eJ ∈
+     fine-tuning the masked VQ-VAE within a short time.                          RJ×D , which consists of J basis vectors {ej ∈ RD , j ∈
+   • Transmitting the encoded features of the unmasked                           1, 2, · · · , J} and D is the dimension of each basis vector, ej .
+     patches and the mask tokens to the decoder at the receiver                  The model takes an input s and it passes through an encoder to
+     leads to a large reduction in transmission overhead.                        produce the encoded feature vector, ze (s). Then, it is mapped
+   • The masking operation can combat the semantic noise                         to a basis vector, zb (s), by the nearest neighbor look-up
+     since part of the noise is masked.
+                                                                                                 zb (s) = arg min ze (s) − ej 2 , ∀ej ,                 (12)
+   2) Masking Strategy Against Semantic Noise: We first                                                          ej
+divide an image into a number of non-overlapping patches.                        where the indices of features are omitted for clarity. Then,
+Then, we sample a subset of patches, mask and remove the                         zb (s) is input to the decoder. We can treat this forward compu-
+remaining patches. A high masking ratio, i.e., the ratio of                      tation as a layer of DNN with a particular non-linear function
+removed patches, largely eliminates redundancy. The “random                      that maps the encoded feature vector, ze (s), to a basis vector,
+sampling” strategy in [38] randomly samples patches follow-                      zb (s). The basis vectors, {ej , ∀j}, in the codebook, E, are
+ing a uniform distribution, i.e., the masking probability of                     trained together with the parameters of encoder and decoder.
+each patch is the same. However, the semantic noise does                         However, operation (12) is non-differentiable. Thus, in back
+not appear randomly. It appears in the patches related to the                    propagation, we approximate the gradient by straight-through
+objectives more frequently. Hence, to reduce the impact of                       estimator [40] and copy gradients from decoder input, zb (s),
+semantic noise, we increase the masking probability of the                       to encoder output, ze (s). Therefore, the nearest basis vector,
+patches effected severely by the semantic noise based on its                     zb (s), is passed to the decoder in forward propagation, and
+statistics.                                                                      during the back propagation, the gradient, ∇zb (s) Lc , is passed
+                                                                                 unaltered to the encoder. Note that the gradients contain useful
+                                                                                 information for training the encoder to minimize the loss
+B. Discrete Codebook for Encoded Feature Representation                          function and can push the encoder’s output, ze (s), to be
+   We aim to design a discrete codebook for the encoded                          discretized efficiently to achieve better performance.
+feature space and represent encoded features by the basis                           2) Differentiable Loss Function: Our designed loss function
+vectors in the codebook. We consider important task-related                      consists of three components representing different parts of
+features and neglect task-unrelated features with noise and                      parameters:
+imperceptible details. Specifically, we set these basis vectors                                                     2                    2
+                                                                                         Lc (s, z; θ, ej ) = ŝ − z 2 + ng ze (s) − ej 2
+as trainable parameters and train them together with the                                                                      2
+parameters of both encoder and decoder. The encoder network                                                 + β ze (s) − ng ej 2 ,            (13)
+outputs continuous encoded features and then maps them into                      where s, ŝ, and z denote the input, output, and true label of
+the discrete indices of basis vectors in the trained codebook.                   the network, respectively, θ denotes the trainable parameters
+This design comes with the following advantages:                                 of the original  DNN, and β is the hyper-parameter. Symbol
+                                                                                           
+   • It is simple to train the codebook with a small variance,                   ng ze (s) represents that there is no gradient passed to ze (s)
+     which makes the semantic communication system more                          and its gradient is zero, which effectively constrains ze (s) to
+     stable.                                                                     be a non-updated constant. The first term is the reconstruction
+   • The discrete feature representation can combat semantic                     loss that trains the parameters of encoder and decoder. Due to
+     noise.                                                                      the straight-through gradient estimation of mapping from ze (s)
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8714                                                            IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+to zb (s), the basis vectors, {ej , ∀j}, receive no gradients from             D. Efficient Transmission With Codebook
+the reconstruction loss ∥ŝ−z∥22 . Therefore, in order to train the               1) Codebook-Based Constellation Diagram: Existing
+basis vectors, we employ the l2 error to move the basis vectors                works in semantic communications focus on mapping
+towards the encoded features, ze (s), as shown in the second                   the source data directly into channel symbols and
+term of (13). Since the volume of the encoded feature space                    assume the full-resolution constellation [10], [11], [12],
+is dimensionless, the codebook can grow arbitrarily and cause                  that is, the constellation points can appear anywhere in the
+the training process to diverge if the basis vectors, {ej , ∀j},               constellation. However, the full-resolution constellation is
+are not trained as fast as the encoder parameters. To address                  extremely complex for practical systems. Thus, we need
+this issue, we add the third term in (13). In summary, the                     to limit the number of constellation points. To address this
+decoder is optimized by the first loss term only, the encoder                  issue, we propose a discrete codebook-based system, which
+is optimized by the first and the last loss terms, and the basis               is more practical for digital communication systems, since
+vectors are optimized by the middle loss term.                                 the indices of the features can be mapped into existing finite
+                                                                               constellation and it can better fit the digital communication
+                                                                               scheme. In general, discretization would cause the loss of
+C. Robustness of Codebook                                                      data transmission accuracy. Fortunately, VQ-VAE is proved
+   1) Semantic Similarity: The semantic similarity of two                      to be an efficient vector quantization scheme that achieves
+basis vectors, e1 and e2 , in the codebook can be defined as                   satisfactory performance [40]. Compared to the conventional
+                                                        eT1 · e2               uniform quantization, VQ-VAE achieves better quantization
+the vector multiplication, eT1 ·e2 , cosine distance,               ,          performance since the codebook is jointly trainied with the
+                                                      ∥e1 ∥ · ∥e2 ∥
+or l2 -norm, −∥e1 − e2 ∥, etc. The two basis vectors contain                   system.
+similar semantic information when their semantic similarity                       2) Semantic Communications With Efficient Transmission:
+is high. We choose the cosine distance and compute all the                     We assume that the transmitter and receiver share the code-
+semantic similarity between two basis vectors in the codebook.                 book, E, consisting of the basis vectors, {ej , ∀j}, which are
+Denote the normalized codebook that consists of all the                        fixed after the training stage. Thus, for each encoded feature
+normalized basis vectors as                                                    output by the encoder, the transmitter simply needs to send the
+                                                                             index of the corresponding basis vector, which significantly
+                        e1      e2           eJ                                reduces the transmission overhead. As shown in Fig. 2(a),
+               E≜            ,       ,··· ,        .           (14)
+                       ∥e1 ∥ ∥e2 ∥          ∥eJ ∥                              in the transmission stage, the indices of the encoded features
+                                                                               are firstly mapped into the binary bits. Then, these binary bits
+Hence, the (i, j)-th element of matrix ET E denotes the                        are mapped into symbols and transmitted via wireless channel,
+semantic similarity of basis vectors ei and ej .                               H. The receiver maps the received symbols into the indices
+  2) Improved Robust Codebook: The loss function for                           and finds the corresponding basis vectors in the codebook,
+decreasing the semantic similarity, i.e., increasing the distance,             which are the input into the decoder for further processing. The
+among the basis vectors can be written as                                      channel and noise can be treated as a layer of the autoencoder
+                                                                               and jointly trained with the parameters of the autoencoder.
+                           Ls = ∥ET E∥2 .                             (15)
+                                                                                         IV. F EATURE I MPORTANCE M ODULE W ITH
+Based on semantic similarity, we add term ∥ET E∥2 into                                              T RAINING M ETHOD
+loss function (13) and try to make the basis vectors in the
+codebook, E, mutually orthogonal, i.e., the semantic similarity                  In this section, we make the semantic communication
+between two basis vectors is small and their distance is large.                system more robust and efficient by designing the FIM.
+                                                                               Furthermore, the SNR is incorporated into the FIM, which
+   3) Analysis of Codebook Robustness: The discrete repre-
+                                                                               ensures that the proposed system can successfully operate
+sentation is efficient to reduce the impact of the semantic
+                                                                               with different SNR levels. Moreover, we propose a novel loss
+noise. As shown in Fig. 2(b), the semantic noise causes the
+                                                                               function and training method to train the FIM.
+extracted feature to move towards some certain directions.
+Only if it does not leave far away from the basis vector
+corresponding to the original extracted feature that is not                    A. Noise-Related Feature Suppression
+affected by the semantic noise, the impact of the semantic                        The FIM dynamically learns and incorporates the feature
+noise can be eliminated by this discrete representation. Thus,                 importance into the training phase to train a DNN model that
+increasing the distance between two basis vectors can improve                  inherently suppresses those noise-related and task-unrelated
+the robustness of the codebook against the semantic noise.                     features.
+Based on the semantic similarity, we propose a novel loss                         1) Noise-Related Features: Different features depict an
+function to increase the distance between two basis vectors                    image from different aspects and there exist strong connections
+and try to make them mutually orthogonal. The orthogonal                       between features and robustness to semantic noise, where such
+basis vectors have two advantages: (i) the distance between                    robustness varies with different features. Different from the
+two orthogonal basis vectors is large; (ii) the required number                existing works assuming features are of equal importance,
+of basis vectors to represent the encoded feature space is the                 we focus on the relationship among features and assign them
+least when basis vectors are mutually orthogonal.                              different importance. Intuitively, different features contribute
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                           8715
+
+
+
+
+Fig. 3.   The architecture of the MAE with FIM.
+
+differently to the results of tasks and have different levels                    Note that the GAP extracts the global feature information
+of robustness to semantic noise. We expect that the semantic                     by averaging elements of the feature vector [12]. Moreover,
+communication systems can learn the importance of different                      different SNR levels result in different importance of features.
+features and have better understanding of semantic information                   Thus, to ensure that the proposed semantic communication
+behind the input image. Then, the transmitter can send the                       system can operate in a wide range of SNR levels, µ is
+important task-related and noise-unrelated features, which                       designed as a part of the input of the FIM, f̂ l .
+significantly improves the robustness of system and reduce                           The feature activation map, f̂ l , is then passed into an
+the transmission overhead.                                                       auxiliary DNN with fully-connected (FC) layers and ReLU
+   2) Feature Activation: We observe two characteristics of                      function. The output of the semantic communication system
+semantic noise from the feature activation perspective: (i) the                  is z ∈ RC , e.g., class label for classification problems and
+magnitudes of the activated features from the samples with                       reconstructed images for reconstruction problems. Then, the
+semantic noise are higher than that of natural samples; (ii)                     trainable parameters
+                                                                                                                           DNNC×(N
+                                                                                                             of this auxiliary     can be written
+some noise-related features are activated more uniformly and                     as Wl ≜ wµl , w1l , w2l , · · · , wN    l
+                                                                                                                               ∈ R    +1)
+                                                                                                                                          , which
+frequently by samples with semantic noise. We find that the                      identifies the importance of each feature corresponding to
+adversarial training has addressed the first issue of high magni-                output z. Parameters Wl will be applied to reweight the
+tudes of activated features. In other words, some task-unrelated                                           l
+                                                                                         l lmap F .l We
+                                                                                 raw feature                   denote the weight component as
+and low contributing features that are not activated by clean                       l
+                                                                                 ŵ ≜ ŵ1 , ŵ2 , · · · , ŵN ∈ RN , where we have
+samples without semantic noise, yet are activated by samples                                                            C
+with semantic noise. This to some extent explains why adver-                                                        1 X l
+                                                                                                           ŵnl =        w (c),                         (17)
+sarial training works but its performance is unsatisfactory.                                                        C c=1 n
+It motivates us to design an FIM that trains a model to assign                   for the n-th feature. It is employed as the weight of importance
+different importance to the features and inherently suppress                     for the n-th feature in the l-th layer associated with output
+these task-unrelated and noise-related high magnitude features                   z. We apply a “softmax” layer to scale these weights into
+from being activated by semantic noise.                                          range [0, 1]. Then, it reweights the features, {fnl , ∀n}, in the
+                                                                                 raw feature map, Fl , as f̃nl = ŵnl fnl . The adjusted feature
+B. FIM With Dynamic SNR
+                                                                                 map, F̃l ≜ f̃1l , f̃2l , · · · , f̃N
+                                                                                                                    l
+                                                                                                                      ∈ RM ×N , will be passed into the
+    1) Architecture    of FIM:     We denote the raw feature map,                next layer via forward propagation. In this way, the feature
+                                 ∈ RM ×N , as the output of the l-
+                             
+Fl ≜ f1l , f2l , · · · , fNl
+                                                                                 relationship is captured and different weights are generated
+th layer, where M and N represent the dimension and the                          for different features to increase or suppress their connection
+number of features, respectively. As shown in Fig. 3, we first                   strength to the next layer.
+apply the global average pooling (GAP) operation on the                             2) FIM With Label Information: Moreover, to make full use
+raw feature   map, Fl , to       obtain  the feature activation map,            of the label information, we slightly modify our FIM for the
+           ˆl ˆl
+f̂ ≜ µ, f1 , f2 , · · · , fˆN
+  l
+                            l
+                                 ∈ RN +1 , where µ denotes the SNR.              image classification task and incorporate the label information
+For the n-th feature, we have                                                    to improve the performance. Particularly, at the training phase,
+                                    M
+                                 1 X l                                           the ground-truth label is utilized as the index to determine the
+                          fˆnl =      f (m).                            (16)     channel importance. While in the inference phase, we simply
+                                 M m=1 n
+                                                                                 take the weight component that is associated to the predicted
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8716                                                            IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+class as the feature importance since the ground-truth label is                  Algorithm 3 Training Procedures of the Robust Semantic
+not available. Thus, the feature importance is then applied to                   Communication System
+reweight the original activation map as f̃nl = wnl (y)f l , where                 Input : The training dataset that consists of the input
+y denotes the true label at the training
+                                       phase andl the         predicted                     images, si , with their true labels, zi , the
+class at the inference phase, F̃l ≜ f̃1l , f̃2l , · · · , f̃N  ∈ RM ×N .                      generated channel samples, Hi , and the
+                      l
+Then, the adjusted F̃ is passed into the next layer via forward                               number of training epoch, N .
+propagation. Therefore, in this case, the feature importance is                   Output : The discrete codebook E and the trained
+learned by considering the label information.                                                 robust model with FIM, encoder, and decoder.
+                                                                                1 for n ← 1 to N do
+C. Model Training                                                               2     Mask a portion of the input images based on the
+   1) Loss Function of FIM: We insert the proposed FIM into                           proposed masking strategy.
+certain layers of the original DNN, which can be considered                     3     Calculate Lc based on the loss function (13) for
+as an auxiliary network. It can be trained together with                              training the discrete codebook E, together with the
+the parameters of the encoder and decoder by using the                                encoder and decoder.
+adversarial training method. We design the loss functions to                    4     Calculate Lf based on the loss function (19) for
+simultaneously train the original DNN and the FIM, where by                           training the FIM.
+taking one inserted FIM after the l-th layer as an example, the                 5     Calculate Ls based on the loss function (15) for
+loss function is designed as                                                          fine-tune the encoder and decoder.
+                                                                                6     Execute Algorithm 2 to do adversarial training via
+     LlFIM pl (f̂ l ), z; θ, Wl ≜ LCE (pl (f̂ l ), z; θ, Wl ),
+                               
+                                                               (18)                   employing the sum of Lc , Lf , and Ls .
+                                                                                7 end
+where pl (f̂ l ) ≜ ReLU(Wl f̂ l ) is the output of the FIM, θ
+denotes the trainable parameter of the original DNN, Wl is the
+trainable parameter of the FIM, and LCE (pl (f̂ l ), z; θ, Wl ) is
+                                                                                                                 TABLE I
+the cross entropy loss of pl (f̂ l ) and label z. The loss function
+                                                                                            T HE A RCHITECTURE OF THE P ROPOSED M ODEL
+of FIM is designed as (18) since the FIM will be trained better,
+i.e., the noise-related features are suppressed and the system
+achieves better performance, when pl (f̂ l ) approaches label z.
+   It can be easily extended to multiple FIMs. The overall loss
+function for adversarial training with the proposed FIM can
+be written as
+                                           L
+                                        γX l
+ Lf (s′ , z; θ, Wl) = LCE (ŝ′ ,z;θ)+         LFIM pl (f̂ l), z; θ, Wl ,
+                                                                      
+                                        L
+                                          l=1
+                                                                     (19)
+where s′ denotes the sample with semantic noise used
+                                                                               with 16, 185 images of 196 classes as the dataset for image
+for adversarial training, ŝ′ is the output of the decoder,
+                                                                               retrieval, and ImageNet, consisting of 14, 197, 122 images as
+LCE (ŝ′ , z; θ) denotes the cross entropy loss of ŝ′ and z,
+                                                                               the dataset for image reconstruction. The average size of joint
+L denotes the number of DNN layers, and γ is a tunable
+                                                                               photographic experts group (JPEG) images in the dataset is
+parameter for controlling the strength of FIM.
+                                                                               5, 108 bytes and the number of patches of each image is
+   2) Training Method of the Whole Model: We develop a
+                                                                               14 × 14. The masking ratio of masked VQ-VAE is 0.5 and the
+method to jointly train the aforementioned modules in the
+                                                                               codebook size is 256, which requires 8 bits for transmitting
+proposed robust semantic communication system, where the
+                                                                               each index. We adopt the 16-QAM for modulation with low-
+detailed training procedures are summarized in Algorithm 3.
+                                                                               density parity-check code (LDPC) of rate 1/2. The number of
+                                                                               iterations to generate semantic noise is set as K = 5 and
+                    V. S IMULATION R ESULTS                                    its power is ϵ = 0.016. The architecture of the proposed
+  In this section, we verify the effectiveness of the proposed                 model is presented in Table I. In particular, the “Codebook”
+semantic communication system by numerical results.                            layer represents that the basis vectors in the codebook are set
+                                                                               as trainable parameters and the “Dimension” of “Codebook”
+A. Simulation Setup                                                            layer denotes the number of basis vectors. Moreover, the
+   We consider the scenario where the transmitter and the                      “Dimension” of other layers represent the output dimension of
+receiver are equipped with Nt = 4 transmit and Nr =                            this layer. For different downstream tasks, e.g., classification,
+2 receive antennas, respectively. We compare the pro-                          we simply need to change the dimension of the last layer and
+posed masked VQ-VAE with the conventional source cod-                          fine-tune the pre-trained masked VQ-VAE. We compare the
+ing and channel coding approaches under MIMO chan-                             performance of the following methods:
+nels [1]. We adopt CIFAR-10, consisting of 60, 000 images                         •   Masked VQ-VAE+FIM+AT: The proposed masked
+of 10 classes as the dataset for image classification, Cars196,                       VQ-VAE with FIM and adversarial training.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                           8717
+
+
+
+
+Fig. 4.   The classification accuracy of the proposed schemes versus SNR.
+                                                                          TABLE II
+                                    T HE N UMBER OF T RANSMITTED S YMBOLS FOR O NE I MAGE IN D IFFERENT TASKS
+
+
+
+
+   • Masked VQ-VAE+AT: The proposed masked VQ-VAE                                Note that “Patch 16” denotes the proposed masked VQ-VAE
+     with adversarial training.                                                  scheme with image compression ratio 16 in the image pre-
+   • Masked VQ-VAE: The proposed masked VQ-VAE.                                  processing stage, i.e., a 16 × 16 × 3 patch is compressed into
+   • JSCC+AT: The modified JSCC scheme in [10] for dif-                          a scalar. Hence, a larger value represents a higher compres-
+     ferent tasks with the ViT architecture and adversarial                      sion ratio and lower transmission overhead. The number of
+     training.                                                                   transmitted symbols of the JPEG+LDPC can be computed as:
+   • JSCC: The modified JSCC scheme in [10] for different                        LHCn Pb Rc
+                                                                                               , where L and H denote the length and the width
+     tasks with the ViT architecture.                                                Cr Bs
+                                                                                 of the image, respectively, Cn is the number of channels,
+   • JPEG+LDPC+AT: The conventional scheme that adopts
+                                                                                 Pb denotes the required number of bits for each pixel, Rc
+     JPEG for the image source coding, LDPC for the channel
+                                                                                 denotes the code rate, Cr is the compression ratio, and Bs
+     coding, and the ViT as classifier with the adversarial
+                                                                                 denotes the required bits for a symbol that depends on the
+     training.
+                                                                                 modulation mode. We take the image classification as an
+   • JPEG+LDPC: The conventional scheme with JPEG and
+                                                                                            224 × 224 × 3 × 8 × 2
+     LDPC.                                                                       example:                            = 53, 760 symbols/image.
+                                                                                                    11.2 × 4
+   Note that we have proposed two kinds of semantic noise                        Moreover, the number of transmitted symbols for the proposed
+models: (i) sample-dependent semantic noise added at the                                                                   LHJc Mr
+                                                                                 masked VQ-VAE can be computed as:                   , where Jc
+transmitter; (ii) sample-independent semantic noise added at                                                                 Pa2 Bs
+                                                                                 denotes the required number of bits for transmitting an index
+the receiver, where (i) has a more serious impact on seman-
+                                                                                 of basis vector in the codebook, Mr is the masking ratio, Pa is
+tic communication systems. Hence, unless otherwise stated,
+                                                                                 the patch size. We take the masked VQ-VAE (Patch = 16) for
+we adopt semantic noise model (i). We consider the following                                                            224 × 224 × 8 × 0.5
+tasks and generate the corresponding semantic noise.                             image classification as an example:                          =
+                                                                                                                               162 × 4
+   • For image classification, the semantic noise is generated                   196 symbols/image. Therefore, the proposed masked VQ-VAE
+     to misclassify the minimally perturbed data that looks                      simply requires 196/53760 = 0.36% transmitted symbols of
+     visually similar to clean samples.                                          the conventional JPEG+LDPC.
+   • As for image retrieval, the subtle semantic noise leads to
+     incorrect retrieved results.
+                                                                                 C. Accuracy of Image Classification
+   • For image reconstruction, the semantic noise results in
+     the failure of reconstruction, e.g., some key objects and                      Fig. 4 shows the classification accuracy versus SNR.
+     information in the reconstructed images are missed or                       We train the model with the SNR range from −3 dB to 12 dB
+     blurred.                                                                    and test it in the SNR range from −9 dB to 18 dB. From
+                                                                                 Fig. 4(a), the classification accuracy increases with SNR for
+                                                                                 all schemes. The proposed Masked VQ-VAE+FIM+AT signif-
+B. Analysis of Transmission Overhead                                             icantly outperforms the JSCC+AT, JSCC, JPEG+LDPC+AT,
+  Table II presents the transmission overhead of the con-                        and JPEG+LDPC, and achieves the best performance. More-
+ventional JPEG+LDPC and our proposed masked VQ-VAE.                              over, the proposed Masked VQ-VAE+FIM+AT outperforms
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8718                                                              IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+
+Fig. 5.   The classification accuracy of different codebook size J versus SNR.
+
+
+
+
+Fig. 6. The classification accuracy of different schemes versus the power of
+                                                                                 Fig. 7. The classification accuracy of the proposed scheme versus reserving
+semantic noise ϵ.
+                                                                                 ratio for different ϵ.
+
+the Masked VQ-VAE+AT and Masked VQ-VAE. It demon-                                codebook size has stronger robustness against semantic noise
+strates the efficiency of each module in our design, including                   and stronger representational capability for the whole dataset,
+the masked VQ-VAE, FIM, and adversarial training. In addi-                       which results in a higher classification accuracy. Moreover, the
+tion, the proposed scheme and JSCC significantly outperform                      codebook size J ≥ 16 is enough for accurate classification.
+the conventional JPEG+LDPC in low SNR scenario because                              Fig. 6 illustrates the classification accuracy versus the power
+the BER is high in low SNR scenario while the proposed                           of semantic noise ϵ. The upper bound and lower bound are
+scheme is robust by transmitting the indices of extracted                        achieved by JSCC without semantic noise and with maximum
+task-related features in the trained codebook.                                   power of semantic noise, respectively. From the figure, the
+   Fig. 4(b) shows the classification accuracy of the schemes                    classification accuracy achieved by all schemes decreases with
+without semantic noise. Note that “clean” denotes the scheme                     ϵ. The proposed Masked VQ-VAE+FIM+AT significantly out-
+without semantic noise. The upper bound is achieved by the                       performs the benchmarks and achieves the best performance,
+JSCC without the effects of channel noise and semantic noise                     especially when ϵ is large, which shows the superiority of the
+while the lower bound is achieved by the JSCC with semantic                      proposed model against semantic noise.
+noise. From the figure, the proposed Masked VQ-VAE+FIM                              Fig. 7 presents the classification accuracy of the proposed
+(clean) approaches the upper bound and significantly outper-                     Masked VQ-VAE+FIM+AT versus reserving ratio for different
+forms JSCC (clean) and JPEG+LDPC (clean). Moreover, the                          ϵ. Note that reserving ratio = 1− masking ratio, which denotes
+proposed Masked VQ-VAE+FIM+AT approaches the perfor-                             the ratio of the reserved parts of an image to that of the whole
+mance of the model without semantic noise, which demon-                          image. From the figure, the classification accuracy achieved
+strates that the proposed model can effectively improve the                      by the proposed Masked VQ-VAE+FIM+AT decreases with ϵ.
+system robustness by reducing the impacts of semantic noise.                     In addition, when ϵ is small, e.g., ϵ = 0.008, the classification
+   Fig. 5(a) and Fig. 5(b) present the classification accuracy                   accuracy of the proposed scheme increases with the reserving
+versus SNR for different codebook sizes without semantic                         ratio since a higher reserving ratio keeps more semantic
+noise and with semantic noise, respectively. From the fig-                       information of the image. When ϵ is large, e.g., ϵ = 0.016,
+ure, the classification accuracy increases with SNR. A larger                    the classification accuracy of the proposed scheme firstly
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                          8719
+
+
+
+                                                                         TABLE III
+                              T HE C LASSIFICATION ACCURACY OF THE W HITE -B OX AND B LACK -B OX S EMANTIC N OISE
+
+
+
+
+                                                                                ResNet-based model. Then, we employ these different kinds
+                                                                                of semantic noise to evaluate the robustness of these models.
+                                                                                Particularly, the “T-P” in the line of “type of semantic noise”
+                                                                                refers to employing the semantic noise generated from the
+                                                                                Transformer-based model to attack the proposed model, which
+                                                                                is the black-box semantic noise. In comparison, the “P-P”
+                                                                                means that the proposed model is attacked with semantic noise
+                                                                                generated from the proposed model, which is the white-box
+                                                                                semantic noise. We can see that the white-box semantic noise
+                                                                                has more severe effects on the performance of the proposed
+                                                                                model than the black-box noise. Moreover, the black-box
+                                                                                semantic noise generated from the Transformer-based model is
+                                                                                more effective than that of the ResNet-based model since the
+                                                                                proposed model is designed based on Transformer. It demon-
+                                                                                strates that the black-box semantic noise generated from a
+Fig. 8. The classification accuracy versus signal-to-semantic noise ratio at    more similar model tends to be more effective. It is mainly
+the receiver.                                                                   because that the models with similar architecture generally
+                                                                                have similar parameters and layer structures. Furthermore, the
+increases and then decreases with the increase of reserving
+                                                                                proposed model is more robust than the Transformer-based
+ratio. It is because that a larger reserving ratio retains more
+                                                                                and ResNet-based models against both the white-box and the
+semantic noise although it keeps more semantic information.
+                                                                                black-box semantic noise. In addition, the target of this paper
+Thus, reserving ratio 0.5 achieves a good trade-off between
+                                                                                is to design a robust semantic communication system against
+the semantic information and semantic noise, which has the
+                                                                                semantic noise. From Table III, the proposed model will be
+highest classification accuracy.
+                                                                                able to defense the black-box semantic noise.
+   Fig. 8 shows the classification accuracy of different schemes
+versus signal-to-semantic noise ratio, where the noise denotes
+the sample-independent semantic noise added at the receiver.                    E. Feature Activation
+From the figure, the classification accuracy achieved by                           Fig. 9(a) and Fig. 9(b) present the activation frequency of
+all schemes increases with signal-to-semantic noise ratio.                      features without FIM and with FIM, respectively. A feature
+The proposed Masked VQ-VAE+FIM+AT significantly out-                            is determined as activated if its activation value is larger
+performs the benchmarks and achieves the best perfor-                           than a threshold. From Fig. 9(a), the samples with semantic
+mance. It shows that the proposed model is more robust                          noise activate the features more uniformly and they tend to
+to the sample-independent semantic noise than the JSCC.                         frequently activate the features that are rarely activated by
+Compared with the sample-dependent semantic noise, the                          clean samples, i.e., the features 125-200. These low frequency
+sample-independent semantic noise has less impacts on clas-                     features are noise-related and correspond to the redundant
+sification accuracy and the effects of adversarial training to                  activation that is less important for the task. Furthermore, the
+combat it is not obvious.                                                       semantic noise inhibits the activation of the features that are
+                                                                                frequently activated by clean samples, i.e., the features 1-75.
+D. White-Box Semantic Noise and Black-Box Semantic Noise                        Fig. 9(b) illustrates that the FIM increases the activation
+   We have claimed that the attacker needs to know all the                      frequency of some important features, i.e., the features 75-100,
+model information to generate the semantic noise. In fact,                      and avoids those redundant and less important features from
+it is almost the worst case for the proposed semantic commu-                    being activated by samples with semantic noise, i.e., the
+nication system, in which the generated semantic noise can                      features 125-200. This result demonstrates the effectiveness
+significantly influence the system performance. We call it the                  of our proposed FIM, which can suppress the activation of
+white-box semantic noise. However, semantic noise could also                    less important and noise-related features.
+be generated when the attackers only know part of the model
+information, e.g., model parameters and architectures. They                     F. Semantic Similarity of Basis Vectors
+can also attack the system by adopting the semantic noise                         Fig. 10(a) and Fig. 10(b) show the semantic similarity of
+generated from other similar models, which is named as the                      basis vectors in the codebook without and with the semantic
+black-box semantic noise.                                                       similarity term in the loss function, respectively. A larger value
+   In Table III, we first generate the semantic noise for                       with brighter color represents the higher semantic similarity
+the proposed model, the Transformer-based model, and the                        between the two vectors. It can be observed that semantic
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8720                                                                 IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+
+Fig. 9.    The activation frequency of features.
+
+
+
+
+Fig. 10.    Semantic similarity of basis vectors in the codebook.
+
+
+
+
+Fig. 11.    The performance of image retrieval and reconstruction.
+
+similarity between two basis vectors in Fig. 10(a) is larger                      bound is achieved by JPEG+LDPC without semantic noise
+than that of Fig. 10(b). It demonstrates that the semantic                        in high SNR scenario, nearly lossless transmission. From the
+similarity term of loss function proposed in Section III-C.2,                     figure, Patch 8 outperforms Patch 16 that has much higher
+∥ET E∥2 , can make the basis vectors in the codebook nearly                       compression ratio and requires lower transmission overhead.
+mutually orthogonal, which enhances the robustness and rep-                       Moreover, Patch 8 significantly outperforms the conventional
+resentational capability of the codebook.                                         JPEG+LDPC, especially in low SNR scenario. It is because
+                                                                                  that the image cannot be correctly decoded by employing
+                                                                                  JPEG+LDPC in low SNR scenario and the proposed scheme
+G. Performance of Image Retrieval and Reconstruction                              is more robust against semantic noise.
+   Fig. 11(a) shows the recall@1 performance of image                                Fig. 11(b) shows the quality of image reconstruction under
+retrieval task versus SNR, where recall@1 represents the ratio                    the power of semantic noise ϵ = 0.012. The left, middle,
+of successful image retrieval at the first query. The upper                       and right column represent the original image, the image
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+HU et al.: ROBUST SEMANTIC COMMUNICATIONS WITH MASKED VQ-VAE ENABLED CODEBOOK                                                                              8721
+
+
+
+reconstructed with patch size 16, and the image reconstructed                   [15] Z. Weng and Z. Qin, “Semantic communication systems for speech
+with patch size 8, respectively. From the figure, a lower                            transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+                                                                                     pp. 2434–2444, Aug. 2021.
+compression ratio leads to a better construction quality and                    [16] P. Jiang, C.-K. Wen, S. Jin, and G. Ye Li, “Deep source-channel coding
+patch size 8 achieves a satisfactory construction quality against                    for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+semantic noise.                                                                      vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+                                                                                [17] C. Lee, J. Lin, P. Chen, and Y. Chang, “Deep learning-constructed joint
+                                                                                     transmission-recognition for Internet of Things,” IEEE Access, vol. 7,
+                          VI. C ONCLUSION                                            pp. 76547–76561, 2019.
+   In this paper, we have analyzed semantic noise and proposed                  [18] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless image
+                                                                                     retrieval at the edge,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+the methods to generate the sample-dependent and sample-                             pp. 89–100, Jan. 2021.
+independent semantic noise. Then, the framework of robust                       [19] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+semantic communication system has been proposed to combat                            for edge inference: An information bottleneck approach,” IEEE J. Sel.
+the semantic noise, where the adversarial training with weight                       Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+                                                                                [20] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+perturbation has been developed. The masked VQ-VAE with                              semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+noise-related masking strategy has been proposed as the archi-                       pp. 2584–2597, Sep. 2022.
+tecture of the system and a discrete codebook for encoded                       [21] G. Zhang et al., “A unified multi-task semantic communication system
+                                                                                     for multimodal data,” 2022, arXiv:2209.07689.
+feature representation has been designed. To improve the                        [22] C. Boncelet, “Image noise models,” in The Essential Guide to Image
+system robustness, the FIM that suppresses the noise-related                         Processing. New York, NY, USA: Academic, 2009, pp. 143–167.
+and task-unrelated features has been proposed. Simulation                       [23] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Y. Li, “Semantic communications:
+                                                                                     Principles and challenges,” 2021, arXiv:2201.01389.
+results show that our proposed method can be applied in many
+                                                                                [24] W. Wang, R. Wang, L. Wang, Z. Wang, and A. Ye, “Towards a robust
+downstream tasks and significantly improve the robustness of                         deep neural network against adversarial texts: A survey,” IEEE Trans.
+semantic communication systems against semantic noise with                           Knowl. Data Eng., vol. 35, no. 3, pp. 3159–3179, Mar. 2023.
+much reduced transmission overhead.                                             [25] C. Szegedy et al., “Intriguing properties of neural networks,” in Proc.
+                                                                                     Int. Conf. Learn. Represent. (ICLR), Apr. 2014, pp. 1–10.
+                                                                                [26] I. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing
+                             R EFERENCES                                             adversarial examples,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+ [1] D. Tse and P. Viswanath, Fundamentals Wireless Communication.                   Jun. 2015, pp. 1–11.
+     Cambridge, U.K.: Cambridge Univ. Press, 2005.                              [27] A. Madry, A. Makelov, L. Schmidt, D. Tsipras, and A. Vladu, “Towards
+ [2] M. Mohammadi, A. Al-Fuqaha, S. Sorour, and M. Guizani, “Deep                    deep learning models resistant to adversarial attacks,” in Proc. Int. Conf.
+     learning for IoT big data and streaming analytics: A survey,” IEEE              Learn. Represent. (ICLR), Apr. 2018, pp. 1–10.
+     Commun. Surveys Tuts., vol. 20, no. 4, pp. 2923–2960, 4th Quart., 2018.    [28] N. Papernot, P. McDaniel, S. Jha, M. Fredrikson, Z. B. Celik, and
+ [3] K. B. Letaief, W. Chen, Y. Shi, J. Zhang, and Y. A. Zhang, “The roadmap         A. Swami, “The limitations of deep learning in adversarial settings,”
+     to 6G: AI empowered wireless networks,” IEEE Commun. Mag., vol. 57,             in Proc. IEEE Eur. Symp. Secur. Privacy, Mar. 2016, pp. 372–387.
+     no. 8, pp. 84–90, Aug. 2019.                                               [29] S.-M. Moosavi-Dezfooli, A. Fawzi, and P. Frossard, “DeepFool:
+ [4] H. Ye, L. Liang, G. Y. Li, and B.-H. F. Juang, “Deep learning-based             A simple and accurate method to fool deep neural networks,” in
+     end-to-end wireless communication systems with conditional GANs as              Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2016,
+     unknown channels,” IEEE Trans. Wireless Commun., vol. 19, no. 5,                pp. 2574–2582.
+     pp. 3133–3143, May 2020.                                                   [30] S.-M. Moosavi-Dezfooli, A. Fawzi, O. Fawzi, and P. Frossard, “Univer-
+ [5] Q. Hu, Y. Cai, K. Kang, G. Yu, J. Hoydis, and Y. C. Eldar, “Two-                sal adversarial perturbations,” in Proc. IEEE Conf. Comput. Vis. Pattern
+     timescale end-to-end learning for channel acquisition and hybrid pre-           Recognit. (CVPR), Jul. 2017, pp. 1765–1773.
+     coding,” IEEE J. Sel. Areas Commun., vol. 40, no. 1, pp. 163–181,          [31] B. Kim, Y. E. Sagduyu, K. Davaslioglu, T. Erpek, and S. Ulukus,
+     Jan. 2022.                                                                      “Channel-aware adversarial attacks against deep learning-based wireless
+ [6] T. O’Shea and J. Hoydis, “An introduction to deep learning for the              signal classifiers,” IEEE Trans. Wireless Commun., vol. 21, no. 6,
+     physical layer,” IEEE Trans. Cogn. Commun. Netw., vol. 3, no. 4,                pp. 3868–3880, Jun. 2022.
+     pp. 563–575, Dec. 2017.                                                    [32] F. Liao, M. Liang, Y. Dong, T. Pang, X. Hu, and J. Zhu, “Defense against
+ [7] M. Kountouris and N. Pappas, “Semantics-empowered communication                 adversarial attacks using high-level representation guided denoiser,”
+     for networked intelligent systems,” IEEE Commun. Mag., vol. 59, no. 6,          in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,
+     pp. 96–102, Jun. 2021.                                                          pp. 1778–1787.
+ [8] M. Kalfa, M. Gok, A. Atalik, B. Tegin, T. M. Duman, and O. Arikan,         [33] N. Papernot, P. McDaniel, X. Wu, S. Jha, and A. Swami, “Distillation
+     “Towards goal-oriented semantic signal processing: Applications and             as a defense to adversarial perturbations against deep neural networks,”
+     future challenges,” Digit. Signal Process., pp. 103–134, Dec. 2021.             in Proc. IEEE Symp. Secur. Privacy (SP), May 2016, pp. 582–597.
+ [9] G. Shi, Y. Xiao, Y. Li, and X. Xie, “From semantic communication to        [34] S. Gu and L. Rigazio, “Towards deep neural network architectures robust
+     semantic-aware networking: Model, architecture, and open problems,”             to adversarial examples,” 2014, arXiv:1412.5068.
+     IEEE Commun. Mag., vol. 59, no. 8, pp. 44–50, Aug. 2021.                   [35] D. Wu, S.-T. Xia, and Y. Wang, “Adversarial weight perturbation helps
+[10] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-               robust generalization,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+     channel coding for wireless image transmission,” IEEE Trans. Cognit.            Dec. 2020, pp. 1–20.
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.                      [36] Y. Bai, Y. Zeng, Y. Jiang, S.-T. Xia, X. Ma, and Y. Wang, “Improving
+[11] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled               adversarial robustness via channel-wise activation suppressing,” 2021,
+     semantic communication systems,” IEEE Trans. Signal Process., vol. 69,          arXiv:2103.08307.
+     pp. 2663–2675, 2021.                                                       [37] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+[12] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless             Process. Syst., Dec. 2017, pp. 5998–6008.
+     image transmission using deep source channel coding with attention         [38] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick, “Masked
+     modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,            autoencoders are scalable vision learners,” in Proc. IEEE/CVF Conf.
+     pp. 2315–2328, Apr. 2022.                                                       Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022, pp. 15979–15988.
+[13] K. Lu, R. Li, X. Chen, Z. Zhao, and H. Zhang, “Reinforcement               [39] A. Kurakin, I. Goodfellow, and S. Bengio, “Adversarial examples in the
+     learning-powered semantic communication via semantic similarity,”               physical world,” in Proc. Int. Conf. Learn. Represent. (ICLR), May 2017,
+     2021, arXiv:2108.12121.                                                         pp. 1–13.
+[14] D. B. Kurka and D. Gunduz, “DeepJSCC-f : Deep joint source-channel         [40] A. van den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+     coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,        representation learning,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+     no. 1, pp. 178–193, Dec. 2020.                                                  Dec. 2017, pp. 6309–6318.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8722                                                               IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+                         Qiyu Hu (Student Member, IEEE) received the B.S.                                  Guanding Yu (Senior Member, IEEE) received the
+                         degree in information engineering from Zhejiang                                   B.E. and Ph.D. degrees in communication engineer-
+                         University, Hangzhou, China, in 2018, where he is                                 ing from Zhejiang University, Hangzhou, China, in
+                         currently pursuing the Ph.D. degree with the College                              2001 and 2006, respectively. He joined Zhejiang
+                         of Information Science and Electronic Engineering.                                University in 2006 and is currently a Professor
+                         His current research interests include unmanned                                   with the College of Information and Electronic
+                         aerial vehicle communications, optimization theory,                               Engineering. From 2013 to 2015, he was also a
+                         machine learning for physical layer communication,                                Visiting Professor with the School of Electrical
+                         and semantic communication.                                                       and Computer Engineering, Georgia Institute of
+                                                                                                           Technology, Atlanta, GA, USA. His research inter-
+                                                                                                           ests include integrated sensing and communications
+                                                                                  (ISAC), mobile edge computing/learning, and machine learning for wireless
+                                                                                  networks. He received the 2016 IEEE ComSoc Asia-Pacific Outstanding
+                                                                                  Young Researcher Award. He regularly sits on the Technical Program Commit-
+                                                                                  tee (TPC) Boards of Prominent IEEE conferences, such as ICC, GLOBECOM,
+                         Guangyi Zhang (Student Member, IEEE) received            and VTC. He also serves as the Symposium Co-Chair for IEEE Globecom
+                         the B.S. degree in information engineering from          2019 and the Track Chair for IEEE VTC 2019’Fall. He has served as a Guest
+                         Zhejiang University, Hangzhou, China, in 2022,           Editor for IEEE Communications Magazine Special Issue on Full-Duplex
+                         where he is currently pursuing the Ph.D. degree with     Communications, an Editor for IEEE J OURNAL ON S ELECTED A REAS IN
+                         the College of Information Science and Electronic        C OMMUNICATIONS Series on Green Communications and Networking and
+                         Engineering. His current research interests include      IEEE J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS Series on
+                         semantic communication and deep learning for phys-       Machine Learning in Communications and Networks, an Editor for IEEE
+                         ical layer communication.                                W IRELESS C OMMUNICATIONS L ETTERS, a lead Guest Editor for IEEE
+                                                                                  Wireless Communications magazine Special Issue on LTE in Unlicensed
+                                                                                  Spectrum, an Editor for IEEE T RANSACTIONS ON G REEN C OMMUNICA -
+                                                                                  TIONS AND N ETWORKING , and an Editor for IEEE ACCESS. He is currently
+                                                                                  serving as an Editor for EEE T RANSACTIONS ON M ACHINE L EARNING IN
+                                                                                  C OMMUNICATIONS AND N ETWORKING.
+
+                      Zhijin Qin (Senior Member, IEEE) is currently
+                      an Associate Professor with Tsinghua University,
+                      Beijing, China. She was with Imperial College
+                      London, Lancaster University, and Queen Mary
+                      University of London, from 2016 to 2022. Her
+                      research interests include semantic communications
+                      and sparse signal processing. She was a recipient
+                      of the 2017 IEEE GLOBECOM Best Paper Award,
+                      the 2018 IEEE Signal Processing Society Young
+                      Author Best Paper Award, the 2021 IEEE Com-
+                      munications Society Signal Processing for Com-
+munications Committee Early Achievement Award, and the 2022 IEEE
+Communications Society Fred W. Ellersick Prize. She served as a Guest
+Editor for IEEE J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS
+(JSAC) Special Issue on Semantic Communications and an Area Editor
+for IEEE J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS. She
+also served as the Symposium Co-Chair for various conferences, such as
+IEEE GLOBECOM 2020/2021. She is serving as an Associate Editor for
+IEEE T RANSACTIONS ON C OMMUNICATIONS, IEEE T RANSACTIONS ON
+C OGNITIVE N ETWORKING, and IEEE C OMMUNICATIONS L ETTERS.
+
+
+                                                                                                             Geoffrey Ye Li (Fellow, IEEE) is currently a
+                                                                                                             Chair Professor with Imperial College London, U.K.
+                                                                                                             Before joining Imperial in 2020, he was a Pro-
+                         Yunlong Cai (Senior Member, IEEE) received the                                      fessor with the Georgia Institute of Technology,
+                         M.Sc. degree in electronic engineering from the                                     USA, for 20 years and a Principal Technical Staff
+                         University of Surrey, Guildford, U.K., in 2006,                                     Member with AT&T Labs—Research in New Jersey,
+                         and the Ph.D. degree in electronic engineering                                      USA, for five years. His research interests include
+                         from the University of York, York, U.K., in 2010.                                   statistical signal processing and machine learning
+                         From 2010 to 2011, he was a Post-Doctoral Fellow                                    for wireless communications. In the related areas,
+                         with the Electronics and Communications Labora-                                     he has published over 600 journals and conference
+                         tory, CNAM, Paris, France. Since February 2011,                                     papers in addition to over 40 granted patents and
+                         he has been with the College of Information Science      several books. His publications have been cited over 59,000 times with an
+                         and Electronic Engineering, Zhejiang University,         H-index over 110 and he has been recognized as a Highly Cited Researcher,
+                         Hangzhou, China, where he is currently a Professor.      by Thomson Reuters, almost every year.
+He held visiting professor positions at various universities, including Georgia     He was awarded a fellow of IEEE and IET for his contributions to signal
+Institute of Technology, McGill University, and University of York. His           processing for wireless communications. He won several prestigious awards
+research interests include transceiver design for multiple-antenna systems,       from IEEE Signal Processing, Vehicular Technology, and Communications
+cooperative and relay communications, UAV communications, and machine             Societies, including IEEE ComSoc Edwin Howard Armstrong Achievement
+learning for communications. He has published over 200 journals and con-          Award in 2019. He has been involved in editorial activities for over 20 tech-
+ference papers in these areas. He served as the General Chair for the 18th        nical journals, including the Founding Editor-in-Chief of IEEE J OURNAL ON
+IEEE International Symposium on Wireless Communications Systems, which            S ELECTED A REAS IN C OMMUNICATIONS Special Series on ML in Commu-
+was held in Hangzhou, in October 2022. He regularly sits on the Technical         nications and Networking. He has organized and chaired many international
+Program Committee Boards of Prominent IEEE conferences, such as ICC,              conferences, including the Technical Program Vice-Chair of the IEEE ICC’03,
+GLOBECOM, and VTC. He is currently an Associate Editor of IEEE S IGNAL            and the General Co-Chair of the IEEE GlobalSIP’14, the IEEE VTC’19 Fall,
+P ROCESSING L ETTERS.                                                             the IEEE SPAWC’20, and the IEEE VTC’22 Fall.
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+

@@ -1,0 +1,1146 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024                                                                                         4101
+
+
+
+
+      A Unified Multi-Task Semantic Communication
+               System for Multimodal Data
+                 Guangyi Zhang , Graduate Student Member, IEEE, Qiyu Hu , Student Member, IEEE,
+                      Zhijin Qin , Senior Member, IEEE, Yunlong Cai , Senior Member, IEEE,
+                                     Guanding Yu , Senior Member, IEEE, and
+                                       Xiaoming Tao , Senior Member, IEEE
+
+
+
+   Abstract— Task-oriented semantic communications have                                                    I. I NTRODUCTION
+achieved significant performance gains. However, the employed
+deep neural networks in semantic communications have to be
+updated when the task is changed or multiple models need
+to be stored for performing different tasks. To address this
+                                                                                W       ITH the rapid development of artificial intelligence,
+                                                                                        a huge amount of interconnected intelligent applica-
+                                                                                tions have appeared in the networks. To support massive
+issue, we develop a unified deep learning-enabled semantic                      connectivity for these applications over limited wireless
+communication system (U-DeepSC), where a unified end-to-end                     resources, the conventional communication systems are facing
+framework can serve many different tasks with multiple
+modalities of data. As the number of required features varies                   critical challenges [1], [2], [3]. To address this issue,
+from task to task, we propose a vector-wise dynamic scheme                      semantic communications have been considered as a promising
+that can adjust the number of transmitted symbols for different                 technology to achieve better performance [4].
+tasks. Moreover, our dynamic scheme can also adaptively
+adjust the number of transmitted features under different
+channel conditions to optimize the transmission efficiency.                     A. Prior Work
+Particularly, we devise a lightweight feature selection module                     Semantic communications have recently received great
+(FSM) to evaluate the importance of feature vectors, which can
+hierarchically drop redundant feature vectors and significantly
+                                                                                attention [5]. Different from conventional communications,
+accelerate the inference. To reduce the transmission overhead,                  they only take into account the relevant semantic information
+we then design a unified codebook for feature representation to                 to the tasks [6], [7], [8]. With the integration of com-
+serve multiple tasks, where only the indices of these task-specific             munications and deep learning (DL), task-related semantic
+features in the codebook are transmitted. According to the                      information can be extracted from the source data through
+simulation results, the proposed U-DeepSC achieves comparable
+performance to the task-oriented semantic communication                         deep neural networks (DNNs), and is represented by the
+system designed for a specific task but with significant reduction              encoded features. Recent DL-based studies on semantic
+in both transmission overhead and model size.                                   communications have shown a great potential to achieve
+  Index Terms— Deep learning, dynamic overhead, multimodal                      performance gains [9], [10], [11], [12], [13], [14], [15], [16],
+data, multi-task semantic communication.                                        [17], [18], [19], [20], [21], [22], [23], [24], [25], [26], [27],
+                                                                                [28], [29], especially in unfriendly channel environments.
+                                                                                   The existing works on semantic communications can be
+  Manuscript received 21 August 2023; revised 28 December 2023;                 mainly divided into two categories: data reconstruction [9],
+accepted 5 February 2024. Date of publication 9 February 2024; date of
+current version 19 July 2024. This work was supported in part by the            [10], [11], [12], [13], [14], [15], [16], [17], [18], [19], [20]
+National Natural Science Foundation of China under Grant U22A2004,              and task execution [21], [22], [23], [24], [25], [26], [27],
+62293484, and 61925105, and also in part by Zhejiang Provincial Key             [28], [29]. For the data reconstruction, the semantic system
+Laboratory of Information Processing, Communication and Networking
+(IPCAN), Hangzhou 310027, China. An earlier version of this paper was           extracts global semantic information from the source data.
+presented at the IEEE Global Communications Conference, Rio de Janeiro,         Specifically, a so-called DeepSC framework in [9] encodes the
+Brazil, December 2022 [DOI: 10.1109/GLOBECOM48099.2022.10000850].               text information into various lengths by employing sentence
+The associate editor coordinating the review of this article and approving it
+for publication was E. Jorswieck. (Corresponding author: Yunlong Cai.)          information. A novel semantic-preserving compression method
+  Guangyi Zhang, Qiyu Hu, Yunlong Cai, and Guanding Yu are with                 for text transmission has been developed in [30], which
+the College of Information Science and Electronic Engineering, Zhejiang         saves the number of bits for message representation. In [10],
+University, Hangzhou 310027, China (e-mail: zhangguangyi@zju.edu.cn;
+qiyhu@zju.edu.cn; ylcai@zju.edu.cn; yuguanding@zju.edu.cn).                     an attention-based JSCC system operates with different signal-
+  Zhijin Qin is with the Department of Electronic Engineering, Tsinghua         to-noise (SNR) levels during image transmission. As for
+University, Beijing 100084, China, and also with the Beijing National           video transmission, a DL-aided wireless video transmission
+Research Center for Information Science and Technology, Beijing 100084,
+China (e-mail: qinzhijin@tsinghua.edu.cn).                                      system in [11] can overcome the cliff-effect. The semantic
+  Xiaoming Tao is with the Department of Electronic Engineering, Tsinghua       communication system in [12] converts speech signals into
+University, Beijing 100084, China (e-mail: taoxm@tsinghua.edu.cn).              semantic features and decodes the received features into
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCOMM.2024.3364990.                                     a reconstructed speech waveform. For the task execution
+  Digital Object Identifier 10.1109/TCOMM.2024.3364990                          applications, only the task-specific semantic information is
+                       0090-6778 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4102                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+extracted and encoded at the transmitter [21], [22], [23],                    system (U-DeepSC). To the best of our knowledge, this is
+[24], [25]. In particular, a model for image retrieval task                   the first work on a unified semantic communication system
+under power and bandwidth constraints has been proposed                       designed to serve various tasks. Furthermore, it is important to
+in [21]. In [22], an image classification-oriented semantic                   notice that there is redundancy in transmitting all the features,
+communication system has been developed. In [23], a vector                    as different tasks require varying numbers of transmitted
+quantization-variational autoencoder (VQ-VAE) based robust                    features. For instance, data reconstruction typically demands
+semantic communication systems has been developed for                         more transmitted features compared to intelligent tasks. While
+image classification.                                                         transmitting more encoded features can enhance performance
+   Though the aforementioned semantic communication sys-                      against noise by capitalizing on feature redundancy, this
+tems have exhibited satisfactory performance in certain                       also introduces higher transmission overhead. Consequently,
+scenarios, they only handle one task with single modality of                  an inherent trade-off between performance and the number
+data. These DNN models are hard to simultaneously serve                       of transmitted symbols exists. Nevertheless, the majority of
+different tasks with multi-modality in practice for the reasons               existing methods heavily rely on handcrafted designs, where
+below: (i) The model has to be updated once the task is                       the output size of employed DNN models remain fixed.
+changed, which leads to massive gradient transmission for                     This will cause the transmission rate to exceed its required
+retraining it; (ii) Different models need to be stored for                    minimum value. Therefore, it is important to determine an
+serving different tasks, which might be unrealistic for the                   optimal transmission rate for each task within a unified multi-
+edge devices with limited storage resources. Generally, most                  task semantic communication system.
+of the devices require multi-task service, hence developing                      To this end, we make the first attempt to devise a unified
+a unified multi-task semantic communication system is of                      semantic communication for end-to-end data transmission. Our
+great importance. In [24], a Transformer-based framework                      approach takes into account six widely recognized tasks within
+has been proposed to address this issue initially. It is able                 the semantic communication community, encompassing both
+to share the same transmitter structure for the considered                    single-modality tasks and multi-modality tasks. The proposed
+tasks. However, the model in [24] still needs to be retrained                 U-DeepSC is capable of simultaneously handling multiple
+separately for different tasks and the transceiver architecture               tasks across three distinct modalities: image, text, and speech.
+has not been unified for different tasks yet. A recent work                   In order to equip U-DeepSC with the ability to extract
+in [31] has designed a model to handle the image detection                    task-specific information for diverse tasks, we introduce task
+and segmentation tasks, but it only handles two tasks with one                embedding vectors and task query matrices. These components
+modality of data. In [32], a multi-task semantic approach was                 are input alongside the source data for each task, effectively
+proposed for joint optimization of completing multiple tasks                  indicating the intended task for the given data. To determine
+with multiple receivers, where the considered tasks are mainly                an appropriate transmission overhead tailored to each task,
+image classification tasks.                                                   we develop a dynamic channel encoder for U-DeepSC. This
+   There have been some works about multi-task learning in                    encoder is designed to drop redundant feature vectors for
+the field of computer vision and natural language processing                  specific tasks and adjust the number of transmitted feature
+[33], [34], [35], [36]. Multi-task learning aims at utilizing                 vectors based on the channel conditions. More specifically,
+the task-specific information contained in the training samples               we implement a lightweight feature selection module (FSM)
+of related tasks. Compared with the single-task models, the                   within the channel encoder. This module generates a selection
+multi-task models bring the following advantages: (i) The                     mask vector, taking into account both the tasks and current
+memory space for storing the model can be significantly                       channel conditions, to precisely indicate which features
+reduced due to the shared model parameters for multi-                         need to be transmitted. In addition, the proposed FSM can
+task; (ii) It is easier to simultaneously train the model                     evaluate the importance of feature vectors and hierarchically
+for multiple tasks and improve the performance if some                        prune redundant feature vectors, significantly speeding up the
+related tasks share the complementary semantic information.                   inference. To reduce the transmission overhead as well as
+Moreover, for data of multiple modalities, multi-representation               enable digital transmission, we adopt the codebook design
+learning is a significant task, which aims to cope with the                   in [23], where a discrete codebook shared by the transmitter
+consistency and the difference in different modalities of data,               and receiver is designed for encoded feature representation and
+and explore modality representations to contain both consistent               only the indices of these encoded features in the codebook
+and complementary information [36].                                           are transmitted. Different from [23] where the codebook is
+                                                                              for a specific task with single modality, we design a unified
+                                                                              codebook for multimodal data. Furthermore, we develop a
+B. Motivation and Contributions                                               unified decoder for different tasks, where a masked cross-
+   It is foreseen that wireless networks are expected to                      attention method is proposed for parallel training. Simulation
+provide various intelligent services in terms of generality                   results show that our proposed methods achieve comparable
+and efficiency. Though there have been numerous semantic                      performance to the task-oriented semantic communication
+works for specific tasks, a unified multi-task model for                      systems designed for a specific task with much reduced
+different modalities of data in wireless communications has                   transmission overhead and fewer model parameters.
+not been thoroughly investigated. Therefore, in this paper,                      Specifically, the main contributions of this paper can be
+we propose a unified DL-based semantic communication                          summarized as follows.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                   4103
+
+
+
+  • We propose a unified semantic communication frame-                                                          TABLE I
+    work, U-DeepSC, which can handle a number of tasks                                                D EFINITIONS OF N OTATIONS
+    using a fixed model. The proposed U-DeepSC is a general
+    framework that can support the transmission of three
+    modalities of data.
+  • We design FSM at the channel encoder, which is
+    empowered with the ability to dynamically adjust
+    the numbers of transmitted features under different
+    channel conditions and tasks. It is able to achieve
+    an adaptive tradeoff between transmission rate and
+    task performance for the considered tasks. Since FSM
+    can hierarchically prune redundant feature vectors, the
+    computation complexity is reduced and inference speed
+    can be accelerated.
+  • We develop a unified codebook for multi-task services to
+    support digital communication and reduce transmission
+    overhead. Specifically, we introduce vector quantized-
+    variational mechanism for discrete feature representa-
+    tions, along with the utilization of a digital modulation
+    module for digital transmission.
+  • We devise a unified decoder based on Transformer
+    decoder, where a novel masked cross-attention method
+    is proposed to achieve parallel training. Besides,
+    we also propose a novel two-phase training algorithm to
+    simultaneously learn multiple tasks.
+
+C. Organization and Notations
+   The rest of this paper is organized as follows. Section II
+introduces the framework of U-DeepSC and the considered
+tasks. Section III presents the detailed architecture of semantic
+encoder. Section IV introduces the dynamic channel encoder                    that there is a candidate task set that contains various tasks, e.g.
+and FSM. The unified codebook and decoder are introduced in                   T1, T2, . . . , T10. These tasks may involve different numbers
+Section V. The masked cross-attention for parallel training and               of modalities, including image, text, and speech. We then take
+training method are provided in Section VI. Simulation results                T4 that contains image, text, and speech data as an example to
+are presented in Section VII. Finally, Section VIII concludes                 present the overall process of U-DeepSC. In particular, after
+this paper.                                                                   determining the involved modality, the proposed framework
+   Notations: Scalars, vectors, and matrices are respectively                 will activate the corresponding transmitters based on the
+denoted by lower case, boldface lower case, and boldface                      selected modalities. It mainly consists of four parts: an
+upper case letters. For a matrix A, A⊤ and ∥A∥ denote its                     image transmitter, a text transmitter, a speech transmitter,
+transpose, conjugate, and Frobenius norm, respectively. For a                 and a unified receiver. DNNs are employed to implement
+vector a, ∥a∥ is its Euclidean norm. Additionally, ⊙ is the                   the transmitters and the unified receiver. In particular, each
+element-wise multiplication of two matrices, i.e., Hadmard                    transmitter consists of a semantic encoder and a dynamic
+product. Finally, Cm×n (Rm×n ) are the space of m × n                         channel encoder. The unified receiver consists of the channel
+complex (real) matrices. Most of the key notations are listed                 decoder and the semantic decoder.
+in Table I.                                                                      The inputs of the system are image sv ∈ RLv , text
+                                                                              st ∈ RLt , and speech ss ∈ RLs , where Lv , Lt , and Ls are the
+          II. F RAMEWORK OF U NIFIED S EMANTIC                                length values of image, text, and speech signals, respectively.
+                    C OMMUNICATION                                            Specifically, Lv is the size of an image, Lt signifies the
+  In this section, we design the framework of U-DeepSC. The                   word count in a sentence, and Ls is the number of sampling
+U-DeepSC consists of the semantic/channel encoders for each                   points in the speech signal. Subsequently, each of these signals
+modality, and the unified semantic/channel decoder with light-                undergoes processing to obtain the corresponding encoded
+weight task-specific heads.                                                   features. For simplicity in notation, we treat the semantic
+                                                                              encoder and channel encoder collectively. In particular, each
+                                                                              signal undergoes initial encoding by the semantic encoder to
+A. System Model                                                               extract semantic features. Subsequently, the dynamic channel
+  As shown in Fig. 1, the proposed U-DeepSC is able to                        encoder is designed to execute feature selection, regulating the
+handle a number of tasks with three modalities. We assume                     size of the channel symbols. As a result, the encoded features
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4104                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+
+Fig. 1.   Framework of the proposed U-DeepSC.
+
+
+
+post the channel encoders for the three data modalities are                      address a diverse set of significant tasks across various
+denoted as z v ∈ CKv , z t ∈ CKt , and z s ∈ CKs , where Kv , Kt ,               domains. These tasks encompass text classification, visual
+and Ks denote the numbers of channel uses of image, text,                        question answering, image classification, video sentiment
+and speech signals, respectively. The encoding process can be                    analysis, image data reconstruction, and text data recon-
+expressed as                                                                     struction. They involve three fundamental data modalities:
+                                                                                 image, text, and speech, which constitute a substantial
+                   z i = fi (si ; θ i ),    i ∈ {v, t, s},                (1)    component of contemporary multimedia communication.
+where fv (·), ft (·), and fs (·) denote the mappings of image,                   Additionally, we include cross-modality tasks such as visual
+text, and speech transmitters, respectively. Additionally, θ v ,                 question answering, aligning with prevalent themes in existing
+θ s , and θ t are the trainable parameters in image, text, and                   semantic communication research. The selected tasks serve
+speech transmitters, respectively. We define the bandwidth                       as a representative demonstration of the proposed scheme’s
+ratios for three modalities as ρi ≜ Ki /Li , i ∈ {v, t, s}.                      effectiveness, with their relevance evident in established
+Moreover, the transmitted signals are subject to a power                         semantic communication systems [9], [21], [24], [30].
+constraint P , i.e., K1i E∥z i ∥2 ≤ P , i ∈ {v, t, s}.                             (i) Text classification: The purpose of the text classification
+    The encoded vectors, z i , i ∈ {v, t, s}, are then sent to the                     task is to classify whether the sentiment of a given
+receiver for decoding, and the received vectors are denoted as                         sentence is positive or negative. It is essentially a
+y i , i ∈ {v, t, s}. Specifically, the received vector at the receiver                 binary classification problem. Thus, we take classification
+is given by                                                                            accuracy as the performance metric for text classification,
+                                                                                       and the cross-entropy as the loss function to train the
+                   y i = hi z i + ni ,      i ∈ {v, t, s},                (2)
+                                                                                       model.
+where hi ∈ C represents the channel gain coefficient and ni ∼                     (ii) Visual question answering: In visual question answering
+CN (0, σ 2 ) is the additive white Gaussian noise (AWGN).                              task, the images and questions in text are processed by
+   At the receiver, the decoder firstly processes the corrupted                        the model to classify which answer is right. Thus, we take
+complex-valued signal and the obtained features are further                            answer accuracy as the performance metric and the cross
+processed by light-weight task-specific head to execute                                entropy as the loss function.
+downstream tasks. The decoding process can be formulated                         (iii) Video sentiment analysis: The video sentiment analysis
+as                                                                                     task is about leveraging multimodal signals for an
+                                                                                       effective understanding of the videos generated by
+                        ŝ = fu (y v , y t , y s ; ϕu ),                  (3)          users [37]. As for the evaluation criterion, classification
+where fu (·) denotes the mapping of the receiver, including                            accuracy is selected as the metric. Additionally, the binary
+channel and semantic decoder, and ϕu is the trainable                                  cross-entropy is used for the loss function.
+parameters of the receiver. Moreover, as different tasks may                     (iv) Image classification: The image classification task aims
+involve different modalities of data, there might not always be                        at classifing which category the given image belongs to.
+a necessity to simultaneously feed all three modalities of data                        To evaluate the performance of image classification task,
+into fu (·). For instance, for tasks like image classification that                    the classification accuracy is adopted as the performance
+solely require image data, only y v is necessary.                                      evaluation metric. To learn this task, we adopt the cross-
+                                                                                       entropy loss function.
+                                                                                  (v) Image reconstruction: The performance of the image
+B. Task Description                                                                    reconstruction task is quantified by the peak signal-
+  To conduct a comprehensive analysis of U-DeepSC and                                  to-noise ratio (PSNR). The PSNR measures the ratio
+present compelling results illustrating its efficacy, we will                          between the maximum possible power and the noise,
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                     4105
+
+
+
+     which is given by
+                                          MAX2
+                    PSNR = 10 log10            (dB),                   (4)
+                                          MSE
+     where MSE = d(x, x̂) denotes the mean square error
+     (MSE) between the source image x, and the reconstructed
+     image x̂, and MAX is the maximum possible value of the
+     pixels. Moreover, the MSE is adopted as the training loss.
+(vi) Text reconstruction: As for the text reconstruction task,
+     the bi-lingual evaluation understudy (BLEU) score is
+     adopted to measure the performance. The BLEU takes the
+     n-gram matching criterion to measure the performance.
+     BLEU score is a scalar between 0 and 1, which evaluates
+     the similarity between the reconstructed text and the
+     source text, with 1 representing the highest similarity.
+     We take the cross entropy as the loss function since the
+     BLEU score is non-differentiable.
+
+             III. S EMANTIC E NCODING D ESIGN
+                   FOR M ULTIMODAL DATA
+
+   In this section, we elaborate the detailed design of
+the transmitter, including the semantic encoders for three
+modalities of data. Since the data from different modalities
+have totally different statistical characteristics and have
+different semantic information, we have to design image, text,
+and speech semantic encoders for image, text, and speech,
+respectively. The detailed architecture of the transmitter is
+shown in Fig. 2. Specifically, the overall process of transmitter             Fig. 2. The transmitter architecture of the proposed U-DeepSC. It mainly
+                                                                              consists of three transmitters and each transmitter is comprised of two parts:
+is depicted as                                                                semantic encoder and channel encoder. The task embedding vectors consist of
+                                                                              randomly generated trainable parameters, which are continually updated along
+             wi      i            mq                                          with the model. Additionally, multiple tasks will share a common transmitter.
+       − X i −−tk
+    si →           − X ise −−→ X ien ,
+               →X̂ →                              i ∈ {v, t, s},       (5)
+
+where the definitions of notations can be found in the
+                                                                              encoding procedure of a Transformer encoder layer [39] can
+following sections.
+                                                                              be denoted as
+                                                                                            F out = MSA(F in ) + FFN(MSA(F in )).                       (6)
+A. Transformer-Based Encoding
+   We mainly use Transformer encoder to construct the                         Furthermore, GeLU activation and layer normalization opera-
+encoders of the transmitter. The Transformer encoder                          tions are employed prior to MSA and MLP modules.
+constitutes the fundamental building block in the landscape                      The MSA module consists of Na self-attention modules
+of signal processing [38], [39], [40]. The architecture of a                  with a residual connection, i.e.,
+basic Transformer encoder layer is depicted in the upper
+                                                                                MSA(X in )
+part of Fig. 2. Each Transformer encoder layer, as illustrated
+in Fig. 2, comprises a multi-head self-attention (MSA)                           = F in + concat (SA(F in ), SA(F in ), . . . , SA(F in )) W , (7)
+                                                                                                 |               {z                      }
+module and a multi-layer perceptron (MLP) layer. The                                                                      Na
+MSA mechanism enables the model to capture long-range
+                                                                              where concat(·) denotes the concatenation operation,
+dependencies among different feature vectors, facilitating
+                                                                              SA(F in ) ∈ RL×Da is self-attention operation on F in ,
+efficient global information integration. It assigns higher
+                                                                              W ∈ RDa Na ×D is linear projection matrix, and Da = D/Na
+weights to relevant feature vectors while simultaneously
+                                                                              is the output dimension. Moreover, SA(·) is formulated as
+attending to different positions in the sequence. After the                                                             !
+MSA, the feed forward neural (FFN) layer introduces non-                                                         QK ⊤
+linearity and captures complex relationships within the feature                             SA(F in ) = softmax   √       V,            (8)
+                                                                                                                    D
+vectors.
+   As depicted in Fig. 2, we input the intermediate feature                   where Q ∈ RL×Da , K ∈ RL×Da , and V ∈ RL×Da are
+matrix F in ∈ RL×D into the Transformer encoder layer. The                    generated from three linear projections as
+generated feature matrix is represented by F out ∈ RL×D ,
+and both F in and F out share the shape L × D. Overall, the                        Q = F in W Q ,        K = F in W K ,         V = F in W V ,          (9)
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4106                                                                               IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+where W Q ∈ RD×Da , W K ∈ RD×Da , W V ∈ RD×Da , and                            REt by concatenating it with X t . Then, the concatenated
+                                                                                             t
+softmax(·) denotes the Softmax function. Moreover, all the                     sequence X̂ ∈ R(Nt +1)×Et is input to the text semantic
+introduced projection matrices are set as trainable parameters.                encoder, which generates the encoded text feature matrix
+In addition to MSA, the FFN module consists of a multi-layer                   X tse ∈ R(Nt +1)×Et .
+MLP and a GeLU activation function.                                               3) Speech Semantic Encoder: As for speech-only and
+                                                                               multimodal tasks, the input speech signal of the proposed
+B. Semantic Encoder Design                                                     system is obtained from the speech set. Similarly, we first
+                                                                               preprocess speech signal ss into X s = [xs1 , xs2 , . . . , xsNs ]⊤ ∈
+   1) Image Semantic Encoder: The image-only and mul-
+                                                                               RNs ×Es , where Ns and Es denote the number and length of
+timodal tasks take an image sv as input. Then, it is
+                                                                               the feature vectors, respectively. Then, the speech semantic
+preprocessed [39] through patch embedding into the prelimi-
+                                                                               encoder learns the Ns encoded speech feature matrix
+nary features X v = [xv1 , xv2 , . . . , xvNv ]⊤ ∈ RNv ×Ev , where
+                                                                               X sse ∈ R(Ns +1)×Es from the concatenated sequence X̂ s =
+Nv and Ev denote the number and length of the feature
+                                                                               concat (X s , wstk ) ∈ R(Ns +1)×Es , where wstk ∈ REs is the
+vectors, respectively. Additionally, for the video tasks that
+                                                                               task embedding vector trained with the whole network.
+involve processing multiple frames of images at one time,
+we concatenate the preliminary features of different frames
+as the input of the image semantic encoder. U-DeepSC is                                  IV. F EATURE S ELECTION -BASED DYNAMIC
+designed as multi-task model that can simultaneously deal with                                      C HANNEL E NCODER
+several tasks with just a set of parameters. Besides, there is no                In this section, we introduce the task-specific dynamic
+need to update the parameters when the task changes. In this                   overhead by developing the dynamic channel encoder with
+case, the encoder of U-DeepSC needs to identify the current                    FSM.
+task so that it can perform the feature extraction pertinently.
+   To this end, we introduce the task embedding vector to the                  A. Hierarchical Feature Selection
+semantic encoder, which is generated as trainable parameter
+                                                                                  Transmitting all the feature vectors introduces excessive
+and updated with the whole model. Specifically, we would
+                                                                               redundancy of semantic information and different tasks
+generate one task embedding vector for each task at the
+                                                                               require different numbers of transmitted features. Thus, the
+image encoder. For instance, in the case of two tasks related
+                                                                               transmission overhead in U-DeepSC can be reduced by
+to image data, two task embedding vectors are randomly
+                                                                               selecting a specific number of feature vectors for each
+generated. It is worth noting that the task embedding vector
+                                                                               task. Although excessive redundancy generally induces a
+is quite similar to the CLS token embedding vector in the
+                                                                               high transmission overhead and latency, it leads to better
+vanilla transformer [38], [39]. This is achieved by generating
+                                                                               performance against noise if more encoded features are
+a set of random trainable parameter vectors, as illustrated in
+                                                                               transmitted. It is mainly because when certain features are
+Fig. 2, and jointly learning them across the entire network.
+                                                                               seriously disturbed, the other features that are not disturbed
+During the training phase, we select the task embedding vector
+                                                                               can help to maintain the performance. Therefore, we need
+corresponding to the specific task and input it along with the
+                                                                               to balance the performance and the number of transmitted
+image. This action signifies the task to be performed, enabling
+                                                                               symbols. To achieve this goal, we design a channel encoder
+the semantic encoder to extract task-specific information.
+                                                                               to dynamically adjust the number of output feature vectors
+In the inference phase, the learned task embedding vectors
+                                                                               for different tasks under different channel conditions in U-
+are selected for specific tasks. For instance, if a task involves
+                                                                               DeepSC, which is able to dynamically achieve satisfactory
+three modalities, three learned task embedding vectors, such
+                                                                               performance by transmitting the least number of features.
+as T4, are selected. As shown in Fig. 2, the task embedding
+                                                                                  Particularly, we design a dynamic channel encoder to
+vector wvtk ∈ REv is added to the semantic encoder. It is
+                                                                               conduct vector-wise feature selection by adjusting the number
+concatenated with X v , and the concatenated feature matrix
+                                                                               of the transmitted feature vectors. The proposed dynamic
+X̂ ∈ R(Nv +1)×Ev is given by
+                                                                               channel encoder has the following advantages:
+                        v
+                     X̂ = concat (X v , wvtk ) .                      (10)        • The transmitter can identify the task-related features
+                                                                                    and omit the task-unrelated features, which leads to
+Particularly, the task embedding vectors are employed to                            satisfactory performance.
+perform convolution or attention operation together with the                      • In Transformer architecture, each encoded feature
+encoded image feature vectors [41]. Then, we obtain the                             corresponds to portion of the input, such as one small
+encoded image feature matrix through the image semantic                             patch of the input image or one word of a sentence. Thus,
+encoder, which is represented by X vse .                                            it is also of great interpretability to see which features are
+   2) Text Semantic Encoder: As for text-only and multimodal                        task-unrelated.
+tasks, we preprocess the input text by word embedding into a                      • With the vector-wise selection design, the transmission
+sequence of Nt feature vectors, X t = [xt1 , xt2 , . . . , xtNt ]⊤ ∈                overhead can be dynamically adjusted and significantly
+RNt ×Et , where Nt and Et denote the number and length of                           reduced.
+the feature vectors, respectively. Subsequently, X t is encoded                   Since the output of the semantic encoder is a sequence of
+by the text semantic encoder. Similar to the image semantic                    encoded feature vectors. We omit the task-unrelated features
+encoder, we also add a trainable task embedding vector wttk ∈                  and transmit the informative task-related features to the
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                    4107
+
+
+
+                                                                               layer, F l denotes the information feature matrix with a smaller
+                                                                               size than the original feature matrix, and El is smaller than
+                                                                               Ed . In addition, to determine whether to drop or keep a feature
+                                                                               vector, we also need to consider the information of the existing
+                                                                               feature vectors that are not masked. It is employed to perform
+                                                                               information fusion with F l to evaluate the information loss
+                                                                               caused by the mask operation. Therefore, the global feature
+                                                                               vector f g that aggregates the information of all existing feature
+                                                                               vectors that have not been masked can be computed by
+
+                                                                                              f g = g MLP(F q ), mq−1 ∈ REl ,
+                                                                                                                        
+                                                                                                                                             (11)
+
+                                                                               where g(·) is the function to extract the information of the
+                                                                               existing feature vectors. g(·) can be implemented by the
+                                                                               average pooling
+                                                                                                                 Nd
+                                                                                                                 X                  Nd
+                                                                                                                                    X
+                                                                                                  g(F , m) =           mi · f i /         mi ,        (12)
+                                                                                                                 i=1                i=1
+
+                                                                               where i is the index of the vector, F = [f 1 , f 2 , . . . , f Nd ]⊤ ,
+                                                                               and m = [m1 , m2 , . . . , mNd ]⊤ . We further expand f g as
+                                                                               F g = [f g , f g , . . . , f g ]⊤ ∈ RNd ×El to perform knowledge
+Fig. 3. The architecture of the proposed channel encoder and FSM. The          fusion between F g and F l . The channel noise also affects
+FSM takes σ 2 , F q , and mq−1 as input and outputs mq .
+                                                                               probability of keeping the feature vectors, we employ another
+                                                                               MLP layer to extract the noise feature f n = MLP(σ 2 ) ∈ REl ,
+receiver. In particular, as shown in Fig. 3, the FSM is                        where σ 2 is the noise variance. Then, we expand f n in
+inserted into the original channel encoder layer to generate                   the same way as f g to obtain F n ∈ RNd ×El . As a result,
+the mask vector, which is used to indicate the features to                     we combine the local, global, and noise feature to obtain
+be kept/dropped for each task. Inspired by [42], we conduct                    comprehensive feature matrix
+hierarchical selection by inserting multiple FSMs at certain
+                                                                                             F c = concat (F l , F g , F n ) ∈ RNd ×3El ,             (13)
+layers, to perform gradually dropping. Moreover, hierarchical
+selection gradually drops the relatively unimportant features                  and feed it to another MLP to predict the probabilities of
+and can avoid mistakenly dropping important features directly.                 keeping the feature vectors,
+It is equivalent to dividing a complex selection problem into
+several simple selection problems. After dropping a small part                                  P = softmax(MLP(F c )) ∈ RNd ×2 .                     (14)
+of features each time, the model can adaptively adjust the
+next selection according to the existing unmasked features,                    Then, we can obtain the current mask vector m by sampling
+to achieve a higher tolerance for error selection than the single              from P . Note that this module will be inserted into different
+selection performed at the end of the transmitter.                             layers of the channel encoder to perform gradually dropping
+                                                                               feature vectors. Accordingly, the true mask vector mq at the
+                                                                               next layer is updated by mq = mq−1 ⊙ m, where ⊙ denotes
+B. FSM Design
+                                                                               Hadamard product. Therefore, once a feature is dropped, it will
+   1) Architecture Details: To realize hierarchical feature                    never be used in the following layers.
+selection, i.e., gradually drop the uninformative feature                         2) Differentiable Sampling: Although the design above is
+vectors, we introduce the selection mask vector, mq =                          able to perform feature vector selection, it is difficult to
+[mq1 , mq2 , . . . , mqNd ] ∈ {0, 1}Nd , which indicates whether to            implement during training. The main obstacle is that the
+transmit each feature vector and Nd is the number of the                       sampling operation from P to obtain the selection mask vector
+encoded feature vectors. The elements in the selection mask                    m is non-differentiable. Note that P = [p1 , p2 , . . . , pNd ]⊤ ∈
+vector are firstly initialized to 1 and updated progressively in               RNd ×2 denotes the probability matrix and the elements of the
+the Nq FSMs, as shown in Fig. 3. We denote the feature matrix                  first rank and second rank are the probabilities of keeping
+                                  ⊤
+F q = [f q1 , f q2 , . . . , f qNd ∈ RNd ×Ed , as the input of the q-th        and dropping these Nd feature vectors, respectively. We take
+selection module, where Nd and Ed denote the number and                        the j-th feature vector f qj in F q as an example, and a
+the size of the feature vectors, respectively. The q-th selection              straightforward way to determine whether to keep it is to
+module takes the previous selection mask vector mq−1 and                       sample from pj ∈ R2 . However, the sampling operation
+F q , as input, and outputs the probabilities of keeping the                   is non-differentiable, which hinders the back propagation of
+feature vectors.                                                               the gradients. To address this problem, the Gumbel-Softmax
+   Firstly, the encoded feature vectors are projected by a MLP:                technique is adopted. It is differentiable and makes it possible
+F l = MLP(F q ) ∈ RNd ×El , where MLP(·) denotes the MLP                       to train the selection module. Firstly, with the Gumbel-Max,
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4108                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+                                                            
+discrete one-hot sample from the distribution, pj = p1j , p2j ,               parameters of each MLP layer. The monotonicity can be easily
+can be expressed as                                                           acknowledged by deriving the derivatives with respect to x.
+                                                                                 Given the specific channel noise σ 2 , we obtain a set of
+    o ≜ [o1 , o2 ] = oneshot arg max log(pij ) + gi ,
+                                                   
+                                                          (15)
+                                     i=1,2                                    target ratios for Nq corresponding selection modules, i.e.,
+                                                                              [δ, δ 2 , . . . , δ Nq ]. We apply the MSE loss to supervise the
+where gi for i = 1, 2 are samples drawn from gumbel(0, 1),
+                                                                              prediction module:
+the operation oneshot(n) denotes generating a one-hot vector,
+where the n-th element equals 1. For instance, oneshot(1) =                                                  Nq          Nd
+                                                                                                                                 !2
+                                                                                                          1 X q        1 X     q
+[1, 0]. The gumbel(0, 1) distribution can be sampled using                                       LFSM =           δ −        m      ,     (19)
+inverse transform sampling by drawing u from a uniform                                                    Nq q=1      Nd i=1 i
+distribution U (0, 1) and computing g = − log(− log(u)).                                  PNd q
+   To approximate the non-differentiable arg max(·), we fur-                  where N1d i=1      mi denotes the true ratio of transmitting
+ther use the softmax function as a continuous, differentiable                 feature vectors. By supervising the true ratio with the target
+approximation [43]:                                                           ratio, only the target ratio of feature vectors will be processed
+                                                                            by the decoder for training. However, if we apply loss (19)
+                      exp log(pij ) + gi /τ                                   directly, more feature vectors will be selected as the training
+            ôi = P2                        ,          (16)
+                             log(pkj ) + gk /τ                                goes on, since the model tends to keep more feature vectors
+                    k=1 exp
+                                                                              to improve the performance. To balance the performance and
+for i = 1, 2, where τ is a temperature parameter that controls                the number of transmitted symbols, we add the l1 -norm of δ
+the discreteness. As the softmax temperature τ approaches                     to loss (19), as given by
+0, sample from the Gumbel distribution, i.e., ô = [ô1 , ô2 ],                                                             !2
+                                                                                                     Nq               Nd
+becomes one-hot. At higher temperatures, it is no longer one-                                    1 X q            1 X      q
+hot, and becomes uniform. It is differentiable and makes it                            LFSM =              δ −           m      + ∥δ∥.     (20)
+                                                                                                 Nq q=1          Nd i=1 i
+possible to train the selection module. Therefore, the i-th
+element in selection vector m can be written as                               It makes the model keep fewer feature vectors with the
+                                                                              decrement of δ, and enables the model to achieve a good
+             mi = ô1 = gumbel-softmax (pi )[1].                     (17)
+                                                                              performance by only transmitting a part of feature vectors.
+In particular, the output of gumbel-softmax(·) is an                             During the inference phase, with knowledge of the channel
+approximate one-hot vector with the same shape as the input,                  noise variance, we can selectively discard less informative
+where element 1 indicates the sampled result. Thus, the output                feature vectors based on probabilities generated by the
+one-hot vector gumbel-softmax(pi ) has two elements, and we                   selection modules. This ensures that only Nd δ Nq feature
+take its first element as the result. Therefore, m will be a mask             vectors are transmitted to the receiver. In particular, only
+vector sampled from F q , with each element being 0 or 1.                     the top Nd δ Nq feature vectors with the highest probabilities
+   3) Training and Inference: The training process for U-                     are transmitted. In addition, only the important parts of the
+DeepSC encompasses the dynamic channel encoder, ensuring                      features are retained after FSM, while the unimportant parts
+its capability to make decisions regarding the transmission                   of feature vectors are dropped directly. Furthermore, the FSM
+of specific feature vectors. To optimize dynamic transmission                 retains only the essential features, discarding unimportant parts
+overhead across varying channel conditions, the ratio of                      of the feature vectors. As a result, the transmitter transmits
+transmitted feature vectors is governed      by a predetermined              only the retained feature vectors without the need to transmit
+variable value δ = fn σ 2 ; ψ , where ψ denotes the                           the mask. At the receiver, the received feature vectors are
+trainable parameters and σ 2 denotes the variable channel                     concatenated and directly fed into the decoder.
+noise. In practical communication systems, the receiver has
+the capability to gain awareness of channel conditions through                             V. U NIFIED C ODEBOOK AND R ECEIVER
+channel feedback. Consequently, the encoding of features
+                                                                                In this section, we first design the unified codebook for the
+can be enhanced by integrating the knowledge of channel
+                                                                              multi-task applications. Then, we design the unified receiver
+conditions into the process. In particular, when fn σ 2 ; ψ
+                                                                              based on Transformer decoder.
+is configured as a non-negative, monotonically increasing
+function implemented by DNNs, and a greater number of
+feature vectors will be chosen for larger σ 2 . To implement                  A. Unified Codebook for Multimodal Data
+this non-negative increasing function, we employ a series of                     We aim to design a unified codebook for all considered tasks
+multi-layer perceptron (MLP) layers. The mapping of an MLP                    with different modalities of data to enable digital transmission.
+layer can be represented by                                                   The codebook consists of a number of basis vectors and
+                                                                              the encoded feature vectors will be represented by the basis
+                     MLP(x) = tanh(W x),                             (18)
+                                                                              vectors. Since the data characteristics of different modalities
+where we employ tanh(·) as the activation function, W                         differ from each other, it is difficult to share the basis
+denotes the trainable parameters, and x represents the input                  vectors among the data of different modalities. In contrast,
+vector. Since we aim to design fn as a non-negative increasing                the semantic information of different tasks from the same data
+function with respect to the channel noise, we let W =                        modality may overlap. For example, the image reconstruction
+abs(W̄ ) for each MLP layer, where W̄ is the actual trainable                 task and image classification task can share some basis vectors
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                      4109
+
+
+
+
+Fig. 4.   The unified codebook for digital data transmission.
+
+
+
+since the class semantic information must be included in global                  Therefore, to learn the basis vectors, we employ the l2 error
+semantic information, which can be employed to reconstruct                       to move the basis vectors towards the encoded features, xvi ,
+the data. It poses a potential to share the basis vectors in the                 as shown in the first term of (23). Since the volume of the
+codebook among these tasks, which leads to a much smaller                        encoded feature space is dimensionless, the codebook can
+codebook size for multiple tasks. Therefore, we aim to design                    grow arbitrarily and cause the training process to diverge if the
+a unified codebook with three sub-codebooks for the image,                       basis vectors, {evj , ∀j}, are not trained as fast as the encoder
+text, and speech, as shown in Fig. 4(a). Different tasks of the                  parameters [44]. To address this issue, we add the second term
+same modality share the same sub-codebook.                                       in (23). In summary, the basis vectors are optimized by the
+   Aspresented in Fig. 4(a), we design a unified codebook as                    first loss term, and the encoder is optimized by the second
+E ≜ E v , E t , E s . Specifically,                                              loss term. These details have been elucidated more explicitly
+                              Mi
+                                                                                 in the revised manuscript.
+                   E i ≜ eij j=1 , i ∈ {v, t, s},
+                        
+                                                            (21)
+                                                                                 B. Unified Receiver Design
+where Mv , Mt , and Ms are the sizes of the image sub-
+codebook E v , text sub-codebook E t , and speech sub-codebook                      1) Transformer-Based Decoding: As depicted in Fig. 5, the
+E s respectively. Mc = Mv + Mt + Ms , is the total size of                       Transformer decoder primarily consists of two components:
+the unified codebook. Then, we take the image data as an                         MSA and multi-head cross-attention (MCA). In contrast to
+example to show the way to represent the encoded feature                         MSA, MCA focuses on attending to the extra input to capture
+vectors with the codebook. Recall that the input data sv                         relevant information. By incorporating both self-attention and
+passes through the encoder to produce the encoded feature                        cross-attention mechanisms, the Transformer decoder layer can
+matrix X ven = [xv1 , xv2 , . . . , xvNv +1 ] ∈ R(Nv +1)×Ev . Then,              adaptively process the received information. In particular, the
+it is represented by a group of basis vectors. Specifically,                     decoding procedure of a Transformer can be denoted as
+each feature vector xvi is represented by fvq (xvi ), which is                       F out = MSA(F in1 ) + FFN(MCA(MSA(F in1 ), F in2 )),
+the nearest vector in the codebook [44],                                                                                                                (24)
+                  fvq (xvi ) = arg    min      xvi − evj 2 .            (22)     where F out ∈ RL1 ×D denotes the output matrix, F in1 ∈
+                                     ev
+                                      j ∈E
+                                           v
+                                                                                 RL1 ×D and Fin2 ∈ RL2 ×D are input matrices. The operation
+   The basis vectors in the codebook are trained together with                   MCA(·) can be described as follows. Firstly, for simplicity,
+the parameters of encoder and decoder. However, the operation                    we let F 1 = MSA(F in1 ) and F 2 = F in2 . Then, similar
+in (22) is non-differentiable. Hence, the gradients are copied                   to MSA, the operation MCA(·) generally takes two matrices,
+from the input of the decoder to the output of the encoder.                      F 1 ∈ RL1 ×D and F2 ∈ RL2 ×D , as input, and the procedure
+In this way, the gradient is passed to the encoder to enable                     can be expressed as
+the back propagation. In particular, the trainable parameters
+                                                                                  MCA(F 1 , F 2 )
+of the encoder, decoder, and codebook are updated via the
+loss function below                                                               = F 1 +concat (CA(F 1 , F 2 ), CA(F 1, F 2 ), . . . , CA( F 1,F 2 ))W.
+                                                                                                |                      {z                           }
+                                  2                2                                                                       Ns
+   Lc (xvi ; evj ) = ng xvi − evj 2 + β xvi − ng evj 2 , (23)
+                        
+                                                                                                                                                        (25)
+                                                            
+where β denotes the hyper-parameter, and symbol ng uvi                           Specifically, the cross-attention operation is given by
+represents stop-gradient operator that has zero gradient during                                                                 !
+backward propagation and is the identity layer during the                                                                QK ⊤
+                                                                                              CA(F 1 , F 2 ) = softmax    √       V,                    (26)
+forward propagation. Additionally, if the task involves more                                                                D
+than one modality, we need to calculate the sum of codebook
+                                                                                 where Q ∈ RL1 ×Ds , K ∈ RL2 ×Da , and V ∈ RL2 ×Da are
+losses of involved modalities. Since we use the straight
+                                                                                 generated from three linear projections as
+gradient estimation of mapping from xvi to fvq (xvi ), the basis
+vectors {evj , ∀j} have no gradients from the loss function.                            Q = F 1W Q,          K = F 2W K , V = F 2W V ,                  (27)
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4110                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+                                                                                 Then, for the later layers, the output of the i-th decoder layer
+                                                                                 U de
+                                                                                   i can be iteratively denoted as
+
+                                                                                   U ide = MSA(U i−1                  i−1
+                                                                                                 de ) + FFN(MCA(MSA(U de ), U cd )). (29)
+
+
+                                                                                   VI. M ASKED C ROSS -ATTENTION AND J OINT T RAINING
+                                                                                    In this section, we design the masked cross-attention
+                                                                                 for parallel training. The overall training algorithm is also
+                                                                                 introduced.
+
+                                                                                 A. Masked Cross-Attention for Parallel Training
+                                                                                    Recall that FSM can select informative feature vectors
+                                                                                 using Gumbel-Softmax sampling. However, the sampling
+Fig. 5.   The receiver architecture of the proposed U-DeepSC.                    operation is inherently random, leading to an indeterminate
+                                                                                 number of selected features that can vary across different
+                                                                                 inputs. Consequently, the received feature matrices Ucd , which
+where W Q ∈ RD×Da , W K ∈ RD×Da , and W V ∈                                      consist of selected feature vectors for distinct inputs (such
+RD×Da . By connecting multiple Transformer decoder layer,                        as different images), exhibit varying shapes. The inherent
+a Transformer decoder is obtained.                                               variability in feature vector sizes poses a challenge to
+                                                                                 achieving parallel batch-wise training, as conventional deep
+   2) Unified Semantic Decoder: The received encoded
+                                                                                 learning frameworks often demand uniform feature shapes
+features are firstly processed by the channel decoder, whose
+                                                                                 within a batch. Diverging from the approach presented in [45],
+output is denoted as U cd , as shown in Fig. 5. For image-
+                                                                                 which utilizes multiple decoders to handle varying feature
+only tasks, text-only tasks, and speech-only tasks, the
+                                                                                 vector sizes, our solution for efficient parallel training involves
+input to the decoder can be represented by U cd = U v ,
+                                                                                 the introduction of a masked cross-attention mechanism.
+U cd = U t , and U cd = U s , respectively, where U v ,
+                                                                                    To this end, we do not directly drop the redundant feature
+U t , and U s denote the decoded image, text, and speech
+                                                                                 vectors, instead, all feature vectors are kept in the training
+feature matrices processed by channel decoder, respectively.
+                                                                                 phase and we only drop the redundant feature vectors in the
+For multimodal tasks, we concatenate the decoded fea-
+                                                                                 inference phase feature. Thus, we must keep the number of
+tures from the corresponding modalities      of data into a
+                                                                                 feature vectors unchanged in the training phase, while cutting
+sequence, e.g., U cd = concat U v , U t for image-and-text
+                                         
+                                                                                 down the interactions between the redundant feature vectors
+tasks.
+                                                                                 and other informative feature vectors. Nevertheless, merely
+   Unlike the separate design for each modality at the
+                                                                                 zero-out the redundant feature vectors according to the mask
+transmitter, the semantic decoder is built upon the unified
+                                                                                 vector is not feasible, since the zeroed feature vectors will
+Transformer decoder structure. As shown in Fig. 5, the
+                                                                                 still influence other vectors through the Softmax operation,
+semantic decoder takes the output of channel decoder,
+                                                                                 as given in (26). In order to drop the redundant feature vectors,
+U cd ∈ RNp ×Ep , and the task-specific query matrix, W ry ∈
+                                                                                 we mask the attention scores calculated by the redundant
+RNr ×Ep , as the input, where Np is the total number of
+                                                                                 feature vectors. That is, the main procedure of the masked
+feature vectors, Nr and Ep denote the number and length
+                                                                                 cross-attention is described as follows. We first denote the
+of task-specific query embedding vectors, respectively. The
+                                                                                 attention score matrix as
+task-specific query embedding matrix serves as an indicator
+                                                                                                                 √
+of the task assigned to the semantic decoder, akin to the                                          A = QK T / D ∈ RL1 ×L2 .                     (30)
+conventional input required by the Transformer decoder [38].
+Similar to the task embedding vectors, we would generate                         Then, we generate a mask matrix M ∈ RL1 ×L2 at the decoder
+several task-specific query embedding matrices, and each of                      for A based on the final mask vector m̂ ∈ RL2 :
+which corresponds to one task. During the testing phase,
+                                                                                                       M [i] = m̂,       1 ≤ i ≤ L1 .                   (31)
+only the task-specific query embedding matrix relevant to
+the ongoing task is utilized. To illustrate, if there are a                      Accordingly, we denote the cross-attention matrix in (26) as
+total of 6 tasks, we create 6 trainable task-specific query                      B, which can be calculated by
+embedding matrices. In the inference phase, we select the
+corresponding matrix as input to indicate the intended task,                                               exp (A[i, j]) M [i, j]
+                                                                                                B[i, j] = PL2                         .                 (32)
+as illustrated in Fig. 5. Let F in1 = W ry and F in2 = U cd .                                              l=1 exp (A[i, l]) M [i, l]
+Then, we obtain the output of the i-th decoder layer U ide .
+                                                                                 Particularly, M [i, j] = 1 indicates that the j-th feature vector
+Therefore, the output of the first decoder layer U 1de can be
+                                                                                 will influence the i-th feature vector. In this way, the redundant
+denoted by
+                                                                                 feature vectors will not contribute to the informative feature
+                                                                                 vectors, so that they can be directly dropped in the inference
+  U 1de = MSA(W ry ) + FFN(MCA(MSA(W ry ), U cd )). (28)                         phase.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                   4111
+
+
+
+ Algorithm 1 Two-Phase Training Algorithm                                        • In the second phase, we fine-tune the entire U-DeepSC
+  1 Input: Training datasets consist of input image, text,                         model, building upon the parameter trained in the first
+    speech data and labels. The numbers of training                                phase. Furthermore, the codebook loss Lc and the FSM
+    epochs for two phases, N1 and N2 , the learning rate.                          loss LFSM are both incorporated into the overall loss
+                                              ∗    ∗    ∗
+  2 Output: Optimized parameters {θ v , θ s , θ t , ϕu }.
+                                                             ∗                     function L (sv , st , ss ). This phase aims to optimize
+  3 First Phase:
+                                                                                   the complete system, aiming for global optimization.
+  4 Fix parameters of fn .
+                                                                                   Consequently, a balanced trade-off between transmission
+  5 for i ← 1 to N1 do
+                                                                                   overhead and task performance can be achieved for
+  6     Choose one task and generate a batch of samples.                           different tasks.
+                                                                                 The detailed training procedures are summarized in
+  7     Generate the selection mask vectors.
+                                                                              Algorithm 1. The proposed U-DeepSC is a general framework,
+  8     Compute FSM loss LFSM based on (19).
+                                                                              and can support various tasks of different modalities of
+  9     Continue forward propagation with the generated
+                                                                              data, e.g., object detection and speech classification. Firstly,
+        mask vectors.
+                                                                              it necessitates the design of a task embedding vector and task-
+ 10     Compute the task-specific loss Lp according to the
+                                                                              specific query embedding matrices customized to the specific
+        type of task.
+                                                                              characteristics of the new task. Secondly, the creation of a task-
+ 11     Compute the total loss L (sv , st , ss ) = Lp + LFSM .
+                                                                              specific head dedicated to the new task is essential. Finally,
+ 12     Update parameters of U-DeepSC, {θ v , θ s , θ t , ϕu },
+                                                                              the model must undergo joint learning to effectively support
+        using L (sv , st , ss ).
+ 13 end
+                                                                              the new task.
+ 14 Second Phase:
+ 15 Load the parameters trained in the first phase.
+                                                                                                   VII. S IMULATION R ESULTS
+ 16 for i ← 1 to N2 do                                                          In this section, we demonstrate the superiority of the
+ 17     Choose one task and generate a batch of samples.                      proposed U-DeepSC by numerical results.
+ 18     Sample the channel variance σ 2 from the given
+        SNR range.                                                            A. Simulation Setup
+ 19     Sample the channel gain coefficient h.                                   The setting of the training procedure is: the AdamW
+ 20     Generate the selection mask vectors before                            optimizer with learning rate 1 × 10−5 , batch size 50, weight
+        transmitting.                                                         decay 5 × 10−3 ,1 where we find that the smaller learning
+ 21     Compute FSM loss LFSM based on (20).                                  rate and the larger batch size lead to better performance. The
+ 22     Compute codebook loss Lc based on (23).                               number of FSM is Nq = 2. To verify the effectiveness of
+ 23     Continue forward propagation with the generated                       U-DeepSC, we test our U-DeepSC on the aforementioned
+        mask vectors.                                                         six tasks, each corresponding to a dataset. Specifically, the
+ 24     Compute the task-specific loss Lp according to the                    CIFAR-10 dataset is utilized for both image classification
+        type of task.                                                         and image reconstruction tasks. For text-related tasks such as
+ 25     Compute the total loss                                                text reconstruction and text classification, the SST-2 dataset
+        L (sv , st , ss ) = Lp + LFSM + Lc .                                  is employed. Additionally, the VQAv2 dataset is chosen
+ 26     Update parameters of U-DeepSC,                                        for the visual question answering task, and the MOSEI
+        {θ v , θ s , θ t , ϕu , ψ}, using L (sv , st , ss ).                  dataset is utilized for the video task. In the context of
+ 27 end
+                                                                              image reconstruction, a patch size of 4 is set, while for
+                                                                              image classification, it is set to 32. The text-related tasks
+                                                                              utilize BERT-base-uncased as the text embedding tool. For
+                                                                              video data’s vision stream, Facet, an analytical tool based on
+B. Joint Training Algorithm                                                   the facial action coding system (FACS), is used to extract
+  To jointly learn the considered tasks, we propose an efficient              facial features. Speech features are extracted using COVAREP,
+method to train the modules in the U-DeepSC system, which                     a professional acoustic analysis framework. The image and
+can be divided into two phases.                                               text transmitters are initialized using a pretrained vision
+                                                                              transformer and the BERT model, respectively. Furthermore,
+  • In the first phase, we fix parameters of fn , ψ,
+                                                                              in the simulation, our focus is on AWGN and Rayleigh fading
+     and jointly train the other parameters. Specifically,
+                                                                              channels.
+     we randomly choose a task and sample data from the
+                                                                                 For comparison, three benchmarks are considered.
+     corresponding dataset. After determining the involved                       • Conventional methods: This is the conventional separate
+     modalities, we activate the required modules and update                        source-channel coding. For the image data, the joint
+     the parameters of encoders and decoders using the                              photographic experts group (JPEG) and low-density
+     loss L (sv , st , ss ). In addition, the codebook for feature                  parity-check code (LDPC) are adopted as image source
+     vector representation is not included in this phase.                           coding and image channel coding, respectively. In addi-
+     After convergence, the model is generally capable                              tion, for video, we adopt the H.264 video compression
+     of extracting task-specific semantic information and
+     achieving satisfactory task performance.                                    1 The code is available at github.com/zhang-guangyi/t-udeepsc.
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4112                                                                                IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+
+Fig. 6. The performance of six tasks versus SNR, including text classification, video sentiment analysis, image classification, text classification, image
+reconstruction, and visual question answering. T-DeepSC and U-DeepSC are both trained at SNR = −2 dB and SNR = 12 dB under AWGN channels.
+
+
+
+                                 TABLE II                                       B. Task Performance
+               T HE N UMBER OF T RANSMITTED S YMBOLS
+                                                                                   Fig. 6 illustrates the performance of the investigated
+                                                                                schemes versus the SNR for different tasks. T-DeepSC and
+                                                                                U-DeepSC are both trained at the same SNR, i.e., −2 dB and
+                                                                                12 dB. The average number of transmission symbols of U-
+                                                                                DeepSC equals that of T-DeepSC. Specifically, the numbers
+                                                                                of transmitted symbols for these tasks are shown in Table II.
+                                                                                The proposed U-DeepSC and T-DeepSC are tested in SNR
+                                                                                from −6 dB to 12 dB (We conduct testing on the image
+                                                                                reconstruction task starting from −4 dB, as −6 dB is deemed
+                                                                                too low for an image compression task that demands a higher
+    codecs for source coding. For the text data, the 8-bit                      channel capacity.). It is readily seen that both the U-DeepSC
+    unicode transformation format (UTF-8) encoding and                          and T-DeepSC outperform the conventional schemes and the
+    the Turbo coding are adopted as the text source coding                      U-DeepSC approaches the upper bound at high SNR. More-
+    and text channel coding, respectively. For the speech                       over, the proposed U-DeepSC achieves close performance
+    signal, 16-bits pulse code modulation (PCM) and LDPC                        to the T-DeepSC in all considered tasks. Therefore, our
+    are employed as the source coding and channel coding,                       proposed U-DeepSC is able to simultaneously handle six tasks
+    respectively. Moreover, the coding rate of channel coding                   with comparable performance to the task-oriented models
+    is selected as 12 .                                                         designed for a specific task. Given that UDeepSC transmits
+  • T-DeepSC: The task-oriented deep learning enabled                           only a specific subset of the overall features for different
+    semantic communication (T-DeepSC) designed for a                            tasks, its satisfactory performance underscores the ability of
+    specific task with the same architecture as U-DeepSC and                    U-DeepSC to effectively capture and specify task-specific
+    is implemented by separately trained U-DeepSC.                              semantic information. By comparing the results of training
+  • Upper bound: Results obtained via delivering noiseless                      at −2 dB with that of training at 12 dB, we observe that
+    image, speech, and text features to the receiver based on                   the performance of U-DeepSC does not saturate immediately
+    the T-DeepSC.                                                               with improvements in channel conditions. This characteristic
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                    4113
+
+
+
+
+Fig. 7. The performance of six tasks versus SNR under Rayleigh fading
+channel.
+
+
+
+
+                                                                               Fig. 9.   The visualization of the feature selection.
+
+
+
+
+Fig. 8. Normalized performance loss and number of transmitted symbols as
+a function of the channel SNR in dynamic channel conditions.
+
+
+
+enhances the robustness of U-DeepSC to fluctuations in
+channel quality, proving advantageous, especially in scenarios
+involving transmission over time-varying channels.
+   We then train the proposed U-DeepSC model in the
+AWGN channel with SNR = 12 dB and test it in the                               Fig. 10. Performance comparison between FSM and random selection. The
+Rayleigh fading channel for SNR from −6 dB to 12 dB.                           “Number” marked in the figure indicates the number of transmitted channel
+                                                                               symbols.
+The channel information is both known at the transmitter and
+receiver. To show results in the same figure, we calculate the
+normalized performance of these tasks as the performance
+                                                                               the figure, the normalized performance losses for both U-
+metric, which is obtained by dividing the actual performance
+                                                                               DeepSC and T-DeepSC decrease with SNR and so does
+by the performance achieved under error free transmission, i.e.,
+                                                                               the number of transmitted symbols of U-DeepSC. Compared
+upper bound. The results of the considered tasks are shown
+                                                                               with T-DeepSC that has a fixed transmission overhead,
+in Fig. 7. As we can see, the fading effect would lead to
+                                                                               the proposed method achieves comparable performance with
+performance loss and the performance of U-DeepSC increases
+                                                                               less transmission overhead. The proposed dynamic channel
+with SNR. It can be also found that the proposed model
+                                                                               encoder can adaptively adjust the number of transmitted
+trained in AWGN could well generalize to different channels
+                                                                               features according to the channel noise levels, thus it can
+with different system settings. Moreover, the performance gap
+                                                                               significantly reduce the transmission overhead at the higher
+between U-DeepSC and T-DeepSC does not decrease a lot as
+                                                                               SNR regime. Particularly, when the channel conditions are
+the channel distribution changes. We further find that when we
+                                                                               unfavorable, the dynamic channel encoder tends to select
+jointly learn multiple tasks, the model tends to perform better
+                                                                               more features for transmission, making the received features
+at low SNR regimes. This is mainly because the training of the
+                                                                               robust to maintain the performance. It is analogous to adding
+other tasks acts as a perturbation, which is similar to training
+                                                                               redundancy for error correction in conventional channel coding
+the model with the lower SNR.
+                                                                               techniques. On the contrary, when the channel conditions are
+                                                                               good, the dynamic channel encoder tends to transmit fewer
+C. Effectiveness of FSM                                                        features to reduce the communication overhead.
+  Fig. 8(a) and Fig. 8(b) illustrate the number of transmitted                    We conduct feature visualization in Fig. 9. Note that in the
+symbols and normalized performance loss versus SNR. From                       Transformer architecture, each encoded feature corresponds
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4114                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+                             TABLE III                                        jointly trained these tasks with a unified model. To control the
+                   T HE N UMBER OF PARAMETERS                                 transmission overhead, we developed a novel vector-wise FSM
+                                                                              to make U-DeepSC adaptive to the tasks, where the number
+                                                                              of the transmitted features can be dynamically adjusted for
+                                                                              different tasks under different SNR regimes. Then, the unified
+                                                                              codebook has been proposed for the feature representation of
+                                                                              multiple tasks. Simulation results showed that our proposed
+                                                                              model had satisfactory performance in the low SNR regime
+                                                                              and achieved comparable performance to the task-oriented
+                                                                              model designed for a specific task with significant reductions
+                                                                              in both transmission overhead and model size.
+
+to one small patch of the input image or one word of a                                                      R EFERENCES
+sentence. As for the image, we use gray patches to represent
+                                                                               [1] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+the patches that are masked. It is readily seen that the dynamic                   Applications, trends, technologies, and open research problems,” IEEE
+channel encoder is able to identify the informative features,                      Netw., vol. 34, no. 3, pp. 134–142, May 2020.
+which are drawn from the important task-specific patches.                      [2] E. C. Strinati and S. Barbarossa, “6G networks: Beyond Shannon
+                                                                                   towards semantic and goal-oriented communications,” Comput. Netw.,
+Moreover, we observe that the patches in the middle of the                         vol. 190, May 2021, Art. no. 107930.
+image have a higher probability to be kept, which is mainly                    [3] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Y. Li, “Semantic communications:
+because that in most images, the objects are located in the                        Principles and challenges,” 2021, arXiv:2201.01389.
+center. As for the text, the discarded words are marked in red.                [4] G. Shi, Y. Xiao, Y. Li, and X. Xie, “From semantic commu-
+                                                                                   nication to semantic-aware networking: Model, architecture, and
+We can see that the features corresponding to the emotional                        open problems,” IEEE Commun. Mag., vol. 59, no. 8, pp. 44–50,
+words, e.g., good and bad, are more likely to be kept in                           Aug. 2021.
+the text classification task. These emotional words usually                    [5] W. Tong and G. Y. Li, “Nine challenges in artificial intelligence and
+                                                                                   wireless communications for 6G,” IEEE Wireless Commun., vol. 29,
+play an important role in identifying the sentiment of the                         no. 4, pp. 140–145, Aug. 2022.
+sentence.                                                                      [6] K. Niu et al., “A paradigm shift toward semantic communications,” IEEE
+   Next, we verify the effectiveness of our proposed FSM by                        Commun. Mag., vol. 60, no. 11, pp. 113–119, Nov. 2022.
+comparing with the random selection strategy. We employ                        [7] M. Kountouris and N. Pappas, “Semantics-empowered communication
+                                                                                   for networked intelligent systems,” IEEE Commun. Mag., vol. 59, no. 6,
+the model trained at SNR = 12 dB for this experiment.                              pp. 96–102, Jun. 2021.
+Specifically, the feature vectors for proposed FSM are selected                [8] M. Kalfa, M. Gok, A. Atalik, B. Tegin, T. M. Duman, and O. Arikan,
+based on the probability matrix P , where only the top Nd δqN                      “Towards goal-oriented semantic signal processing: Applications and
+                                                                                   future challenges,” Digit. Signal Process., vol. 119, pp. 103–134,
+feature vectors with the highest probability will be selected.                     Dec. 2021.
+For comparison, we randomly select Nd δqN feature vectors in                   [9] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+the inference phase. According to Fig. 10, we find that FSM                        semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+                                                                                   pp. 2663–2675, 2021.
+significantly outperforms the random selection strategy. It is                [10] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+mainly because the feature vectors with the higher sampling                        image transmission using deep source channel coding with attention
+probability contributes much more to the final result, i.e.,                       modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,
+                                                                                   Apr. 2022.
+classification results. From the results, we can conclude that                [11] T. Tung and D. Gündüz, “DeepWiVe: Deep-learning-aided wireless
+FSM makes semantic extraction more efficient and can focus                         video transmission,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+on the content that is truly relevant to the results. Hence,                       pp. 2570–2583, Sep. 2022.
+the proposed U-DeepSC is more flexible and can significantly                  [12] Z. Weng and Z. Qin, “Semantic communication systems for speech
+                                                                                   transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+improve the inference speed.                                                       pp. 2434–2444, Aug. 2021.
+                                                                              [13] M. Yang, C. Bian, and H. Kim, “OFDM-guided deep joint source
+                                                                                   channel coding for wireless multipath fading channels,” IEEE Trans.
+D. Model Parameters                                                                Cognit. Commun. Netw., vol. 8, no. 2, pp. 584–599, Jun. 2022.
+                                                                              [14] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep
+   As shown in Table III, the total stored number of parameters                    joint source-channel coding,” IEEE Signal Process. Lett., vol. 29,
+of T-DeepSC is 153.67M, which is obtained by adding                                pp. 1442–1446, 2022.
+the parameters required for each task. For our proposed                       [15] A. Li, X. Liu, G. Wang, and P. Zhang, “Domain knowledge
+U-DeepSC, the number of stored model parameters is only                            driven semantic communication for image transmission over wireless
+                                                                                   channels,” IEEE Wireless Commun. Lett., vol. 12, no. 1, pp. 55–59,
+42.85M for six tasks, which is 28.54% of the T-DeepSC. The                         Jan. 2023.
+U-DeepSC is able to provide satisfactory performance with                     [16] H. Zhang, H. Wang, Y. Li, K. Long, and A. Nallanathan, “DRL-driven
+much-reduced model parameters. It is of great significance                         dynamic resource allocation for task-oriented semantic communication,”
+                                                                                   IEEE Trans. Commun., vol. 71, no. 7, pp. 3992–4004, Jul. 2023, doi:
+towards a practical semantic communication system for                              10.1109/TCOMM.2023.3274145.
+scenarios with limited spectrum and storage resources.                        [17] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Towards semantic
+                                                                                   communications: Deep learning-based image semantic coding,” 2022,
+                                                                                   arXiv:2208.04094.
+                       VIII. C ONCLUSION                                      [18] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Joint device-edge
+                                                                                   inference over wireless links with pruning,” in Proc. IEEE 21st Int.
+  In this paper, we first proposed a general framework for                         Workshop Signal Process. Adv. Wireless Commun. (SPAWC), May 2020,
+U-DeepSC. Particularly, we considered six popular tasks and                        pp. 1–5.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: UNIFIED MULTI-TASK SEMANTIC COMMUNICATION SYSTEM FOR MULTIMODAL DATA                                                                           4115
+
+
+
+[19] D. Huang, X. Tao, F. Gao, and J. Lu, “Deep learning-based image               [43] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with
+     semantic coding for semantic communications,” in Proc. IEEE Global                 gumbel-softmax,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+     Commun. Conf. (GLOBECOM), Dec. 2021, pp. 1–6.                                      Feb. 2017, pp. 1–12.
+[20] S. Wang et al., “Wireless deep video semantic transmission,” IEEE J.          [44] A. van den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+     Sel. Areas Commun., vol. 41, no. 1, pp. 214–229, Jan. 2023.                        representation learning,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+[21] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless image                       Dec. 2017, pp. 6309–6318.
+     retrieval at the edge,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,           [45] M. Mortaheb, M. A. A. Khojastepour, S. T. Chakradhar, and S. Ulukus,
+     pp. 89–100, Jan. 2021.                                                             “Semantic multi-resolution communications,” 2023, arXiv:2308.11604.
+[22] C.-H. Lee, J.-W. Lin, P.-H. Chen, and Y.-C. Chang, “Deep learning-
+     constructed joint transmission-recognition for Internet of Things,” IEEE
+     Access, vol. 7, pp. 76547–76561, 2019.
+[23] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust
+     semantic communications with masked VQ-VAE enabled codebook,”
+     IEEE Trans. Wireless Commun., vol. 22, no. 12, pp. 8707–8722,
+     Dec. 2023.
+[24] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+     semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,                                  Guangyi Zhang (Graduate Student Member, IEEE)
+     pp. 2584–2597, Sep. 2022.                                                                              received the B.S. degree in information engineer-
+                                                                                                            ing from Zhejiang University, Hangzhou, China,
+[25] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+                                                                                                            in 2022, where he is currently pursuing the Ph.D.
+     coding of images with feedback,” IEEE J. Sel. Areas Commun., vol. 1,
+                                                                                                            degree with the College of Information Science
+     no. 1, pp. 178–193, May 2020.
+                                                                                                            and Electronic Engineering. His current research
+[26] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication                                   interests mainly include semantic communication
+     for edge inference: An information bottleneck approach,” IEEE J. Sel.                                  and deep learning for physical layer communication.
+     Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+[27] S. Ma et al., “Task-oriented explainable semantic communications,”
+     IEEE Trans. Wireless Commun., vol. 22, no. 12, pp. 9248–9262,
+     Dec. 2023, doi: 10.1109/TWC.2023.3269444.
+[28] Y. Xu, H. Zhou, and Y. Deng, “Task-oriented semantics-aware
+     communication for wireless UAV control and command transmission,”
+     IEEE Commun. Lett., vol. 27, no. 8, pp. 2232–2236, Aug. 2023.
+[29] J. Huang, D. Li, C. Huang, X. Qin, and W. Zhang, “Joint task and
+     data-oriented semantic communications: A deep separate source-channel
+     coding scheme,” IEEE Internet Things J., vol. 11, no. 2, pp. 2255–2272,
+     Jan. 2024.                                                                                             Qiyu Hu (Student Member, IEEE) received the B.S.
+[30] E. Kutay and A. Yener, “Semantic text compression for classification,”                                 degree in information engineering from Zhejiang
+     2023, arXiv:2309.10809.                                                                                University, Hangzhou, China, in 2018, and the Ph.D.
+[31] M. Wang, Z. Zhang, J. Li, M. Ma, and X. Fan, “Deep joint source-                                       degree from the College of Information Science
+     channel coding for multi-task network,” IEEE Signal Process. Lett.,                                    and Electronic Engineering, Zhejiang University,
+     vol. 28, pp. 1973–1977, 2021.                                                                          in 2023. He is currently working in Zhejiang
+[32] Y. E. Sagduyu, T. Erpek, A. Yener, and S. Ulukus, “Multi-receiver                                      provincial government. His research interests mainly
+     task-oriented communications via multi-task deep learning,” 2023,                                      include unmanned aerial vehicle communications,
+     arXiv:2308.06884.                                                                                      optimization theory, machine learning for physical
+                                                                                                            layer communication, and semantic communication.
+[33] S. Vandenhende, S. Georgoulis, W. Van Gansbeke, M. Proesmans,
+     D. Dai, and L. Van Gool, “Multi-task learning for dense prediction
+     tasks: A survey,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 44, no. 7,
+     pp. 3614–3633, Jul. 2022.
+[34] M. Crawshaw, “Multi-task learning with deep neural networks: A
+     survey,” 2020, arXiv:2009.09796.
+[35] R. Hu and A. Singh, “UniT: Multimodal multitask learning with a
+     unified transformer,” in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),
+     Oct. 2021, pp. 1419–1429.
+[36] W. Yu, H. Xu, Z. Yuan, and J. Wu, “Learning modality-specific                                           Zhijin Qin (Senior Member, IEEE) is currently an
+     representations with self-supervised multi-task learning for multimodal                                 Associate Professor with the Department of Elec-
+     sentiment analysis,” in Proc. AAAI Conf. Artif. Intell., May 2021, vol. 35,                             tronic Engineering, Tsinghua University, Beijing,
+     no. 12, pp. 10790–10797.                                                                                China. She was with Imperial College London,
+[37] D. Hazarika, R. Zimmermann, and S. Poria, “MISA: Modality-invariant                                     Lancaster University, and Queen Mary University
+     and-specific representations for multimodal sentiment analysis,” in Proc.                               of London, U.K., from 2016 to 2022. Her research
+     28th ACM Int. Conf. Multimedia, Oct. 2020, pp. 1122–1131.                                               interests include semantic communications and
+[38] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training                                   sparse signal processing. She was a recipient of
+     of deep bidirectional transformers for language understanding,” 2018,                                   several awards, such as the 2017 IEEE GLOBECOM
+     arXiv:1810.04805.                                                                                       Best Paper Award, the 2018 IEEE Signal Processing
+[39] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers                                     Society (SPS) Young Author Best Paper Award,
+     for image recognition at scale,” 2020, arXiv:2010.11929.                      the 2021 IEEE Communications Society (ComSoc) Signal Processing for
+                                                                                   Communications Committee Early Achievement Award, the 2022 IEEE
+[40] N. Carion, F. Massa, G. Synnaeve, N. Usunier, A. Kirillov, and                Communications Society Fred W. Ellersick Prize, the 2023 IEEE ICC
+     S. Zagoruyko, “End-to-end object detection with transformers,” in Proc.       Best Paper Award, the 2023 IEEE ComSoc SPCC Best Paper Award, and
+     Eur. Conf. Comput. Vis. (ECCV), Aug. 2020, pp. 213–229.                       the 2023 IEEE SPS Best Paper Award. She served as a Guest Editor for IEEE
+[41] K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick,                    J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS (JSAC) Special
+     “Masked autoencoders are scalable vision learners,” in Proc.                  Issue on Semantic Communications and an Area Editor for IEEE J OURNAL
+     IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2022,              ON S ELECTED A REAS IN C OMMUNICATIONS Series. She also served as the
+     pp. 16000–16009.                                                              Symposium Co-Chair for IEEE GLOBECOM 2020 and 2021. She is serving
+[42] Y. Rao, W. Zhao, B. Liu, J. Lu, J. Zhou, and C.-J. Hsieh, “DynamicViT:        as an Associate Editor for IEEE T RANSACTIONS ON C OMMUNICATIONS and
+     Efficient vision transformers with dynamic token sparsification,” in Proc.    IEEE T RANSACTIONS ON C OGNITIVE N ETWORKING and the Area Editor
+     Adv. Neural Inf. Process. Syst., vol. 34, 2021, pp. 13937–13949.              for IEEE C OMMUNICATIONS L ETTERS.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+4116                                                                                IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 7, JULY 2024
+
+
+
+                         Yunlong Cai (Senior Member, IEEE) received the         Asia–Pacific Outstanding Young Researcher Award. He regularly sits
+                         M.Sc. degree in electronic engineering from the        on the technical program committee (TPC) boards of prominent IEEE
+                         University of Surrey, Guildford, U.K., in 2006, and    conferences, such as ICC, GLOBECOM, and VTC. He also serves as the
+                         the Ph.D. degree in electronic engineering from the    Symposium Co-Chair for IEEE GLOBECOM 2019 and the Track Chair
+                         University of York, U.K., in 2010.                     for IEEE VTC 2019’Fall. He has served as a Guest Editor for IEEE
+                           From 2010 to 2011, he was a Post-Doctoral            Communications Magazine Special Issue on Full-Duplex Communications,
+                         Fellow with the Electronics and Communications         an Editor for IEEE J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS
+                         Laboratory, CNAM, France. Since February 2011,         Series on Green Communications and Networking, and Series on Machine
+                         he has been with the College of Information Science    Learning in Communications and Networks, an Editor for IEEE W IRELESS
+                         and Electronic Engineering, Zhejiang University,       C OMMUNICATIONS L ETTERS, a lead Guest Editor for IEEE Wireless
+                         Hangzhou, China, where he is currently a Professor.    Communications Magazine Special Issue on LTE in Unlicensed Spectrum,
+He has also held research visiting appointments with the Georgia Institute of   an Editor for IEEE T RANSACTIONS ON G REEN C OMMUNICATIONS AND
+Technology, McGill University, and University of California at Irvine. His      N ETWORKING, and an Editor for IEEE ACCESS. He is also serving
+research interests include transceiver design for multiple-antenna systems,     as an Editor for IEEE T RANSACTIONS ON M ACHINE L EARNING IN
+cooperative and relay communications, UAV communications, and machine           C OMMUNICATIONS AND N ETWORKING.
+learning for communications. He has published over 200 journals and
+conference papers in these areas. He also serves as an Associate Editor for
+IEEE T RANSACTIONS ON C OMMUNICATIONS and a Senior Area Editor for
+IEEE S IGNAL P ROCESSING L ETTERS. He was the Lead Guest Editor of
+the Special Issue on “Next Generation Advanced Transceiver Technologies”
+of the IEEE J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS.
+He was an Associate Editor of IEEE S IGNAL P ROCESSING L ETTERS
+from 2018 to 2023. He has served as the General Chair for the 18th IEEE
+International Symposium on Wireless Communications Systems, which was
+held in Hangzhou, in October 2022. He regularly sits on the technical                                     Xiaoming Tao (Senior Member, IEEE) received
+program committee boards of prominent IEEE conferences, such as ICC,                                      the Ph.D. degree in information and communication
+GLOBECOM, and VTC.                                                                                        systems from Tsinghua University, Beijing, China,
+                                                                                                          in 2008. She is currently a Professor with the
+                                                                                                          Department of Electronic Engineering, Tsinghua
+                                                                                                          University. She was the Workshop General Co-
+                                                                                                          Chair for IEEE INFOCOM 2015 and the Volunteer
+                        Guanding Yu (Senior Member, IEEE) received                                        Leadership for IEEE ICIP 2017. She is serving as
+                        the B.E. and Ph.D. degrees in communication                                       an Editor for IEEE T RANSACTIONS ON W IRELESS
+                        engineering from Zhejiang University, Hangzhou,                                   C OMMUNICATIONS, Journal of Communications
+                        China, in 2001 and 2006, respectively.                                            and Information Networks, and China Communica-
+                          He joined Zhejiang University in 2006, where he is    tions. She was a recipient of the National Science Foundation for Outstanding
+                        currently a Professor with the College of Information   Youth and many national awards, which include the 2017 China Young
+                        and Electronic Engineering. From 2013 to 2015,          Women Scientists Award, the 2017 Top Ten Outstanding Scientists and
+                        he was also a Visiting Professor with the               Technologists from the China Institute of Electronics, the 2017 First Prize
+                        School of Electrical and Computer Engineering,          of Wu Wen Jun AI Science and Technology Award, the 2016 National
+                        Georgia Institute of Technology, Atlanta, GA,           Award for Technological Invention Progress, and the 2015 Science and
+                        USA. His research interests include integrated          Technology Award of the China Institute of Communications. She also
+sensing and communications (ISAC), mobile edge computing/learning, and          received the 2023 IEEE ICC Best Paper Award and the 2023 IEEE ComSoc
+machine learning for wireless networks. He received the 2016 IEEE ComSoc        SPCC Best Paper Award.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:17:14 UTC from IEEE Xplore. Restrictions apply.
+

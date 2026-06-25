@@ -1,0 +1,1044 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025                                                                                         4257
+
+
+
+
+   From Analog to Digital: Multi-Order Digital Joint
+   Coding-Modulation for Semantic Communication
+        Guangyi Zhang , Graduate Student Member, IEEE, Pujing Yang , Graduate Student Member, IEEE,
+                    Yunlong Cai , Senior Member, IEEE, Qiyu Hu , Student Member, IEEE,
+                                  and Guanding Yu , Senior Member, IEEE
+
+
+
+   Abstract— Recent studies in joint source-channel coding                      Things (IoT), autonomous driving, and mobile Internet [2].
+(JSCC) have fostered a fresh paradigm in end-to-end semantic                    In response to this shift, there has been a paradigm shift
+communication. Despite notable performance achievements,                        towards embracing semantic communications [3], [4], [5], [6],
+present initiatives in building semantic communication systems
+primarily hinge on the transmission of continuous channel                       [7]. Semantic communications hold significant promise for
+symbols, thus presenting challenges in compatibility with                       delivering superior transmission rate by extracting task-related
+established digital systems. In this paper, we introduce a                      information from raw data [8], [9], [10], [11], [12], [13].
+novel approach to address this challenge by developing a
+multi-order digital joint coding-modulation (MDJCM) scheme
+for semantic communications. Initially, we construct a digital                  A. Prior Work
+semantic communication system by integrating a multi-order
+modulation/demodulation module into a nonlinear transform                          In contrast to the classical separation-based scheme using
+source-channel coding (NTSCC) framework. Recognizing the                        compression algorithms combined with the practical channel
+non-differentiable nature of modulation/demodulation, we pro-                   codes, semantic communications typically conceive of an
+pose a novel substitution training strategy. Herein, we treat                   integrated design of source codes and channel codes, also
+modulation/demodulation as a constrained quantization process
+and introduce scaling operations alongside manually crafted
+                                                                                referred to as joint source-channel coding (JSCC) [14], [15],
+noise to approximate this process. As a result, employing this                  [16], [17], [18], [19], [20], [21], [22], [23]. In particular,
+approximation in training semantic communication systems can                    numerous researchers aimed to design JSCC systems utilizing
+be deployed in practical modulation/demodulation scenarios                      deep learning techniques, predominantly focusing on lever-
+with superior performance. Additionally, we demonstrate the                     aging autoencoder (AE) and its variants, such as variational
+equivalence by analyzing the involved probability distribution.
+Moreover, to further upgrade the performance, we develop
+                                                                                AE (VAE). Several works have significantly enhanced
+a hierarchical dimension-reduction strategy to provide a                        the transmission efficiency across different data modalities.
+gradual information extraction process. Extensive experimental                  A pioneer work for text semantic communications has
+evaluations demonstrate the superiority of our proposed method                  been proposed in [14], demonstrating superior performance
+over existing digital and non-digital JSCC techniques.                          compared to conventional separation-based methods. Another
+   Index Terms— Digital modulation, multi-order modulation,                     notable advancement is DeepJSCC, proposed in [24], which
+joint source-channel coding, semantic communications.                           utilizes an AE-based framework to map the source images
+                                                                                to low-dimensional feature vectors, effectively mitigating the
+                          I. I NTRODUCTION                                      cliff effect. Building upon [24], researchers have endeavored
+                                                                                to upgrade performance by introducing advanced designs.
+T   HE rapid evolution of sixth-generation (6G) com-
+    munication systems has led to the emergence of
+numerous intelligent applications [1], such as the Internet of
+                                                                                For instance, the attention mechanism is employed in [20]
+                                                                                and [25] to augment the adaptability of DeepJSCC over MIMO
+                                                                                channels. Moreover, in [26], authors designed a semantic
+  Received 7 June 2024; revised 27 October 2024; accepted 28 November           communication system using the Swin Transformer, achieving
+2024. Date of publication 5 December 2024; date of current version              improved performance across various image resolutions and
+18 June 2025. This work was supported in part by the Major Key Project
+of Peng Cheng Laboratory under Grant PCL2023AS1-2, in part by the               channel conditions.
+National Natural Science Foundation of China under Grant U22A2004, and             More recently, entropy model-based learned image com-
+in part by Zhejiang Provincial Key Laboratory of Information Processing,        pression (LIC) mechanisms [27], [28], [29], [30] have achieved
+Communication and Networking (IPCAN), Hangzhou 310027, China. The
+associate editor coordinating the review of this article and approving it for   notable success in source coding. These methods utilize an
+publication was J. Park. (Corresponding author: Yunlong Cai.)                   entropy model to estimate the probability distribution of the
+  Guangyi Zhang, Pujing Yang, Qiyu Hu, and Guanding Yu are with                 feature vector to be compressed, which directly relates to the
+the College of Information Science and Electronic Engineering, Zhejiang
+University, Hangzhou 310027, China (e-mail: zhangguangyi@zju.edu.cn;            final code length using entropy encoding. The whole training
+yangpujing@zju.edu.cn; qiyhu@zju.edu.cn; yuguanding@zju.edu.cn).                is modeled as a problem of rate-distortion (RD) optimization.
+  Yunlong Cai is with the College of Information Science and Electronic         Inspired by these advancements, the authors of [31] introduced
+Engineering, Zhejiang University, Hangzhou 310027, China, and also with the
+Peng Cheng Laboratory, Shenzhen 518071, China (e-mail: ylcai@zju.edu.cn).       nonlinear transform source-channel coding (NTSCC) for
+  Digital Object Identifier 10.1109/TCOMM.2024.3511949                          semantic communications. Taking into account that images
+                0090-6778 © 2024 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4258                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+vary in the amount of information they contain and necessitate                only support a fixed type of modulation, necessitating model
+different numbers of bits for compression, NTSCC integrates                   updates when the modulation order changes, which hinders
+JSCC with an entropy model. This integration allows for                       adaptability. To address these challenges, we propose a multi-
+the determination of optimal transmission bandwidth for each                  order digital joint coding-modulation scheme tailored for
+image, enabling variable-rate transmission and positioning                    wireless image transmission that addresses issues related to
+NTSCC as a potent JSCC scheme for image transmission.                         resolution generalization, and modulation flexibility. To this
+Building upon NTSCC, an improved version termed NTSCC+                        end, we initiate the development of a modulation-agnostic
+has been developed in [32]. NTSCC+ introduces a context                       digital semantic communication system by integrating a
+model to capture contextual information in the latent feature                 multi-order modulation/demodulation module into an NTSCC
+vector, thereby further enhancing the overall performance of                  framework. To tackle the non-differentiable characteristics
+semantic communication systems.                                               of modulation/demodulation, we propose a novel substitu-
+   Though deep learning-based JSCC systems have shown                         tion training strategy, demonstrating superior effectiveness
+remarkable performance, their practical deployment in modern                  compared to existing methods. Subsequently, we conduct
+digital communication devices encounters several challenges.                  a theoretical analysis to validate the rationale behind the
+Many existing works primarily focus on directly mapping the                   proposed training strategy. To further enhance performance,
+source information to continuous channel symbols, a process                   we devise a hierarchical dimension-reduction strategy to
+that often necessitates analog transmission or a full-resolution              facilitate a gradual information extraction process.
+constellation [33], [34]. However, this approach poses                           Specifically, we summarize our main contributions as
+challenges for power amplifiers with non-ideal characteristics,               follows:
+thereby limiting the feasibility and scalability of such systems
+in real-world applications. To tackle this challenge, researchers              (1) We introduce MDJCM for digital wireless image
+have explored various approaches, aiming to discretize the                         transmission, aiming to overcome the impracticality
+channel inputs to accommodate the hardware limitations [35].                       of training and utilizing multiple models for various
+For instance, in [36], the authors modeled latent variables                        modulation orders. To achieve this, we devise a multi-
+as sequences of bits following a Bernoulli distribution.                           order modulator/demodulator, employing a conditional
+Within this framework, the encoder outputs the probability                         response network. This module considers the required
+that the bit symbol is either 1 or 0, with exact channel                           modulation order and the input source, enabling MDJCM
+symbols sampled from this distribution. This enables more                          to generate distinct channel symbols based on the given
+efficient representation and transmission of information within                    order. Through optimization via training with diverse
+hardware constraints. Similarly, an innovative end-to-end                          input sources and modulation orders, MDJCM can
+optimized JSCC scheme for wireless image transmission has                          effectively determine the transmission bandwidth for each
+been presented in [37]. In this scheme, the encoder outputs the                    input source.
+probabilities associated with each constellation point, which                  (2) The requirement to map continuous variables to a
+are then sampled according to these probabilities. In [38]                         finite set of symbols poses a significant challenge
+and [39], the authors proposed to transform the semantic                           for model training. This process lacks differentiability,
+features into discrete bits. Nevertheless, the quantization                        making conventional optimization algorithms like SGD
+operation entails mapping continuous variables to a finite                         ineffective. In this study, we tackle this challenge through
+number of discrete variables, posing a challenge for neural                        the development of a novel substitution training strategy.
+networks due to their non-differentiable nature. This renders                      Specifically, we treat the modulation/demodulation pro-
+common optimization methods, such as stochastic gradient                           cess as a constrained quantization operation and introduce
+descent (SGD), ineffective. To address this issue, existing                        scale operations and handcrafted noise as continuous
+digital communication systems employ various strategies to                         relaxations to approximate this process. Crucially, this
+make the modulation process trainable. For instance, in [40],                      approximation is differentiable, allowing for its direct
+the authors considered the straight-through estimator (STE).                       application to practical modulation processes. We further
+Additionally, the Gumbel-Softmax strategy is employed as                           validate this approximation by comparing the probability
+a continuous approximation of sampling [37], enabling                              distributions of the two processes, establishing their
+backpropagation through the modulation process.                                    equivalence.
+                                                                               (3) Recognizing the discrepancy between the modula-
+                                                                                   tion/demodulation process and the proposed continuous
+B. Motivation and Contributions                                                    relaxation, we propose a two-phase strategy. Initially,
+   While current methods have advanced digital semantic                            we train with continuous relaxation and then fine-
+communications, several challenges remain. First, many                             tune using STE to effectively address this discrepancy
+approaches rely on small datasets, like CIFAR10, which may                         and enhance system performance. To further aug-
+not accurately reflect the complexities of real-world scenarios.                   ment the performance of MDJCM, we introduce an
+Second, existing digital systems typically support fixed-rate                      innovative hierarchical dimension-reduction strategy at
+transmissions and lack the flexibility to determine the optimal                    the transmitter. This strategy gradually reduces the
+bandwidth for each source sample. This limitation can result in                    intermediate feature dimension, directly corresponding to
+suboptimal system performance. Third, most current methods                         the number of transmitted channel symbols. Additionally,
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                        4259
+
+
+
+      we implement a turbo decoder at the receiver, a technique                Subsequently, y undergoes quantization to obtain a discrete
+      known for its effectiveness in error correction [41].                    latent representation ŷ = Q(y) ∈ Rny , with Q(·) representing
+ (4) We conduct extensive simulations to validate the per-                     the quantization operation. At this stage, lossless compression
+      formance, encompassing images of varying resolutions.                    of ŷ into a bit sequence is feasible via entropy coding methods
+      Moreover, to demonstrate the effectiveness of each                       like arithmetic coding or range coding, given that the entropy
+      proposed scheme, we perform a comprehensive ablation                     information (model) Pŷ is known. In particular, we further
+      study. Our experimental findings indicate that our                       define the rate R as the expected length of the bit sequence,
+      proposed MDJCM achieves significant performance and                      which is equivalent to the entropy of ŷ, where R can be
+      remarkable compatibility, exhibiting superior perfor-                    specifically determined by the entropy model as follows:
+      mance compared to both emerging analog transmission
+                                                                                            R = Ex∼px [− log2 Pŷ (Q (ga (x; θ g )))] .                  (1)
+      schemes and digital transmission schemes.
+   The remainder of this paper is structured as follows.                       Following this, the bit sequence then undergoes entropy
+In Section II, we provide an overview of the proposed                          decoding for lossless reconstruction of ŷ. Subsequently,
+MDJCM. The design of the substitution training strategy                        a nonlinear synthetic transform gs is utilized to reconstruct
+is detailed and introduced in Section III. The detailed                        the decoded data x̂ = gs (ŷ; ϕg ), where ϕg encompasses its
+model architectures and the proposed hierarchical dimension-                   trainable parameters.
+reduction strategy are presented in Section IV. The simulations                   As stated above, the compression of the quantized discrete
+are presented in Section V. Finally, the concluding remarks are                latent ŷ necessitates its entropy information (model). One of
+provided in Section VI.                                                        the most effective methods to estimate the entropy is the
+   Notations: For a vector a, ∥a∥ is its Euclidean norm.                       hyperprior model proposed in [27]. As shown in Fig. 1(a),
+px denotes a probability density function (PDF) of the                         the main idea of the hyperprior model is to introduce another
+continuous-valued random variable x, while Px̂ represents the                  latent feature z = ha (y; θ h ) ∈ Rnz , where ha represents the
+probability mass function (PMF) of the discrete-valued random                  parametric synthesis transform and θ h denotes the trainable
+variable x̂. Additionally, we denote U(−d, d) as the uniform                   parameters. Then, ẑ = Q(z) ∈ Rnz is taken as the side
+distribution with a range from −d to d. Finally, Cm×n (Rm×n )                  information, serving to characterize the dependencies among
+are the space of m × n complex (real) matrices.                                the elements in ŷ. In general, the optimization of such a
+                                                                               learning-based coder involves a tradeoff between rate and
+  II. P ROBLEM F ORMULATION AND S YSTEM OVERVIEW                               distortion, which can be written as
+   In this section, our objective is to provide an overview                                               
+                                                                                    R + λ · D = Ex∼px − log2 Pŷ|ẑ (ŷ|ẑ) − log2 Pẑ (ẑ)
+                                                                                                                                            
+of the proposed MDJCM. We commence by introducing the                                                       |     {z      }|     {z       }
+                                                                                                                  compression rate      side info rate
+learning-based source coder, which encompasses variational
+entropy modeling, as well as analysis and synthesis trans-                                           + λ · Ex∼px [D(x, x̂)],                             (2)
+forms. Subsequently, we present the MDJCM, encompassing                        where D(·) denotes the distortion function, and λ controls
+learning-based source coder, encoding/decoding, and modula-                    the tradeoff between the distortion and compression rate.
+tion/demodulation phases. Notably, the learning-based source                   Specifically, with a higher λ, the resulting model will compress
+coder serves as a rate indicator, guiding the MDJCM in                         the source at a higher rate.
+selecting an appropriate rate for transmission.                                   Due to the non-differentiability of the quantization operation
+                                                                               during training, the quantization operations on y and z are
+A. Learning-Based Source Coder                                                 replaced by the addition of uniform noise, represented by
+   Recently, a number of learning-based source coders have                     ỹ = y + u ∈ Rny and z̃ = z + u ∈ Rnz , respectively, where
+been designed to surpass the performance of many traditional                   u is randomly sampled from standard uniform distribution
+coders [42], such as versatile video coding (VVC) and better                   U(− 21 , 12 ). Then, each ỹi in ỹ is variationally modeled as
+portable graphics (BPG). The success of these methods stems                    a Gaussian distribution, where the standard deviation σi and
+from advanced entropy modeling, coupled with an autoencoder                    mean µi are predicted based on z̃, i.e.,
+architecture for nonlinear transform coding. These approaches
+                                                                                                                                    
+                                                                                                                        2        1 1
+focus on minimizing the entropy of the encoded feature                                    pỹ|z̃ (ỹi |z̃) = N (µ̃i , σ̃i ) ∗ U(− , ) (ỹi ) , (3)
+                                                                                                                                 2 2
+representations, approximated by a well-established entropy                                                 Y
+model. Consequently, the length of the final codeword can be                               pỹ|z̃ (ỹ|z̃) =   pỹ|z̃ (ỹi |z̃) ,               (4)
+                                                                                                            i
+optimized.
+   A typical learning-based source coder is depicted in                        where (µ̃, σ̃) = hs (z̃; ϕh ), with its i-th element being
+Fig. 1(a). Given a raw data sample, such as an image                           (µ̃i , σ̃i ), ϕh denotes the trainable parameters of the parametric
+represented by a pixel intensity vector x ∈ Rnx ,1 a                           analysis transform hs , and ∗ represents the convolutional
+deep learning-based nonlinear analytic transform ga is                         operation. For the term of side information rate, − log2 pẑ (ẑ),
+employed to convert x into a latent representation y =                         we do not have prior beliefs. Thus, it is modeled as the non-
+ga (x; θ g ) ∈ Rny , where θ g denotes the trainable parameters.               parametric fully factorized density, as given by
+                                                                                                    Y                         1 1
+                                                                                                                                     
+                                                                                                                      (i)
+  1 We use the notation “n ” to denote the vector length, with subscripts
+                             x                                                     pz̃|ψ (z̃|ψ) =         pzi |ψ(i) (ψ ) ∗ U(− , ) (z̃i ) , (5)
+indicating the specific vector.                                                                      i
+                                                                                                                               2 2
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4260                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+
+Fig. 1.   Operational diagrams. (a) The diagram of a typical learning-based source coder, AE&AD represents arithmetic encoding and decoding, which
+are only employed in the compression phase. U/Q denotes adding uniform noise or quantization, where uniform noise is considered in the training phase
+and the quantization operation is employed for compression; (b) The diagram of the developed entropy model-based digital semantic communication system.
+ RM denotes the rate matching operation, which is used to control the overall transmission overhead. C represents wireless channel.
+
+
+
+where ψ denotes the trainable parameters. With these                             where s represents the channel input and ns denotes the
+modelings, (2) can be employed as the loss function for                          number of transmitted channel symbols. Different from
+learning the source coder. More specifically, the entropy term                   existing semantic communication systems, we consider a
+can be readily calculated by using this cumulative distribution                  digital transmission case. We specifically design a varying-
+function [27]. By optimizing the rate term with varying                          order digital modulator as well as a demodulator, with the
+weights, the model is able to generate the latent representations                optional order set being defined as M = [M1 , M2 , . . .].
+y with different levels of entropy (sparsity).                                   Then, the channel input s is further mapped to the discrete
+                                                                                 constellation symbols, as ŝ = qa (s; M ) ∈ Cns , where the
+B. Formulation of Rate-Guided Digital JSCC                                       modulator is able to generate constellation symbols in different
+   Inspired by [31], we propose a multi-order digital semantic                   orders. Herein, the channel bandwidth ratio (CBR) is defined
+communication system, where the rate control is under the                        as ρ = ns /nx . Drawing inspiration from the benefits of
+guidance of the learning-based source coder. Recalling that                      encoding different source data with different rates [27], the
+the compression rate at the source coder is correlated to the                    entropy model is employed to indicate the CBR value for
+entropy model Pŷ , we are able to control the transmission                      each source data. Specifically, if the entropy for certain source
+bandwidth based on Pŷ . The workflow of the proposed                            data is relatively large, a higher CBR value will be adopted.
+MDJCM is shown in Fig. 1(b), comprising two parts, the                           Typically, s is comprised of multiple embedding vectors yi ,
+learning-based source coder and the digital JSCC.                                each is length C. After the rate matching operation, the length  
+   The digital JSCC consists of a joint source-channel (JSC)                     of each vector is adjusted to ki = Q −η log Pŷi |ẑ (ŷi |ẑ) ,
+encoder fa , a JSC decoder fs , a modulator qa and a                             where Q denotes the quantization operation, and η controls
+demodulator qs , with the parameters of fa and fs being θ f                      the relation between the prior Pŷi |ẑ (ŷi |ẑ) and the expected
+and ϕf , respectively. In general, wireless transmission systems                 the length of the corresponding symbol vector si . The way to
+should be able to overcome channel variations, e.g., fading                      realize this will be depicted in Section IV-B.
+effects. To accommodate varying channel conditions, it may                          Subsequently, the encoded ŝ merely undergoes a power
+be necessary to train multiple networks or retrain a network                     constraint Es , as given by ∥ŝ∥2 ≤ Es . Then, ŝ is sent from the
+as the channel conditions fluctuate. However, training and                       transmitter to the receiver through a wireless channel, which
+deploying multiple networks are not always practical, and thus                   is given by
+we aim to design a digital semantic communication system                                                   s̃ = hŝ + n ∈ Cns ,                         (7)
+that is compatible with fading, noise, etc. That is, MDJCM
+is expected to accommodate various channel signal-to-noise                       where h denotes the channel gain coefficient, and n represents
+ratios (SNRs). Moreover, the same problems will appear when                      the additive white Gaussian noise (AWGN). In addition,
+MDJCM is required to support different modulation orders.                        n ∼ N 0, σ 2 I , where σ 2 denotes the noise variance.
+Therefore, MDJCM is designed to generate different orders                        To characterize the quality of the physical channel, we define
+of constellation points within one model. In the following,                      the SNR as follows:
+we will provide an overview of the proposed MDJCM.                                                                        Es
+   To this end, we consider the conditional coding design for                                          SNR = 10 log10 2 .                       (8)
+                                                                                                                          σ
+the digital JSCC part. In particular, the JSC encoder takes the
+                                                                                 At the receiver, the received noisy signal s̃ is firstly
+output of the analytic transform y and channel SNR (evaluated
+                                                                                 demodulated to s̄ = qs (s̃; M ) ∈ Cns . Then, s̄ undergoes
+by a channel quality indicator (CQI) γ) as input, and the
+                                                                                 decoding by fs , i.e., y MD = fs (s̄; γ, ϕf ) ∈ Rny . Finally, the
+encoding function can be expressed as
+                                                                                 recovered source x̂MD is given by x̂MD = gs (y MD ; ϕg ) ∈
+                        s = fa (y; γ, θ f ) ∈ Cns ,                       (6)    Rnx . The target of the JSCC system is to find the
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                              4261
+
+
+
+                                                                                 the minimal distance between two constellations is 2d. The
+                                                                                 average symbol power constraint is set        √ to Es . We denote each
+                                                                                 point as (qiIn , qjQu ), for i, j = 1, . . . , M , where qiIn and qiQu
+                                                                                 denote the in-phase component and quadrature component,
+                                                                                 respectively. As we aim to modulate s according to the
+                                                                                 constellation mapping, we constrain the power of s to improve
+                                                                                 the training stability. It is also of significance in ensuring
+                                                                                 the equivalence, which we will present in Section III-B.
+                                                                                 In particular, we make an assumption that the probability
+                                                                                 distribution of each√element in s should satisfy    √ that psi (u) =
+                                                                                 0, when u < −( M − 1)d and u > ( M − 1)d. This
+Fig. 2.   An example of 64QAM constellation symbols.                             constraint can be achieved by applying a clipping operation
+                                                                                 to the output of the rate matching operation.
+                                                                                    2) Process Formulation: In general, a typical digital
+optimal parameters θ ∗g , θ ∗h , θ ∗f , ϕ∗f , ϕ∗h , ϕ∗g to minimize the
+                                                       
+                                                                                 communication system can be represented by the following
+reconstruction distortion between the source data and the                        process,
+reconstructed data, as well as to find a suitable CBR value for                                       ×h/+n∼CN (0,σ 2 I )
+                                                                                           Modulation                     Demodulation
+transmitting each x. The training objective will be presented                           s −−−−−−→ ŝ −−−−−−−−−−−−−→ s̃ −−−−−−−→ s̄.                             (9)
+in the next section.
+                                                                                 Since (9) cannot be directly applied during the training phase,
+                                                                                 we aim to find an equivalent process for training. Considering
+          III. T RAINING W ITH S UBSTITUTION P ROCESS
+                                                                                 the distribution constraint, we propose training the model using
+   In this section, our focus lies on the training strategies                    the following process:
+for MDJCM. When training the MDJCM, a significant issue
+                                                                                       +u1 ∼U (−d,d)        ×h/+n∼CN (0,σ 2 I)             +u2 ∼U (−d,d)
+arises due to the non-differentiability of the modulation and                       s −−−−−−−−−→ ô −−−−−−−−−−−−−→ õ −−−−−−−−−→ ō,
+demodulation processes. This interrupts gradient propagation
+during MDJCM training. To address this challenge, we pro-                                                                                                      (10)
+pose a novel mechanism involving training MDJCM with a                           where we approximate the modulation by using scaled uniform
+differentiable substitution process. Consequently, the obtained                  noise, allowing (10) to serve as a continuous relaxation
+model can be directly applied to digital transmission. In the                    of (9). As stated in [43], the moments of the quantized
+following, we start by formulating the problem, followed                         random variable equal to the moments of the signal plus an
+by elaborating on the rationality of the proposed method.                        independent random noise uniformly distributed on (−d, d, ],
+Subsequently, we propose a two-phase training strategy to                        where d denotes the quantization cell width. This indicates
+further improve the system performance by eliminating the                        that it is rational to approximate the distortion with uniform
+mismatch between the training phase and the testing phase.                       noise caused by the modulation and demodulation process.
+
+A. Problem Formulation                                                           B. Equivalence Illustration
+   In the realm of learning-based compression, one of the key                      We next make an attempt to investigate the relationship
+challenges is quantization. This is because the gradient of                      between the distribution functions of ō and s̄, in order
+quantization is zero almost everywhere, making the gradient-                     to examine whether process (10) can be considered as
+based optimization unavailable. A classical solution to this is                  a continuous relaxation for process (9). Specifically, the
+training the model with additive uniform noise to approximate                    optimization objective of MDJCM can be formulated as [31]:
+quantization during the testing phase since training with addi-                                                  
+tive uniform noise is differentiable. It has been demonstrated to                min Ex∼px DKL qō,z̃|x ∥pō,z̃|x
+be effective in various fields, achieving significant performance
+                                                                                                              
+                                                                                   ≤ min Ex∼px Eō,z̃∼qō,z̃|x log2 qō,z̃|x (ō, z̃|x) − log2 pz̃ (z̃)
+gains compared to other methods. This approach is particularly                                                     
+effective in enhancing the representation ability of the latent                      − Ey∼py|ō,z̃ log2 px|y (x|y) − log2 pō|z̃ (ō|z̃) + const
+feature [27], [28], [29], [30]. Drawing inspiration from this,                                                                                                 (11)
+we observe the modulation/demodulation operation is quite
+                                                                                 The first term qō,z̃|x (ō, z̃|x) can be dropped since it will
+similar to the quantization, or rather, it can be viewed as a
+                                                                                 not introduce gradient the model parameters. The second
+limited and scaled quantization process. Therefore, we propose
+                                                                                 term pz̃ (z̃) stands for the overhead of encoding the side
+to introduce a noise-adding process to approximate the
+                                                                                 information. The third term denotes the weighted distortion.
+modulation/demodulation operation during testing. To this end,
+                                                                                 Thus, we have the resulted learning objective for MDJCM:
+we have the distribution constraint and process formulation as
+                                                                                                                
+follows.                                                                             L ≜ R + λD = Ex∼px − log2 pō|z̃ (ō|z̃) − log2 pz̃ (z̃)
+   1) Distribution Constraint: We consider a more general                                                         |     {z     }|    {z     }
+                                                                                                                        compression rate      side info rate
+case of quadrature amplitude modulation (QAM), as shown                                                                              
+in Fig. 2. There are in total of M constellation points,                                                  + λ[D(x, x̃MD ) + D(x, x̃)] ,                        (12)
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4262                                                                                IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+                                                                                                                                     √
+where λ denotes the hyperparameter to control the tradeoff                          Moreover, the probability of ōIn
+                                                                                                                   i equaling (2m− M −1)d
+between rate and distortion. In [31], the conditional entropy                    can be represented by
+model pỹ|z̃ (ỹ|z̃) is employed as a substitution of the fourth                               √
+rate term pō|z̃ (ō|z̃), since pỹ|z̃ (ỹ|z̃) is proportional to                 pōIn
+                                                                                     i
+                                                                                        ((2m− M −1)d)
+pō|z̃ (ō|z̃). In this case, the training objective is formulated                     Z √M d Z ν+d          Z (2m−√M)d−ν
+                                                                                                                                      1
+as                                                                                 = √              psIn(µ)dµ       √       peIn (τ ) 2 dτ dν.
+                                                                                        − M d ν−d
+                                                                                                      i
+                                                                                                              (2m− M−2)d−ν
+                                                                                                                               i     4d
+                                                                                                                                          (16)
+                                
+     L ≜ R + λD = Ex∼px − log2 pỹ|z̃ (ỹ|z̃) − log2 pz̃ (z̃)
+                                  |      {z      }|     {z   }
+                                     compression rate    side info rate          where the detailed derivations can be found in Appendix A.
+                                                                                 By comparing     (15) with (16), we√further find that P (s̄In    =
+                                                  
+                       + λ[D(x, x̃MD ) + D(x, x̃)] ,                      (13)            √                                                   i
+                                                                                 (2m − M − 1)d) ≈ pōIn    i
+                                                                                                             ((2m  −   M  −  1)d) ∗ 2d  indicating
+However, the relation between pō|z̃ (ō|z̃) and Ps̄|z̃ (s̄|z̃) is still         that process (9) serves as an approximation of (10). When
+unknown, making it hard to deploy a model that is trained                        the modulation order gets larger, this approximation is much
+with (13) to the practical modulation/demodulation scenarios.                    more accurate. More specifically, pōIn   provides a continuous
+                                                                                                                        i
+Fortunately, we find the entropy of ō serves as a continuous                    relaxation by interpolating the discrete probability of s̄In    i
+relaxation of the discrete entropy of ō, under the distribution                 at the positions of the discrete constellation symbols. Most
+constraint.                                                                      importantly, we observe that this equivalence is not limited
+   Noticing that ô and ŝ are both complex vectors, we assume                   by the channel environment, demonstrating that our proposed
+that the elements of the vector are independent from each                        substitution training method offers strong generalizationability.
+other. For simplicity, we specifically analyze the i-th element                     2) Edge Constellation Symbols: Similar to (15) and (16),
+of the vectors in processes (9) and (10), where we use                           we can obtain probability (density)      of receiving the edge
+                                                                   Qu                                          √
+the lowercase letter to denote the element, e.g., (ôIn      i , ôi )           constellation symbols, e.g., ( M − 1)d, as given by
+represents the i-th element of complex vector ô, where the                                  √
+superscripts ‘Qu’ and ‘In’ denote the quadrature component                        P (s̄In
+                                                                                       i = ( M − 1)d)
+                                                                                            √           √
+and in-phase component, respectively. In this case, we have                                 XM Z (2t− M )d                Z ∞                   !
+                 √                 √                                                      =                    psIn (µ)dµ           peIn (τ )dτ .
+                                                                                                         √
+ P (s̄i = ((2m− M −1)d, (2l− M −1)d))                                                       t=1      (2t−2− M )d
+                                                                                                                 i                    i
+                                                                                                                                  (1−2t)d
+                     √                   Qu
+                                                       √
+ = P (s̄In
+         i = (2m− M −1)d) × P (s̄i            = (2l− M −1)d),                                                                                         (17)
+                                                                                               √
+                                                                  (14)           pōIn ((2m− M −1)d)
+                                                                                    i
+                                                                                           Z √M d Z ν+d           Z √M d−ν
+where we omit the conditional notation “|z̃” for simplicity.
+                                                                                         = √            psIn (µ)dµ √                        peIn (τ )dτ dν.
+Furthermore, supposing that the in-phase and quadrature                                      − Md
+                                                                                                          i
+                                                                                                        ν−d                  ( M−2)d−ν
+                                                                                                                                              i
+
+components are independent, we will concentrate on the in-
+                                                                                                                                                      (18)
+phase component in the following. As shown in Fig. 2,
+we split the constellation symbols into two groups, the inner                    Although ensuring equivalence becomes increasingly chal-
+constellation symbols and the edge constellation symbols.                        lenging for edge points, we find that this approximation
+We will study these two types respectively, since the difference                 remains accurate, particularly in higher SNR regimes,
+in calculating the probability distribution.                                     as demonstrated by simulations. Moreover, we further address
+   1) Inner Constellation Symbols: We concentrate on √     the in-               this with the proposed two-phase training strategy.
+phase component
+         √         of the  constellation
+                                √         symbol  ((2m−      M−
+1)d, (2l− M−1)d), i.e., (2m− M−1)d. Moreover, we define
+the transmission error as e = s̃ − ŝ or e = õ − ô, where we                   C. Two-Phase Training Strategy
+assume the error is independent of the signal. It is important                      This noise-adding strategy proves advantageous for enhanc-
+to note that this is available in many transmission models.                      ing representation ability, unlike the popular STE [40] and
+In this case, the PDF of the i-th in-phase components of                         soft-to-hard annealing [35], [37], which encounter training
+e is represented by peIn i
+                           . Intuitively, this error is primarily                issues such as biased or unstable gradients, resulting in
+influenced by the√  channel  environments. The probability of                    suboptimal models. While process (10) provides a continuous
+receiving (2m− M −1)d with process (9) can be written as                         relaxation, enabling end-to-end training of the system,
+                 √                                                               we identify two challenges in directly employing (10),
+P (s̄In
+     i = (2m− M −1)d)                                                               • There exists a mismatch between the training phase
+            √
+            XM
+                               √                                                       and the testing phase. Specifically, the modulation and
+        =         P (ŝIn
+                       i = (2t− M −1)d))                                               demodulation operations are deterministic processes with
+          t=1
+                         √                    √                                        respect to the signal, rather than truly random noise. Thus
+          × P (s̄In                  In
+                 i = (2m− M −1)d|ŝi = (2t− M −1)d)                                    training with the noise-adding process (10) may hurt the
+          √         √
+           M Z (2t− M )d           Z 2(m−t)+d                                          system performance.
+          X
+                                                                                    • Due to the constraints imposed by limited modulation
+                                                         
+        =            √   psIn
+                           i
+                              (µ)dµ           peIn
+                                                i
+                                                   (τ )dτ .
+            t=1     (2t−2− M )d                 2(m−t)d−d                              order and channel noise, utilizing process (10) may not
+                                                                          (15)         yield sufficient accuracy, especially when the modulation
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                       4263
+
+
+
+                                                                                 s = s ⊙ m, where ⊙ denotes element-wise dot product.
+                                                                                 As a result, the transmission rate is controlled by reducing
+                                                                                 the output dimension. We find this one-time dimension
+                                                                                 reduction operation may lose effectiveness, since the model
+                                                                                 may suffer from heavy information loss in this sudden
+                                                                                 mask operation, which is caused by masking some important
+                                                                                 features by mistake. To address this issue, we propose
+                                                                                 a hierarchical dimension reduction mechanism, as shown
+                                                                                 in Fig. 4. Specifically, we employ multiple rate reduction
+                                                                                 operations, aiming to provide a gradual dimension reduction.
+                                                                                 This approach effectively breaks down a complex selection
+                                                                                 problem into several simpler ones. By iteratively dropping a
+Fig. 3.   The Overall architecture of MDJCM.                                     small subset of features, the model can dynamically adjust
+                                                                                 subsequent selections based on the remaining unmasked
+                                                                                 features. This adaptive process enables the model to tolerate
+      order is small. Additionally, there exists a bias in the                   errors more effectively compared to a single selection
+      approximation of edge constellation points.                                performed at the end of the process.
+   To tackle these issues, we propose a two-phase training                          Specifically, the input of the JSC encoder y can be
+strategy. Initially, we train the entire model using process (10).               denoted as a vector sequence (y1 , y2 , . . . , yl ), where each
+This helps in obtaining a robust transmitter model with                          yi is a feature vector. The rate is controlled by masking
+excellent representation capability. Subsequently, we freeze the                 portion of each vector, with the mask m. To determine
+parameters at the transmitter, (θ g , θ h , θ f ), thereby retaining             the mask ratio for each yi , the entropy model is adopted.
+the encoder’s ability. Next,                                                     In particular, for each yi , the length   for the first time is set
+                              we fine-tune the parameters at                                                         
+the receiver, ϕf , ϕh , ϕg , based on STE, aiming to alleviate                   to ki1 = Q −η1 log Pȳi |z̄ (ȳi |z̄) , where η1 is employed to
+discrepancies between the training and testing phases. This is                   control the length of the feature yi . According to ki1 , we are
+because STE operates as a deterministic function and does not                    able to generate the corresponding mask for yi , and mask
+introduce randomness. Our two-phase strategy simultaneously                      the intermediate feature. We consider using two reduction
+combines the benefits of both methods, resulting in enhanced                     operations, where we introduce a new hyperparameter η2 to
+performance.                                                                     further control the final length of yi . Hence, the final length of
+                                                                                 yi is given by ki2 = Q −η2 log Pȳi |z̄ (ȳi |z̄) , where η1 > η2 .
+               IV. M ODEL A RCHITECTURE D ESIGN                                  For each yi , we generate two mask vectors
+
+   In this section, we depict the design of MDJCM, including                                mji = [1, 1, . . . , 1, 0, . . . , 0],   for j = 1, 2.      (19)
+                                                                                                   | {z }
+the details of the conditional network and hierarchical                                                    kij
+dimension reduction design. Finally, we provide a detailed
+introduction to the training process.                                            The generated vectors are adopted to mask yi , resulting in a
+                                                                                 vector where some elements are set to zero.
+A. Overall Model Architecture
+                                                                                 C. Conditional Network Design and Turbo Decoder
+   The overall architecture of our proposed MDJCM is shown
+in Fig. 3. As stated in the previous section, it comprises the                      We make an attempt to design a multi-order constellation
+analytic transform ga , synthesis transform gs , JSC encoder                     generator that can produce constellation symbols of different
+fe , JSC decoder fd , and the hyperprior model. The analytic                     orders. To avoid training different generators for different
+transform and synthesis transform are mainly implemented                         modulation orders, we design a modulation conditional module
+with multiple Swin Transformer blocks, as depicted in Fig. 3.                    (MCM). This module can take the modulation order as
+Besides, both the JSC encoder and decoder are designed                           conditioning input, accompanied by the intermediate feature.
+with Swin Transformer blocks, which map the intermediate                         We integrate this module into the JSC encoder fa , helping to
+features to channel symbol vectors of different length. For the                  adjust the encoding strategy for different modulation orders.
+hyperprior model, we employ convolutional layer with a ReLU                      Additionally, we aim to devise a fixed model capable of
+activation function.                                                             accommodating different channel conditions. To this end,
+                                                                                 we further consider an SNR conditional module (SCM), which
+                                                                                 takes SNR as input and produces the feature vector depending
+B. Hierarchical Dimension Reduction                                              on the channel SNR.
+   In this work, we manage to control the number of                                 To implement MCM and SCM, we develop the architecture
+transmission symbols for each image according to the                             shown in Fig. 4. The main difference between MCM and
+estimated entropy. This is actually achieved by generating                       SCM lies in the processing of conditioning input, i.e., MCM
+a mask vector m to mask the channel input vector, with                           employs a one-shot encoding while SCM uses a multi-layer
+certain elements being zero. Then, the encoded feature s                         perceptron (MLP). The developed conditional module mainly
+output by the JSC encoder is masked by m, given as                               consists of a convolutional layer and MLP. The softplus
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4264                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+
+Fig. 4.   The illustration of the proposed SCM and MCM, as well as the hierarchical dimension reduction strategy.
+
+
+
+ Algorithm 1 Training the MDJCM
+1  Input: Training data x, the numbers of training steps for
+   three phases N1 , N2 , and N3 , the scaling
+   hyperparameters (η1 , η2 ), the Lagrange multiplier λ, the
+   learning rate lr , and the power constraint Es.
+                             ∗  ∗   ∗     ∗     ∗    ∗
+ 2 Output: Parameters θ g , θ h , θ f , ϕf , ϕh , ϕg .
+ 3 First Phase: Train learning-based source coder
+ 4 Randomly initialize the parameters and fix the parameters                     Fig. 5.   The architecture of the turbo decoder.
+                                             
+   of JSC encoder and decoder, θ f , ϕf .
+ 5 for i ← 1 to N1 do
+ 6     Sample x ∼ px .                                                           operation is given by
+ 7     Calculate the rate-distortion loss function
+       L(x, x̂, λ) = R + λD(x, x̂) based on (2).                                                       softplus(x) = log(1 + ex ).                      (20)
+       Update the parameters θ ∗g , θ ∗h , ϕ∗h , ϕ∗g .
+                                                    
+ 8                                                                               By incorporating the modulation order and channel condition
+ 9 end                                                                           into the encoding process, the transmitter is able to generate
+10 ————————————————————                                                          the required signal accordingly. We integrate SCM and
+11 Second Phase: Learn the model with process (10).                              MCM into the JSC encoder and decoder, indicating the
+12 Load the parameters trained in the first phase.                               JSC encoder/decoder to adjust the encoding/decoding strategy
+13 for i ← 1 to N2 do                                                            dynamically based on the modulation order and channel
+14     Sample x ∼ px .                                                           condition.
+15     Sample SNR uniformly from the required range.                                At the receiver, we employ the turbo decoder for signal
+16     Randomly choose a modulation order M from M.                              denoising, which has proven to be effective in channel
+17     Calculate d according to the modulation order M and                       decoding [41]. It consists of multiple decoder layers, each is
+       power constraint Es .                                                     comprised of a conv1d layer and a linear layer.
+18     Generate the reconstructed signal x̂MD through
+       process (10).
+19     Calculate the loss function                                               D. Training Algorithm
+       L(x, x̂, λ, M, SNR) = R + λ[D(x, x̂) + D(x, x̂MD )]                          The training process of MDJCM is concluded in
+       based on (13).                                                           Algorithm 1. Noting that MDJCM involves three main phases
+20     Update the parameters θ g , θ h , θ f , ϕf , ϕh , ϕg .                    to optimize, i.e., the learning-based source coder, the JSC
+21 end                                                                           encoder/decoder, and the modulation modules, it is hard to
+22 ————————————————————                                                          train the model directly. To this end, we decompose the
+23 Third Phase: Finetune the whole model with STE.                               training process into different phases. At first, we begin
+24 Load the parameters trained in the second phase.                              with optimizing the learning-based coder, and thus only the
+25 Fix the parameters of the transmitter (θ g , θ h , θ f ).                     parameters of the learning-based coder θ g , θ h , ϕh , ϕg are
+26 for i ← 1 to N3 do                                                            trained, leaving the other modules fixed. This phase will
+27     Repeat step 14 to step 17.                                                give rise to a powerful learning-based coder, especially an
+28     Generate the x̂MD through process (9).                                    accurate entropy model to indicate the rate determination
+29     Calculate the loss function                                               for the JSC encoder. In the second phase, we initialize the
+       L(x, x̂, λ, M, SNR) = R + λ[D(x, x̂) + D(x, x̂MD )]                       MDJCM with the parameters trained in the first phase and
+       based on (13).                                                            then learn the whole model with the process (10), using loss
+30     Calculate the gradient through STE.                                      function (13). In this phase, we will be able to obtain a
+31     Update the parameters ϕf , ϕh , ϕg .                                      powerful transmitter with great representation ability, as we
+32 end                                                                           have stated in Section III-C. Finally, we further finetune the
+                                                                                 receiver part of MDJCM with STE to eliminate the mismatch
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                       4265
+
+
+
+                                                                                 and a wide range of real-world content, serving as common
+                                                                                 benchmarks for various image compression tasks. To evaluate
+                                                                                 the performance of the proposed methods, we choose the
+                                                                                 peak noise-to-signal ratio (PSNR) as the main metric, which
+                                                                                 measures the distortion between the transmitted image and the
+                                                                                 received image.
+                                                                                    3) Benchmarks: For comparison, we incorporate several
+                                                                                 advanced mechanisms to demonstrate the effectiveness of
+Fig. 6.   The length (symbol count) distribution versus different datasets.      the proposed methods. Firstly, we include the emerging
+                                                                                 DeepJSCC proposed in [24], where we adopt an improved
+                                                                                 model architecture to achieve superior performance compared
+between the training process and the testing process, where                      to the original paper. Additionally, we consider NTSCC [31]
+the gradients are passed from the receiver to the transmitter.                   as a benchmark, showcasing the relative performance gain of
+Note that the overall training process may contain a number                      the proposed methods. Furthermore, we include its variant,
+of training epochs. As MDJCM is expected to support various                      NTSCC+ [32], which achieves higher performance than
+channel SNRs and modulation orders, during each training                         NTSCC by introducing a context model to enhance coding
+epoch, we randomly generate different SNRs and modulation                        efficiency. To the best of our knowledge, NTSCC+ represents
+order values. These values are then inputted into MDJCM,                         the state-of-the-art deep learning-based analog JSCC model
+alongside sampled input source samples. In this way, MDJCM                       at present. In addition to these analog JSCC systems,
+is able to generate corresponding channel symbols to deal with                   we introduce several digital methods. Specifically, we exploit
+different channel conditions.                                                    the combination of the advanced image codec, BPG, with
+   Furthermore, we examine the resulted symbol length, ki2                       a practical channel codec, LDPC. The coding rate and
+for i = 1, 2, . . . , l, of the model trained with the imageNet                  modulation type are selected based on the SNR, ensuring
+dataset, as shown in Fig. 6. We can observe a significant                        approximately error-free transmission. For instance, when
+difference between the symbol length on imageNet and that                        SNR = 10 dB, the channel code rate is set to 2/3 and
+on the CLIC2021 dataset, this training bias leads to a sub-                      modulation is selected as 16QAM. Moreover, the STE is
+optimal performance. Identifying the imageNet is stored with                     also chosen as the digital baseline, where the transmitter
+a lossy format, JPEG, we address this issue by incorporating                     directly outputs the constellation symbols, and the gradient
+the lossless DIV2K dataset as the training data, as what we                      is copied to the transmitter from the receiver to enable end-to-
+will clarify in the Section V.                                                   end training. Furthermore, we include the state-of-the-art joint
+                                                                                 coding-modulation (JCM) mechanism proposed in [37], which
+                      V. S IMULATION R ESULTS                                    realizes digital transmission based on a VAE. Moreover, in two
+A. Simulation Settings                                                           recent works, [38] and [39], the authors proposed methods for
+                                                                                 quantizing symbols into bits for transmission, which we also
+   1) Training Details: We implement benchmarks and our                          include for comparison.
+proposed methods using PyTorch.2 For training, we randomly
+select 50, 000 images with a resolution larger than 256 ×                        B. Distribution Analysis
+256 from the ImageNet validation set and then randomly crop
+                                                                                    Notably, existing digital methods often concentrate on
+them to the size of 256 × 256 during training. We utilize the
+                                                                                 small-size image datasets such as CIFAR10. Therefore,
+Adam optimizer with a batch size of 8. The initial learning
+                                                                                 we first incorporate CIFAR10 as the training dataset to
+rate is set to 1 × 10−4 . Notably, since ImageNet is in JPEG
+                                                                                 reinforce the validity of our findings. As outlined in
+format, which represents a lossy version of the original images,
+                                                                                 Section III-B, the probability density of s̄ in process (9)
+we additionally employ the DIV2K dataset as the training
+                                                                                 is approximately proportional to the probability mass of ō
+dataset. The learning rate decays to 1×10−5 when training the
+                                                                                 using process (10). To validate this assertion, we conduct
+model with DIV2K. The model is trained with a modulation
+                                                                                 numerical Monte Carlo simulations. Specifically, we derive
+set M = [4, 16, 64, 256, 1024], η1 = 0.4, and η2 = 0.2,
+                                                                                 the PMF of ō through sample counting, while the PDF of
+we train the model at an SNR of 10 dB. In addition, when we
+                                                                                 s̄ is obtained by kernel density estimation. The simulation
+present the performance versus SNR, the SNR is uniformly
+                                                                                 results are depicted in Fig. 7. In the first row, we present
+drawn from the range [0, 13] dB. Moreover, we investigate the
+                                                                                 the results employing 64QAM, under SNR conditions of
+performance of the proposed methods in AWGN channels.
+                                                                                 10 dB and 18 dB, respectively. The results of using
+   2) Evaluation: We evaluate our methods on various datasets
+                                                                                 1024QAM are shown in the second row. We provide the
+with different resolutions. To ensure fairness, we first include
+                                                                                 comparisons of the signal after modulation and demodulation.
+the CIFAR10 dataset. Additionally, we consider the Kodak
+                                                                                 That is, we consider the comparison between ŝ and s̄,
+dataset, which has an image size of 768 × 512, as well as
+                                                                                 as well as the comparison between ō and ô. From the
+the CLIC2022 and CLIC2021 datasets, both of which have a
+                                                                                 results, we can clearly see that the proposed process (10)
+resolution of 2k. These datasets encompass diverse resolutions
+                                                                                 can approximate the process (9). This approximation is
+  2 Our code and model weights are available in https://github.com/zhang-        quite accurate at different SNRs, especially at the high
+guangyi/Semantic-MDJCM.git                                                       SNR regime. Furthermore, we note a slight approximation
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4266                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+
+Fig. 7.   The distribution comparisons after modulation and demodulation.
+
+
+
+
+Fig. 8.   The PSNR performance versus SNR over CIFAR10 dataset.
+
+
+
+                                                                                 C. Performance Analysis
+                                                                                    In Fig. 8, we present a comparison of the PSNR results
+                                                                                 obtained using different training methods across varying SNR
+                                                                                 levels under the AWGN channel. Specifically, we introduce the
+                                                                                 STE as a benchmark to demonstrate the relative performance
+                                                                                 gain achieved by our proposed two-phase training strategies.
+                                                                                 Additionally, we include as a benchmark the advanced digital
+                                                                                 JCM proposed by [37], which employs the VAE to output the
+                                                                                 probabilities of each constellation symbol and sample from
+                                                                                 the probabilities to generate the constellation symbols. Since
+                                                                                 there is no released code from [37], we implement a similar
+                                                                                 architecture to that reported in [37] for different schemes.
+Fig. 9. The relative performance gain of introducing the second phase to the     Additionally, we also incorporate two more recent methods,
+training process by ablation study.
+                                                                                 [38] and [39], as benchmarks, which are labeled as “Park et al.
+                                                                                 2024 (BESC)” and “Liu et al. 2024” in Fig. 8, respectively.
+error, primarily noticeable at the edge constellation symbols.                   From the results, we find the proposed two-phase strategy
+However, this discrepancy remains minor, ensuring the                            significantly outperforms JCM and training with STE, where
+continued effectiveness of (10) across various conditions.                       STE holds a higher performance than JCM at most modulation
+Notably, we observe that this approximation achieves greater                     orders. We can also observe a performance saturation for
+accuracy with higher modulation orders, consistent with the                      these schemes since transmitting with fixed modulation order
+rationale detailed in Section III-B. By introducing the two-                     introduces a bound for the amount of information. For
+phase training strategy, the impact of this error is significantly               instance, when SNR is larger than 8 dB, almost no extra
+eliminated.                                                                      redundancy will be introduced, and the performance will not
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                     4267
+
+
+
+
+Fig. 10. The PSNR performance versus the average CBR over the AWGN channels at an SNR of 10 dB. The considered datasets are (a) Kodak, (b) CLIC2021,
+and (c) CLIC2022, respectively.
+
+
+
+
+                                                                               Fig. 12. PSNR performance versus CBR of training with different modulation
+Fig. 11. The PSNR performance versus the CBR over the AWGN channels,           orders. A comparison between the multi-order modulator/demodulator and a
+where all the schemes employ the analog transmission to show the relative      fixed-order modulator/demodulator.
+performance gain.
+
+
+improve with SNR as already all of the transmitted symbols                     in this figure, where the model is only trained with fixed
+have been employed for source representation. Moreover,                        modulation order. Our findings indicate the superiority of the
+Park et al. 2024 (BESC) show competitive performance at                        proposed methods over DeepJSCC and traditional separation-
+a low SNR regime while decreased performance when SNR                          based schemes like JPEG+LDPC, JPEG2000+LDPC, and
+is high, especially when 4QAM is employed. It mainly stems                     BPG+LDPC. Notably, DeepJSCC experiences performance
+from its mixed training strategy, where the model tends to                     deterioration with increasing CBR due to its fixed-rate nature,
+maintain an excessive robustness against different noise levels,               unlike MDJCM and NTSCC, which leverage adaptive rate
+and thus fails to achieve high performance in the whole SNR                    allocation for each image. Besides, the Swin Transformer
+range. Since the model in Liu et al. 2024 does not consider                    employed in MDJCM is much more effective than the
+the modulation process in the training phase, it achieves the                  standard CNN in DeepJSCC. Moreover, we observe a greater
+worse performance.                                                             performance gain at higher CBR levels compared to lower
+   From Fig. 9, it is evident that training with the substitution              ones, as higher CBR allows for more flexible transmission
+process (10) yields significantly higher PSNR performance                      rate allocation among different images. For the three high-
+compared to direct training with STE. The performance gain                     resolution datasets, we can all observe the relative performance
+is much more significant when employing lower modulation                       gain. Furthermore, in training with higher modulation order,
+orders and operating in low SNR regimes. Specifically, training                the performance of MDJCM will approach that of MDJCM-
+with the process (10) outperforms STE when SNR is below                        A, since the modulation error decreases with the modulation
+12 dB using 4QAM. Through the utilization of the two-phase                     order. This phenomenon also explains why the performance
+strategy, performance can be further enhanced, surpassing                      using 1024QAM surpasses that of 64QAM and 256QAM.
+that achieved by STE comprehensively, even in high SNR                            In Fig. 11, we compare the analog transmission per-
+scenarios.                                                                     formance of the proposed MDJCM with NTSCC and its
+   Fig. 10 shows the PSNR performance versus CBR over                          advanced variant, NTSCC+. The primary distinction between
+the AWGN channels at an SNR of 10 dB. In this figure,                          MDJCM-A and NTSCC lies in the hierarchical dimension
+“MDJCM-A” represents the utilization of analog transmission                    reduction strategy introduced in MDJCM-A. NTSCC+
+for the proposed MDJCM, serving as an upper bound.                             represents an enhanced version of NTSCC, incorporating
+In addition, we consider 64QAM, 256QAM, and 1024QAM                            a context model to improve coding efficiency, which was
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4268                                                                                  IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+
+Fig. 13.    The PSNR performance versus the SNR over different datasets. The average CBR is set to 0.0625.
+
+
+
+
+Fig. 14. Visualization example of the reconstructed images. The metrics are [CBR/PSNR]. These reconstructed images are obtained by employing different
+schemes over the AWGN channel at the SNR of 10 dB.
+
+
+
+considered as state-of-the-art in wireless image transmission.                    the limitations of lower modulation orders in supporting higher
+Our observations from the figure reveal that the proposed                         CBR. Compared to fixed modulation schemes, our proposed
+methods significantly outperform NTSCC, underscoring the                          approach offers greater compatibility with contemporary
+effectiveness of our approach. Moreover, MDJCM-A is even                          digital communication systems, as there is no need to
+able to surpass NTSCC+, particularly in the high CBR region.                      train multiple models to support different requirements.
+This also reveals the necessity to design a powerful JSCC                         Additionally, we include results for Rayleigh fading channels
+part in such a variable-rate scheme, while NTSCC+ mainly                          in the simulation section, as shown in Fig. 12 (b). This figure
+focuses on the learning-based source coder by employing a                         illustrates the robustness of the proposed MDJCM across
+more advanced source coder.                                                       varying channel SNRs. We observe that our MDJCM performs
+   In Fig. 12 (a), we present the results of training the model                   exceptionally well in different SNR regimes on Rayleigh
+with varying modulation orders M = [4, 16, 64, 256, 1024],                        fading channels, highlighting its generalizability across diverse
+where the performance is indicated by the black points. The                       channel environments.
+other curves are obtained by training the MDJCM with a                               Fig. 13 (a) and (b) depict the PSNR performance as
+fixed modulation order. The dataset considered is Kodak,                          SNR varies, utilizing the Kodak dataset and CLIC2021
+and the channel models include AWGN and Rayleigh fading.                          dataset, respectively, while maintaining a constant CBR
+From the results, we can observe only a slight performance                        value of 0.0625 for all transmission schemes. The figure
+degradation when using a multi-order constellation generator,                     includes the traditional separation scheme, BPG+LDPC,
+underscoring the efficacy of our proposed conditional network,                    where modulation and channel code rate adapt according to
+where our proposed multi-order constellation generator can                        the channel SNR. Next, we also consider the DeepJSCC,
+approach the specifically trained model. In addition, the                         which is trained at a specific SNR and should be able
+performance degradation mainly exists in higher modulation                        to achieve its best at each SNR point. For our proposed
+order and higher CBR regions. For example, the performance                        scheme, we train the model across a broad SNR range
+of MDJCM shows comparable performance to the specifically-                        using either a fixed modulator, denoted as “MDJCM-S”,
+trained one, except for 1024QAM and CBR greater than                              or a multi-order modulator, denoted as “MDJCM-V”. Our
+0.07. Moreover, the performance gap between different                             results demonstrate the capability of our proposed scheme to
+modulation orders widens with increasing CBR, highlighting                        support applications over a wide channel SNR range without
+
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                      4269
+
+
+
+requiring multiple models trained at specific SNR conditions. and
+Notably, MDJCM exhibits superior performance compared                                1         u
+                                                                                                      Z u+d
+                                                                                                                       1
+to DeepJSCC trained at specific SNR conditions. Moreover,                peIn (u) ∗ rect( ) =               peIn (τ ) dτ,          (23)
+                                                                           i        2d         2d       u−d
+                                                                                                              i      2d
+traditional separation-based digital methods like BPG+LDPC
+often suffer from the cliff effect when SNR falls below the we have
+expected level by the channel code. In contrast, MDJCM p In (u)
+                                                                 ō
+provides gradual degradation as SNR decreases and even i Z ∞ Z ν+d                                   Z u+d−ν
+approaches analog system performance at higher SNR regions                                      1                         1
+                                                                    =               psIn   (µ) dµ             peIn (τ ) dτ dν. (24)
+due to its flexibility in adjusting the tradeoff between channel         −∞ ν−d
+                                                                                       i       2d      u−d−ν
+                                                                                                                 i       2d
+and source coding. Comparing MDJCM-S with MDJCM- According to the distribution constraint, we further obtain
+V, we observe only slight performance degradation despite                       √
+MDJCM-V needing to handle multiple modulation orders, pōIn          i
+                                                                        ((2m− M −1)d)
+underscoring the effectiveness of our proposed methods.                Z √M d Z ν+d                Z (2m−√M)d−ν
+                                                                                                                               1
+   To further illustrate the performance of the proposed            = √               psIn   (µ)dµ       √         peIn   (τ ) 2 dτ dν.
+                                                                        − M d ν−d
+                                                                                         i
+                                                                                                    (2m− M−2)d−ν
+                                                                                                                      i       4d
+methods, Fig. 14 presents examples of the reconstructed
+                                                                                                                                   (25)
+images using different transmission schemes. Compared
+with the benchmarks, the proposed methods provide better                                       A PPENDIX B
+visual quality with lower CBR cost. In addition, applying                          P ROOF OF THE E QUIVALENCE
+higher modulation order can achieve better reconstruction
+quality. In addition, the proposed methods can help to keep          Assuming that
+more texture and details than the BPG+LDPC. This further                        Z ν+d               Z (2m−√M)d−ν
+                                                                                                                                 1
+demonstrates the potential of employing the proposed methods        g(ν, M ) ≜          psIn  (µ)dµ       √          peIn  (τ ) 2 dτ,
+                                                                                  ν−d
+                                                                                            i
+                                                                                                      (2m− M−2)d−ν
+                                                                                                                        i      4d
+in wireless image transmission.
+                                                                                                                                   (26)
+
+                          VI. C ONCLUSION                                       and thus
+                                                                                                                              √
+                                                                                                      √          Z Md
+   In this work, we have proposed a modulation-agnostic                                   pōIn ((2m−  M −1)d) =      g(ν, M )dν.
+                                                                                             i                     √
+digital semantic communication system for wireless image                                                                     − Md
+transmission. Starting from the learning-based coder, we for-                                                                                          (27)
+mulated a framework for digital systems capable of achieving
+                                                                                It is clear that
+variable-rate transmission. To overcome the challenges                                               √
+posed by non-differential modulation/demodulation processes,                            P (s̄In
+                                                                                             i = (2m− M −1)d)
+we introduce a novel substitution training strategy. This                                           √
+                                                                                                     M
+                                                                                                                    √
+strategy treats them as limited and scaled quantization
+                                                                                                    X
+                                                                                                =         g((2t −    M − 1)d, M ) ∗ 4d2
+processes, with an explanation of their equivalence provided.                                       t=1
+To eliminate the mismatch between the training and testing                                          Z √M d
+phases, we introduce a two-phase training strategy. For                                         ≈     √   g(ν, M )dν ∗ 2d
+the realization of a variable-order modulator, we propose                                            − Md
+                                                                                                             √
+a conditional network that instructs the transmitter to                                         = pōIn
+                                                                                                     i
+                                                                                                        ((2m− M −1)d) ∗ 2d.                            (28)
+generate corresponding constellation symbols. Additionally,
+                                                                                Intuitively,
+                                                                                      √      this approximation becomes more accurate when
+we implement a hierarchical dimension-reduction strategy to
+                                                                                term M d has limit when M → ∞. For instance, when sym-
+further enhance performance. In essence, our paper presents a
+                                                                                bol s̄In                       qand the power is constrained
+                                                                                      i is uniformly distributed
+promising and effective method for training a digital semantic                          √
+communication system in an end-to-end fashion, exhibiting                       by Es , M d would approach 3E2s . According to [27], (28)
+superior performance compared to existing solutions.                            ensures the effectiveness of employing process (10) during
+                                                                                training.
+                            A PPENDIX A                                                                       R EFERENCES
+                        D ERIVATION OF (16)
+                                                                                 [1] W. Li, H. Liang, C. Dong, X. Xu, P. Zhang, and K. Liu, “Non-orthogonal
+  According to the probability convolution formula, we have                          multiple access enhanced multi-user semantic communication,” IEEE
+                                                                                     Trans. Cognit. Commun. Netw., vol. 9, no. 6, pp. 1438–1453, Dec. 2023.
+                             1      u               1    u                       [2] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+  pōIn (u) = psIn (u) ∗       rect( ) ∗ peIn (u) ∗ rect( ).                         Applications, trends, technologies, and open research problems,” IEEE
+     i          i           2d      2d     i       2d    2d                          Netw., vol. 34, no. 3, pp. 134–142, May 2020.
+                                                            (21)                 [3] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+                                                                                     image transmission using deep source channel coding with attention
+Since                                                                                modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,
+                                                                                     pp. 2315–2328, Apr. 2022.
+                                      Z u+d
+                      1      u                            1                      [4] H. Wu, Y. Shao, E. Ozfatura, K. Mikolajczyk, and D. Gündüz,
+        psIn (u) ∗      rect( ) =             psIn (µ)      dµ.        (22)          “Transformer-aided wireless image transmission with channel feedback,”
+          i          2d      2d         u−d
+                                                i        2d                          2023, arXiv:2306.09101.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+4270                                                                                 IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 6, JUNE 2025
+
+
+
+ [5] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified              [27] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational
+     multi-task semantic communication system for multimodal data,” IEEE              image compression with a scale hyperprior,” 2018, arXiv:1802.01436.
+     Trans. Commun., vol. 72, no. 7, pp. 4101–4116, Jul. 2024, doi:              [28] D. He, Y. Zheng, B. Sun, Y. Wang, and H. Qin, “Checkerboard
+     10.1109/TCOMM.2024.3364990.                                                      context model for efficient learned image compression,” in Proc.
+ [6] X. Xu et al., “Task-oriented and semantic-aware heterogeneous                    IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2021,
+     networks for artificial intelligence of things: Performance analysis and         pp. 14771–14780.
+     optimization,” IEEE Internet Things J., vol. 11, no. 1, pp. 228–242,        [29] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image
+     Jan. 2024.                                                                       compression with discretized Gaussian mixture likelihoods and attention
+ [7] Y. Zhang, H. Zhao, J. Wei, J. Zhang, M. F. Flanagan, and J. Xiong,               modules,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+     “Context-based semantic communication via dynamic programming,”                  (CVPR), Jun. 2020, pp. 7936–7945.
+     IEEE Trans. Cognit. Commun. Netw., vol. 8, no. 3, pp. 1453–1467,            [30] Z. Guo, Z. Zhang, R. Feng, and Z. Chen, “Soft then hard: Rethinking
+     Sep. 2022.                                                                       the quantization in neural image compression,” in Proc. 38th Int. Conf.
+ [8] Z. Weng and Z. Qin, “Semantic communication systems for speech                   Mach. Learn., vol. 139, Jul. 2021, pp. 3920–3929.
+     transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,                  [31] J. Dai et al., “Nonlinear transform source-channel coding for semantic
+     pp. 2434–2444, Aug. 2021.                                                        communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,
+ [9] J. Huang, D. Li, C. Huang, X. Qin, and W. Zhang, “Joint task and                 pp. 2300–2316, Aug. 2022.
+     data-oriented semantic communications: A deep separate source-channel       [32] S. Wang, J. Dai, X. Qin, Z. Si, K. Niu, and P. Zhang, “Improved
+     coding scheme,” IEEE Internet Things J., vol. 11, no. 2, pp. 2255–2272,          nonlinear transform source-channel coding to catalyze semantic
+     Jan. 2024.                                                                       communications,” IEEE J. Sel. Topics Signal Process., vol. 17, no. 5,
+[10] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,                 pp. 1022–1037, Sep. 2023.
+     “Predictive and adaptive deep coding for wireless image transmission        [33] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+     in semantic communication,” IEEE Trans. Wireless Commun., vol. 22,               for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+     no. 8, pp. 5486–5501, Aug. 2023.                                                 vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[11] C. Zeng et al., “Task-oriented semantic communication over rate splitting   [34] P. Jiang, C. Wen, S. Jin, and G. Y. Li, “Wireless semantic
+     enabled wireless control systems for URLLC services,” IEEE Trans.                communications for video conferencing,” IEEE J. Sel. Areas Commun.,
+     Commun., vol. 72, no. 2, pp. 722–739, Feb. 2024.                                 vol. 41, no. 1, pp. 230–244, Jan. 2023.
+[12] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic                [35] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+     communications: Deep learning-based image semantic coding,” IEEE                 Channel input constrained deep joint source-channel coding,” in Proc.
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, Jan. 2023.                     IEEE Int. Conf. Commun. (ICC), May 2022, pp. 3880–3885.
+[13] T. Tung and D. Gündüz, “DeepWiVe: Deep-learning-aided wireless              [36] K. Choi, K. Tatwawadi, T. Weissman, and S. Ermon, “NECST:
+     video transmission,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,                 Neural joint source-channel coding,” in Proc. Int. Conf. Mach. Learn.,
+     pp. 2570–2583, Sep. 2022.                                                        Jun. 2019, pp. 1182–1192.
+[14] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled           [37] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+     semantic communication systems,” IEEE Trans. Signal Process., vol. 69,           digital semantic communications via variational autoencoder,” 2023,
+     pp. 2663–2675, 2021.                                                             arXiv:2310.06690.
+[15] X. Zhong et al., “Joint source-channel coding system for 6G                 [38] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel
+     communication: Design, prototype and future directions,” IEEE Access,            coding for channel-adaptive digital semantic communications,” IEEE
+     vol. 12, pp. 17708–17724, 2024.                                                  Trans. Cognit. Commun. Netw., early access, Jul. 3, 2024, doi:
+[16] J. Huang, K. Yuan, C. Huang, and K. Huang, “D2 -JSCC: Digital                    10.1109/TCCN.2024.3422496.
+     deep joint source-channel coding for semantic communications,” 2024,        [39] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. S. Quek, “OFDM-based
+     arXiv:2403.07338.                                                                digital semantic communication with importance awareness,” IEEE
+[17] D. Li, J. Huang, C. Huang, X. Qin, H. Zhang, and P. Zhang,                       Trans. Commun., vol. 72, no. 10, pp. 6301–6315, Oct. 2024, doi:
+     “Fundamental limitation of semantic communications: Neural estimation            10.1109/TCOMM.2024.3397862.
+     for rate-distortion,” J. Commun. Inf. Netw., vol. 8, no. 4, pp. 303–318,    [40] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+     Dec. 2023.                                                                       communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+[18] Y. M. Saidutta, A. Abdi, and F. Fekri, “Joint source-channel coding              Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+     over additive noise analog channels using mixture of variational            [41] Y. Jiang, H. Kim, H. Asnani, S. Kannan, S. Oh, and P. Viswanath,
+     autoencoders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7,                       “Turbo autoencoder: Deep learning based channel codes for point-to-
+     pp. 2000–2013, Jul. 2021.                                                        point communication channels,” in Proc. Adv. Neural Inf. Process. Syst.,
+                                                                                      Dec. 2019, pp. 2754–2764.
+[19] M. Yang, C. Bian, and H. Kim, “OFDM-guided deep joint source
+     channel coding for wireless multipath fading channels,” IEEE Trans.         [42] J. Liu, H. Sun, and J. Katto, “Learned image compression with mixed
+     Cognit. Commun. Netw., vol. 8, no. 2, pp. 584–599, Jun. 2022.                    transformer-CNN architectures,” in Proc. IEEE/CVF Conf. Comput. Vis.
+                                                                                      Pattern Recognit. (CVPR), Jun. 2023, pp. 14388–14397.
+[20] H. Wu, Y. Shao, C. Bian, K. Mikolajczyk, and D. Gündüz, “Vision
+                                                                                 [43] R. M. Gray and D. L. Neuhoff, “Quantization,” IEEE Trans. Inf. Theory,
+     transformer for adaptive image transmission over MIMO channels,”
+                                                                                      vol. 44, no. 6, pp. 2325–2383, Oct. 1998.
+     2022, arXiv:2210.15347.
+[21] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+     information bottleneck guided joint source and channel coding for
+     image transmission,” IEEE J. Sel. Areas Commun., vol. 41, no. 8,
+     pp. 2628–2644, Aug. 2023.
+[22] S. Guo, Y. Wang, S. Li, and N. Saeed, “Semantic importance-aware
+     communications using pre-trained language models,” IEEE Commun.
+     Lett., vol. 27, no. 9, pp. 2328–2332, Sep. 2023.
+[23] X. Chen, J. Wang, L. Xu, J. Huang, and Z. Fei, “A perceptually moti-
+     vated approach for low-complexity speech semantic communication,”
+     IEEE Internet Things J., vol. 11, no. 12, pp. 22054–22065, Jun. 2024.
+[24] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-                                    Guangyi Zhang (Graduate Student Member, IEEE)
+     channel coding for wireless image transmission,” IEEE Trans. Cogn.                                   received the B.S. degree in information engineer-
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.                                                ing from Zhejiang University, Hangzhou, China,
+[25] G. Zhang, Q. Hu, Y. Cai, and G. Yu, “SCAN: Semantic communication                                    in 2022, where he is currently pursuing the Ph.D.
+     with adaptive channel feedback,” IEEE Trans. Cognit. Commun. Netw.,                                  degree with the College of Information Science
+     vol. 10, no. 5, pp. 1759–1773, Oct. 2024.                                                            and Electronic Engineering. His current research
+[26] K. Yang, S. Wang, J. Dai, K. Tan, K. Niu, and P. Zhang, “WITT: A                                     interests include semantic communication and deep
+     wireless image transmission transformer for semantic communications,”                                learning for physical layer communication.
+     in Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP),
+     Jun. 2023, pp. 1–5.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: FROM ANALOG TO DIGITAL: MULTI-ORDER DIGITAL JOINT CODING-MODULATION                                                                      4271
+
+
+
+                         Pujing Yang (Graduate Student Member, IEEE)                                     Qiyu Hu (Student Member, IEEE) received the B.S.
+                         received the B.S. degree in information engineer-                               degree in information engineering from Zhejiang
+                         ing from Zhejiang University, Hangzhou, China,                                  University, Hangzhou, China, in 2018, and the Ph.D.
+                         in 2024, where she is currently pursuing the M.Sc.                              degree from the College of Information Science
+                         degree with the College of Information Science                                  and Electronic Engineering, Zhejiang University,
+                         and Electronic Engineering. Her current research                                in 2023. His research interests include unmanned
+                         interests include semantic communication and deep                               aerial vehicle communications, optimization theory,
+                         learning for physical layer communication.                                      machine learning for physical layer communication,
+                                                                                                         and semantic communication.
+
+
+
+
+                                                                                                        Guanding Yu (Senior Member, IEEE) received
+                                                                                                        the B.E. and Ph.D. degrees in communication
+                                                                                                        engineering from Zhejiang University, Hangzhou,
+                          Yunlong Cai (Senior Member, IEEE) received the                                China, in 2001 and 2006, respectively.
+                          Ph.D. degree in electronic engineering from the                                 He joined Zhejiang University in 2006.
+                          University of York, U.K., in 2010.                                            From 2013 to 2015, he was a Visiting Professor
+                            From 2010 to 2011, he was a Post-Doctoral                                   with the School of Electrical and Computer
+                          Fellow with the Electronics and Communications                                Engineering, Georgia Institute of Technology,
+                          Laboratory, CNAM, France. Since February 2011,                                Atlanta, GA, USA. He is currently a Professor
+                          he has been with the College of Information Science                           with the College of Information Science and
+                          and Electronic Engineering, Zhejiang University,                              Electronic Engineering. His research interests
+                          Hangzhou, China, where he is currently a Professor.   include integrated sensing and communications (ISAC), mobile edge
+                          He has also held research visiting appointments       computing/learning, and machine learning for wireless networks. He received
+                          at Georgia Institute of Technology, McGill Uni-       the 2016 IEEE ComSoc Asia–Pacific Outstanding Young Researcher
+versity, and the University of California at Irvine. His research interests     Award. He regularly sits on the Technical Program Committee (TPC)
+include transceiver design for multiple-antenna systems, cooperative and        Board of prominent IEEE conferences, such as ICC, GLOBECOM,
+relay communications, UAV communications, and machine learning for              and VTC. He serves as the Symposium Co-Chair for IEEE Globecom
+communications. He has published over 200 journal and conference papers in      2019 and the Track Chair for IEEE VTC 2019’Fall. He served as the Guest
+these areas. He regularly sits on the Technical Program Committee Board of      Editor for IEEE Communications Magazine Special Issue on Full-Duplex
+prominent IEEE conferences, such as ICC, GLOBECOM, and VTC. He has              Communications; an Editor for IEEE J OURNAL ON S ELECTED A REAS
+served as the General Chair for the 18th IEEE International Symposium on        IN C OMMUNICATIONS Series on Green Communications and Networking
+Wireless Communications Systems, which was held in Hangzhou, in October         and Series on Machine Learning in Communications and Networks, the
+2022. He is also serving as an Associate Editor for IEEE T RANSACTIONS ON       IEEE W IRELESS C OMMUNICATIONS L ETTERS, IEEE T RANSACTIONS ON
+C OMMUNICATIONS and a Senior Area Editor for IEEE S IGNAL P ROCESSING           G REEN C OMMUNICATIONS AND N ETWORKING, and IEEE ACCESS; and
+L ETTERS. He was the Lead Guest Editor of the Special Issue on “Next            a Lead Guest Editor for IEEE Wireless Communications Magazine Special
+Generation Advanced Transceiver Technologies” of the IEEE J OURNAL ON           Issue on LTE in Unlicensed Spectrum. He is also serving as an Editor for
+S ELECTED A REAS IN C OMMUNICATIONS. He was an Associate Editor of              IEEE T RANSACTIONS ON M ACHINE L EARNING IN C OMMUNICATIONS
+IEEE S IGNAL P ROCESSING L ETTERS from 2018 to 2023.                            AND N ETWORKING .
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:07:53 UTC from IEEE Xplore. Restrictions apply.
+

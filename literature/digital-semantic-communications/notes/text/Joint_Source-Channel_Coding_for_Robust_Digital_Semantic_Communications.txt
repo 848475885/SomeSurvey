@@ -1,0 +1,492 @@
+                                                                                                                                                                          2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+
+
+                                                                                                                                                       Joint Source-Channel Coding for Robust Digital
+                                                                                                                                                                  Semantic Communications
+GLOBECOM 2024 - 2024 IEEE Global Communications Conference | 979-8-3503-5125-5/24/$31.00 ©2024 IEEE | DOI: 10.1109/GLOBECOM52923.2024.10901466
+
+
+
+
+                                                                                                                                                                                   Joohyuk Park, Yongjeong Oh, Seonjung Kim, and Yo-Seb Jeon
+                                                                                                                                                                  Department of Electrical Engineering, POSTECH, Pohang, Gyeongbuk 37673, Republic of Korea
+                                                                                                                                                                             Email: {joohyuk.park, yongjeongoh, ksj8970, yoseb.jeon}@postech.ac.kr
+
+
+                                                                                                                                                    Abstract—This paper proposes a novel joint source-channel                     the performance of the dedicated semantic task, they assume
+                                                                                                                                                 coding (JSCC) approach for robust digital semantic communi-                      the end-to-end training of the JSCC encoder/decoder over a
+                                                                                                                                                 cations. When employing a binary-output JSCC encoder with                        certain communication environment. Therefore, the effective-
+                                                                                                                                                 digital modulation, end-to-end training becomes challenging due
+                                                                                                                                                 to the unpredictable dynamics of channel conditions. To address                  ness of these methods is not guaranteed when they operate
+                                                                                                                                                 this challenge, we first develop a new demodulation method which                 under the channel environments that significantly differ from
+                                                                                                                                                 assesses the uncertainty of the demodulation output to improve the               the trained environment.
+                                                                                                                                                 robustness of the digital semantic communication system. We then                    To address this challenge, channel-adaptive JSCC en-
+                                                                                                                                                 devise a robust training strategy which enhances the robustness
+                                                                                                                                                 and flexibility of the JSCC encoder and decoder against diverse                  coder/decoder has been studied, which can provide a ro-
+                                                                                                                                                 channel conditions. To this end, we model the relationship between               bust performance over diverse channel environments such as
+                                                                                                                                                 the encoder’s output and decoder’s input using binary symmetric                  varying signal-to-noise ratio (SNR) levels [6]–[9]. The SNR-
+                                                                                                                                                 erasure channels and then sample the parameters of these chan-                   adaptive JSCC for wireless image transmission was studied in
+                                                                                                                                                 nels from diverse distributions. Using simulations, we demonstrate               [6], which extracts the importance of features using attention
+                                                                                                                                                 the superior performance of the proposed JSCC approach for
+                                                                                                                                                 image classification and reconstruction tasks compared to existing               modules considering SNR and loss. This idea was extended
+                                                                                                                                                 JSCC approaches.                                                                 in [7] by additionally considering the use of an orthogonal
+                                                                                                                                                                                                                                  frequency division multiplexing waveform. Also, in [8], the
+                                                                                                                                                                          I. I NTRODUCTION                                        attention mask is transformed into a binary mask for adaptive
+                                                                                                                                                    Semantic communications, referring to the process of trans-                   rate control. The common idea behind these methods is to
+                                                                                                                                                 mitting and receiving messages designed to convey meaning,                       utilize channel information, such as SNR, as an additional input
+                                                                                                                                                 have garnered increasing attention as a crucial technology for                   to control the JSCC encoder/decoder network. This concept
+                                                                                                                                                 enabling high-volume data-intensive and/or low-latency tasks                     is realized by incorporating dedicated modules like attention
+                                                                                                                                                 such as VR/AR, and video signal used in autonomous vehicle                       modules or SNR-adaptive modules. However, this approach
+                                                                                                                                                 [1]. In traditional communication, the focus of the transmitter                  increases both the network size and training complexity. In
+                                                                                                                                                 is to transform the message into a bit sequence that can                         [9], channel-adaptive training was conducted by sampling
+                                                                                                                                                 be accurately reconstructed at the receiver with minimal bit                     the variance of Gaussian noise from a uniform distribution,
+                                                                                                                                                 errors. In contrast, in semantic communication, the goal of the                  and then deactivating the encoder’s output nodes when the
+                                                                                                                                                 transmitter is to convey the meaning of the message, aiming to                   sampled value is less than a threshold. This approach can
+                                                                                                                                                 maximize the performance of a target task at the receiver even                   reduce communication overhead when the SNR is high, and
+                                                                                                                                                 if the transmitted bit sequence itself contains errors.                          enhance recovery accuracy when the SNR is low. However,
+                                                                                                                                                    There is a rich literature on the design of the semantic                      reducing the latent dimension can significantly degrade the de-
+                                                                                                                                                 communication system that can deliver task-reliant information                   coder’s restoration capability due to the increased compression
+                                                                                                                                                 quickly and accurately over wireless channels. One of the                        rate. Moreover, all these methods primarily focus on analog
+                                                                                                                                                 representative approaches is end-to-end training by employing                    communication systems, where real-valued or complex-valued
+                                                                                                                                                 a joint source-channel coding (JSCC) neural network. The                         encoder outputs are transmitted without any digital modulation.
+                                                                                                                                                 fundamental idea of this approach is to integrate source and                     Consequently, these methods are not compatible with modern
+                                                                                                                                                 channel encoders/decoders into a JSCC encoder/decoder and                        digital communication systems and suffer from the disad-
+                                                                                                                                                 then to jointly train the JSCC encoder/decoder by taking into                    vantages associated with analog communication over digital
+                                                                                                                                                 account the effect of a wireless channel. The design of the                      communication. To the best of the authors’ knowledge, no
+                                                                                                                                                 JSCC encoder/decoder was studied for various semantic tasks                      previous studies have explored a channel-robust JSCC approach
+                                                                                                                                                 such as image transmission [2], [3], text transmission [4], and                  for digital semantic communication systems, even though it is
+                                                                                                                                                 speech transmission [5]. Although these methods can improve                      crucial for the early adaptation of semantic communications.
+                                                                                                                                                                                                                                     To bridge this research gap, in this paper, we propose a
+                                                                                                                                                    This work was supported in part by the National Research Foundation of        novel channel-robust JSCC approach, enabling robust digital
+                                                                                                                                                 Korea(NRF) grant funded by the Korea government(MSIT) (No. RS-2024-
+                                                                                                                                                 00453301) and in part by the National Research Foundation of Korea (NRF)         semantic communications for the first time. The proposed
+                                                                                                                                                 grant funded by the Korea government(MSIT) (No. 2022R1C1C1010074).               approach involves a JSCC followed by binarization and digital
+
+
+
+                                                                                                                                                                                                                           2072
+                                                                                                                                                          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+                        2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+
+
+                   Fig. 1. Illustration of the digital semantic communication system with the BSEC modeling considered in our work.
+
+modulation, with a JSCC decoder preceded by channel equal-                      The channel equalization with the knowledge of h is executed
+ization and digital demodulation. In the proposed approach, we                  for the received signal in (1). Then the equalized signal at time
+devise a robust training strategy for the JSCC encoder/decoder,                 slot n is given by
+which models the combined effect of the wireless channel with
+                                                                                                          ỹ[n] = x[n] + ṽ[n],                           (2)
+the digital modulation and demodulation as binary symmetric
+                                                                                                                                              2       2
+erasure channels (BSECs). In this strategy, we improve the                      where ṽ[n] ∼ CN (0, 1/SNR) and SNR = |h| /σ is the
+robustness of the JSCC encoder/decoder against diverse SNR                      instantaneous SNR of the system. Then digital demodulation is
+by sampling the bit-flip probabilities of the BSECs from                        executed to reconstruct the transmitted bit sequence from the
+stochastic distributions with different robustness levels. Using                equalized signals. Details of a demodulation method adopted
+simulations, we demonstrate the superiority of our JSCC ap-                     in our work will be introduced in Sec. III. By applying
+proach compared to existing JSCC approaches.                                    the aforementioned demodulation process, the transmitted bit
+                                                                                sequence b is reconstructed at the receiver, which is denoted by
+                       II. S YSTEM M ODEL
+                                                                                b̂ = [b̂1 , · · · , b̂N ]T . After reconstructing the bit sequence, the
+   In this work, we consider a digital semantic communication                   JSCC decoder configured with a DNN is applied to reconstruct
+system to perform a dedicated machine learning task at a                        the input data u, denoted by û. The operation of the JSCC
+receiver. An example of this system for an image classification                 decoder is denoted by a function û = fϕ (b̂) parameterized by
+task is illustrated in Fig. 1.                                                  the weights ϕ. Finally, the dedicated machine learning task
+   At the transmitter, a JSCC encoder configured with a deep                    is performed by a task neural network fψ (e.g., classifier),
+neural network (DNN) is employed to transform an input image                    parameterized by the weights ψ, based on the reconstructed
+into a bit sequence. Let u be an input data (e.g., an image)                    data û.
+which is assumed to be independent and identically distributed
+over a source distribution pin (u). The operation of the JSCC                       III. ROBUST D EMODULATION M ETHOD FOR D IGITAL
+encoder is denoted by a function fθ (u) parameterized by the                                  S EMANTIC C OMMUNICATIONS
+weights θ. Suppose that the sigmoid function is employed as                        In this section, we design a special type of demodulation,
+an activation function of the output layer. Then each output                    referred to as robust demodulation, for improving the robust-
+of the JSCC encoder can be interpreted as the probability                       ness of the digital semantic communication system described
+of the modulated bit being 1, and the sampling from this                        in Sec. II.
+distribution results in the generation of the bit sequence,
+b = [b1 , · · · , bN ]T ∈ {0, 1}N where N is the length of the                  A. Design Principle
+bit sequence. The entries of the bit sequence b can be treated                     In traditional digital communication systems, two types
+as binary latent variables. After this, digital modulation is                   of demodulation are typically considered: (i) soft-output de-
+applied to transform the bit sequence b into a symbol sequence                  modulation, which yields LLR values, and (ii) hard-output
+x ∈ C K , where C is a symbol constellation set, and K is the                   demodulation, which generates binary outputs. Unfortunately,
+length of the symbol sequence. The 2M -QAM is employed                          when applied to JSCC-based digital semantic communication
+for the digital modulation, which leads to K = N/M . By                         systems, both demodulation methods encounter their own lim-
+assuming that the transmit power is normalized to one, the                      itations as described below.
+baseband transmitted signal at time slot n is denoted as x[n],                     • Limitations of soft-output demodulation: The LLR
+which is the n-th entry of the symbol sequence x.                                     values obtained from the soft-output demodulation have
+   Under the quasi-static fading channel model, the baseband                          an infinite number of possibilities. Consequently, the sta-
+received signal at time slot n is observed as                                         tistical behavior of these values may involve an infinite
+                                                                                      number of parameters, with distributions influenced by
+                       y[n] = hx[n] + v[n],                            (1)
+                                                                                      channel conditions. Therefore, training a capacity-limited
+where h ∈ C is a complex-valued channel coefficient, and                              JSCC encoder/decoder with the LLR values is challeng-
+v[n] ∈ C is an additive white Gaussian noise distributed                              ing.
+as CN (0, σ 2 ). The channel coefficient is assumed to remain                      • Limitations of hard-output demodulation: The outputs
+constant during the transmission of the symbol sequence x                             of the hard-output demodulation are limited to binary
+and is also assumed to be perfectly estimated at the receiver.                        values, significantly restricting the expressive power in
+
+
+
+                                                                         2073
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+                         2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+      the latent space. Furthermore, hard-output demodulation                    B. Low-Complexity Robust Demodulation Method
+      is susceptible to bit-flip errors, especially in low-SNR                      The robust demodulation method in (6) requires high compu-
+      regimes, which may significantly alter the desired meaning                 tational complexity due to the need to measure distances to all
+      of transmitted data.                                                       symbols in CM . To alleviate the computational complexity, we
+   To address the limitations of the conventional demodulation                   design a low-complexity variation of the robust demodulation
+methods, we devise a robust demodulation method that pro-                        method. We start by approximating the LLR as
+duces ternary outputs. This method introduces an intermediate
+                                                                                                (a)           |(ỹ[n] − c)|2            |(ỹ[n] − c′ )|2
+value, denoted as 0.5, in addition to the conventional binary                      Lm (ỹ[n]) ≈ min                          − min                       ,
+values of 0 and 1. Specifically, our method assigns this interme-                                        (M )
+                                                                                                      c∈Cm,1      1/SNR            (M )
+                                                                                                                              c′ ∈Cm,0      1/SNR
+diate value when uncertainty arises regarding the transmitted                                                                                            (7)
+binary latent variable. This strategy effectively mitigates fre-
+                                                                                 where (a) follows from a well-known log-sum-exp approxi-
+quent bit-flip errors in low-SNR regimes while simultaneously
+                                                                                 mation. Thanks to the independence of the real and imaginary
+enhancing the expressiveness of the demodulation output com-
+                                                                                 parts of the AWGN along with the symmetric property of the
+pared to conventional hard-output demodulation.
+                                                                                 QAM, the demodulation method for the bits associated with
+   In our demodulation method, we measure the reliability level
+                                                                                 the real and imaginary parts can be performed independently.
+of the decision on each latent variable based on the magnitude
+                                                                                 Utilizing this fact, we define LLR function:
+of the LLR, in order to determine a criterion for assigning
+the intermediate value 0.5. Let nm be the m-th binary latent                                                          (Re {ỹ[n] − c})2
+                                                                                             LI,m (ỹ[n]) = min
+variable associated with the transmitted symbol x[n] at time                                                     (M )
+                                                                                                              c∈Cm,1      1/SNR
+                      (M )
+slot n. Also, let Cm,u be a subset of CM which consists                                                                     (Re {ỹ[n] − c′ })2
+of symbols whose m-th bit is given by u after a symbol                                                         − min                            ,       (8)
+                                                                                                                       (M )
+                                                                                                                  c′ ∈Cm,0       1/SNR
+demapping, i.e.,
+   (M )
+ Cm,u
+           
+        = c ∈ CM um = u, DemapM (c) = [u1 , · · · , uM ] ,                       which correspond to the bits associated with the real part.
+                                                              (3)                LQ,m (ỹ[n]) is similarly defined using the imaginary part.
+                                                                                 Depending on the value of m, a proper LLR function is
+for u ∈ {0, 1}, where DemapM (·) : CM → {0, 1}M is a                             chosen between LI,m (ỹ[n]) and LQ,m (ỹ[n]). In particular, our
+symbol demapping function for 2M -QAM. Then the LLR of                           criterion for assigning the intermediate value in the second line
+the m-th binary latent variable bnm is computed as                               of (6) is rewritten as
+                                              
+                              P(bnm = 0|ỹ[n])                                             |LI,m (ỹ[n])| ≤ ρnm or |LQ,m (ỹ[n])| ≤ ρnm .               (9)
+            Lm (ỹ[n]) = ln                      . (4)
+                              P(bnm = 1|ỹ[n])
+                                                                                    To facilitate the low-complexity computation for checking
+Unfortunately, prior knowledge about the distribution of bit
+                                                                                 the criterion in (9), we now introduce decision boundaries in an
+outputs from the JSCC decoder may not be available at the
+                                                                                 in-phase-quadrature (I-Q) constellation diagram for 2M -QAM.
+receiver because it depends on the true distribution of both
+                                                                                 Let ai ∈ [0, 1] be the first decision boundary, which is closest
+the encoder weights and the source data. To circumvent this
+                                                                                 to the I-axis or the Q-axis, to check the above criterion for a
+challenge, we assume that the prior probability of each binary
+                                                                                 given ρi , where the bit index i satisfies 1 + ⌊(i − 1)/M ⌋ = n.
+latent variable is uniform. Under this assumption, the LLR in
+                                                                                 From (8) and (9), if the i-th bit has different values across ai ,
+(4) is rewritten as
+                                                                                 then ρi can be expressed as
+                                                    ′ 2 !
+                     P
+                            (M ) exp(−SNR|(ỹ[n] − c )| )
+                       c′ ∈Cm,0
+                                                                                                   (              2                  2 )
+             (a)
+  Lm (ỹ[n]) = ln P                                       , (5)                                        (ai + 1)dM           (1 − ai )dM
+                                                      2
+                            (M ) exp(−SNR|(ỹ[n] − c)| )                               ρi = SNR                        −
+                        c∈C    m,1                                                                          2                    2
+where (a) follows from (2). The magnitude of the LLR                                                             6SNR
+                                                                                           = SNRd2M ai =               ai ,                            (10)
+Lm (ỹ[n]) can be used as a measure of the reliability level                                                    2M − 1
+when making a decision about the binary latent variable bnm                                        p
+                                                                                 where dM =           6/(2M − 1) is the minimum distance for
+based on the observation ỹ[n]. In particular, our demodulation
+                                                                                 the normalized 2M -QAM constellation set. Since adjacent
+method assigns the intermediate value 0.5 to the m-th latent
+                                                                                 decision boundaries maintain equidistant intervals, once ai
+variable bnm whenever the corresponding LLR is close to 0. Let
+                                                                                 is determined, we √   obtain the decision boundary values for
+ρnm > 0 be a threshold applied to the LLR for assigning the in-
+                                                                                 ∀j ∈ {0, ±1, · · · , ± 2M /2} as follows:
+termediate value. Then the output of our demodulation method                                          r
+can be expressed as DemodM (ỹ[n]) = [b̂n1 , b̂n2 , · · · , b̂nM ],                                     2(2M − 1)
+where                                                                                    ai,j+1 =                 dM + ai,j = 2 + ai,j ,  (11)
+                                                                                                           3
+                   0,
+                           if Lm (ỹ[n]) > ρnm ,                                                        U
+                                                                                 where ai = ai,1 . Let Di,M,0.5,j        L
+                                                                                                                  and Di,M,0.5,j  be the sets of
+            b̂nm = 0.5, if |Lm (ỹ[n])| ≤ ρnm ,                (6)               scaled upper and lower decision boundaries associated with two
+                   
+                   
+                     1,     if Lm (ỹ[n]) < −ρnm .                               adjacent symbols having different i-th bit values. Similarly, let
+
+
+
+                                                                          2074
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+                         2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+  U               L
+Di,M,k,j  and Di,M,k,j    be the sets of scaled upper and lower                  also the bit-erasure probability, BSEC offers the advantage of
+decision boundaries associated with two adjacent symbols                         reducing the likelihood of bit-flip errors compared to the binary
+having the same i-th bit value equal to k ∈ {0, 1}. Utilizing                    symmetric channel (BSC), while allowing the consideration
+these notations, the low-complexity robust demodulation for                      of the inevitable bit-flip errors that are ignored in the binary
+the real-part bits is represented as                                             erasure channel (BEC).
+                 b̂i = k, if Re {ỹ[n]} ∈ Ai,M,k ,                     (12)      B. Parameter Sampling Strategy
+for k ∈ {0, 0.5, 1}, where                                                          When employing our BSEC modeling approach, it is crucial
+                  [                                                             to determine a proper set of parameters {µ̃i , d˜i , r̃i }N
+                                                                                                                                           i=1 that can
+                                 L              U                                reflect communication scenarios encountered during an infer-
+     Ai,M,k =           u ∈ R : Di,M,k,j ≤ u ≤ Di,M,k,j ,
+                j∈Ii,M,k                                                         ence phase. If we simply consider fixed parameters during a
+                (
+             4(j−1)−ai,j                                                         training phase, they can only represent a certain communication
+   L                2     dM ,            if k = 0.5,
+  Di,M,k,j = ai,j−1                                                              scenario with a particular channel condition and modulation
+                     dM ,                 if k ∈ {0, 1} ,                        level. This motivates us to consider flexible determination of
+            ( 2
+             ai,j                                                                the parameters to ensure the robustness of the JSCC encoder
+   U
+  Di,M,k,j    2 dM ,
+           = 4j−a
+                                        if k = 0.5,
+                                                                       (13)
+                   i,j+1
+                         dM ,           if k ∈ {0, 1} ,                          and decoder against diverse SNRs that may occur during the
+                  2
+                                                                                 inference phase.
+where Ii,M,k ∈ N denotes the set of indices of deci-                                To promote flexibility in the parameter determination, our
+sion boundaries related to the i-th bit being k in the 2M -                      strategy is to introduce variations in the bit-flip probabilities
+QAM. Due to the symmetric property of QAM, the low-                              {µ̃i }N
+                                                                                       i=1 by sampling them from different stochastic distribu-
+complexity robust demodulation for the imaginary-part bits can                   tions. In particular, when computing the loss for each training
+be executed similarly. This involves replacing Re {ỹ[n]} with                   data, we sample the bit-flip probability µ̃i of the i-th BSEC
+Im {ỹ[n]}
+     U and appropriately     defining the decision boundary                     independently from the following uniform distribution:
+                 L
+sets Di,M,k,j , Di,M,k,j k∈{0,0.5,1}
+                                     for the imaginary-part bits.                                             i.i.d
+                                                                                                          µ̃i ∼ Uniform[0, αi ],                       (15)
+   IV. ROBUST T RAINING S TRATEGY OF THE P ROPOSED
+                   JSCC A PPROACH                                                where αi ∈ [0, 0.5] is a target robustness level which represents
+                                                                                 the maximum bit-flip probability allowed for the i-th latent
+  In this section, we devise a robust training strategy to
+                                                                                 variable bi . By doing so, the latent variable bi can be trained
+enhance the robustness and flexibility of the JSCC encoder
+                                                                                 to cover the bit-error probability up to the target robustness
+and decoder against diverse channel conditions.
+                                                                                 level αi . After sampling the bit-flip probabilities {µ̃i }Ni=1 , we
+A. BSEC Modeling Approach                                                        determine the remaining parameters d˜i and r̃i that match with
+   The fundamental idea of our robust training strategy is to                    the sampled value of µ̃i . During the training phase, we assume
+harness a stochastic model to represent the combined effects                     that 4-QAM (i.e., M = 2) is chosen with ρi = SNR for
+of digital modulation, fading channel, equalization, and de-                     simplicity. Under this assumption, the first decision boundary
+modulation, instead of explicitly considering their effects in-                  is given by ai = 0.5 for all i ∈ {1, . . . , N } by the relationship
+dividually. In the digital semantic communication system with                    between ai and ρi characterized in (10). In addition, we
+our robust demodulation method in Sec. III-B, a binary latent                    can interpret the bit-error probability [10] as the parameters
+variable bi ∈ {0, 1} is stochastically transformed into a ternary                µ̃i , the bit-flip and bit-erasure probabilities of the BSEC are
+variable b̂i ∈ {0, 0.5, 1}. This stochastic transformation exactly               characterized as
+                                                                                                                             r          !
+follows a well-known BSEC model in which the intermediate                                    4
+                                                                                                
+                                                                                                        1
+                                                                                                             
+                                                                                                                                 3SNR
+value 0.5 is treated as an erased value assigned when the                             µ̃i =        1− √        Q (1 + ai )                ,
+                                                                                            M           2M                      2M − 1
+symbol is erased. Motivated by this fact, we harness N -parallel                                            (                r          !
+BSECs to model the relationship between the JSCC encoder’s                                   4          1                          3SNR
+                                                                                      d˜i =        1− √          Q (1 − ai )
+output b and the JSCC decoder’s input b̂, as illustrated in                                 M           2M                        2M − 1
+Fig. 1. In this model, the conditional distribution of the decoder                                                                r          !)
+input b̂i for a given encoder output bi is represented as                                                                            3SNR
+                                                                                                                 − Q (1 + ai )                    .
+                                                                                                                                   2M − 1
+                                         r̃i , if b̂i = bi ,
+                                         
+                                                                                                                                                 (16)
+                                   ˜
+            pBSEC (b̂i |bi ; µ̃i , di ) = d˜i , if b̂i = 0.5,   (14)
+                                         
+                                         
+                                           µ̃i , if b̂i ̸= bi ,                  Therefore, the bit-erasure probability d˜i associated with the
+                                                                                 sampled value of µ̃i is determined by plugging ai = 0.5 and
+where r̃i + d˜i + µ̃i = 1, µ̃i ∈ [0, 1] represents the bit-flip                  SNR˜ i (µ̃i ) into the parameter characterization in (16). Similarly,
+probability, d˜i ∈ [0, 1] represents the bit-erasure probability,                the corresponding bit-correct probability r̃i is determined as
+and r̃i ∈ [0, 1] represents the bit-correct probability for the i-               r̃i = 1 − µ̃i − d˜i . These parameter expressions are utilized
+th BSEC. By introducing not only the bit-flip probability but                    during the training phase.
+
+
+
+                                                                          2075
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+                         2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+C. Training with BSEC Model                                                          using û. According to [12], to maximize I (ℓ(u); û), it suffices
+                                                                                     to minimize the cross-entropy (CE) loss function defined as
+  To train the JSCC encoder and decoder using the BSECs
+with diverse parameters, we modify the training strategy in                            LCE (θ, ϕ, ψ)
+[11] which was originally developed for the BSCs with the                                            
+                                                                                        = −Eu∼pin (u) Eb̂∼pnoisy (b̂|u;µ̃,d,θ)
+                                                                                                                          ˜
+                                                                                                                                                    
+                                                                                                                                 log fψ (fϕ (b̂))ℓ(u) .
+same bit-flip probabilities. Let µ̃ = [µ̃1 , µ̃2 , · · · , µ̃N ]T and                                                                                 (21)
+d˜ = [d˜1 , d˜2 , · · · , d˜N ]T , where the i-th entry of µ̃ and d˜
+represents the bit-flip probability and bit-erasure probability                         To maximize both reconstruction and classification accu-
+determined by our sampling strategy in Sec. IV-B for the i-th                        racies, we finally design our loss function L(θ, ϕ, ψ) as the
+BSEC, respectively. By assuming that each bit bi follows an                          weighted summation of the MSE loss in (20) and the CE loss
+independent Bernoulli distribution with probability fθ (u)i , the                    in (21) as follows:
+conditional distribution of the JSCC encoder pθ (bi |u) follows                                L(θ, ϕ, ψ) = λLMSE (θ, ϕ) + LCE (θ, ϕ, ψ),              (22)
+             pθ (bi |u) = (fθ (u)i )bi (1 − fθ (u)i )1−bi .                 (17)     where λ is a hyperparameter determined by the relative
+                                                                                     importance of the reconstruction accuracy of the JSCC en-
+Generating bi via sampling from the Bernoulli distribution                           coder/decoder compared to the classification accuracy.
+can be regarded as stochastic 1-bit quantization for the i-th
+                                                                                                        V. S IMULATION R ESULTS
+encoder output which is originally a real-valued constant. The
+distributions pθ (bi |u) and pBSEC (b̂i |bi ; µ̃i , d˜i ) imply that the                In this section, using simulations, we evaluate the effective-
+channel from u to b̂ can be described as a noisy memoryless                          ness of the proposed JSCC approach for image classification
+channel with the following conditional distribution:                                 and reconstruction tasks using the CIFAR-10 dataset. For per-
+                                                                                     formance comparison, we consider a separate source-channel
+                           N
+                           Y X                                                       coding approach, specifically JPEG+1/2-rate LDPC. We also
+                  ˜ θ) =
+pnoisy (b̂|u; µ̃, d,                       pθ (bi |u)pBSEC (b̂i |bi ; µ̃i , d˜i ),   consider the neural joint source-channel coding (NECST)
+                           i=1 bi ∈{0,1}                                             approach in [11] in which the bit-flip probabilities of the BSCs
+                               |                        {z                     }     during the training phase are set to be the same. We adopt the
+                                            =pnoisy (b̂i |u;µ̃i ,d˜i ,θ)
+                                                                                     ideal strategy for training the NECST in [11]. In this strategy,
+                                                                            (18)
+                                                                                     we consider multiple pairs of the JSCC encoders and decoders
+                                                                                     and then train each pair of the JSCC encoder and decoder for
+where pnoisy (b̂i |u; µ̃i , d˜i , θ) is further computed as                          the SNR range of interest during the inference phase. We mod-
+                                                                                     ify the analog and digital JSCC approaches discussed in [2] and
+ pnoisy (b̂i |u; µ̃i , d˜i , θ)                                                      [3], referred to as DeepJSCC and DeepJSCC-Q, respectively,
+    
+                                ˜                                                    by integrating our JSCC encoder/decoder structure. During the
+    µ̃i fθ (u)i + (1 − di − µ̃i )(1 − fθ (u)i ),
+                                                                 if b̂i = 0,
+  = di ,˜                                                         if b̂i = 0.5,      training of these two approaches, we sample the SNR from a
+                                                                                     uniform distribution. The range of this distribution corresponds
+       µ̃i (1 − fθ (u)i ) + (1 − d˜i − µ̃i )fθ (u)i ,
+    
+                                                                  if b̂i = 1.
+    
+                                                                                     to the SNR range of interest during the inference phase. The
+                                                                             (19)    structure of the JSCC encoder/decoder follows Table 1 in [13],
+                                                                                     while the classifier consists of 6 convolution layers and 2
+During the training process, the decoder’s input b̂ is sampled                       dense layers. For proposed approach, an Adam optimizer with
+according to (19) for each input data u. Note that by employing                      a learning rate of 0.001 is employed for training the JSCC
+the sampling strategy in Sec. IV-B, the parameters µ̃i and d˜i                       encoder/decoder and the classifier and the batch size is 256.
+are independently sampled across different input data.                               All models were trained for 20 epochs. When training the
+   According to [11], by reducing mean-squared error (MSE)                           JSCC encoder and decoder, we use the loss defined in (22)
+between u and û, the mutual information I(u; b̂) between                            with λ = 0.2 for an image classification task, the MSE loss in
+u and b̂ is maximized and the decoder gains the ability to                           (20) for an image reconstruction task. N is set to 128 for the
+effectively utilize b̂ for accurate prediction of u and therefore                    image classification task and 512 for the image reconstruction
+reduce the difference between u and û. Therefore we use the                         task.
+MSE loss function defined as                                                            Fig. 2 compares the classification accuracies and PSNRs of
+                                                                                     various JSCC and non-JSCC approaches with 4-QAM. For the
+                                                              2
+                                                               
+                                             ˜ [∥u − fϕ (b̂)∥2 ] .
+LMSE (θ, ϕ) = Eu∼pin (u) Eb̂∼pnoisy (b̂|u;µ̃,d,θ)                                    proposed approach, we set αi = 0.45 for all i in BSCs and
+                                                             (20)                    αi = 0.4 for all i in BSECs for the image classification task,
+                                                                                     and αi = 0.05 for all i for both BSCs and BSECs for the image
+For the ultimate loss function design, we also aim at max-                           reconstruction task. For JPEG+1/2-rate LDPC, the average bit
+imizing the mutual information between the true label ℓ(u)                           sequence length N is 14966 for image classification task and
+corresponding to u and the reconstructed data û, in order to                        10906 for image reconstruction task. Fig. 2(a) shows that the
+train the classifier fψ to make accurate inference about the label                   proposed approaches achieve a higher classification accuracy
+
+
+
+                                                                                2076
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+                          2024 IEEE Global Communications Conference: Signal Processing for Communications
+
+
+                                                                                  Proposed (BSEC). This result demonstrates the superiority of
+                                                                                  the proposed JSCC approach over a traditional separate source-
+                                                                                  channel coding approach in terms of both communication
+                                                                                  latency and task performance. We observe a similar trend in
+                                                                                  PSNRs as shown in Fig. 2(b).
+                                                                                                               VI. C ONCLUSION
+                                                                                     In this paper, we have proposed a novel JSCC approach for
+                                                                                  enabling channel-robust digital semantic communications. To
+                                                                                  this end, we have first developed a robust demodulation method
+                                                                                  to prevent frequent bit-flip errors of the binary latent variables
+                                                                                  while enhancing the expressiveness of a demodulation output.
+                                                                                  We have then developed a robust training strategy which
+                         (a) Classification accuracy                              not only facilitates end-to-end training of the JSCC encoder
+                                                                                  and decoder but also enhances their robustness and flexibility
+                                                                                  against diverse channel conditions. Using simulations, we
+                                                                                  have demonstrated that the proposed approach outperforms the
+                                                                                  existing JSCC approaches in terms of communication latency
+                                                                                  and task performance.
+                                                                                                                  R EFERENCES
+                                                                                   [1] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K.
+                                                                                       Wong, and C.-B. Chae, “Beyond transmitting bits: Context, semantics,
+                                                                                       and task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+                                                                                       no. 1, pp. 5–41, Jan. 2023.
+                                                                                   [2] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+                                                                                       channel coding for wireless image transmission,” IEEE Trans. Cogn.
+                                                                                       Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+                                                                                   [3] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+                                                                                       Constellation constrained deep joint source-channel coding,” IEEE J. Sel.
+                                 (b) PSNR                                              Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+                                                                                   [4] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+Fig. 2. Comparison of the classification accuracies and PSNRs of various               channel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal
+approaches with 4-QAM for the image classification and reconstruction tasks            Process. (ICASSP), Calgary, AB, Canada, Apr. 2018, pp. 2326–2330.
+using the CIFAR-10 dataset.                                                        [5] Z. Weng and Z. Qin, “Semantic communication systems for speech
+                                                                                       transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8, pp. 2434–
+                                                                                       2444, Aug. 2021.
+                                                                                   [6] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+than NECST (Ideal), particularly in the low-SNR regime. In                             image transmission using deep source channel coding with attention
+particular, Proposed (BSEC) using a single encoder-decoder                             modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, pp.
+                                                                                       2315–2328, Apr. 2022.
+pair even outperforms NECST (Ideal) which requires a large                         [7] H. Wu, Y. Shao, K. Mikolajczyk, and D. Gündüz, “Channel-adaptive
+number of the encoder-decoder pairs. This result validates the                         wireless image transmission with OFDM,” IEEE Wireless Commun. Lett.,
+effectiveness of our robust training strategy in Sec. IV in                            vol. 11, no. 11, pp. 2400–2404, Nov. 2022.
+                                                                                   [8] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+improving the robustness of the JSCC encoder and decoder                               image transmission with adaptive rate control,” in Proc. IEEE Int. Conf.
+against diverse SNR. It is also shown that Proposed (BSEC)                             Acoust., Speech, Signal Process. (ICASSP), Singapore, Singapore, May
+which adopts the robust demodulation method in Sec. III                                2022, pp. 5193–5197.
+                                                                                   [9] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+outperforms Proposed (BSC) which utilizes the conventional                             for edge inference: An information bottleneck approach,” IEEE J. Sel.
+hard-output demodulation. Although DeepJSCC exhibits the                               Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+highest classification accuracy in some low-SNR regimes,                          [10] H. Soury, F. Yilmaz, and M.-S. Alouini, “Error rates of M-PAM and
+                                                                                       M-QAM in generalized fading and generalized Gaussian noise environ-
+DeepJSCC is not compatible with practical digital communica-                           ments,” IEEE Commun. Lett., vol. 17, no. 10, pp. 1932–1935, Oct. 2013.
+tion systems. Proposed (BSEC) also outperforms DeepJSCC-                          [11] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+Q in terms of the classification accuracy. This performance gain                       joint source-channel coding,” in Proc. Int. Conf. Mach. Learn. (ICML),
+                                                                                       Long Beach, CA, USA, Jun. 2019, pp. 1182–1192.
+can be attributed to the utilization of the demodulation process,                 [12] M. Boudiaf, J. Rony, I. M. Ziko, E. Granger, M. Pedersoli, P. Piantanida,
+which maps real-domain equalized signals into ternary values.                          and I. B. Ayed, “A unifying mutual information view of metric learning:
+The statistical modeling and robust training based on demodu-                          Cross-entropy vs. pairwise losses,” in Proc. Eur. Conf. Comput. Vis.
+                                                                                       (ECCV), Glasgow, United Kingdom, Sep. 2021, pp. 548–564.
+lation enable the JSCC decoder to effectively manage errors                       [13] C. Lee, X. Hu, and H.-S. Kim, “Deep joint source-channel coding with
+in the transmission of latent variables. The performance of                            iterative source error correction,” in Proc. Int. Conf. Artif. Intell. Statist.
+JPEG+1/2-rate LDPC degrades significantly below a certain                              (AISTATS), Palau de Congressos, Valencia, Spain, Apr. 2023, pp. 3879–
+                                                                                       3902.
+SNR threshold, despite requiring a bit sequence length more
+than 116 times longer than other JSCC approaches, including
+
+
+
+                                                                           2077
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:10:17 UTC from IEEE Xplore. Restrictions apply.
+

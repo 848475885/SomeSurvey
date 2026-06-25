@@ -1,0 +1,1180 @@
+35662                                                                             IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+
+                                Vision Transformer-Based
+                              Semantic Communications With
+                              Importance-Aware Quantization
+              Joohyuk Park , Student Member, IEEE, Yongjeong Oh , Graduate Student Member, IEEE,
+                        Yongjune Kim , Member, IEEE, and Yo-Seb Jeon , Member, IEEE
+
+
+
+    Abstract—Semantic communications provide significant                        attention toward a more goal-oriented approach known as
+performance gains over traditional communications by                            semantic communications [1], [2], [3], which prioritizes the
+transmitting task-relevant semantic features through wireless                   transmission of intended meaning over the precise recovery
+channels. However, most existing studies rely on end-to-end
+(E2E) training of neural-type encoders and decoders to ensure                   of bits. A typical goal of semantic communications is to
+effective transmission of these semantic features. To enable                    maximize task performance by ensuring that the conveyed
+semantic communications without relying on E2E training,                        message facilitates effective task execution, even if the bit
+this article presents a vision transformer (ViT)-based semantic                 sequence is not perfectly reconstructed. This approach has
+communication system with importance-aware quantization                         gained considerable traction in resource-demanding scenarios,
+(IAQ) for wireless image transmission. The core idea of the
+presented system is to leverage the attention scores of a pretrained            such as Internet of Things (IoT) wireless networks or low-
+ViT model to quantify the importance levels of image patches.                   latency communications, which require high data efficiency
+Based on this idea, our IAQ framework assigns different                         or low latency while operating under limited communication
+quantization bits to image patches based on their importance                    resources [4], [5].
+levels. This is achieved by formulating a weighted quantization                    The most widely adopted approach in semantic commu-
+error minimization problem, where the weight is set to be an
+increasing function of the attention score. Then, an optimal                    nication systems is to employ joint source-channel coding
+incremental allocation method and a low-complexity water-                       (JSCC) to transmit task-related semantic features directly
+filling method are devised to solve the formulated problem. Our                 over wireless channels. In this approach, source and channel
+framework is further extended for realistic digital communication               encoders/decoders are integrated into a single neural model,
+systems by modifying the bit allocation problem and the                         and the unified encoder and decoder models are jointly trained
+corresponding allocation methods based on an equivalent binary
+symmetric channel (BSC) model. Simulations on single-view                       under wireless channel environments such as additive white
+image classification, multiview image classification, and single-               Gaussian noise (AWGN) and Rayleigh fading channels. This
+object detection tasks demonstrate that our IAQ framework                       approach has demonstrated significant performance gains over
+outperforms conventional image compression methods under                        traditional separate source and channel coding methods in var-
+both error-free and realistic communication scenarios.                          ious applications, including image transmission [6], [7], text
+   Index Terms—Adaptive bit allocation, attention score,                        transmission [8], [9], and speech transmission [10]. Despite
+importance-aware quantization (IAQ), semantic communications,                   its success in various applications, the analog transmission
+vision transformer (ViT).                                                       assumed in the JSCC approach poses challenges for integration
+                                                                                with existing digital communication systems, which use hard-
+                                                                                ware components and processing units specifically designed
+                          I. I NTRODUCTION                                      for digital symbol transmission. Additionally, analog transmis-
+                                                                                sion has inherent drawbacks compared to digital transmission,
+     RADITIONAL communication systems primarily focus
+T    on encoding messages into bit sequences to ensure
+accurate reconstruction of transmitted bit sequences with
+                                                                                including vulnerability to noise and limited flexibility and
+                                                                                scalability.
+                                                                                   To address the limitations of the analog JSCC approach,
+minimal bit errors. However, recent advancements have shifted
+                                                                                digital semantic communication systems have been developed,
+   Received 27 November 2024; revised 19 April 2025; accepted 9 June 2025.      focusing on efficiently representing semantic features with
+Date of publication 17 June 2025; date of current version 25 August 2025.       finite values that could be easily converted into digital sym-
+This work was supported in part by the National Research Foundation
+of Korea (NRF) Grant funded by the Korea Government (MSIT) under                bols. For example, in [11], [12], [13], and [14], fixed-length bit
+Grant RS-2024-00453301, and in part by the Institute of Information and         sequences were generated via explicit or implicit quantization
+Communications Technology Planning and Evaluation (IITP) Grant funded           of semantic features. In [13], the quantization function was
+by MSIT (Intelligent 6G Wireless Access System) under Grant RS-2021-
+II210467. (Corresponding author: Yo-Seb Jeon.)                                  designed as a nonlinear differentiable form using a weighted
+   The     authors    are      with    the   Department    of    Electrical     sum of sigmoid functions, enabling end-to-end (E2E) training.
+Engineering, POSTECH, Pohang 37673, Gyeongbuk, South Korea                      In [14], a bit-level interleaving strategy was introduced to
+(e-mail:      joohyuk.park@postech.ac.kr;       yongjeongoh@postech.ac.kr;
+yongjune@postech.ac.kr; yoseb.jeon@postech.ac.kr).                              map more critical bits to robust positions in the constellation,
+   Digital Object Identifier 10.1109/JIOT.2025.3580597                          improving resilience to channel errors. While these methods
+               2327-4662 
+                         c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                        35663
+
+
+
+enhance system performance in specific aspects, they adopt                    by adjusting modulation levels according to the parametric
+fixed quantization levels across all semantic features, without               model. This approach significantly enhances the adaptability
+considering their varying contributions to the task. As a result,             and flexibility of the semantic communications, but still relies
+they lack the flexibility to allocate communication resources                 on a predefined parametric model. To overcome this limitation,
+in a task-adaptive manner.                                                    training-free semantic communications have been suggested
+                                                                              in [26] and [27], which do not rely on the E2E training or
+A. Importance-Aware Quantization                                              the parametric-model-based training. Specifically, in [27], a
+   To tackle this challenge, adaptive quantization for digital                pretrained vision transformer (ViT) encoder [28] was used to
+semantic communications has been studied on the basis of                      select image patches relevant to the classification task instead
+entropy coding [15], [16] or importance-aware quantization                    of employing the E2E training. This method reflects semantic
+(IAQ) [17], [18]. The key idea of entropy coding is to reduce                 importance in a selective manner, similarly to [29]. While
+the bit overhead in an average sense, by assigning shorter bit                this strategy effectively reduces communication overhead,
+sequences to more frequent elements and longer bit sequences                  such binary treatment of importance offers limited flexibility
+to less frequent ones. Based on this idea, in [15] and [16],                  in managing communication resources. Consequently, this
+learning-based source coders were considered to determine                     approach may suffer from performance degradation when
+the optimal transmission rate of semantic features. Unlike                    communication resources are highly constrained (e.g., IoT sen-
+the entropy coding which focuses on the frequency of the                      sor networks). More importantly, the method in [27] overlooks
+semantic features, the IAQ focuses on the importance of                       the impact of communication errors, which are inevitable due
+each semantic feature in the context of task performance.                     to channel fading and noise effects. This limitation restricts
+For instance, in [17], a reinforcement-learning (RL)-based                    the broader applicability of this method in practical wireless
+bit allocation scheme was proposed for orthogonal frequency                   networks.
+division multiplexing systems. In [18], a masking strategy was
+considered to mask noise-related image patches to suppress                    D. Contributions and Organization
+feature activations and reduce communication overhead. Both
+methods necessitate the use a dedicated module to compute                        To take a step toward realizing training-free and practical
+feature importance, which needs to be carefully designed for                  digital semantic communications, in this article, we present
+each task.                                                                    a ViT-based semantic communication system with IAQ for
+                                                                              wireless image transmission. Our key idea is to exploit
+B. Challenges of E2E Training                                                 pretrained ViT to extract attention-based importance measures
+                                                                              and use them to perform fine-grained, adaptive bit allocation.
+   A common limitation of all the aforementioned studies                      This IAQ enables flexible bit allocation based on semantic
+is their reliance on E2E training, where various modules in                   importance without requiring E2E training, thereby improving
+semantic communication systems are jointly trained using large                communication efficiency and robustness. We first develop
+amounts of training data. However, the E2E training approach                  IAQ under an idealized error-free communication setting and
+does not guarantee the effectiveness of the trained modules                   then extend it to a more realistic digital communication
+in mismatched training and testing environments, which may                    scenario, where transmission errors may occur due to noise
+arise from dynamic and unpredictable wireless environments.                   and channel impairments. This extension further demon-
+Moreover, E2E training becomes increasingly impractical in                    strates the practicality of IAQ in real-world wireless systems.
+complex scenarios such as reconfigurable intelligent surface                  The main contributions of this article are summarized as
+(RIS)-assisted wireless networks, multimodal, multitask, and                  follows.
+collaborative inference [19], [20], [21], [22], [23]. In these                   1) We present a novel IAQ framework for training-free
+cases, the modules may need to be trained for all possible                           semantic communication systems. To the best of our
+combinations of scenarios or, at least, retrained for any changes                    knowledge, this is the first work that incorporates
+in training scenarios. These requirements not only limit the                         adaptive quantization into the training-free semantic
+scalability of these methods but also reduce their applicability                     communication systems. Our framework provides an
+in cellular or IoT sensor networks.                                                  enhanced flexibility in controlling communication over-
+                                                                                     head compared to a selective transmission method
+C. Training-Free Semantic Communications                                             considered in [27].
+   To address this limitation, semantic communication systems                    2) We formulate an importance-aware bit allocation
+that do not rely on the E2E training under specific com-                             problem for semantic communications. To this end, we
+munication environments have been studied in some prior                              consider a weighted quantization error minimization
+works [24], [25], [26], [27]. In [24], the training process                          problem by determining a weight as an increasing func-
+involved random sampling of signal-to-noise ratio (SNR)                              tion of the importance level. Our problem formulation
+values to ensure the JSCC model could adapt to diverse                               can be generalized with any choice of the weight and
+channel conditions. Furthermore, in [25], a digital JSCC                             importance measure. Therefore, our formulation pro-
+encoder-decoder pair was trained based on a parametric-                              vides an optimization framework for importance-aware
+model-based training environment. Then, during inference,                            bit allocation that can be applied in various semantic
+communication systems adapt to this training environment                             communication systems.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35664                                                                            IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+   3) We devise importance-aware bit allocation methods to                     these patches are linearly transformed to a D-dimensional
+       solve the formulated problem. By characterizing the                     vectors, i.e.,
+       property of the formulated problem, we show that an                                                               
+                                                                                   z(0) = u(0)cls ; up,1 T; . . . ; up,N T + Tpos ∈ R
+                                                                                                                                     (N+1)×D
+                                                                                                                                             (1)
+       incremental allocation method [30] provides the optimal
+                                                                                                        2
+       solution of the formulated problem. To reduce the com-                  where up,i ∈ R1×P C , i ∈ {1, . . . , N} is the ith row of up ,
+       putational complexity required to solve this problem, we                z(0) is the output of linear projection, and Tpos denotes the
+       also develop a low-complexity method based on a simple                  learnable position embedding. To facilitate the classification
+       relaxation strategy and the water-filling algorithm [31].               process, a class token z(0)        (0)
+                                                                                                         0 = ucls ∈ R
+                                                                                                                           1×D is added at the
+   4) We extend our IAQ framework to operate under practical                   beginning of the embedded patch sequence. This class token
+       digital semantic communications, where the transmis-                    is crucial for gathering information from the entire sequence,
+       sion of the bit sequence may contain errors due to                      ultimately contributing to the final classification result. The
+       channel fading and noise effects. To this end, we model                 overall forwarding mechanism of the ViT encoder, described
+       the combined effects of digital communications using                    in [28], can be summarized as
+       parallel binary symmetric channels (BSCs), as done                                                               
+                                                                                                 (l)              (l−1)        (l−1)
+       in [25]. We then reformulate the importance-aware bit                                   z̃j = MSA LN(zj          ) + zj
+       allocation problem based on distortion analysis that                                                          
+                                                                                               zj(l) = MLP LN(z̃(l)
+                                                                                                                 j ) + z̃j
+                                                                                                                           (l)
+                                                                                                                                            (2)
+       takes into account both quantization and communication                                             
+       errors. We also modify the incremental allocation and                                    (L)        (L)
+                                                                                              ucls = LN z0
+       water-filling methods to solve the reformulated problem.
+   5) Using simulations, we demonstrate the superiority of                     where j ∈ {0, 1, . . . , N}, l ∈ {1, . . . , L}, and L is the
+       our IAQ framework over existing quantization meth-                      number of layers. MSA, MLP and LN represent the multihead
+       ods for single-view and multiview image classification,                 self-attention, multilayer perceptron and layer normalization,
+                                                                                                                       (L)
+       as well as single-object detection, using the CIFAR-                    respectively. The final class token ucls is obtained from the
+       10 [32], MIRO [33], MVP-N [34], and COCO2017 [35]                       encoder’s output and then used as input to the classifier,
+       datasets. Our results show that the proposed framework                  defined by the function f (·) with parameters .
+       provides significant gains in the performance-overhead                     To determine the significance of each patch, we leverage
+       tradeoff across the considered tasks compared to existing               the attention scores produced by the MSA mechanism. The
+       approaches.                                                             mth single-head attention score ãm is calculated as
+   In our preliminary work [36], we introduced a ViT-aided                                              ⎛              ⎞
+                                                                                                            (L)     (L) T
+                                                                                                          qcls,m  kp,m
+IAQ framework designed exclusively for error-free communi-                                              ⎜                  ⎟
+cation scenarios. In this work, we advance the framework to                               ãm = Softmax⎝        √          ⎠∈R
+                                                                                                                                1×N
+                                                                                                                                          (3)
+                                                                                                                   d
+address erroneous scenarios, enhancing its robustness against
+communication errors and enabling its application in realistic                 where m ∈ {1, . . . , H}, H is the total number of heads, and
+digital communication settings. To achieve this, we newly                                   (L)
+                                                                               d = D/H. qcls,m ∈ R1×d represents the query for the class
+formulate an importance-aware bit allocation problem based                                                                       (L)
+                                                                               token at the mth head and the Lth layer, while kp,m ∈ RN×d
+on distortion analysis and parallel BSCs, solving it using
+                                                                               denotes the keys corresponding to the image patches in the
+advanced allocation methods. We also enhance our simulation
+                                                                               same head and layer [24], [28]. Finally, the mean attention
+study to demonstrate the superiority of the extended frame-
+                                                                               score a ∈ R1×N is obtained as
+work in scenarios with communication errors.                                                                        H
+                                                                                                                    m=1 ãm
+                                                                                                            a=         .                     (4)
+                                                                                                                H
+                        II. S YSTEM M ODEL                                        After extracting the mean attention scores, these scores
+   In this work, we consider a ViT-based semantic communi-                     are utilized as an input for a quantization process applied to
+cation system for wireless image transmission, where a device                  the input image u. This process yields a quantized image ū
+transmits an image to a server performing a dedicated machine                  and the corresponding bit sequence b ∈ {0, 1}B , where B =
+learning task (e.g., image classification). In our system, the                 P2 C N  i=1 Mi represents the total length of bit sequence and
+device employs a lightweight ViT encoder, and the server uses                  Mi denotes the quantization bit for the ith patch. Details of
+a more complex one, reflecting the resource constraints of                     the quantization method will be introduced in Sections III
+IoT devices and the computational capacity of servers [27].                    and IV. The process of transmitting the bit sequence b to
+We assume that both the encoders are pretrained using large                    the server using digital communications can be equivalently
+datasets.                                                                      modeled using BSCs, as will be explained in Section IV-A.
+   The ViT encoder equipped at the device is denoted by the                    Then, at the server, the received bit sequence b̂ is transformed
+function fθ (·), parameterized by weights θ . Given input data                 into a reconstructed image û through a dequantization process.
+u ∈ RH×W×C , where H, W, and C represent the height, width,                    After reconstructing the image û, the ViT encoder at the
+and number of channels, respectively, we first reshape u into a                server is applied to perform the dedicated machine learning
+                                                            2
+sequence of flattened 2-D patches, denoted by up ∈ RN×P C .                    task (e.g., image classification task). The overall transmission
+Here, (P, P) is the patch size, and N = (HW/P2 ) is the total                  and reception process considered in our work is illustrated in
+                                                         2
+number of patches. By using a projection matrix T ∈ RP C×D ,                   Fig. 1.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                           35665
+
+
+
+
+Fig. 1.   Illustration of the proposed IAQ framework for digital semantic communication systems.
+
+
+
+     III. P ROPOSED IAQ F RAMEWORK FOR VIT-BASED
+               S EMANTIC C OMMUNICATIONS
+   In this section, we present a novel IAQ framework that
+enables efficient image transmission for the digital semantic
+communication system. We begin by addressing a simple
+case under an error-free transmission scenario, where the
+BSC parameter μ̃ is set to 0. An extension to an erroneous
+transmission scenario will be discussed in Section IV.
+
+A. Patch-Wise Quantization
+                                                                                 Fig. 2. Illustration of the operation of a uniform quantizer under error-free
+   We start by explaining a patch-wise quantization approach                     communication and communication with one-bit error.
+adopted in our framework. Let uik be the kth pixel value of the
+ith patch of the original image u, where i ∈ {1, . . . , N} and
+k ∈ {1, . . . , P2 C}. In this work, we simply adopt a uniform                      We now analyze the quantization error of our patch-wise
+quantizer which is the most representative scalar quantization                   quantization approach. For the ith patch, the quantization
+technique. If the uniform quantizer with the quantization bit                    error of each pixel value is upper bounded by the maximum
+Mi ≥ 0 is assigned to the ith patch, the quantizer output for                    difference between the quantization output ūik and the input
+uik is expressed as                                                              uik , as depicted in Fig. 2(a). Therefore, the upper bound of the
+                                                                                 quantization error between ūik and the input uik is given by
+                       ūik = argmin |q − uik |2                          (5)                                2
+                                q∈Qi                                                                         i      (umax − umin )2 −Mi
+                                                                                           |uik − ūik |2 ≤       =                 4          (7)
+                                                                                                             2              4
+where QMi = {umin + (s + 1/2)i |s ∈ {0, . . . , 2Mi − 1}}, i =
+                                                                                 for all i and k. Consequently, the upper bound of the quanti-
+(umax − umin )/2Mi , umin = min(uik ), and umax = max(uik )
+                                       i,k                          i,k          zation error of the ith patch is expressed as
+denote the minimum and maximum pixel values of an 8-bit                                                           2
+image, respectively. Once ūik is obtained, it can be equivalently                                               
+                                                                                                                 P C
+
+represented using a binary sequence bik = [bik,1 , . . . , bik,Mi ],                           ui − ūi  =
+                                                                                                           2
+                                                                                                                       |uik − ūik |2
+given by                                                                                                         k=1
+
+                                                                                                                       (umax − umin )2 −Mi
+                        ūik − umin      1 (2)                                                                 ≤ P2 C                   4 .               (8)
+                 bik =                −                         (6)                                                         4      
+                              i         2                                                                                  D0
+
+where the operator [ · ](2) denotes the binary representation of                 As shown in (8), the quantization error of the ith patch
+an integer. An example of the uniform quantizer with Mi = 3                      exponentially decreases with the assigned quantization bit Mi .
+under error-free communications is shown in Fig. 2(a). In this                     After the patch-wise quantization, a complete bit sequence
+scenario, if umin + 3i < uik < umin + 4i , we have ūik =                      b is constructed by concatenating each bik across all i and k.
+umin + 3.5i , and the corresponding bit sequence is given by                    Since we focus on the error-free transmission of the bit
+bik = [3](2) = 011.                                                              sequence b in this section, the received sequence b̂ at the
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35666                                                                             IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+                                                                                be any arbitrary increasing function of ai . Here, Badd is the
+                                                                                bit overhead required to transmit the quantizer information,
+                                                                                defined as
+                                                                                                                    
+                                                                                            Badd = log2 (Mmax + 1) N + 8 · 2              (12)
+                                                                                where · is the ceiling function. The first term represents
+                                                                                the bit overhead for {Mi }Ni=1 , and the second term denotes the
+                                                                                bit overhead for transmitting umax and umin . This quantizer
+                                                                                information enables the server to perform dequantization. It
+                                                                                should be noted that, in most cases, this additional overhead
+                                                                                is negligible compared to the bit overhead of B required for
+                                                                                transmitting the quantized pixel values of the image.
+                                                                                   The problem (P1 ) is categorized as a discrete optimization
+                                                                                problem. Since the objective function of (P1 ) is convex and
+                                                                                monotonically decreasing function of Mi , it is well known that
+                                                                                the optimal solution of (P1 ) is obtained via an incremental
+Fig. 3. Visualization of the attention score map measured using ViT encoder
+for the single-view image classification task on the CIFAR-100 dataset.         allocation algorithm [30]. This algorithm begins by initializing
+                                                                                Mi = 0 ∀i, to start from the minimal bit overhead. Then, for
+                                                                                each patch where Mi has not yet reached Mmax , the algorithm
+server is identical to the transmitted sequence. Otherwise, as                  iteratively increases Mi by 1 for the patch that leads to the
+illustrated in Fig. 2(b), the received sequence differs from                    largest decrease in the objective function as a response to the
+b. The received bit sequence is divided into patch-wise                         additionally assigned bit. This process continues until the total
+sequences, denoted by {b̂ik }∀i,k . Each patch-wise sequence b̂ik               bit constraint in (10) is satisfied, progressively increasing the
+then undergoes dequantization to produce the kth pixel value                    quantization bit for the selected patch. This algorithm offers
+of the ith patch, denoted by ûik . Finally, a dequantized image                an optimal allocation of the quantization bits.
+û is constructed by rearranging the dequantized values into an
+image.                                                                          C. Importance-Aware Bit Allocation: Water Filling
+                                                                                   A major limitation of the incremental allocation method
+B. Importance-Aware Bit Allocation: Incremental Allocation                      in Section III-B is its substantial computational complexity,
+   Typically, each patch within the image exhibits significantly                quantified as O(N[B̄/P2 C]), where B̄ = Btarget − Badd . In each
+different mean attention scores, indicating that the patches                    iteration, the objective function given in (9) must be computed,
+have varying impacts on task performance [37]. For example,                     resulting in a complexity of O(N). This is further multiplied
+Fig. 3 visualizes the attention score map generated by the ViT                  by the total number of iterations, (B̄/P2 C). To tackle this
+encoder for an image classification task on the CIFAR-100                       limitation, we develop a low-complexity bit allocation method
+dataset [32]. This figure shows that the attention scores are                   based on the water-filling algorithm. To this end, we reformu-
+relatively high for critical pixels in the images, while they                   late the problem (P1 ) by substituting the quantization bit Mi
+are relatively low for less important pixels. Inspired by this                  with the quantization level Qi = 2Mi and also by relaxing the
+observation, in our IAQ framework, we adopt mean attention                      quantization level Qi from discrete values to continuous real
+scores as an operational measure of the importance level                        values. Our reformulated problem is given by
+of each patch within the image. We then allocate varying                                                    
+                                                                                                            N
+quantization bits to patches based on their mean attention                                 (P2 ) min              w(ai )D0 Q−2
+                                                                                                                            i                          (13)
+                                                                                                 {Qi }N
+scores, assigning higher quantization bits to patches with                                            i=1   i=1
+higher mean attention scores.                                                                       s.t.    B + Badd ≤ Btarget                         (14)
+   Based on this idea, we formulate a weighted quantization                                                 1 ≤ Qi ≤ Qmax ∀i ∈ {1, . . . , N}          (15)
+error minimization problem by leveraging the mean attention
+score of the patch as a weight for the quantization error. By                   where Qmax = 2Mmax . The problem (P2 ) is categorized as
+utilizing the upper bound of the quantization error in (8), our                 a convex optimization problem, specifically a cave-filling
+problem is formulated as                                                        problem within the family of water-filling problems [31].
+                                                                                Consequently, the optimal solution of (P2 ) can be obtained by
+                        
+                        N
+                                                                                applying the Karush–Kuhn–Tucker (KKT) conditions.
+        (P1 ) min             w(ai )D0 4−Mi                              (9)       The optimal quantization level Qi for the ith patch is given
+             {Mi }N
+                  i=1   i=1                                                     in the following theorem.
+                s.t.    B + Badd ≤ Btarget                          (10)           Theorem 1: The optimal solution of the problem (P2 ) is
+                        Mi ∈ {0, . . . , Mmax } ∀i ∈ {1, . . . , N} (11)                    ⎧          ⎧                                  ⎫⎫
+                                                                                            ⎨          ⎨       w(a  ) ln 2(u    − u    ) 2 ⎬⎬
+                                                                                  Qi = min Qmax , max 1,
+                                                                                                                  i         max    min
+where Btarget is a total bit constraint such that P2 CNMmax +
+                                                                                            ⎩          ⎩                   2ν             ⎭⎭
+Badd > Btarget , Mmax is the maximum quantization bit of the
+uniform quantizer, and w(ai ) is a weight function which can                                                                                           (16)
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                         35667
+
+
+
+for all i ∈ {1, . . . , N}, where ν  is the optimal Lagrange                  demonstrates advantages in terms of computational complexity
+multiplier. The optimal solution is attained when the total                    compared to the incremental allocation method.
+number of allocated bits equals the available bit budget
+B̄, as this minimizes the objective function of the problem                         IV. E XTENSION TO R EALISTIC D IGITAL S EMANTIC
+(P2 ). Accordingly, ν  is determined to satisfy the following                                    C OMMUNICATIONS
+equality:                                                                         In this section, we extend our IAQ framework to operate
+                                                                               under practical digital semantic communications, where the
+                        
+                        N
+                                            B̄                                 transmission of the bit sequence suffers from communication
+                              log2 Qi =        .                     (17)     errors due to channel fading and noise effects.
+                                           P2 C
+                        i=1
+
+                                                                               A. BSC Modeling Approach
+      Proof: See Appendix A.
+   The optimal Lagrange multiplier ν  in Theorem 1 can be                        We start by describing a standard process to incorporate our
+easily obtained using various water-filling algorithms, such as                IAQ framework into practical digital semantic communication
+the bisection search algorithm [31] and the fast water-filling                 systems. In this process, the bit sequence b, corresponding to
+algorithm [38]. Once ν  is acquired through the water-filling                 the quantized image ū, is modulated into digital symbols x =
+algorithm, the optimal quantization level is determined as                     [x[1], . . . , x[T]]T ∈ X T , where X denotes the constellation
+shown in (16).                                                                 set, and transmitted through fading channels. Then, a received
+   Theorem 1 demonstrates that the optimal quantization level                  signal at time slot t is given by
+increases with the weight w(ai ) which is the increasing func-                                          y[t] = h[t]x[t] + v[t]                        (18)
+tion of the mean attention score. Therefore, the quantization
+level allocation in (16) assigns a higher quantization level                   where h[t] ∈ C represents a channel gain at time slot t, and v[t] ∈
+to patches with higher mean attention scores compared to                       C is an AWGN distributed as CN (0, σ 2 ). At the server, channel
+those with lower scores. This indicates that our quantization                  estimation is performed to obtain an estimate of h[t]. Based on
+framework with the optimal bit allocation effectively reduces                  this, channel equalization is applied to compensate for the effects
+overall quantization error by adaptively quantizing patches                    of fading, commonly using a zero-forcing (ZF) equalizer [39].
+according to their importance.                                                 The equalized signal is then passed through data detection,
+   It should be noted that the optimal quantization level in (16)              which determines the transmitted symbol x from received
+may not be a power of two, which violates the assumption of                    signals. Following the data detection, symbol demapping is
+Qi = 2Mi in our work. To address this issue, we introduce a                    employed to recover the estimated bit sequence b̂. Then, this
+simple adjustment step to satisfy the above assumption while                   bit sequence b̂ is applied as an input of the dequantization
+utilizing the entire available bit budget. This step involves                  process, yielding a reconstructed image û.
+rounding the solutions in (16) (i.e., round off(log2 Qi ) = m̂i ),               Our key strategy is to equivalently model the relationship
+and then adjusting the quantization levels based on Btarget and                between the input b and output b̂ of the digital communication
+the differences denoted by Dbit = B̄ − P2 C N       i=1 m̂i . Then, if
+                                                                               process by using parallel BSCs with certain bit-flip proba-
+Dbit > 0 and 2m̂i < Qmax , one bit is incrementally added to                   bilities, as explained in [25]. Specifically, these BSCs have
+the patch (i.e., Q̂i = 2m̂i +1 ), with this adjustment performed               the same bit-flip probabilities when the same modulation is
+in descending order of mean attention scores. Conversely, if                   applied to all the bits in b, and the channel remains constant
+Dbit < 0 and 2m̂i > 1, one bit is incrementally removed from                   within the transmission of the symbol sequence x (i.e., h[t] = h
+the patch (i.e., Q̂i = 2m̂i −1 ), with this adjustment carried out             ∀t) [39]. Then, the relationship between b and b̂ are equivalent
+in ascending order of mean attention scores. This step ensures                 to B-parallel BSCs with a common bit-flip probability μ̃ ∈
+that the total bit constraint in (14) is satisfied with the adjusted           [0, 1]. This implies that the conditional distribution of b̂j for
+quantization bits.                                                             a given bj is represented as
+   Remark 1 (Complexity Comparison of the Bit Allocation                                                     1 − μ̃, if b̂ = b
+                                                                                                                               j    j
+Methods): The problem (P1 ) has the same objective function                                pBSC b̂j |bj ; μ̃ =                                (19)
+                                                                                                                 μ̃,      if b̂j = bj .
+and bit overhead constraint as the problem (P2 ), with the
+distinction that (P1 ) assumes discrete quantization levels while                 A key advantage of our BSC modeling approach is that
+(P2 ) considers continuous ones. As a result, (15) represents                  it can reflect various communication environments without
+a relaxed feasible set of (11), implying that the optimal                      explicitly considering digital modulation, fading channel,
+solution of (P2 ) is suboptimal for the original problem (P1 ).                channel equalization, and digital demodulation processes;
+The computational complexity order required to solve (P2 )                     rather, the combined effect of these processes is implicitly
+is O(NSmax ), where Smax denotes the maximum number of                         captured by the parallel BSCs with a bit-flip probability
+iterations required by the water-filling algorithm. In con-                    μ̃. Note that μ̃ is equivalent to the bit error rate (BER)
+trast, solving (P1 ) requires a computational complexity of                    performance of the system and therefore characterized as a
+O(N[B̄/P2 C]). Since Smax ≤ N ≤ (B̄/P2 C) typically holds                      function of the channel h, the SNR = E[|x[t]|2 ]/E[|v[t]|2 ], and
+due to the rapid convergence of the water-filling algorithm and                the constellation set X [39].
+the required minimum bit overhead, (P2 ) is computationally                       In practical communication scenarios where bit-flip error is
+more efficient than (P1 ). Therefore, the water-filling algorithm              inevitable (i.e., μ̃ > 0), the errors between b and b̂ occur
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35668                                                                               IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+before the dequantization process, leading to a degradation                           To solve the problem (P3 ), we characterize the property of
+in task performance. This motivates us to devise a new                             the distortion function D(2Mi ; μ̃) with respect to Mi , as given
+quantization technique that minimizes the distortion between                       in the following proposition.
+the input image u and the reconstructed image û, taking into                         Proposition 1: If μ̃ ≤ (3/13), the distortion function
+account both quantization and communication errors.                                D(2Mi ; μ̃) is convex and monotonically decreasing with
+                                                                                   respect to Mi for Mi ≥ 0.
+B. Distortion Analysis                                                                    Proof: See Appendix C.
+   We analyze the distortion of our patch-wise quantization                           Proposition 1 indicates that the problem (P3 ) has the form
+approach, by taking into account both quantization and com-                        of a well-known discrete optimization problem and therefore
+munication errors. A key observation behind our analysis is                        can be solved using an incremental allocation algorithm [30].
+that the length of a pixel-wise bit sequence bik , given by                        For this reason, we refer to the above bit allocation method as
+Mi , is very short because the maximum quantization bit is                         a modified incremental allocation method. Note that if there
+a small number (e.g., Mmax = 8) in general. Additionally,                          is no communication error, our modified method is identical
+practical communication systems often operate in a small bit-                      to the method in Section III-B because the objective function
+error-rate regime (i.e., μ̃       1). These facts imply that the                   of the problem (P3 ) with μ̃ = 0 is the same as that of (P1 ),
+probability of having more than two-bit error within each                          (i.e., D(2Mi ; μ̃ = 0) = D0 4−Mi ).
+pixel-wise sequence is very small and therefore negligible.                           2) Modified Water Filling: In this modification, we refor-
+Motivated by this, we focus on characterizing the distortion                       mulate the weighted distortion minimization problem (P3 ) by
+under the following assumption.                                                    substituting the quantization bit with a real-valued quantization
+   Assumption 1: The maximum number of the bit-flip errors                         level, as done in Section III-C. The reformulated problem is
+occurred within each pixel-wise bit sequence bik ∈ {0, 1}Mi is                     given by
+limited to one, i.e., bik − b̂ik 0 ≤ 1 ∀i, k.                                                                
+                                                                                                               N
+   Based on Assumption 1, we characterize the upper bound                                   (P4 )    min              w(ai )D(Qi ; μ̃)                 (25)
+                                                                                                    {Qi }N
+of the expected distortion for the ith patch. This result is stated                                      i=1    i=1
+in the following theorem.                                                                            s.t.      B + Badd ≤ Btarget                      (26)
+   Theorem 2: The upper bound of the expected distortion for                                                   1 ≤ Qi ≤ Qmax ∀i ∈ {1, . . . , N}.      (27)
+the ith patch under Assumption 1 is
+                                                                                   To solve the problem (P4 ), we characterize the property of the
+               P2 C
+                                                       !                          distortion function D(Qi ; μ̃) with respect to Qi . The result is
+                      Eb ,b̂             |uik − ûik |2 ≤ D(Qi ; μ̃)        (20)   stated in the following proposition.
+                          ik        ik
+               k=1                                                                    Proposition 2: If μ̃ ≤ (3/13), the distortion function
+for all i ∈ {1, . . . , N}, where                                                  D(Qi ; μ̃) is convex with respect to Qi for Qi ≥ 1.
+                                                                                      Proof: See Appendix D.
+                                    1−μ̃
+                         log2        4                                   "         Since a positive weighted sum of convex functions is also
+               D0 Qi                               4                    16
+D(Qi ; μ̃) =                                         μ̃Q2i + 4μ̃Qi + 1 − μ̃ .      convex, the problem (P4 ) is a convex optimization problem.
+                  (1 − μ̃)                         3                     3
+                                                                                   By utilizing the KKT conditions, we derive the optimal
+                                                                            (21)
+                                                                                   solution of the problem (P4 ) as given in the following theorem.
+    Proof: See Appendix B.                                                            Theorem 3: If μ̃ < (3/13), the optimal solution of the
+  If μ̃ = 0 in (20), it becomes equivalent to (8).                                 problem (P4 ) is
+Therefore, (20) represents a generalized upper bound that                                            %            %      #              $&&
+encompasses both quantization and communication errors.                                    Qi = min Qmax , max 1, h−1 ν  ; w(ai ), μ̃        (28)
+
+                                                                                   for all i ∈ {1, . . . , N}, where h−1 (·; w(ai ), μ̃) is the inverse
+C. Importance-Aware Bit Allocation for Distortion                                  function of h(·; w(ai ), μ̃) defined in (30), as shown at the
+Minimization                                                                       bottom of the next page, and ν  is the optimal Lagrange
+   On the basis of the distortion analysis in Section IV-B,                        multiplier determined to satisfy the following equality:
+we modify the importance-aware bit allocation methods in
+                                                                                                               
+                                                                                                               N
+                                                                                                                                   B̄
+Sections III-B and III-C to incorporate them into the realistic                                                      log2 Qi =        .               (29)
+digital semantic communications.                                                                                                  P2 C
+                                                                                                               i=1
+   1) Modified Incremental Allocation: In this modification,
+                                                                                         Proof: See Appendix A.
+we formulate a weighted distortion minimization problem by
+                                                                                      Based on Theorem 3, we determine the optimal quantization
+utilizing the distortion upper bound in (20) along with the
+                                                                                   levels as summarized in Algorithm 1. In this method, the
+weight function w(ai ). Our bit allocation problem is given by
+                                                                                   optimal Lagrange multiplier ν  in Theorem 3 is iteratively
+                          
+                          N
+                                            #         $                            determined using a bisection search algorithm in conjunction
+        (P3 ) min                    w(ai )D 2Mi ; μ̃                       (22)   with the Newton–Raphson method [40], which is a representa-
+              {Mi }N
+                   i=1     i=1                                                     tive root-finding algorithm, to determine Qi that satisfies ν  =
+               s.t.       B + Badd ≤ Btarget                                (23)   h(Qi ; w(ai ), μ̃) for the given ν  . As proved in Appendix A, the
+                          Mi ∈ {0, . . . , Mmax } ∀i ∈ {1, . . . , N}. (24)        function h(Qi ; w(ai ), μ̃) is a strictly decreasing function of Qi
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                           35669
+
+
+Algorithm 1 Modified Water Filling                                                1) Single-View Image Classification: In this task, we
+Require: {w(ai )}N   i=1 , μ̃, Btarget
+                                                                                     consider single-view image classification using the
+Ensure: Optimal quantization level {Qi }N   i=1
+                                                                                     CIFAR-101 [32] dataset.
+ 1: Set νmin and νmax to be sufficiently small and large values,                  2) Multiview Image Classification: In this task, we consider
+    respectively.                                                                    multiview image classification using the MIRO2 [33]
+      (0)
+ 2: Qi = 1, ∀i ∈ {1, . . . , N}                                                      and MVP-N3 [34] datasets. We assume that four devices
+ 3: for s = 1 to Smax do
+ 4:    ν = (νmin + νmax )/2                                                          send the images for the same object, but from different
+ 5:    for t = 0 to Tmax do                                                          views. The server receives a single-view image from
+                 (t)                     (t)
+ 6:        h̃(Qi ; w(ai ), μ̃) = h(Qi ; w(ai ), μ̃) − ν, ∀i                          each device and classifies the image individually. The
+              (t+1)      (t)         (t)              (t)                            final classification result is determined by applying a
+ 7:        Qi        = Qi − h̃(Qi ; w(ai ), μ̃)/h̃ (Qi ; w(ai ), μ̃), ∀i
+                  (t+1)      (t)                                                     majority rule to the four individual outcomes.
+ 8:        if |Qi       − Qi | < τq then
+                                    (t)                                           3) Single-Object Detection: In this task, we evaluate single-
+ 9:           Qi = min((max(Qi , 1), Qmax ), ∀i
+10:           Break the loop                                                         object detection using the COCO20174 [35] dataset.
+11:        end                                                                       During both training and testing, we focus on predicting
+12:    end for                                                                       only the single most dominant object per image.
+       B = P2 C N                  
+13:                    i=1 log2 Qi                                                   Specifically, among all ground-truth bounding boxes in
+14:    if B < B̄ then                                                                an image, the one with the largest area is selected
+15:       νmax = ν
+16:    else                                                                          as the target. The goal of the model is to predict
+17:       νmin = ν                                                                   the bounding box that best matches this target object,
+18:    end                                                                           thereby simplifying the detection task to a single-object
+19:    if |B − B̄| < τb then                                                         localization problem. To evaluate prediction accuracy,
+20:       Break the loop                                                             we use the intersection over union (IoU) metric,
+21:    end
+22: end for
+                                                                                     defined as
+                                                                                                                   Area of overlap
+                                                                                                          IoU =
+                                                                                                                   Area of union
+when μ̃ < (3/13). Therefore, the Newton–Raphson method                               which measures the spatial alignment between the pre-
+yields a unique solution for Qi that satisfies (30) within a finite                 dicted and ground-truth bounding boxes. A higher IoU
+number of iterations. Note that if μ̃ = 0, the problem (P4 )                         indicates more accurate localization.
+becomes equivalent to the problem (P2 ) (i.e., D(Qi ; μ̃ = 0) =                   All datasets are normalized to have zero mean and unit
+D0 /Q2i ), and the optimal quantization level can be explicitly                variance. The ViT encoder deployed on the device is DeiT-
+derived in the same manner as in Section III-C. Our modified                   Tiny, while DeiT-Small is used on the server, which has
+water-filling method for determining the optimal quantization                  approximately 4.4 times more parameters than the device-side
+level in the problem (P4 ) is outlined in Algorithm 1. After                   model [41]. Both models are pretrained on the ImageNet-
+completing Algorithm 1, we applied the method described in                     1k dataset, which contains 1 million images spanning 1000
+Section III-C to fully utilize the available bit budget.                       classes. For the classification task, the class token is passed
+    Remark 2 (Complexity Comparison of the Modified                            through a fully connected layer to predict the class label.
+Methods): As discussed in Section III-C, the optimal solution                  For the object detection task, a detection token is used
+of (P4 ) is suboptimal for the original problem (P3 ). The                     and processed by two separate fully connected layers for
+computational complexity associated with solving (P4 ) is                      class prediction and bounding box regression. The pretrained
+O(NSmax Tmax ), where Tmax denotes the number of iterations                    ViT encoders and task-specific output layers are fine-tuned
+required by the Newton–Raphson method. This formula-                           according to the target datasets. For the single-view and
+tion yields a substantial advantage in comparison to the
+O(N[B̄/P2 C]) complexity of (P3 ), as it holds that Smax Tmax ≤                   1 The CIFAR-10 dataset consist of 50 000 training images and 10 000 test
+                                                                               images.
+N ≤ (B̄/P2 C). Consequently, this demonstrates that water-                        2 The MIRO dataset comprises 12 classes, each containing 1600 images.
+filling algorithm is more computationally efficient than                       These images are divided among 10 distinct objects, with 160 multiview
+incremental allocation method.                                                 images per object. For the training dataset, 32 multiview images per object are
+                                                                               selected, while 128 images are reserved for testing. Consequently, the dataset
+                                                                               includes 3840 training images and 15 360 testing images.
+                                                                                  3 The MVP-N dataset consists of 44 classes with 1760 training images and
+                    V. S IMULATION R ESULTS                                    7040 test images. The testing images include one object per class, where each
+                                                                               object is represented by 160 multiview images.
+  In this section, we evaluate the superiority of the proposed                    4 The COCO2017 dataset contains 118 287 training images and 5000 vali-
+IAQ method through simulations. In these simulations, we                       dation images, each annotated with multiple objects and their corresponding
+consider the following tasks.                                                  bounding boxes.
+
+
+                                                                                                                        "
+                                                    1−μ̃
+                        w(ai )D0 ln 2 log2           4       4                                   1 − μ̃       16         1 − μ̃
+    h(Qi ; w(ai ), μ̃)  2           Q                      − μ̃Q2i log2 (1 − μ̃) − 4μ̃Qi log2           − 1 − μ̃ log2             (30)
+                        P C(1 − μ̃) i                        3                                     2          3            4
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35670                                                                            IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+multiview image classification tasks, fine-tuning is conducted                       we allocate the highest quantization level, Qi = Qmax ,
+using the cross-entropy loss. The Adam optimizer is used                             to the top k% of patches based on their attention
+with a learning rate of 0.0001 and a batch size of 32. The                           scores, while assigning the lowest quantization level,
+number of training epochs is set to 3 for MIRO, and 10 for                           Qi = 1, to the remaining patches. In this case,
+CIFAR-10 and MVP-N. For the single-object detection task,                            the compression ratio can be simplified to ρ =
+fine-tuning is performed using a combination of the cross-                           (NkP2 C log2 Qmax /(100 × 8HWC)). Therefore, the com-
+entropy loss for class prediction and the smooth L1 loss for                         pression ratio can be determined based on the value
+bounding box regression. The AdamW optimizer is employed                             of k.
+with a learning rate of 0.0001, a weight decay of 0.05, a batch                   4) Attention Threshold (AT): We consider the attention-
+size of 32, and a cosine annealing learning rate scheduler.                          aware patch selection-based quantization approach
+The number of training epochs is set to 20 for COCO2017.                             in [27]. In this strategy, we allocate the highest quanti-
+All input images are resized to (3, 224, 224) for both the                           zation level, Qi = Qmax , to the patches whose attention
+device and server across all datasets. It should be noted that                       scores exceed a certain threshold δ, while assigning the
+the fine-tuning process is carried out offline and does not                          lowest quantization level, Qi = 1, to the remaining
+involve any communication protocols or channel modeling.                             patches. Since the precise relationship between δ and
+The device model is configured with a hidden dimension                               the compression ratio remains unclear, we numerically
+of D = 192 and H = 3 attention heads, while the server                               determine the optimal δ within the range of 0.001 to
+model adopts a larger configuration with D = 384 and H =                             0.01 for each simulation setting.
+6 attention heads. Both models share the same architectural                       5) Attention Sum Threshold (AST): We consider the
+parameters, including a patch size of P = 16, a total of                             attention-aware patch selection-based quantization
+L = 12 encoder layers, and N = 196 patches per input                                 approach in [27]. In this strategy, we allocate the highest
+image. The compression ratio is defined as the ratio of the                          quantization level, Qi = Qmax , to patches in order
+compressed bit overhead to the original bit overhead (i.e., ρ =                      of their attention scores, until the cumulative sum of
+[P2 C N  i=1 log2 Qi /8HWC]). For performance comparison, we                         these scores exceeds a specified threshold δsum . The
+consider the following methods.                                                      remaining patches are assigned the lowest quantization
+   1) Proposed: We consider four methods for the proposed                            level, Qi = 1. Since the precise relationship between
+       IAQ framework: a) Proposed (IA), which employs                                δsum and the compression ratio remains unclear, we
+       the incremental allocation method in Section III-B                            numerically determine the optimal δsum within the range
+       to solve the problem (P1 ); b) Proposed (WF), which                           of 0.3 to 0.95 for each simulation setting.
+       employs the water-filling method in Section III-C to                       6) Learned Quantization Method (LQM): We implement
+       solve the problem (P2 ); c) Proposed (Modified IA),                           a learned quantization approach inspired by [15]. A
+       which employs the modified incremental allocation                             DeiT-Small model is split between the device (first five
+       method in Section IV-C to solve the problem (P3 );                            encoder layers) and the server (remaining layers and
+       and d) Proposed (Modified WF), which employs the                              classifier). During training, the device-side feature map
+       modified water-filling method in Section IV-C to solve                        (N × D) is corrupted with element-wise uniform noise
+       the problem (P4 ). In all these methods, we set Smax =                        sampled from U [ − (1/2), (1/2)] before transmission.
+       10, Tmax = 5, Mmax = 8, and Qmax = 256. Therefore, as                         At inference, the feature map is uniformly quantized
+       highlighted in Remarks 1 and 2, the water-filling method                      and sent over a BSC, after which the server performs
+       is more computationally efficient than the incremental                        dequantization and predicts the final task output. In this
+       allocation method. A weight function w(ai ) is chosen as                      case, the compression ratio can be simplified to ρ =
+                             1 − dc                                                  (NDBL /8HWC), where BL represents the number of bits
+              w(ai ) =                   (ai − amin )γ + dc           (31)           allocated per element in the quantized feature map.
+                         (amax − amin )γ
+     where amin = min(ai ), amax = max(ai ), γ > 0 is
+                         i                i
+     a factor that determines the shape of the weight, and                     A. Performance Evaluation Under Error-Free
+     dc = 10−7 is an arbitrary small value introduced to                       Communication
+     prevent the weight from becoming zero. When γ > 1,                           Fig. 4 compares the classification accuracies of various
+     the weight function becomes convex, whereas for γ < 1,                    quantization methods for the multiview image classification
+     it becomes concave. In the special case of γ = 1,                         tasks on the MIRO and MVP-N datasets. Fig. 4 shows that
+     the weight function is linear with respect to the mean                    the proposed methods achieve a higher classification accuracy
+     attention score.                                                          compared to the existing quantization methods, particularly
+  2) Fixed Q: We consider the fixed-level quantization                         when the target communication overhead is low. Although
+     approach, which falls under the category of fixed-bit                     existing attention-aware quantization methods (i.e., Top-k, AT,
+     quantization. In this case, the compression ratio can be                  and AST) consider mean attention scores, the proposed method
+     simplified to ρ = (NP2 C log2 Qi /8HWC), as Qi remains                    offers additional performance gains over these methods by
+     constant for all i.                                                       enabling optimal bit allocation beyond binary bit selection.
+  3) Top-k: We consider the attention-aware patch selection-                   Additionally, Proposed (IA) and Proposed (WF) can con-
+     based quantization approach in [27]. In this strategy,                    trol the communication overhead effectively. For instance, it
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                          35671
+
+
+
+
+                  (a)                                     (b)
+
+
+Fig. 4.   Comparison of classification accuracies for various quantization
+approaches on multiview image classification tasks using the MIRO and MVP-
+N datasets. (a) μ̃ = 0, MIRO. (b) μ̃ = 0, MVP-N.
+
+
+
+                                                                                Fig. 6. Confusion matrix for the single-view image classification task on the
+                                                                                CIFAR-10 dataset.
+
+
+
+                                                                                consistently outperforms Fixed Q, Top-k, AT, and AST across
+                                                                                all values of γ for most cases. These results demonstrate that
+                                                                                the proposed method performs well with various choices of
+                                                                                the weight function.
+                                                                                   Fig. 6 provides the confusion matrix for the single-view
+                                                                                image classification task on the CIFAR-10 dataset, obtained
+                                                                                using Proposed (WF). The matrix reveals systematic mis-
+                                                                                classification patterns that often occur between classes with
+                                                                                visual or semantic similarity. For example, images of cat are
+                                                                                frequently misclassified as dog, and bird as frog. Although
+Fig. 5. Comparison of IoU for various quantization approaches in the single-
+object detection task on the COCO2017 dataset.                                  such confusions are observed, the matrix also exhibits strong
+                                                                                diagonal dominance, indicating that the majority of sam-
+                                                                                ples are correctly classified. These results demonstrate that
+achieves task performance at ρ = 0.1875 and ρ = 0.3125,                         the pretrained ViT encoder delivers reliable classification
+which Fixed Q, AT, and AST could not achieve. This demon-                       performance, even when interclass distinctions are subtle.
+strates the flexibility of Proposed (IA) and Proposed (WF)
+in controlling communication overhead. The performance of
+Proposed (IA) and Proposed (WF) is nearly identical. Since                      B. Performance Evaluation Under BSC Models
+Proposed (WF) requires lower computational complexity than                         Fig. 7 compares the classification accuracy and communica-
+Proposed (IA), Proposed (WF) becomes a more appealing                           tion overhead of various quantization methods under different
+solution, even though it relies on some relaxations to determine                bit-flip probabilities for the multiview image classification task
+the optimal bit allocation.                                                     on the MIRO dataset. Fig. 7(a) shows that Proposed (Modified
+   Fig. 5 compares the IoU of various quantization methods                      IA) outperforms Proposed (IA) and Proposed (Modified WF)
+for the single-object detection task on the COCO2017 dataset.                   outperforms Proposed (WF). This indicates that our adaptive
+In this simulation, we also examine the effect of the weight                    bit allocation by jointly considering both quantization and bit-
+function design by comparing the performance of Proposed                        flip errors offers robustness against communication errors. In
+(IA) with different values of γ in (31). Fig. 5 shows that as γ                 addition, Proposed (WF) exhibits performance comparable to
+increases, the performance of Proposed (IA) improves for ρ ≤                    Proposed (IA), and Proposed (Modified WF) closely tracks the
+0.25, while lower γ values yield better performance for ρ >                     accuracy of Proposed (Modified IA). These results suggest that
+0.25. Specifically, an exponential-like weight function (i.e.,                  the low-complexity algorithms introduced in Sections III-B
+γ = 1.5) is preferred when the target communication overhead                    and IV-C achieve competitive performance to their optimal
+is low, while a root-like weight function (i.e., γ = 0.5) is                    counterparts when ρ = 0.125. While LQM transmits nearly
+preferred when the communication overhead is high. For                          twice as many bits as the proposed methods, its classification
+example, at γ = 0.5 and ρ = 0.1250, the root-like                               accuracy remains consistently lower across all error levels. As
+weight function assigns relatively low weights to semantically                  the BER μ̃ increases, its performance degrades significantly,
+important patches, limiting their quantization precision and                    revealing limited robustness to channel noise. In contrast,
+causing a slight degradation in detection performance. This                     the proposed methods achieve both efficient compression and
+indicates that the performance of Proposed (IA) can be                          strong resilience to communication errors, maintaining supe-
+maximized by designing the weight function according to the                     rior accuracy even with substantially fewer transmitted bits.
+target communication overhead. Nevertheless, Proposed (IA)                      Fig. 7(b) demonstrates that when μ̃ = 0.05, the proposed IAQ
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35672                                                                             IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+
+                                              (a)                                                               (b)
+
+Fig. 7. Comparison of the classification accuracy and communication overhead of various quantization approaches under different channel error levels for a
+multiview image classification task on the MIRO dataset. (a) Proposed: ρ = 0.125, LQM: ρ = 0.2513. (b) μ̃ = 0.05.
+
+
+
+
+Fig. 8. Visualization of the attention score map and the quantization level map of the proposed IAQ approach under both error-free and erroneous conditions
+at ρ = 0.5, for a single-object detection task on the COCO2017 dataset.
+
+
+
+approaches consistently maintain strong task performance, par-                  in preserving task-relevant features. Fig. 8 further shows that
+ticularly in the low communication overhead regime. Although                    patches with higher attention scores are assigned higher
+LQM achieves the highest accuracy when ρ ≥ 0.3125, its                          quantization levels in both the μ̃ = 0 and μ̃ = 0.05 settings,
+performance degrades sharply as the communication overhead                      which aligns with the optimality conditions derived in (16)
+decreases. In contrast, the proposed methods provide more                       and (28). Moreover, a comparison between the dequantized
+graceful degradation and maintain robustness across a wider                     images under different channel conditions reveals that, as
+range of overhead conditions.                                                   μ̃ increases, the quantization level for background patches
+   Fig. 8 visualizes the attention score and quantization level                 tends to decrease, while that for object regions increases. This
+maps of Proposed (WF) under error-free communications                           allocation strategy effectively prioritizes the preservation of
+(μ̃ = 0), and Proposed (Modified WF) under BSCs with μ̃ =                       semantically critical information while reducing the bitrate
+0.05 at ρ = 0.5, for the single-object detection task on the                    spent on less important background content.
+COCO2017 dataset. In all cases, the predicted bounding box,
+shown in green, accurately localizes the largest object in the                  C. Performance Evaluation Under Rayleigh Fading Channels
+image and closely aligns with the ground truth box depicted in                     To evaluate the robustness of the proposed methods under
+red, demonstrating the effectiveness of the proposed method                     realistic wireless conditions, we consider Rayleigh fading
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                         35673
+
+
+                                                                                                          TABLE II
+                                                                                 RUNTIME C OMPARISON OF THE P ROPOSED Q UANTIZATION M ETHODS
+                                                                                        E VALUATED ON THE MIRO DATASET W ITH ρ = 0.5
+
+
+
+
+                                                                                  Table I summarizes the resource profile of the device model.
+                                                                               This model contains 5.56 million parameters and requires
+                                                                               21.22 MB of memory during inference. The computational
+                                                                               load is approximately 1.52 GFLOPs, which translates to a
+                                                                               power consumption of 20.2 mW, based on the theoretical
+                                                                               peak performance and power characteristics of our inference
+                                                                               hardware. These values remain well within the operating limits
+Fig. 9. Comparison of classification accuracy and communication overhead       of modern IoT devices, which typically offer power budgets
+for various quantization approaches under Rayleigh fading channels in the      in the range of 15–150 mW.
+multiview image classification task on the MVP-N dataset.                         In addition to the model memory, the proposed quanti-
+                                                                               zation methods introduce only a small memory overhead.
+                              TABLE I
+        R ESOURCE P ROFILE OF THE D EPLOYED D EVICE M ODEL                     Specifically, storing attention scores from the final transformer
+                                                                               layer requires approximately 4(N+1)2 H×2−20 ≈ 1.7765 MB.
+                                                                               Quantization levels are stored using 0.5 bytes per patch,
+                                                                               resulting in a total of 0.5 × N × 2−20 ≈ 0.000093 MB.
+                                                                               Combining these values with the model memory, the total
+                                                                               memory usage becomes approximately 22.9966 MB. This
+channels. The corresponding results are presented in Fig. 9.                   cumulative memory requirement remains well within the
+In this setting, the transmit power is adjusted to maintain a                  memory budgets of typical edge devices.
+target BER μ̃ under 2M -QAM modulation, where M denotes                           Table II presents the runtime comparison of the proposed
+the modulation order. According to the formulation in [39],                    quantization methods, evaluated on the MIRO dataset with
+the transmit power P is computed as                                            ρ = 0.5. The low-complexity methods run significantly faster
+                       $ 2⎧      ⎛              ⎞⎫2                            than their optimal counterparts, with execution times that are
+              # M         ⎨            √         ⎬
+               2 −1 σ         −1 ⎝ M 2 μ̃ ⎠
+                                         M                                     more than one order of magnitude lower. While the presence of
+        P=                  Q        √                                       channel errors slightly increases the runtime due to additional
+                  3|h|2   ⎩        4 2M − 1 ⎭                                  computational steps, all variants complete within 133 ms.
+                                                                               In particular, the low-complexity methods complete in under
+where the channel coefficient h is modeled as a Rayleigh
+                                                                               3 ms, making them well suited for real-time inference on
+fading variable following a circularly symmetric complex
+                                                                               embedded systems.
+Gaussian distribution (i.e., h ∼ CN (0, 1)). This power control
+                                                                                  In summary, the proposed IAQ framework meets essential
+scheme ensures that the average BER remains fixed at μ̃,
+                                                                               hardware constraints for edge deployment. It achieves low
+enabling a fair performance comparison across different quan-
+                                                                               power consumption of 20.2 mW, maintains a compact memory
+tization methods. In the simulation results shown in Fig. 9,
+                                                                               usage below 23 MB, and completes execution within 133 ms.
+we set M = 6, corresponding to 64-QAM, and μ̃ = 0.05.
+                                                                               These characteristics collectively demonstrate the practical
+Compared to the error-free results in Fig. 4(b), Fig. 9 high-
+                                                                               feasibility of the proposed algorithms in real-world IoT and
+lights a clear distinction in robustness across the evaluated
+                                                                               embedded AI systems.
+methods. The proposed quantization methods exhibit strong
+resilience to channel fading, maintaining high classification
+accuracy across a wide range of communication overheads.                                                  VI. C ONCLUSION
+In particular, Proposed (Modified IA) and Proposed (Modified
+                                                                                  In this article, we proposed a novel IAQ framework for
+WF) consistently outperform both the Fixed Q and attention-
+                                                                               training-free ViT-based semantic communication systems. The
+aware approaches (i.e., Top-k, AT, and AST), which suffer
+                                                                               key idea is to exploit attention scores from a pretrained
+more severe degradation under fading. These results confirm
+                                                                               ViT model to quantify the importance of image patches
+that the proposed IAQ framework remains effective under
+                                                                               and allocate quantization bits accordingly. To realize this,
+more complex wireless conditions than the BSC model.
+                                                                               we formulated a weighted quantization error minimization
+                                                                               problem and developed both optimal and low-complexity bit
+D. Feasibility on Resource-Constrained Devices                                 allocation methods. Furthermore, we extended our framework
+  To verify the feasibility of deploying the proposed frame-                   to account for communication errors by adopting a BSC-
+work on resource-constrained edge devices, we analyze its                      based distortion model. Simulation results demonstrate that our
+runtime, memory usage, computational cost, and power                           IAQ method significantly improves the performance-overhead
+consumption.                                                                   tradeoff in both single-object detection and multiview image
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35674                                                                             IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+classification tasks, under not only BSC but also realistic                        Now, we prove that h(Qi ; w(ai ), μ̃) is a strictly decreasing
+Rayleigh fading channels.                                                       function of Qi . The first derivative of h(Qi ; w(ai ), μ̃) with
+   An important direction for future research is to extend                      respect to Qi is given by
+the IAQ framework to multimodal and multitask semantic
+communication systems. In such scenarios, modality-aware                                    ∂h(Qi ; wi , μ̃)  w(ai )D0 ln 2 x−1
+                                                                                                             = 2           Q g(Qi ; μ̃)                (42)
+attention mechanisms could be used to quantify the relative                                     ∂Qi           P C(1 − μ̃) i
+importance of heterogeneous inputs, enabling adaptive bit
+allocation across different data types. This would further                      where x = log2 (1 − μ̃)/4 and g(Qi ; μ̃) is defined as
+enhance the flexibility and applicability of IAQ in complex,
+                                                                                                         4
+real-world communication environments.                                                    g(Qi ; μ̃) = − μ̃(x + 2)2 Q2i − 4μ̃(x + 1)2 Qi
+                                                                                                         3          
+                                                                                                                16
+                          A PPENDIX A                                                                  − x 1 − μ̃ .
+                                                                                                          2
+                                                                                                                                                       (43)
+                  P ROOF OF T HEOREMS 1 AND 3                                                                    3
+  The Lagrangian function for (25) is given by                                  The function g(Qi ; μ̃) satisfy the following inequality:
+          #                                 $
+        L {Qi }N                                                                                                                 
+               i=1 , ν, {λi }i=1 , {γi }i=1
+                             N          N
+                                                                                                      (a)                    16
+                                    '                        (                             g(Qi ; μ̃) ≤ − 4μ̃Qi − 4 1 − μ̃
+        N                                   N
+                                                                                                                              3
+      =     w(ai )D(Qi ; μ̃) + ν P C     2
+                                                log2 Qi − B̄                                                                   
+                                                                                                      (b)                 16      (c)
+            i=1                                   i=1                                                 ≤ − 4μ̃ − 4 1 − μ̃ < 0                           (44)
+                  
+                  N                      
+                                         N                                                                                 3
+              +         λi (1 − Qi ) +         γi (Qi − Qmax ).        (32)
+                                                                                where (a) follows from the condition μ̃ ≥ 0 and x ≤ −2,
+                  i=1                    i=1
+                                                                                (b) is based on the fact that Qi ≥ 1, and (c) holds because
+Then, the KKT conditions for (32) are represented by                            μ̃ < (3/13). Therefore, (∂h(Qi ; wi , μ̃)/∂Qi ) < 0, indicating
+           1 ≤ Qi ≤ Qmax ∀i ∈ {1, . . . , N}                           (33)     that h(Qi ; w(ai ), μ̃) is a strictly decreasing function of Qi . This
+           ν, λi , γi ≥ 0, ∀i                                          (34)     also implies that Qi = h−1 (ν; w(ai ), μ̃) exists and is a strictly
+                                                                                decreasing function of ν.
+           λi (1 − Qi ) = 0, ∀i                                        (35)        By combining all the above results, the optimal quan-
+           γi (Qi − Qmax ) = 0, ∀i                                     (36)     tization level Qi that satisfies the KKT conditions is
+            '                      (
+                   N                                                           given by
+           ν P C2
+                      log2 Qi − B̄ = 0                                 (37)                 ⎧
+                     i=1                                                                    ⎨ 1,                       ν  ≥ h(1; w(ai ), μ̃)
+                                                                                       
+                         ∂D(Qi ; μ̃)   νP2 C                                          Qi =    Q  max  ,                ν  ≤ h(Qmax ; w(ai ), μ̃) (45)
+           γi − λi + w(ai )          +         = 0, ∀i. (38)                                ⎩ −1 
+                              ∂Qi      Qi ln 2                                                h (ν ; w(ai ), μ̃), otherwise
+Under the condition in (33), we consider the following three                    where ν  denotes the Lagrange multiplier defined in (37).
+cases.                                                                          When ν  > 0, the complementary slackness condition implies
+  1) Case 1 (1 < Qi < Qmax ): In this case, we have λi =                        that the equality P2 C N               
+                                                                                                           i=1 log2 Qi = B̄ must be satisfied.
+       γi = 0 from (35) and (36). Therefore, the condition                      Therefore, the above expression can be rewritten as given
+       in (38) can be rewritten as                                              in (28) and (29), which completes the proof for Theorem 3.
+                    w(ai ) ln 2 ∂D(Qi ; μ̃)                                        We also prove Theorem 1 by setting μ̃ = 0 in (45). If μ̃ =
+            ν=−                Qi           = h(Qi ; w(ai ), μ̃)(39)
+                      P2 C        ∂Qi                                           0, the function h(Qi ; w(ai ), μ̃) in (30) is expressed as
+     where h(Qi ; w(ai ), μ̃) is given in (30). In this case, the                                                        w(ai )D0 ln 2 −2
+     value of Qi can be determined by finding the solution                                    h(Qi ; w(ai ), 0) = 2                   Qi .             (46)
+                                                                                                                            P2 C
+     of the equation in (39) for a given value of ν.
+  2) Case 2 (Qi = 1): In this case, we have λi ≥ 0 and                          Consequently, we have
+     γi = 0 from (34)–(36). Therefore, the condition in (38)                                                      
+     implies that
+                                                                                                                      w(ai ) ln 2(umax − umin )2
+                     ∂D(Qi ; μ̃) ))        νP2 C                                        h−1 (ν; w(ai ), 0) =                                     .     (47)
+              w(ai )                     +       ≥ 0.                                                                             2ν
+                                  )                          (40)
+                        ∂Qi        Qi =1    ln 2
+                                                                                Therefore, the optimal quantization level Qi is rewritten as
+     This is equivalent to ν ≥ h(1; w(ai ), μ̃).
+  3) Case 3 (Qi = Qmax ): In this case, we have λi = 0 and                               ⎧
+                                                                                         ⎪
+                                                                                         ⎨ 1,                          ν  ≥ h(1; w(ai ), 0)
+     γi ≥ 0 from (34)–(36). Therefore, the condition in (38)
+                                                                                    Qi = Q+max ,                      ν  ≤ h(Qmax ; w(ai ), 0) (48)
+     implies that                                                                        ⎪
+                                                                                         ⎩ w(ai ) ln 2(umax −umin )2 , otherwise.
+                  ∂D(Qi ; μ̃) ))             νP2 C                                                         2ν 
+           w(ai )              )          +           ≤ 0. (41)
+                    ∂Qi          Qi =Qmax   Qmax ln 2                           The above expression can be rewritten as given in (16)
+        This is equivalent to ν ≤ h(Qmax ; w(ai ), μ̃).                         and (17), which completes the proof for Theorem 1.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                                              35675
+
+
+
+
+         
+          2
+         P C                                     !         P2 C
+                                                       (a)                                               ,
+                                                                                                            Mi
+                                                                                                                                                    !
+               Eb ,b̂        |uik − ûik |   2
+                                                       ≤                                                       P bik,r = lr P b̂ik,r = l̂r |bik,r = lr · |uik − ûik |2
+                 ik     ik
+         k=1                                                 k=1 l1 ,...,lMi ∈{0,1} l̂1 ,...,l̂M ∈{0,1} r=1
+                                                                                                i
+
+                                                             P2 C
+                                                                                                           Mi ,
+                                                                                                                   Mi                           !
+                                                       (b)                                                   1
+                                                       ≤                                                              P b̂ik,r = l̂r |bik,r = lr · |uik − ûik |2
+                                                                                                             2
+                                                             k=1 l1 ,...,lMi ∈{0,1} l̂1 ,...,l̂M ∈{0,1}             r=1
+                                                                                                i
+
+                                                           P2 C                               2                            2 Mi        t   2 
+                                                       (c)                               i                                 i
+                                                                                 Mi                               Mi −1                Mi +1 1
+                                                       ≤             (1 − μ̃)                       + (1 − μ̃)            μ̃          2          +1
+                                                                                          2                                  2               2
+                                                             k=1                                    
+                                                                                                                                 t=1
+                                                                                                                                                  
+                                                                                 E0
+                                                                                                                                   E1
+                                                                                                                   "
+                                                             P2 C
+                                                             
+                                                       (d)    (umax − umin )              2
+                                                                                            4  log2 1−4 μ̃       16
+                                                       =                       Qi             μ̃Qi + 4μ̃Qi + 1 − μ̃
+                                                                                                 2
+                                                                 4(1 − μ̃)                  3                     3
+                                                          k=1
+                                                                          
+                                                                       1−μ̃                             "
+                                                          D0     log2 4       4                       16
+                                                     =          Qi              μ̃Q2i + 4μ̃Qi + 1 − μ̃       = D(Qi ; μ̃)                                                  (49)
+                                                       (1 − μ̃)               3                        3
+
+                                #         $                                                              
+                              ∂D 2Mi ; μ̃     K ln 2 xMi 4                                             16
+                                            =        2      μ̃(x + 2) · 22Mi + 4μ̃(x + 1) · 2Mi + x 1 − μ̃                                                                 (50)
+                                 ∂Mi          1 − μ̃      3                                            3
+                                                                                                        
+                                                                                                                   D1,i
+
+
+                             #         $                                                                                        
+                        ∂ 2 D 2Mi ; μ̃                K(ln 2)2 xMi            4                                               16
+                                                 =            2                 μ̃(x + 2)2 · 22Mi + 4μ̃(x + 1)2 · 2Mi + x2 1 − μ̃                                          (52)
+                               ∂Mi2                    1 − μ̃                 3                                               3
+                                                                                                                               
+                                                                                                                     D2,i
+
+
+
+                              A PPENDIX B                                                                  Similarly, the second derivative of D(2Mi ; μ̃) is expressed
+                         P ROOF OF T HEOREM 2                                                           in (52), as shown at the top of this page. The lower bound of
+   The upper bound of the expected distortion for the ith                                               D2,i in (52) can be determined as follows:
+                                                                                                                                               
+patch is presented in (49), as shown at the top of this page.                                                           (a)                16
+Specifically, (a) follows from the property of memoryless                                                          D2,i ≥4μ̃2Mi + 4 1 − μ̃
+                                                                                                                                            3
+BSCs, (b) follows from the assumption of equiprobable bit                                                                                   
+                                                                                                                        (b)            16          52
+outputs, (c) denotes the exact upper bound of expected distor-                                                           ≥4μ̃ + 4 1 − μ̃ = − μ̃ + 4.               (53)
+                                                                                                                                        3           3
+tion of the ith patch under Assumption 1, where Em denoting
+the upper bound of the mean squared error (MSE) between                                                 where (a) follows from the condition μ̃ ≥ 0 and x ≤ −2, and
+uik and ûik when bik undergoes m ∈ {0, 1} bit errors, and (d)                                          (b) is based on the fact that Mi ≥ 0. Therefore, if μ̃ ≤ (3/13),
+follows from the fact that Qi = 2Mi .                                                                   we have (∂ 2 D(2Mi ; μ̃)/∂Mi2 ) ≥ 0, implying that D(2Mi ; μ̃)
+                                                                                                        is convex with respect to Mi . Aggregating the above results
+                                                                                                        implies that if μ̃ ≤ (3/13), the distortion function D(2Mi ; μ̃)
+                            A PPENDIX C
+                                                                                                        is convex and a monotonically decreasing function of Mi .
+                      P ROOF OF P ROPOSITION 1
+   By utilizing the distortion in (49), the first derivative of                                                                    A PPENDIX D
+D(2Mi ; μ̃) can be obtained as (50), as shown at the top of this                                                             P ROOF OF P ROPOSITION 2
+page, where x = log2 ((1 − μ̃)/4). The upper bound of D1,i
+                                                                                                           Let D(2Mi ; μ̃) = Jμ̃ (Mi ) and Mi = log2 Qi = U(Qi ), then
+in (50) can be determined as follows:
+                                                                                                      the second derivative of D(Qi ; μ̃) with respect to Qi is derived
+                (a)                      16                                                             as
+           D1,i ≤ − 4μ̃ · 2Mi − 2 1 − μ̃                                                                                                                "
+                                          3                                                                     ∂ 2 D(Qi ; μ̃)   ∂ 2 Jμ̃ (U(Qi )) ∂U(Qi ) 2
+                                                                                                                             =
+                (b)                16       20
+                ≤ − 4μ̃ − 2 1 − μ̃ =           μ̃ − 2      (51)                                                      ∂Q2i           ∂U(Qi )2       ∂Qi
+                                    3        3
+                                                                                                                                            ∂Jμ̃ (U(Qi )) ∂ 2 U(Qi )
+where (a) follows from the condition μ̃ ≥ 0 and x ≤ −2, and                                                                             +
+                                                                                                                                              ∂U(Qi )        ∂Q2i
+(b) is based on the fact that Mi ≥ 0. Therefore, if μ̃ ≤ 0.3,                                                                           '                              (
+we have (∂D(2Mi ; μ̃)/∂Mi ) ≤ 0, implying that D(2Mi ; μ̃) is a                                                                   1 ∂ 2 Jμ̃ (Mi ) 2 ∂Jμ̃ (Mi )
+                                                                                                                                = 2              I −           I           (54)
+monotonically decreasing function of Mi .                                                                                        Qi     ∂Mi2          ∂Mi
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+35676                                                                              IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 17, 1 SEPTEMBER 2025
+
+
+
+where I = (1/ln 2). If μ̃ ≤ (3/13), we have                                       [22] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for mul-
+(∂ 2 Jμ̃ (Mi )/∂Mi2 ) ≥ 0 and (∂Jμ̃ (Mi )/∂Mi ) ≤ 0 as shown in                        tidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+                                                                                       vol. 22, no. 1, pp. 73–87, Jan. 2023.
+Appendix C. This directly implies that if μ̃ ≤ (3/13) and                         [23] W. Xu, Y. Zhang, F. Wang, Z. Qin, C. Liu, and P. Zhang, “Semantic
+Qi ≥ 1, we have (∂ 2 D(Qi ; μ̃)/∂Q2i ) ≥ 0. This completes the                         communication for the Internet of Vehicles: A multiuser cooperative
+proof.                                                                                 approach,” IEEE Veh. Technol. Mag., vol. 18, no. 1, pp. 100–109,
+                                                                                       Mar. 2023.
+                                                                                  [24] H. Wu, Y. Shao, C. Bian, K. Mikolajczyk, and D. Gündüz, “Vision
+                              R EFERENCES                                              transformer for adaptive image transmission over MIMO channels,”
+                                                                                       in Proc. IEEE Int. Conf. Commun. (ICC), Rome, Italy, May 2023,
+ [1] X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,               pp. 3702–3707.
+     open issues, and future research directions,” IEEE Wireless Commun.,         [25] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding for
+     vol. 29, no. 1, pp. 210–219, Feb. 2022.                                           channel-adaptive digital semantic communications,” IEEE Trans. Cogn.
+ [2] K. Niu et al., “A paradigm shift toward semantic communications,” IEEE            Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.
+     Commun. Mag., vol. 60, no. 11, pp. 113–119, Nov. 2022.                       [26] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+ [3] G. Zhang, Q. Hu, Z. Qin, Y. Cai, and G. Yu, “A unified multi-task                 scheme for semantic communication systems,” IEEE Trans. Cogn.
+     semantic communication system with domain adaptation,” in Proc.                   Commun. Netw., vol. 10, no. 1, pp. 150–163, Feb. 2024.
+     IEEE Global Commun. Conf. (GLOBECOM), Rio de Janeiro, Brazil,                [27] J. Im, N. Kwon, T. Park, J. Woo, J. Lee, and Y. Kim, “Attention-aware
+     Dec. 2022, pp. 3971–3976.                                                         semantic communications for collaborative inference,” IEEE Internet
+ [4] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and              Things J., vol. 11, no. 22, pp. 37008–37020, Nov. 2024.
+     task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,          [28] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers
+     no. 1, pp. 5–41, Jan. 2023.                                                       for image recognition at scale,” in Proc. IEEE Int. Conf. Learn.
+ [5] C. Zhang, H. Zou, S. Lasaulce, W. Saad, M. Kountouris, and M. Bennis,             Represent. (ICLR), May 2021, pp. 1–21.
+     “Goal-oriented communications for the IoT and application to data            [29] Y. Liu et al., “Semantic importance-aware reordering-enhanced semantic
+     compression,” IEEE Internet Things Mag., vol. 5, no. 4, pp. 58–63,                communication system with OFDM transmission,” IEEE Internet Things
+     Dec. 2022.                                                                        J., vol. 12, no. 7, pp. 7938–7954, Apr. 2025.
+ [6] E. Erdemir, T.-Y. Tung, P. L. Dragotti, and D. Gündüz, “Generative joint     [30] B. Fox, Discrete Optimization via Marginal Analysis. Santa Monica,
+     source-channel coding for semantic image transmission,” IEEE J. Sel.              CA, USA: RAND Corp., 1966.
+     Areas Commun., vol. 41, no. 8, pp. 2645–2657, Aug. 2023.                     [31] F. Gao, T. Cui, and A. Nallanathan, “Optimal training design for channel
+ [7] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission                    estimation in decode-and-forward relay networks with individual and
+     with deep joint source-channel coding,” IEEE Trans. Wireless Commun.,             total power constraints,” IEEE Trans. Signal Process., vol. 56, no. 12,
+     vol. 20, no. 12, pp. 8081–8095, Dec. 2021.                                        pp. 5937–5949, Dec. 2008.
+ [8] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled            [32] A. Krizhevsky, “Learning multiple layers of features from tiny images,”
+     semantic communication systems,” IEEE Trans. Signal Process., vol. 69,            M.S. thesis, Dept. Comput. Sci., Univ. Toronto, Toronto, ON, Canada,
+     pp. 2663–2675, 2021.                                                              2009.
+ [9] L. Yan, Z. Qin, R. Zhang, Y. Li, and G. Y. Li, “Resource allocation for      [33] J. Cha, K. Lee, S. Park, and S. Chun, “Domain generalization by mutual-
+     text semantic communications,” IEEE Wireless Commun. Lett., vol. 11,              information regularization with pre-trained models,” in Proc. Eur. Conf.
+     no. 7, pp. 1394–1398, Jul. 2022.                                                  Comput. Vis. (ECCV), Oct. 2022, pp. 440–457.
+[10] Z. Weng and Z. Qin, “Semantic communication systems for speech               [34] R. Wang, T. S. Kim, J.-S. Kim, and H.-J. Lee, “Towards real-world
+     transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,                        multi-view object classification: Dataset, benchmark, and analysis,”
+     pp. 2434–2444, Aug. 2021.                                                         IEEE Trans. Circuits Syst. Video Technol., vol. 34, no. 7, pp. 5653–5664,
+[11] Q. Sun, C. Guo, Y. Yang, J. Chen, R. Tang, and C. Liu, “Deep joint                Jul. 2024.
+     source-channel coding for wireless image transmission with semantic          [35] T.-Y. Lin et al., “Microsoft coco: Common objects in context,” in
+     importance,” in Proc. IEEE Conf. Veh. Technol. (VTC-Fall), London,                Proc. Eur. Conf. Comput. Vis. (ECCV), Zurich, Switzerland, Sep. 2014,
+     U.K., Sep. 2022, pp. 1–7.                                                         pp. 740–755.
+[12] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural         [36] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Vision transformer-aided
+     joint source-channel coding,” in Proc. Int. Conf. Mach. Learn. (ICML),            importance-aware quantization for digital semantic communications,”
+     Long Beach, CA, USA, Jun. 2019, pp. 1182–1192.                                    in Proc. IEEE Int. Conf. Commun. (ICC), Montreal, QC, Canada,
+[13] L. Guo, W. Chen, Y. Sun, and B. Ai, “Digital-SC: Digital semantic                 Jun. 2025, pp. 1–6.
+     communication with adaptive network split and learned non-linear             [37] S. Son, J. Ryu, N. Lee, and J. Lee, “The role of masking for efficient
+     quantization,” IEEE Trans. Cogn. Commun. Netw., early access, Dec. 2,             supervised knowledge distillation of vision transformers,” in Proc. Eur.
+     2024, doi: 10.1109/TCCN.2024.3510586.                                             Conf. Comput. Vis. (ECCV), Milan, Italy, Nov. 2024, pp. 379–396.
+[14] L. Teng, W. An, C. Dong, and X. Xu, “sDMCM—Semantic digital                  [38] X. Ling, B. Wu, P.-H. Ho, F. Luo, and L. Pan, “Fast water-filling for
+     modulation constellation mapping scheme for semantic communication,”              agile power allocation in multi-channel wireless communications,” IEEE
+     IEEE Internet Things J., vol. 12, no. 12, pp. 20885–20901, Jun. 2025,             Commun. Lett., vol. 16, no. 8, pp. 1212–1215, Aug. 2012.
+     doi: 10.1109/JIOT.2025.3545667.                                              [39] A. Goldsmith, Wireless Communications. Cambridge, U.K.: Cambridge
+[15] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational         Univ. Press, 2005.
+     image compression with a scale hyperprior,” 2018, arXiv:1802.01436.          [40] W. T. V. William H. Press, S. A. Teukolsky, and B. P. Flannery,
+[16] J. Huang, K. Yuan, C. Huang, and K. Huang, “D2 -JSCC: Digital deep                Numerical Recipes in C. Cambridge, U.K.: Cambridge Univ. Press,
+     joint source-channel coding for semantic communications,” IEEE J. Sel.            1992.
+     Areas Commun., vol. 43, no. 4, pp. 1246–1261, Apr. 2025.                     [41] H. Touvron, M. Cord, M. Douze, F. Massa, A. Sablayrolles, and
+[17] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. S. Quek, “OFDM-based                    H. Jégou, “Training data-efficient image transformers & distillation
+     digital semantic communication with importance awareness,” IEEE                   through attention,” in Proc. Int. Conf. Mach. Learn. (ICML), Jul. 2021,
+     Trans. Commun., vol. 72, no. 10, pp. 6301–6315, Oct. 2024.                        pp. 10347–10357.
+[18] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+     communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+     Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+[19] Q. Li et al., “Reconfigurable intelligent surfaces relying on non-diagonal                            Joohyuk Park (Student Member, IEEE) received
+                                                                                                           the B.S. degree from the Department of Electrical
+     phase shift matrices,” IEEE Trans. Veh. Technol., vol. 71, no. 6,
+                                                                                                           Engineering, Pohang University of Science and
+     pp. 6367–6383, Jun. 2022.
+                                                                                                           Technology (POSTECH), Pohang, South Korea, in
+[20] Q. Li, M. El-Hajjar, I. Hemadeh, A. Shojaeifard, and L. Hanzo, “Low-
+                                                                                                           2023, where he is currently pursuing the Ph.D.
+     overhead channel estimation for RIS-aided multi-cell networks in the
+                                                                                                           degree.
+     presence of phase quantization errors,” IEEE Trans. Veh. Technol.,
+                                                                                                             His main research interests include the areas
+     vol. 73, no. 5, pp. 6626–6641, May 2024.
+                                                                                                           of semantic communication, machine learning, and
+[21] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+                                                                                                           wireless communications.
+     communications for VQA,” IEEE Wireless Commun. Lett., vol. 11, no. 3,
+     pp. 553–557, Mar. 2022.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+PARK et al.: VISION TRANSFORMER-BASED SEMANTIC COMMUNICATIONS                                                                                           35677
+
+
+
+                         Yongjeong Oh (Graduate Student Member, IEEE)                                     Yo-Seb Jeon (Member, IEEE) received the B.S.
+                         received the B.S. degree from the Department of                                  (Hons.) and Ph.D. degrees from the Department
+                         Electronics Engineering, Pusan National University,                              of Electrical Engineering, Pohang University of
+                         Busan, South Korea, in 2021, and the M.S. degree                                 Science and Technology (POSTECH), Pohang,
+                         from the Department of Electrical Engineering,                                   South Korea, in 2012 and 2016, respectively.
+                         Pohang University of Science and Technology                                        From September 2016 to August 2018, he was
+                         (POSTECH), Pohang, South Korea, in 2023, where                                   a Postdoctoral Research Associate with POSTECH.
+                         he is currently pursuing the Ph.D. degree.                                       From September 2018 to January 2020, he was a
+                            His main research interests include the areas                                 Postdoctoral Research Fellow with the Department
+                         of semantic communications, distributed AI, and                                  of Electrical Engineering, Princeton University,
+                         wireless communications.                                                         Princeton, NJ, USA. Since 2020, he has been a
+                                                                                 Faculty Member with POSTECH, where he is currently an Associate Professor
+                                                                                 with the Department of Electrical Engineering. His research interests include
+                                                                                 the areas of wireless communications, distributed AI, and AI/ML for wireless
+                                                                                 communications.
+                          Yongjune Kim (Member, IEEE) received the B.S.            Dr. Jeon has been an Associate Editor of IEEE W IRELESS
+                          (Hons.) and M.S. degrees in electrical and computer    C OMMUNICATIONS L ETTERS and an Editor of Journal of Communications
+                          engineering from Seoul National University, Seoul,     and Networks since 2024. He was recognized as an Exemplary Reviewer for
+                          South Korea, in 2002 and 2004, respectively, and the   IEEE T RANSACTIONS O N C OMMUNICATIONS in 2021 and 2022, and for
+                          Ph.D. degree in electrical and computer engineering    IEEE W IRELESS C OMMUNICATIONS L ETTERS in 2024.
+                          from Carnegie Mellon University, Pittsburgh, PA,
+                          USA, in 2016.
+                             From 2016 to 2018, he was a Postdoctoral
+                          Research Associate with the Coordinated Science
+                          Laboratory, University of Illinois at Urbana-
+                          Champaign, Urbana, IL, USA. From 2018 to 2020,
+he was with Western Digital Research, Milpitas, CA, USA. From 2020
+to 2022, he was an Assistant Professor with the Department of Electrical
+Engineering and Computer Science, Daegu Gyeongbuk Institute of Science
+and Technology, Daegu, South Korea. Since 2022, he has been with the
+Department of Electrical and Engineering, Pohang University of Science and
+Technology (POSTECH), Pohang, South Korea, where he is currently an
+Associate Professor. His research interests include semantic communications,
+information theory, and machine learning.
+   Dr. Kim received the IEEE Data Storage Best Student Paper Award, the Best
+Paper Award of the 2016 IEEE International Conference on Communications,
+the Best Paper Award (Honorable Mention) of the 2018 IEEE International
+Symposium on Circuits and Systems, and the Best Paper Award of the 31st
+Samsung Semiconductor Technology Symposium. He is an Editor of IEEE
+T RANSACTIONS ON C OMMUNICATIONS.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:52:10 UTC from IEEE Xplore. Restrictions apply.
+

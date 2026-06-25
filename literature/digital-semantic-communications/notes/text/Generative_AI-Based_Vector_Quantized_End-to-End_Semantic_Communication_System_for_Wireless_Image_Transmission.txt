@@ -1,0 +1,1469 @@
+                                    Received 10 February 2025; revised 24 July 2025; accepted 31 August 2025.
+                                  Date of publication 9 September 2025; date of current version 17 September 2025.
+                        The associate editor coordinating the review of this article and approving it for publication was Y. Deng.
+                                                      Digital Object Identifier 10.1109/TMLCN.2025.3607891
+
+
+
+
+               Generative AI-Based Vector Quantized
+               End-to-End Semantic Communication
+              System for Wireless Image Transmission
+                        MAHESHI LOKUMARAMBAGE 1 (Graduate Student Member, IEEE),
+                          THUSHAN SIVALINGAM 2 (Graduate Student Member, IEEE),
+                        FENG DONG 1 , NANDANA RAJATHEVA 2 (Senior Member, IEEE),
+                               AND ANIL FERNANDO 1 (Senior Member, IEEE)
+                        1 Department of Computer and Information Sciences, University of Strathclyde, G1 1XQ Glasgow, U.K.
+                                2 Centre for Wireless Communications (CWC), University of Oulu, 90570 Oulu, Finland
+
+                                    CORRESPONDING AUTHOR: T. SIVALINGAM (thushan.sivalingam@oulu.fi)
+                This work was supported in part by the Business Finland via the 6GBridge–Local 6G Project under Grant 8002/31/2022,
+                            and in part by the Research Council of Finland through the 6G Flagship under Grant 369116.
+
+
+
+
+         ABSTRACT       Semantic communication (SemCom) systems enhance transmission efficiency by conveying
+         semantic information in lieu of raw data. However, challenges arise when designing these systems due to
+         the need for robust semantic source coding for information representation extending beyond the training
+         dataset, maintaining channel-agnostic performance, and ensuring robustness to channel and semantic noise.
+         We propose a novel generative artificial intelligence (AI) based SemCom architecture conditioned on
+         quantized latent. The system reduces the communication overhead of the wireless channel by transmitting
+         the index of the quantized latent over the communication channel by mapping the quantized vector to the
+         learned codebook vectors. The learned codebook is the shared knowledge base. The encoder is designed with
+         a novel spatial attention mechanism based on image energy, focusing on object edges. The critic assesses
+         the realism of generated data relative to the original distribution, with the Wasserstein distance. The model
+         introduces novel contrastive objectives at multiple levels, including pixel, latent, perceptual, and task output,
+         tailored for noisy wireless semantic communication. We validated the proposed model for transmission
+         quality and robustness with low-density parity-check (LDPC), which outperforms the baselines of better
+         portable graphics (BPG), specifically at low signal-to-noise ratio (SNR) levels (<5 dB). Additionally, it shows
+         comparable results with joint source-channel coding (JSCC) with lower complexity and latency. The model is
+         validated for human perception and machine perception-oriented task utility. The model effectively transmits
+         high-resolution images without requiring additional error correction at the receiver. We propose a novel
+         semantic-based matrix to evaluate the robustness to noise and task-specific semantic distortion.
+
+         INDEX TERMS Generative adversarial network (GAN), generative artificial intelligence (GenAI), knowl-
+         edge representation, LDPC code, semantic communication, semantic encoding, vector quantization.
+
+
+I. INTRODUCTION                                                                     transmission, which is concerned with pixel accuracy, was
+
+T     HE rapid growth of wireless content has been driven by
+      the emergence of modern multimedia applications such
+as augmented reality (AR), virtual reality (VR), autonomous
+                                                                                    governed by the classic information theory introduced by
+                                                                                    Shannon [1]. This theory has achieved great heights in infor-
+                                                                                    mation communication and introduced the basic concepts of
+vehicles, and intelligent healthcare. These applications are                        channel capacity, entropy, lossless and lossy compression of
+more concerned with the fidelity of the transmitted con-                            source and channel coding. The fundamental limitations of
+tent, particularly when interpreting high-level content such                        data compression and transmission are originally based on the
+as object identity/location, and spatial relationships, rather                      concept that the semantics of the information are unimportant
+than pixel-level details. In contrast, traditional content                          to the communication aspects, which is the technical problem
+                                     2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+                                             For more information, see https://creativecommons.org/licenses/by/4.0/
+1050                                                                                                                                  VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+
+FIGURE 1. Semantics of a range of example applications such as
+classification, object detection for autonomous driving, and                FIGURE 2. Traditional communication system.
+high perpetual quality for multimedia applications.
+
+                                                                            challenging and involves minimizing semantic noise, which
+of communication. It has reached its theoretical limits due to              remains largely unexplored.
+the fast growth of modern multimedia-related applications.                     When it comes to defining a language, it involves repre-
+It has necessitated a paradigm shift in the design of com-                  senting the image or video frame with standardized symbols
+munication systems to cater to the increasing demand for                    agreeable to the transmitter and receiver. Semantic coding
+multimedia content.                                                         establishes a set of symbols to represent key features that
+                                                                            define an image. We can measure the amount of semantic
+A. THEORETICAL FOUNDATIONS                                                  information by calculating the probability of a message being
+Semantic communication (SemCom) considers level 2 of                        logically valid. In practical terms, this could be determined by
+Shannon’s information theory, which addresses the semantic                  the probability concerning the intended task (reconstruction,
+problem. It revolutionizes data transmission by emphasizing                 object identification, classification, etc.) of the receiver and
+the meaning and intent behind the information, rather than                  provide a quantitative measurement to assess the ‘‘effective-
+its bit-level representation. As shown in Fig. 1, different                 ness problem’’.
+multimedia applications define semantics differently. Rather,                  According to the semantic information    P theory, semantic
+developing a SemCom system that can effectively represent                   entropy [2] Hsem (s) is defined as − log2 w|Hs p(w), where w
+the underlying information is beneficial for further advances.                                                P |H denotes the proposi-
+                                                                            denotes a world model [4], [5], where
+Fig. 2 shows the classical communication system, which                      tional satisfaction relation, and w|Hs p(w) is the probability
+encodes and decodes the information at the bit level. Opposed               of all world models in which s is true. In a probabilistic
+to this, a SemCom system identifies the semantics of the                    framework, world models represent a system’s possible states
+underlying message depending on the context and down-                       or interpretations. Similarly, each discrete code in a codebook
+stream task of the application, as shown in Fig. 3. The ‘‘Goal’’            represents a distinct feature or pattern that can be identified in
+is the intended task of the receiver related to the ‘‘Level C: the          the data. Thus, different codes can represent different aspects
+effectiveness problem’’ of Shannon’s communication theory.                  of the image. The reconstruction of an image can be thought
+Extraction of the meaning from the source and semantic                      of as finding the ‘‘world model’’ that best represents the high
+coding is associated with ‘‘Level B: the semantic problem’’.                level features of the image. The semantic rate distortion can
+Semantic coding is mapping the extracted meaning of the                     be defined as follows:
+intended message into semantic symbols [2]. Channel coding,                                                         
+                                                                                        Rsem (D) = min Hsem (s|ŝ)
+often called ‘‘Level A: the technical problem,’’ is taken as                                          p(ŝ|s)
+mapping semantic symbols to channel symbols. Throughout                                               subject to E[Dsem (s, ŝ)] ≤ D      (1)
+this process, various types of noise are introduced. Noise
+introduced at level B can be considered semantic noise, while               where s is the original message, ŝ is the reconstructed mes-
+noise at level A is referred to as channel or technical noise.              sage after encoding and decoding, p(ŝ|s) is the conditional
+To address the language problem that the transmitter and                    probability distribution of the reconstructed message given
+receiver understand, both parties should agree on a semantic                the original message, Hsem (s|ŝ) is the conditional seman-
+and technical language that could translate the symbols effec-              tic entropy, representing the remaining uncertainty about s
+tively. Developing semantic language with semantic symbols                  given ŝ, Dsem (s, ŝ) is a semantic distortion measure, quan-
+for text-based SemCom can be augmented with methods                         tifying the difference in meaning between s and ŝ such as
+such as structural semantic interconnections (SSI) to enhance               bilingual evaluation understudy (BLEU) [6] score or percep-
+the precision of symbol interpretation for accurate seman-                  tual losses in images. Thus, the SemCom system involves
+tic understanding [3]. Developing a common language with                    encoding images into symbolic representations and decoding
+semantic symbols for multimedia-based SemCom systems is                     or generating them back into a visual format so that the
+
+VOLUME 3, 2025                                                                                                                           1051
+                                                                   • We formulate a theoretical SemCom model aligned
+                                                                     with the semantic information theory and develop
+                                                                     a novel generative artificial intelligence (AI)-based
+                                                                     practical SemCom system called semantic vector
+                                                                     quantized Wasserstein generative adversarial network
+                                                                     (SVQ-WGAN) based on the developed theoretical
+                                                                     model. Consequently, we propose semantic coding to
+                                                                     achieve higher semantic compression and to repre-
+                                                                     sent image semantics (semantic language/ symbols).
+                                                                     The transmitter and the receiver agree upon a learned
+                                                                     codebook to represent image semantics to minimize
+                                                                     the semantic noise.The transmitter conveys the relevant
+                                                                     codebook indices of quantized latent over the communi-
+                                                                     cation channel.
+FIGURE 3. Theoretical SemCom system: semantic noise is
+                                                                   • A Wasserstein distance [11] based discriminator
+introduced at the semantic extraction and coding phases.
+Channel noise is introduced at transmission through a physical       enhances the language grammar for better reconstruc-
+channel.                                                             tion quality and semantic fidelity. Compared to tra-
+                                                                     ditional discriminators used in generative adversarial
+                                                                     network (GAN)s, the Wasserstein distance quantifies the
+semantic rate distortion does not affect the intended objective.     lowest cost required to convert real data distribution to
+This approach is crucial for computer vision, image search,          the generated data distribution. This approach provides
+automated captioning, and content-based retrieval applica-           a more meaningful quantitative measure of the differ-
+tions. Addressing semantic rate distortion presents several          ence between the generated image and the real image,
+challenges in practical settings.                                    resulting in a more stable training process compared to
+                                                                     traditional GANs.
+B. CHALLENGES                                                      • Using the Sobel operator, we further enhance our model
+This research addresses five key challenges in designing             with a novel spatial attention mechanism at the encoder
+practical SemCom systems as follows:                                 to emphasize the low-level object edge details. The pro-
+  • Semantic feature extraction: Extracting representa-              posed architecture demonstrates generalization across
+     tions that carry meaningful, high-level semantics and           diverse data distributions as measured by Fréchet incep-
+     generalize beyond the training set dataset [7], [8].            tion distance (FID) value of 5.496. We evaluate the
+  • Semantic compression: Efficiently compressing seman-             system’s transmission quality for the Kodak dataset with
+     tic features while retaining semantic meaning, i.e., incur-     peak signal-to-noise ratio (PSNR), multi-scale structural
+     ring low semantic noise, remains a core issue [9].              similarity index (MS-SSIM)) and perpetual quality with
+  • Noise robustness: Developing channel-agnostic Sem-               learned perceptual image patch similarity (LPIPS). The
+     Com systems that remain robust under diverse noise              model is trained on a combined dataset comprising
+     profiles and integrate seamlessly with existing channel         DIV2K, CelebA-HQ, and Flickr15k, with augmentation
+     coding methods remains an open and critical challenge           to represent diverse data distributions. The experimen-
+     in contrast to joint source-channel coding (JSCC), which        tal results show that the proposed system outperforms
+     depends heavily on training conditions such as signal-to-       traditional better portable graphics (BPG) encoding in
+     noise ratio (SNR) [10].                                         additive white Gaussian noise (AWGN) and fading
+  • Dataset limitations: Existing datasets often target              channels and deep learning based JSCC in AWGN
+     object detection or classification [7], making it difficult     channel without any additional semantics based error
+     to train SemCom models on diverse, generalizable visual         correction/de-noising method at the receiver. The pro-
+     semantics.                                                      posed system utilizes low-density parity-check (LDPC)
+  • Evaluation metrics: Traditional metrics fail to evaluate         coding implemented via the NVIDIA Sionna simula-
+     the semantic fidelity of transmitted images for perceived       tor [12] to ensure alignment with a channel-agnostic
+     semantic fidelity in conjunction with the communica-            design.
+     tion channel distortions. SemCom systems require novel        • The SVQ-WGAN introduces a novel application of con-
+     evaluation metrics that assess semantic preservation,           trastive learning strategy tailored for semantic commu-
+     noise robustness, human perception, and task-specific           nication with multi-level contrast mechanisms across
+     performance to provide meaningful insights into each            the pixel level, latent space, perceptual features, and
+     level of communication task.                                    semantic task outputs. This is achieved through spatial
+                                                                     augmentation of training data, injecting noise into the
+C. CONTRIBUTIONS                                                     quantized latent vector, index masking, and Wasserstein
+The main contributions of this paper are as follows:                 distance-based discrimination. Compared to traditional
+
+1052                                                                                                              VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+    contrastive models SimCLR [13] and MoCo v3 [14]                         has been influential in developing practical SemCom systems
+    used in computer vision, which operate in clean, noise-                 in text [27], speech [28], image [29] and video [30].
+    free environments, the proposed model is optimized                         Introducing deep learning-based techniques has revolu-
+    for noisy wireless communication environments. This                     tionized this field [31]. Autoencoders [32], [33] have been
+    enables robust generalization to noisy channels without                 widely used for compressing data into latent spaces. Masci
+    requiring explicit error correction at the receiver, thereby            et al. [34] extended autoencoders to convolutional neural
+    avoiding added complexity and latency that would hin-                   networks, making them suitable for image data and hierar-
+    der low-latency applications.                                           chical feature extraction, and Makhzani et al. [35] introduced
+  • To measure the robustness quantitatively and illus-                     adversarial autoencoders (AAEs), which combine autoen-
+    trate the proposed system’s semantic and channel noise                  coders with adversarial training to learn more structured
+    robustness, we propose a novel metric called robustness                 latent representations. Variational auto encoder (VAE)s pro-
+    index (RI) quantifying the human perceived fidelity                     vide a framework for probabilistic modeling with continuous
+    and the channel noise characteristics, better suited to                 latent variables [36]. Further, vector quantized variational
+    SemCom systems, which validates the ‘‘Level B’’ of the                  auto encoder (VQ-VAE), [37], extends this concept by incor-
+    SemCom process with the proposed theoretical frame-                     porating discrete latent spaces more suitable for specific data
+    work introduced in I-A.                                                 types, such as images.
+  • SVQ-WGAN supports both machine-centric and                                 Several recent works have explored vector-quantized
+    human-centric task performance. It achieves high classi-                semantic communication. Authors of [38] apply VQ-VAE
+    fication accuracy compared to baselines BPG and JSCC                    in a noisy channel setting with limited reconstruction tasks
+    for the CIFAR-10 dataset and strong captioning quality                  using the MINIST dataset with limited domain-level gener-
+    against BPG with COCO dataset, while maintaining per-                   alization and modeled using a theoretical discrete memory-
+    ceptually coherent reconstructions that preserve seman-                 less channel (DMC) channel. VQ-DeepSC [22] employs a
+    tic intent from a human perspective.                                    PatchGAN discriminator to focus on local texture realism,
+  • We validate our model using a novel task-oriented                       such that patch-level training lacks global semantic aware-
+    semantic distortion measurement to provide a meaning-                   ness and may lead to unstable training or poor generaliza-
+    ful evaluation for the aforementioned ‘‘Level C’’ of the                tion. A transformer-based model is used in [39], which is
+    communication task in I-A and empirically prove that                    comparatively highly complex. The pixel-level and semantic-
+    the proposed outperforms the BPG in an experimental                     level results are comparatively low compared to the much
+    setting. This matrix quantifies the object identification               less complex dataset FFHQ, where generalization across
+    and semantic placement of objects within the scene.                     domains is not considered. The work in [40] quantifies the
+                                                                            semantic importance of messages using pre-trained large
+   The structure of our paper is as follows. Section II
+                                                                            language models (LLMs) and introduces a semantic error
+assesses the evolution of deep learning-based SemCom sys-
+                                                                            correction mechanism based on BERT, which effectively mit-
+tems towards generative modeling and a critical evaluation
+                                                                            igates semantic loss by reconstructing missing or corrupted
+of state-of-the-art generative AI-based SemCom systems.
+Section III presents the mathematical modeling of the main                  content. A privacy-preserving framework is introduced [41]
+system components, training algorithm, and the design of the                for task-oriented semantic communication (ToSC) in 6G,
+novel matrices. Section IV provides a theoretical analysis                  leveraging DeepJSCC, comparing four privacy strategies:
+for the design choices. Section V presents the experimental                 differential privacy, encryption, adversarial learning, and
+setup, hyperparameter selection, and numerical and visual                   learning-based vector quantization (LBVQ). The DT-JSCC
+results. We identify potential limitations of the work in VI.               framework [42], employed in LBVQ, introduces a discrete
+Finally, Section VII concludes the study with a discussion of               task-oriented communication scheme based on the Robust
+future directions in section VIII. Proofs for the prepositions              Information Bottleneck (RIB) principle, which balances task
+in section IV and additional simulation results are in the                  informativeness and transmission robustness by encoding
+appendix A and appendix B, respectively.                                    redundancy into discrete representations. This design enables
+                                                                            compatibility with digital modulation and improves resilience
+                                                                            to channel variations.
+II. RELATED WORK                                                               Generative AI techniques, particularly those based on deep
+A strong theoretical framework is necessary to develop effec-               neural networks and GANs [43], have significantly advanced
+tive SemCom systems. Carnap and Bar-Hillel [24] developed                   the field of SemCom. Integrating generative models, such as
+a formal framework for semantic information theory [25],                    GANs, into SemCom frameworks has improved data quality
+[26], introducing the concept of semantic entropy as a mea-                 by preserving high-level semantic features, even under low
+sure of the uncertainty in a message’s meaning. Recent stud-                SNR conditions. These models can synthesize or recover
+ies explored this about semantic rate-distortion theory, which              missing or distorted parts of transmitted signals, enhancing
+seeks to quantify the trade-off between semantic fidelity and               the perceptual quality and semantic integrity. Table 1 reviews
+compression and proposes a theory [2] for SemCom, which                     the latest advancements in generative AI-based SemCom
+
+
+VOLUME 3, 2025                                                                                                                         1053
+frameworks, highlighting their methodologies, strengths, and      representation ze (xi ) ∈ RF as
+challenges.
+                                                                                            ze (xi ) = E(xi ; θE ),                    (2)
+III. SYSTEM MODEL                                                 where F is the number of features. The encoder consists of
+This section describes the proposed SemCom system.                convolution and residual blocks, as illustrated in Fig. 4.
+Following the theoretical framework described in I-A, the
+architecture defines a common shared semantic symbol lan-         C. SPACIAL ATTENTION BASED RESIDUAL BLOCKS
+guage as a discrete codebook. Each codebook entry corre-          The image energy En(x, y) is defined as the magnitude of the
+sponds to a specific pattern or feature the model has learned     image gradient |∇I (x, y)|, which highlights areas with rapid
+to recognize. The model incorporates a discriminator to guide     intensity changes, such as edges [44]. A spatial energy-based
+the reconstruction process with the relevant codebook entries.    attention mechanism emphasizing object edges for improved
+The proposal suggests merging semantically equivalent fea-        fidelity is introduced using this concept. The Sobel operator
+tures of an image into a single codebook, similar to how          enhances object edge information by computing gradient
+similar contexts in language can be mapped into a single mes-     magnitudes in the x and y directions using Sobel kernels
+sage. This method creates a reduced subset of the messages,
+ensuring minimal loss of meaning. The resulting reduced           qx and Py . The gradient magnitude S is then given by S =
+                                                                  P
+subset achieves the lowest entropy and the shortest expected         Sx2 + Sy2 , where Sx = x ∗ Px and Sy = x ∗ Py . The attention
+coding length.                                                    weights A = σ (S), derived using a sigmoid normalization
+   In practical terms, a discriminator helps refine these         function, are applied to the input features, F ′ = A ⊙ F,
+symbols, ensuring they are more expressive and represent          with ⊙ denoting element-wise multiplication. This attention
+the knowledge within the defined language model. The dis-         map is multiplied by the original feature map. If the input
+criminator ensures the symbols are combined semantically,         and output feature maps differ in dimensions, a convolution
+consistently, and meaningfully to enhance their ‘‘Grammar’’       is applied to match them. The residual is the addition of
+when training. The discriminator helps reduce semantic noise      this output and the skip connection. This helps to enhance
+by making symbol combinations resemble features more              attention to the object edges, essentially the high-frequency
+accurately, thereby fulfilling the goal of defining accurate      areas, thereby preserving the object boundaries under high
+semantic language or symbols for images.                          levels of compression.
+                                                                     The proposed mechanism primarily captures low-level
+                                                                  features, such as edges and gradients, while integrating
+A. SYSTEM ARCHITECTURE
+                                                                  them into higher-level representations through attention-
+The system architecture of the proposed model consists of         modulated residual connections. Each residual block com-
+five primary components: encoder, quantizer, noisy commu-         prises three convolutional layers: the first applies a convolu-
+nication channel, critic, and generator. The shared knowledge     tion with ReLU activation and the same padding to maintain
+base is the learned codebook. The structured and informative      spatial dimensions, followed by batch normalization for sta-
+input provided by the quantized vectors, coupled with the         bilized and accelerated training as shown in Fig. 6.
+stable training process of Wasserstein generative adversarial
+network (WGAN)s, leads to more stable training, improved
+                                                                  D. DISCRETE CODEBOOK AND QUANTIZATION
+control and interoperability of the generated images, and effi-
+                                                                  The embedding vector space (codebook) C ∈ RK ×L contains
+cient representation of information. The use of the quantized
+                                                                  K discrete code vectors (embeddings), each of dimension
+vectors as conditioned inputs allows more control over the
+                                                                  L. The embeddings are trainable and are updated during
+generated output than the random noise used in traditional
+                                                                  the training process.The continuous latent vector ze (xi ) is
+GANs. Each vector can correspond to specific attributes or
+                                                                  compared to each code vector in C. The quantization process
+high-level features in the generated images, enabling a pre-
+                                                                  selects the code vector ck that is closest to ze (xi ) in terms of
+cise generative process. This efficient representation of the
+                                                                  Euclidean distance. This selected vector ck is then used as the
+underlying data can help the generator network to produce
+                                                                  quantized representation as
+higher-quality images with reduced semantic noise. It is ben-
+eficial in applications where specific characteristics of the                            zq (xi ) = VQ(ze (xi ); θVQ ).                (3)
+output need to be controlled or analyzed. The training phase
+of the proposed architecture is depicted in Fig. 4 and the        The quantization process selects the closest codebook vector
+inference phase in 5.                                             ck by minimizing the Euclidean distance:
+
+                                                                    zq (xi ) = arg min ∥ze (xi ) − cj ∥22     for j ∈ {1, 2, . . . , K },
+B. SEMANTIC ENCODER                                                                  j
+Given an ith input image xi ∈ Rh×w×c , where h, w, and c rep-                                                                          (4)
+resent the height, width, and number of channels respectively,
+the encoder E parameterized by θE captures the semantic           where ∥ · ∥2 denotes the Euclidean distance. The index
+features of the input and maps it to a continuous latent          sequence j can be considered a compressed form of the ze (xi )
+
+1054                                                                                                                         VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+TABLE 1. Summary of recent advancements in generative AI-based SemCom systems.
+
+
+
+
+                  FIGURE 4. Training phase of SVQ-WGAN: Continuous feature representations are quantized using the
+                  learned codebook, noise is added to the quantized latent, and randomly drops elements from the
+                  quantized latent vector at the masking stage. The complete training process is defined in Algorithm 1.
+
+
+
+and is transferred via the transmission channel in the pro-                 close to their corresponding codebook vectors:
+posed SemCom system. To train the codebook, a vector quan-
+                                                                                          Lcommit = α · ∥ze (xi ) − sg[zq (xi ])∥22 ,   (6)
+tization loss is introduced LVQ , which comprises two compo-
+nents. A codebook loss that encourages the codebook vectors                 where α is a hyperparameter that controls the weight of the
+ck to be aligned more closely with the encoder outputs:                     commitment loss. The total vector quantization loss is then:
+                 Lcodebook = ∥zq (xi ) − sg[ze (xi )]∥22 ,         (5)                          Lvq = Lcodebook + Lcommit .             (7)
+where sg(·) denotes the stop-gradient operation. The commit-                This loss is added to the overall loss function during train-
+ment loss function encourages the encoder outputs to remain                 ing, ensuring that both the codebook and the encoder are
+
+VOLUME 3, 2025                                                                                                                          1055
+       FIGURE 5. Image transmission under noisy channel. The indices of the relevant codebook vectors are converted into a
+       bit stream and transmitted over an AWGN and fading channels with LDPC.
+
+
+
+
+                                                                    original input dimensions. The lightweight generator effec-
+                                                                    tively generates high-quality images conditioned on discrete
+                                                                    latent vectors by upsampling and refining the latent fea-
+                                                                    tures, aligning well with practical SemCom architectures for
+                                                                    resource optimization.
+
+                                                                    F. CRITIC
+                                                                    The discriminator ensures the generated images are indistin-
+                                                                    guishable from real images. It provides a smooth gradient
+FIGURE 6. Residual block.                                           that facilitates stable model training. The critic leverages the
+                                                                    benefits of Wasserstein distance over Kullback–Leibler diver-
+                                                                    gence, allowing for greater control over the generated out-
+optimized to produce effective and robust discrete rep-             puts [45]. The discrete latent vectors offer a compressed and
+resentations in the latent space. In backpropagation, the           efficient representation of the input data, while the WGAN
+non-differentiable quantization process prevents direct gradi-      critic enforces perpetuity, resulting in high-quality images.
+ent flow. During training, a straight-through estimator (STE)       When evaluated by the WGAN discriminator, these represen-
+bypasses this by allowing gradients from reconstruction loss        tations ensure high-fidelity reconstruction. Further, Wasser-
+to pass through zq (xi ) as if through ze (xi ), enabling updates   stein distance helps mitigate mode collapse [46], where the
+to both the encoder and codebook. Embeddings, treated as            WGAN critic ensures that the generated distribution closely
+learnable parameters, adapt based on VQ loss to better repre-       approximates the real data distribution, minimizing the risk
+sent latent space.                                                  of the generator collapsing to a limited number of modes.
+
+E. GENERATOR                                                        1) WASSERSTEIN DISTANCE
+The generator reconstructs the data from zq (xi ). A Wasser-        The Wasserstein distance [47] quantifies the lowest cost
+stein distance-based critic (D) distinguishes between real and      required to convert one probability distribution into another.
+reconstructed data, thereby guiding the decoder to improve          The proposed model provides a robust way to compare the
+the quality of its reconstructions. The reconstructed data x̂ is    generated data distribution Pgen with the training or the real
+given by:                                                           data distribution Pdata with Wasserstein distance as:
+
+                      x̂ = G(zq (xi ); θG ),                 (8)       W (Pdata , Pgen ) =          inf           E(x,x̂)∼γ [∥x − x̂∥],    (9)
+                                                                                             γ ∈5(Pdata ,Pgen )
+
+where G is the generator, and it employs a Conv2DTranspose          where 5(Pdata , Pgen ) denotes the set of all joint distribu-
+layer with 64 filters, a kernel size of 3, ReLU activation,         tions, γ (x, x̂) that have Pdata and Pgen as their marginals.
+and a stride of 2 for initial upsampling. A residual block          Regarding model energy, the Wasserstein distance can be
+follows this to refine features. A second Conv2DTranspose           viewed as a measure of the energy required to transform
+layer with 32 filters and similar parameters performs further       the generated data distribution into the real data distribution.
+upsampling, which is again refined by another residual block.       The expectation E(x,x̂)∼γ [∥x − x̂∥] is the average distance
+The final Conv2DTranspose layer with three filters and a            between the pairs (x, x̂) under the optimal transport plan γ ,
+kernel size of 3 produces the output image, matching the            which represents the most efficient way to redistribute the
+
+
+1056                                                                                                                             VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+probability mass of real and generated data distributions. The              (Pmask ) and the quantized latent as,
+training objective is to minimize the energy (cost) required to
+                                                                                                   zq,d (xi ) = mi ⊙ zq (xi ).
+transform the Pgen into Pdata . The discriminator comprises
+a critic network that scores the realism of the generated                   The generated image is given by
+image compared to the original image. The discriminator
+output is the Wasserstein distance, which is a scalar value                                           x̂i = G(zq,d (xi ); θG ).
+defining quantitatively the magnitude of the difference of                  The reconstruction loss is an expectation over possible masks:
+Pgen and Pdata compared to True(1) and False(0) in tradi-                                                                    X N
+tional discriminators. The adversarial loss, Ladv [48] is a                                                                  1
+                                                                             Lrec (θE , θG , θVQ ) = Emi ∼Bernoulli(Pmask )        ∥xi − G(mi
+key component in training GAN. This loss function mea-                                                                       N
+                                                                                                                               i=1
+sures how the real and generated data distributions differ,                                                                          
+guiding the generator and discriminator to improve their                                             ⊙ VQ(E(xi ; θE ); θVQ ); θG )∥2 .    (12)
+performance as
+                                                                           Perceptual loss improves the visual fidelity of reconstructed
+          Ladv = min max Ex∼Pdata [D(x)]                                    images, which are more aligned with human visual percep-
+                    G    D
+                                                                           tion. Perceptual loss is calculated using the RESNET50 [50]
+                  − Ezq (x)∼Pzq (x) [D(G(zq (x)))                           network, comparing the feature maps of the true and predicted
+                    + λEx̂∼Pinterp [(∥∇x̂ D(x̂)∥2 − 1)2 ].        (10)      images as
+                                                                                                                N
+                                                                                                             1 X                   2
+   The first expectation Ex∼Pdata [D(x)] represents the aver-                    Lperceptual (x1 , x̂i ) =       8(xi )u − 8(x̂i )u ,        (13)
+age output of the discriminator when fed real data samples                                                   N
+                                                                                                               u=1
+x drawn from Pdata . The second expectation Ezq (x)∼Pzq (x)
+                                                                            where xi and x̂i are the ground truth and generated images,
+[D(G(zq (x)))] represents the average discriminator output
+                                                                            respectively, 8(·) represents the feature extraction function
+when we fed generated samples produced by the genera-
+                                                                            using a specific layer of the RESNET50 network, and N is the
+tor G, which takes as input quantized latent vectors zq (x)
+                                                                            number of elements in the feature maps. Algorithm 1 shows
+derived from the distribution Pzq (x) . The generator creates
+                                                                            the training procedure for the model using these loss terms.
+realistic data samples that can deceive the discriminator.
+Lipschitz constraint [49] is enforced to ensure the critic
+                                                                             H. COMMUNICATION ARCHITECTURE
+function does not grow too quickly. This helps stabilize
+the training process and ensures that the Wasserstein dis-                  In this study, we implemented the communication pipeline
+tance remains a valid and meaningful objective function.                    using Sionna to evaluate the performance of the proposed
+The gradient penalty term λEx̂∼Pinterp [(∥∇x̂ D(x̂)∥2 − 1)2 ]               system under varying coding rates and different SNR val-
+where, Pinterp represents the distribution of points interpo-               ues.We leverage the NVIDIA Sionna simulator to model 5G-
+lated between real and generated samples, and λ is the gra-                 compliant LDPC and physical-layer effects, offering a more
+dient penalty coefficient. This term discourages deviations                 realistic and rigorous transmission simulation than simple
+from the unit gradient norm, which helps stabilize the training             channel models used in prior works.The encoder transforms
+process and ensures the Wasserstein distance is accurately                  the input information bits (k) into a codeword (n), while
+minimized.                                                                  decoding is performed using a belief-propagation-based iter-
+                                                                            ative algorithm with a fixed number of iterations (20). The
+                                                                            channel is modeled for both AWGN and Rayleigh flat fading
+G. MODEL LOSS FUNCTION
+                                                                            scenarios with AWGN. The system configuration includes a
+The total loss function for the model is expressed as a combi-
+                                                                            single transmitter antenna (rtx ) and a single receiver antenna
+nation of several loss terms: the reconstruction loss Lrec , the
+                                                                            (rrx ).
+vector quantization loss Lvq , the adversarial loss Ladv , and
+                                                                               A set of indices {j1 , j2 , . . . , jK }, each of the indices rep-
+the perceptual loss Lperceptual as
+                                                                            resenting the closest codebook vectors {cj1 , cj2 , . . . , cjK } rel-
+   Ltotal = Lrec + LVQ + λadv Ladv + λperceptual Lperceptual .              evant to the image, is encoded using LDPC codes as a bit
+                                                       (11)                 stream as illustrated in Fig. 5. Each index jk (where k =
+                                                                            1, . . . , K ) is encoded as uck = C(jk ), with LDPC cod-
+Randomness is introduced to the model at the training phase,                ing [51], where C(·) denotes the channel coding function.
+which randomly drops elements from the quantized latent                     The encoded indices {uc1 , uc2 , . . . , zcK } are then modulated
+vector zq (xi ). It prevents the model from becoming dependent              using quadrature amplitude modulation (QAM), described as
+on specific dimensions of the latent representation and learn-              umk = M (uck ) for each k, where M (·) is the modulation
+ing more robust and general features, making it less sensitive              function. The set of modulated signals {um1 , um2 , . . . , umK }
+to noise in the input data. The binary mask applied during                  is then transmitted over the communication channel, where it
+index dropping mi , where mi ∼ Bernoulli(Pmask ) repre-                     is subjected to channel noise and other impairments. At the
+sents the randomness of dropping elements with probability                  receiver, the signal is demodulated and decoded to receive the
+
+VOLUME 3, 2025                                                                                                                               1057
+corresponding indices {ĵ1 , ĵ2 , . . . , ĵK }. In the AWGN part of   continuous with constant LG , and let the semantic distortion
+the channel, the received signal yAWGN = zm + nAWGN is                  Dsem (x, x̂) be upper-bounded by pixel and perceptual recon-
+influenced by noise nAWGN , where each element is an inde-              struction terms:
+pendent and identically distributed Gaussian random variable
+with zero mean and variance σ 2 , denoted as nAWGN ∼                            Dsem (x, x̂) ≤ ∥x − x̂∥22 + α · ∥φ(x) − φ(x̂)∥22 .
+N (0, σ 2 ).                                                            Further, the entropy of the quantized latent sequence satisfies:
+   The Rayleigh fading channel models the effects of multi-
+path propagation, which is common in urban environments.                                    H (zq ) ≤ R = N log2 K .
+Here, the received signal is given by yRayleigh = hzm +
+                                                                        Then, the expected semantic distortion is upper-bounded as:
+nRayleigh , where h is the channel fading coefficient modeled                                            
+as a complex Gaussian random variable with zero mean                                Ex Dsem (x, G(zq (x))) ≤ F(R, LG ),
+and unit variance (h ∼ CN (0, 1)), and nRayleigh is a noise
+vector denoted as nRayleigh ∼ N (0, σ 2 ). The Rayleigh fad-            where F is a monotonic function increasing with rate R and
+ing channel affects the amplitude of the transmitted signal,            decoder sensitivity LG .
+leading to variations in the received signal power. When                  proof of proposition 3 is available in appendix B
+combined with AWGN, this presents a challenging scenario                  Proposition 4 (Adversarial Training With Channel Noise
+for the communication system. An linear minimum mean                    Enables Semantic Robustness): Let z̃q = zq + ε, where
+square error (LMMSE) equalizer is used at the receiver to               ε ∼ N (0, σ 2 ) representing discrete channel noise. If the
+compensate for the effects, including fading and noise. The             generator( G) is trained adversarially to minimize
+equalizer processes the received signal vectoryRayleigh , the                         Ladv = Ex [D(x)] − Ez̃q [D(G(z̃q ))],
+channel vector h, and the noise variance no to estimate the
+transmitted symbols. The effective noise variance is com-               then for bounded perturbation ε, the reconstruction x̂ = G(z̃q )
+puted for the subsequent demapping stage. The signal-to-                remains semantically valid, i.e., x̂ ∈ Msem .
+noise ratio per symbol (Es /N0 ) is converted to noise variance             proof of proposition 4 is avalilabe in appendix B
+(no ) considering the modulation order (log2 M ) and coding                 Proposition 5 (Index Dropout Combined With Adversar-
+rate (Rc ).                                                             ial Training Enables Error-Tolerant Reconstruction): Let
+                                                                        zq (x) ∈ {1, . . . , K }N be the quantized latent vector and m ∈
+IV. THEORETICAL ANALYSIS                                                {0, 1}N be a binary mask sampled from Bernoulli(1 − Pmask ).
+To support the design choices of our proposed SVQ-WGAN                  Let the corrupted latent be defined as:
+framework, we provide theoretical justifications that explain
+                                                                                         z̃q = m ⊙ zq + (1 − m) ⊙ z0 ,
+how the key components, quantized latent representation,
+index transmission, adversarial training, and contrastive regu-         where z0 is a default symbol (zero vector). Let the reconstruc-
+larization, jointly contribute to semantic compression, preser-         tion be x̂ = G(z̃q ). If G is trained with:
+vation, and robustness under channel noise.
+   Proposition 1 (Reconstruction Loss Preserves Task Utility              Lrec = ∥x − x̂∥2 ,      Ladv = Ex [D(x)] − Ez̃q [D(G(z̃q ))],
+Under Semantic Equivalence): Let f : RH ×W ×3 → Y be a                  then for small Pmask ,
+pretrained downstream task model (e.g., object detector), and
+define f (x) = (cx , bx ), where cx is the predicted class and bx                      E[∥G(zq ) − G(z̃q )∥2 ] ≤ δ(Pmask ),
+is the predicted bounding box and f is Lipschitz continuous                              with δ → 0 as Pmask → 0,
+over a semantic manifold Msem ⊂ RH ×W ×3 , x̂ ∈ Msem ,and
+if The reconstruction error satisfies ∥x − x̂∥22 ≤ ε for some           and x̂ ∈ Msem .
+small ε > 0. Then the task output is preserved with high                   proof of proposition 5 is avalilabe in appendix B
+probability, with the indicator function:                                  Proposition 6 (Semantic Generalization Through Multi-
+                                                                        -Level Robust Representation Learning via Pixel and Latent
+                       I(f (x̂) = f (x)) = 1                            Perturbations): x ∈ X be an input image, and let x ′ ∼ T (x)
+proof of proposition 1 is available in appendix B.                      be an augmented version generated by random geometric or
+  Proposition 2 (Learned Prior Over Quantized Latents                   photometric transformations. Let zq (x), zq (x ′ ) ∈ {1, . . . , K }N
+Enables Structured Semantic Decoding): Let G : RF →                     be the quantized latent representations, and z̃q (x) denote a
+RH ×W ×C denote the generator in the VQ-based semantic                  perturbed version via dropout or additive noise in latent space.
+communication model.G is Lipschitz continuous, i.e., there              The generator G and perceptual feature extractor φ are Lips-
+                                           (1) (2)
+exists a constant L > 0 such that for all zq , zq ∈ RF ,                chitz continuous with constants LG , Lφ , and that the model is
+                                                                        trained to minimize:
+                q ) − G(zq )∥2 ≤ L∥zq − zq ∥2 .
+            ∥G(z(1)      (2)        (1)  (2)
+                                                                        Ltotal = ∥x −G(zq (x))∥2 +∥φ(x)−φ(G(zq (x)))∥2 +LVQ +Ladv .
+proof of hypothesis 2 is available in appendix B
+  Proposition 3 (Semantic Rate-Distortion Trade-Off via                 Then, the model enforces the following contrastive
+Quantized Representation): The Generator( G) is Lipschitz               invariances:
+
+1058                                                                                                                           VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+  1) The encoder learns augmentation-invariant latents:                     Algorithm 1 Training Algorithm
+                                                                             1: Input: Training dataset D, batch size B, number of
+                 Ex ′ ∥zq (x) − zq (x ′ )∥ ≤ δ1 .
+                                         
+                                                                                epochs M , latent dimension L, number of embeddings
+  2) The generator produces stable outputs under latent                         K , number of discriminator steps nD , gradient penalty
+     perturbation:                                                              weight λ, drop probability pd , learning rates ηG , ηD ,
+                                                                                training variance τ 2
+             Ez̃q ∥φ(G(zq (x))) − φ(G(z̃q ))∥ ≤ δ2 .
+                                            
+                                                                             2: Output: Trained model parameters θE , θG , θVQ , and θD
+    Hence, semantic consistency is preserved under both pixel-               3: Initialize: Optimizer for discriminator AdamD with ηD
+and latent-level variation, enabling generalization and robust-              4: Initialize: Optimizer for generator AdamG with ηG
+ness in semantic communication tasks.                                        5: for m ← 1 to M do
+    proof of proposition 6 is avalilabe in appendix B                        6:      Sample mini-batch {xi }Bi=1 from D
+    Proposition 7 (Symbolic Semantic Compression Bounds                      7:     Train Discriminator:
+Bandwidth Usage): Let zq (x) ∈ {1, . . . , K }N be the quan-                 8:     for j ← 1 to nD do
+tized latent representation of an input x, where K is the size of            9:          Encode xi to latent space: zie = E(xi )
+the codebook and N is the number of symbols. Assume a dis-                  10:          Quantize latent vectors: ziq = VQ(zie )
+crete communication channel transmitting the index sequence                 11:          Add AWGN noise: ziq = ziq + N (0, τ 2 )
+zq (x) losslessly.Then, the theoretical bandwidth B (in bits)               12:          Drop indices with probability pd
+required to transmit zq (x) satisfies:                                      13:          Decode to generate fake data: x̂i = G(ziq )
+                                                                            14:         Dreal = D(xi ), Dfake = D(x̂i )
+                         B = N · log2 K ,                                   15:          Compute discriminator loss:
+and is independent of the original input size dim(x). Further-                       Ladv = E[Dfake ] − E[Dreal ] + λ · gradient penalty
+more, for a fixed maximum bandwidth Bmax , the compression
+rate satisfies:                                                              16:         Update θD by maximizing Ladv using AdamD
+                           B                                                 17:    end for
+                                ≪ 1,                                         18:    Train Model:
+                        dim(x)
+                                                                             19:     Encode xi to latent space: zie = E(xi )
+provided N ≪ dim(x), thus demonstrating that the learned                     20:     Quantize latent vectors: ziq , Lvq = VQ(zie )
+codebook representation achieves compression proportional                    21:     Add noise
+to symbol count and logarithmic in vocabulary size.                          22:     Decode to generate fake data: x̂i = G(ziq )
+   proof of proposition 7 is avalilabe in appendix B                         23:     Compute Lrec and Lperceptual
+                                                                             24:     Compute Ltotal
+A. PERFORMANCE MATRICES                                                      25:    {θE , θG , θVQ } ← AdamG (∇{θE ,θG ,θVQ } Ltotal )
+PSNR is commonly used to assess the quality of recon-                        26: end for
+structed signals in terms of overall fidelity, where higher
+values indicate better quality. Still, it often fails to corre-
+late with human perception of quality due to its reliance                   semantic information deviates significantly from the original.
+on pixel-wise differences. Perceptual quality is crucial in                 This probability is calculated as
+applications such as entertainment, fashion, advertising, and                                                        
+healthcare, where the human-perceived quality of transmitted                                               ||x − x̂||
+                                                                                                EP = Q                  ,            (14)
+images is paramount. MS-SSIM improves upon PSNR by                                                             σ
+considering perceptual similarity at multiple scales, capturing
+structural information and contrast sensitivity, thus providing             where Q(·) is the Q-function [54], σ is the standard deviation
+a more accurate representation of perceived quality. LPIPS                  of the noise, and ||x − x̂|| is the Euclidean distance between
+[52] leverages deep learning to evaluate perceptual similarity              the real and transmitted vectors. The RI combines SF and EP
+based on feature representations. It allows better alignment                into a single metric as
+with human visual perception than traditional metrics by                                    RI = α · SF + (1 − α) · (1 − EP),         (15)
+leveraging features from the VGG network [53]. Our evalua-
+tion based on PSNR provides an essential measure of signal                  where α is a weighting factor that balances the importance of
+fidelity. MS-SSIM and LPIPS offer advanced assessments                      semantic fidelity and error probability.
+that reflect human perception more accurately.
+   To quantitatively evaluate the robustness of the SemCom                   B. SEMANTIC DISTORTION MEASUREMENT
+system, we propose a novel metric termed the RI, which                      We evaluate the semantic integrity of the transmitted image
+integrates semantic fidelity (SF) and error probability (EP).               by aligning the objects detected in the generated image with
+SF quantifies the similarity between the original and recon-                the original image. Maintaining semantic integrity is par-
+structed semantic content, and it is measured using the LPIPS               ticularly critical for applications such as object detection
+metric. EP represents the likelihood that the reconstructed                 systems, visual question answering (VQA) systems, robotics,
+
+VOLUME 3, 2025                                                                                                                         1059
+       FIGURE 7. Image transmission performance over AWGN channel for varying SNRs for Kodak dataset with different coding
+       rates for LDPC for QPSK: (a) average PSNR (higher the better), (b) average MS-SSIM (Higher the better), and (c) average
+       LPIPS (lower the better).
+
+
+
+
+       FIGURE 8. Image transmission performance over Fading channel for varying SNRs for Kodak dataset with different
+       coding rates for LDPC for QPSK: (a) average PSNR (higher the better), (b) average MS-SSIM (Higher the better), and
+       (c) average LPIPS (lower the better).
+
+
+
+industrial automation, and AR applications, including virtual          Then the semantic distortion is given by
+object placement in real-world environments (e.g., gaming,
+                                                                                   Dsemantic = wK · EK + wIoU · EIoU ,            (19)
+interior design) and autonomous vehicles. This evaluation is
+based on two primary metrics: category error and intersection          where wK and wIoU are the weights assigned to each error
+over union (IoU) error. Category error quantifies the extent           term. For our experiment, we used 0.8 and 0.2, respectively.
+to which the object categories in the original image are pre-          If |Kx | = 0, set EK = 0 and EIoU = 0, as there are no
+served in the generated image and can be formally defined as           objects detected in the original image. However, if |Kx | ̸=
+follows:                                                               0 and |Kx̂ | = 0, indicating that the original image contains
+                                   |Kx ∩ Kx̂ |                         objects but none are detected in the generated image, set both
+                     EK = 1 −                  ,                (16)   EK = 1 and EIoU = 1, representing a complete failure in
+                                     |Kx |
+                                                                       both category detection and object alignment.
+where Kx is the set of object categories detected in the
+ground truth image and Kx̂ is the set of object categories             V. RESULTS AND DISCUSSION
+detected in the generated image. The IoU [55] measures the             This section presents the implementation details and the qual-
+overlap between the bounding boxes of detected objects in              itative and quantitative results of our proposed system.
+the original and generated images. Let Bx̂ represent the set
+of bounding boxes in the generated image x̂. For each pair of          A. TRAINING DATASET
+bounding boxes bx ∈ Bx and bx̂ ∈ Bx̂ , the IoU is given by             We combined DIV2K [56], a high-resolution image dataset,
+                            Area of Intersection(bx , bx̂ )            CelebA-HQ [57], a high-resolution facial image dataset, and
+         IoU(bx , bx̂ ) =                                   ,   (17)   the entire Flickr15k dataset [58], ensuring a diverse and
+                              Area of Union(bx , bx̂ )
+                                                                       comprehensive representation of high-quality images. The
+and the IoU error is given by                                          preprocessing pipeline resized all images to a uniform dimen-
+                                                                       sion of (256, 256, 3) and normalized pixel values for con-
+               EIoU = 1 − mean (IoU(Bx , Bx̂ )) ,               (18)   sistency. A total of 8, 000 augmented samples were gener-
+
+1060                                                                                                                     VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+ated, incorporating transformations such as random rotations                no visible artifacts are observed in smooth areas. Compared
+(up to 20 degrees), horizontal flips, brightness variations                 to self-attention (O(N 2 )) and multi-scale fusion networks
+(0.8–1.2), shifts (up to 20% of width/height), and zooms                    (O(N log N )), our method operates with near-linear complex-
+(up to 20%). The total dataset size, including both original                ity (O(N )) and low memory overhead, making it efficient for
+and augmented images, was 27620. This augmentation step                     real-time semantic communication.
+aimed to increase diversity and generalize the model’s ability                 The quantizer performs semantic encoding by mapping
+for varied scenarios. The train-test split was a 90-10 ratio.               the continuous feature representations from the encoder into
+                                                                            discrete codebook vectors. The continuous feature vector is
+B. IMPLEMENTATION DETAILS                                                   flattened, and one-hot encoding is applied to select the nearest
+We used a warm-up cosine learning rate scheduling to opti-                  embedding vectors in a learned codebook.
+mize the training. Its initial warm-up phase is followed by                    The generator reconstructs images from the quantized
+a cosine decay, which provides smoother gradient updates                    latent codes, employing a sequence of transposed convo-
+and improved convergence. During the warm-up phase, the                     lutional layers with 4 × 4 kernels, strides of 2 × 2, and
+learning rate increases linearly from a small initial value to              ReLU activations to progressively upscale the latent features.
+the base learning rate over a fixed number of steps (swarm ).               Residual blocks enhance reconstruction quality by preserving
+We addressed the instability of the gradient updates by sta-                essential details during the upsampling process.
+bilizing and ensuring effective convergence. After the warm-                   The discriminator operates as a convolutional neural net-
+up phase, the learning rate follows a cosine decay to reach                 work trained adversarially to differentiate between real and
+zero (Stotal ). The warm-up phase constitutes 15% of the total              reconstructed. It uses convolutional layers with LeakyReLU
+training steps, and the decay is designed to smoothly taper                 activations, which enhance gradient flow during adversar-
+off the learning rate over the remaining steps, enhancing                   ial learning. Dropout regularization, with a probability of
+model performance and training efficiency. The total number                 0.2, prevents overfitting in the discriminator. A final fully
+of steps is calculated as                                                   connected layer produces a scalar output representing the
+                                                                            likelihood of the input image being real or fake. The number
+                                D
+                 Stotal =              × Epochs.                            of discriminator steps, nD , was set to 5.
+                            Batch Size                                         We set the gradient penalty coefficient λ = 10 based on
+Batch Size is the size of each mini-batch, and Epochs is                    empirical best practices from the literature [45], balancing
+the total number of epochs. The base learning rates for the                 the contributions of adversarial loss and regularization during
+discriminator and generator were selected as ηD = 0.001 and                 training. Our experiments with values λ ∈ {1, 5, 10, 20}
+ηG = 0.004, respectively. The Generator and Discriminator                   confirmed that λ = 10 offers the best stability-performance
+learning rate schedules are depicted in Fig. 10. We have                    trade-off, avoiding both critic overfitting (low λ) and under-
+used α = 0.25.                                                              training (high λ).
+   During training, we introduced AWGN noise to the quan-                      A JSCC scheme was also implemented for benchmarking
+tized vector at an SNR of 10, with the noise distribution                   purposes. We replicated the results for the Kodak dataset
+modeled as N (0, 0.1). The probability of masking, Pmask ,                  using the model described in [10]. We used the pre-trained
+was set to 0.01, ensuring the random dropping of elements                   weights of the model trained at an SNR of 1 with a channel-
+in the latent representation. The training variance, denoted                per-pixel (CPP) ratio of 1/16. However, a limitation of this
+as τ , was computed as 0.0615, representing the spread or                   approach is that the model needs to be trained for a specific
+dispersion of values within the augmented training dataset, D.              SNR, which may not be feasible in dynamic environments
+   The encoder performs semantic extraction using convolu-                  where channel conditions are continuously varying.
+tional layers with 4× 4 kernels and strides of 2 × 2, combined                 To test the robustness of the developed SemCom system,
+with ReLU activations to downsample the input images while                  we have used an AWGN and Rayleigh fading channel with
+preserving the features. Residual connections are incorpo-                  an LDPC coding scheme and quadrature phase shift keying
+rated in the encoder to maintain feature continuity, improve                (QPSK) modulation. The model was experimented with vary-
+gradient flow, and enhance stability during training. Batch                 ing SNR levels to benchmark the system with BPG encoding
+normalization is applied to standardize feature scaling, while              [60] and JSCC.
+dropout with a probability of 0.05 is used for regularization
+and to prevent overfitting. The spatial attention mechanism
+is also integrated to emphasize edge regions in the feature                 C. EXPERIMENTAL RESULTS ON QUALITY OF
+maps. Fig. 9 shows the spatial attention heatmap applied                    TRANMISSION
+to sample images from the Kodak dataset [59]. Although                      The results presented in Fig. 7a and Fig. 8a demonstrate
+the Sobel-based attention emphasizes edges, it may assign                   that SVQ-WGAN consistently achieves higher PSNR values
+relatively less focus to smooth regions. However, this is                   across both AWGN and Rayleigh fading channels, particu-
+mitigated through residual learning, convolutional integra-                 larly in low SNR conditions. SVQ-WGAN at CRs 0.67 and
+tion, and multilevel contrastive learning, which reinforces                 0.50 demonstrates overall superior performance in maintain-
+semantic consistency across scales. As shown in Fig. 14–15,                 ing image quality even under heavy noise. In contrast, BPG
+
+VOLUME 3, 2025                                                                                                                         1061
+                                   FIGURE 9. Attention heat map from the spatial attention module
+                                   for sample images from Kodak dataset to show how the
+                                   attention is focused on the edges of the objects.
+
+
+
+                                                                     SVQ-WGAN exhibits a much higher MS-SSIM, while BPG
+                                                                     shows almost no structural similarity. Even at higher SNRs,
+                                                                     BPG’s performance is severely degraded under fading con-
+                                                                     ditions, struggling to maintain any significant structural
+                                                                     integrity. SVQ-WGAN, on the other hand, shows stability
+                                                                     in preserving structural details across all coding rates, even
+                                                                     under these harsher channel conditions. Thus, the proposed
+                                                                     system’s approach demonstrates superior structural reten-
+FIGURE 10. Learning rate schedule (a) critic learning rate
+                                                                     tion under both AWGN and Rayleigh fading channels. This
+schedule (b) generator learning rate schedule.                       becomes more evident in fading environments with complex
+                                                                     noise characteristics, as seen in the broader performance gap
+                                                                     in fading channels.
+achieves a comparatively low level of performance at a higher
+SNR. The PSNR stabilizes at a low value because the BPG              D. EXPERIMENTAL RESULTS ON SEMANTIC FEDALITY
+was configured to operate at its maximum compression level,          In the AWGN channel Fig. 7c, SVQ-WGAN consistently
+ensuring alignment with the compression rate of the SemCom           outperforms BPG in terms of LPIPS across all SNR levels and
+system. In fading environments, SVQ-WGAN continues to                coding rates. Even at low SNRs of below 5 dB, SVQ-WGAN
+outperform BPG significantly, especially in the mid-to-low           manages to keep LPIPS values lower than BPG, which trans-
+SNR range. The proposed system performs comparably well              lates into better perceptual quality despite high levels of
+against the JSCC, where JSCC performs well in low SNR                noise with the assistance of channel coding. For example,
+regions below 2 dB in AWGN channel, but at a higher                  at an SNR of 2 dB, SVQ-WGAN exhibits substantially lower
+transmission cost in terms of bit rate. The proposed Sem-            LPIPS values compared to BPG, particularly at coding rates
+Com system exhibits better overall pixel-level reconstruction        of CR 0.50 and CR 0.67, suggesting that even under noisy
+fidelity in noisy environments, demonstrating its robustness         conditions, the visual fidelity of the reconstructed images
+and adaptability to challenging channel conditions.                  from SVQ-WGAN is much closer to the original. As the SNR
+   In AWGN channel Fig. 7b, SVQ-WGAN consistently                    increases, SVQ-WGAN ’s LPIPS values rapidly improve,
+achieves higher MS-SSIM values across all coding rates,              stabilizing at low levels, indicating that its perceptual qual-
+particularly at lower SNRs below 5 dB. This difference is            ity is resilient and does not degrade as significantly with
+more significant than the comparison with PSNR and high-             noise. In contrast, BPG shows a sharp increase in LPIPS
+lights SVQ-WGAN’s ability to maintain structural similar-            values at lower SNRs, particularly at higher coding rates
+ity even in highly noisy environments. At a CR of 0.50,              (CR 0.83 and CR 0.75), suggesting that its perceptual qual-
+SVQ-WGAN’s MS-SSIM begins to stabilize at an SNR                     ity deteriorates quickly in noisy conditions. Even at higher
+of around 2 dB at a higher value, whereas BPG only                   SNRs, BPG struggles to match the perceptual quality pro-
+fails to meet a comparable performance even beyond 5 dB              vided by SVQ-WGAN, particularly at higher coding rates.
+for AWGN channel. SVQ-WGAN has comparably good                       JSCC maintains overall better perpetual quality at all SNR
+MS-SSIM against the JSCC where JSCC performs well in                 levels in AWGN channel, at the cost of a higher bit rate than
+low SNR regions below 5 dB.                                          the proposed.
+   In contrast, the Rayleigh fading channel Fig. 8b presents a          In the more challenging Rayleigh fading channel Fig. 8c,
+more challenging scenario due to its multipath fading charac-        the difference between SVQ-WGAN and BPG becomes even
+teristics. Here, the performance gap between SVQ-WGAN                more evident. Rayleigh fading introduces complex noise
+and BPG becomes even more pronounced, especially at                  and fading effects due to multipath propagation, making it
+lower SNRs. At an SNR of 4 dB and CR 0.5 and 0.67,                   significantly more challenging to maintain image quality.
+
+1062                                                                                                                   VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+
+      FIGURE 11. Image transmission quality evaluated for different bit error rate (BER)s for Kodak dataset over Rayleigh fading
+      channel with LDPC coding for QPSK: (a) average PSNR (higher the better), (b) average MS-SSIM (higher the better), and
+      (c) average LPIPS (lower the better).
+
+
+
+
+      FIGURE 12. Evaluation of the model noise robustness with RI (a) AWGN channel, (b) fading channel, (c) BER.
+
+
+
+
+At low SNRs (around 3 dB), SVQ-WGAN exhibits consid-                        especially under low-SNR conditions.In AWGN channel
+erably lower LPIPS values compared to BPG, especially at                    Fig. 12a, SVQ-WGAN consistently achieves a higher RI
+coding rates of 0.67 and 0.5 with AWGN channel, where                       across all SNR levels and coding rates. At low coding rates
+BPG performs poorly, with LPIPS values at settling at around                (0.50 and 0.67), SVQ-WGAN shows a stable RI even in
+0.55 even at higher SNR rates above 7 dB, and indicates that                low SNRs, with values significantly higher than BPG, start-
+BPG struggles to preserve perceptual quality when fading                    ing at SNRs as low as 2 dB. As SNR increases beyond
+and noise are combined, especially at higher coding rates                   5 dB, SVQ-WGAN maintains a near-constant RI, showing
+and higher compression, making it less suitable for applica-                its robustness against noise across all coding rates. In con-
+tions requiring high visual fidelity. Conversely, SVQ-WGAN                  trast, BPG performs well in low coding rates (0.50) in
+performs comparably well in preserving perceptual quality                   higher SNR conditions. BPG shows a sharp decline when
+under Rayleigh fading, with minimal degradation even as the                 the coding rate increases, where the robustness to noise
+channel becomes more challenging. SVQ-WGAN demon-                           significantly decreases in noisy conditions. When analyzing
+strates superior performance in terms of perceptual quality                 the performance over the Rayleigh fading channel, as illus-
+as measured by LPIPS across both the AWGN and Rayleigh                      trated in Fig. 12b, the disparity between SVQ-WGAN and
+fading channels. The advantage SVQ-WGAN has over the                        BPG becomes increasingly pronounced. SVQ-WGAN ’s RI
+traditional method in terms of perceptual quality highlights                remains relatively high across higher SNR levels, even at
+its potential for improving end users’ quality of experience                higher coding rates, demonstrating its ability to resist fad-
+(QoE) in real-world communication systems.                                  ing effects and maintain strong performance in noisy con-
+                                                                            ditions. For instance, at an SNR of 3 dB, SVQ-WGAN
+E. EXPERIMENTAL RESULTS ON NOISE ROBUSTNESS                                 shows considerably higher RI compared to BPG with 0.5
+Fig. 12 shows the model’s robustness against the channel                    CR, and this disparity becomes even more prominent as
+noise.We set α = 0.25 to balance SF and EP, placing                         SNR increases. SVQ-WGAN’s ability to maintain a high
+greater emphasis on communication reliability. This value                   RI across all CRs and SNRs, even under challenging fading
+was empirically determined through preliminary experiments                  conditions, highlights its suitability for communication sys-
+to achieve consistency with perceptual degradation trends,                  tems deployed in environments with highly noisy conditions,
+
+VOLUME 3, 2025                                                                                                                       1063
+       FIGURE 13. Image quality at different SNRs for different datasets for QPSK modulation with LDPC for coding rate (CR)
+       = 0.5 in a fading channel (PSNR/MS-SSIM/LPIPS).
+
+
+
+
+FIGURE 14. Zoom image patch at zero channel noise scenario for Kodak dataset image and DIV2K dataset image.
+
+
+
+
+making SVQ-WGAN a robust choice in scenarios where                  using LDPC coding. The CR was varied, and its impact on
+noise resilience is critical for maintaining the quality.           image quality was analyzed.
+                                                                       PSNR results, as illustrated in Fig. 11a, demonstrate that
+                                                                    the proposed system outperforms the BPG scheme across all
+F. EXPERIMENTAL RESULTS ON PERFORMANCE VERSUS                       CRs. As BER increases, the PSNR of both schemes deteri-
+BER                                                                 orates; however, the proposed system consistently maintains
+The quality of image reconstruction in image transmission           higher PSNR values. The proposed exhibits a gradual decline
+systems is critically affected by channel noise, with BER as a      at moderate and high BERs compared to a sharp decline in
+fundamental metric to quantify this impact. The performance         BPG. The proposed system’s generative capabilities, com-
+comparison of the proposed system and the BPG scheme was            bined with error-correction mechanisms, enable it to with-
+evaluated under varying BER in a Rayleigh fading channel            stand the effects of channel noise more effectively.
+
+1064                                                                                                                   VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+   The structural similarity of the reconstructed images, eval-             TABLE 2. BERTScore F1 across SNR levels for BPG and
+uated using MS-SSIM and shown in Fig. 11b, further under-                   SVQ-WGAN.
+scores the advantages of the proposed system. Across all
+CRs, the proposed system achieves higher MS-SSIM scores
+compared to BPG, indicating better preservation of structural
+and perceptual details. The performance gap widens signif-
+icantly as the BER increases. For instance, at higher coding
+rates (0.75 and 0.83), the proposed system maintains notably
+higher MS-SSIM values, particularly at BER values above
+0.04, demonstrating the system’s capacity to retain structural
+integrity even in highly noisy environments.
+   The LPIPS results, presented in Fig. 11c, reveal the fidelity
+of the reconstructed images as perceived by the human visual
+system. The proposed system achieves substantially lower
+LPIPS scores compared to BPG across all coding rates and
+BPG values. The proposed system can maintain high per-
+petual quality despite an increase in BERs, owing to its
+generative nature, compared to traditional methods where                    SVQ-WGAN model outperformed BPG at various SNR lev-
+BPG exhibits a sharp rise in LPIPS values. Fig. 12c depicts                 els, maintaining high semantic fidelity in the presence of
+the RI variation with different BERs. The proposed sys-                     channel noise as shown in table 2.
+tem achieves higher values for all coding rates than BPG.                      The results in Table 2 demonstrate that the proposed
+At CR of 0.5 and BER of 0.05 SVQ-WGANs RI is around                         system achieves higher BERTScore F1 values than BPG
+0.7 wheres BPG scheme’s RI drops below 0.6. This indicates                  across all SNR levels above 3 dB, with a notable margin
+that a deep learning-based generative mechanism and an                      at moderate noise conditions above 5 dB. The performance
+LDPC error correction achieve the proposed scheme’s supe-                   gain is due to the use of quantized latent representations
+rior noise robustness. When evaluating all metrics, it is evi-              optimized with adversarial training, which encourages the
+dent that SVQ-WGAN excels in maintaining images’ struc-                     model to retain task-relevant semantic features. In contrast,
+tural integrity and semantic fidelity. This is especially evident           BPG’s reliance on pixel fidelity results in reduced semantic
+under noisy conditions such as Rayleigh fading channels.                    fidelity under compression and channel noise. In contrast,
+                                                                            SVQ-WGAN demonstrates effectiveness in preserving the
+                                                                            contextual meaning of images for language-based tasks.
+G. TASK PERFORMANCE
+The ultimate goal of semantic communication systems is to
+                                                                            2) CLASSIFICATION ACCURACY
+perform specific tasks, where the transmitted images can be
+                                                                            To evaluate machine-level task utility, we measured the clas-
+used directly by human or machine agents. This encourages
+                                                                            sification accuracy of transmitted images using a ResNet-
+us to measure the performance of our system in terms of two
+                                                                            50 model trained on ImageNet data and fine-tuned on the
+broad classes of semantic utility: human perception-oriented
+                                                                            CIFAR-10 dataset. The model was initially trained with
+utility and machine perception-oriented utility. The former
+                                                                            frozen base layers and subsequently fine-tuned end-to-end
+emphasizes the preservation of meaning as understood by
+                                                                            to achieve 96.2% accuracy on clean test images. All input
+human observers; the latter focuses on the semantic fea-
+                                                                            images were resized to 224 × 224 and augmented during
+tures necessary for automated reasoning and decision-making
+                                                                            training to enhance robustness. As a proxy for machine
+tasks. We evaluate these two dimensions using image caption-
+                                                                            perception, the classification task requires the receiver to
+ing accuracy as a proxy for human semantic understanding
+                                                                            efficiently understand and classify visual content despite the
+and classification accuracy as a representative of machine-
+                                                                            distortions induced by transmission. Images transmitted via
+level perception. The following subsections detail the evalu-
+                                                                            SVQ-WGAN achieved 94% classification accuracy at SNR
+ation protocols and results for each of these perspectives.
+                                                                            values above 4 dB, as shown in Fig. 16, outperforming both
+                                                                            BPG and JSCC baselines.
+1) IMAGE CAPTIONING ACCURACY                                                   The critic helps to preserve discriminative semantic fea-
+To assess human-level semantic preservation, we conducted                   tures, as evidenced by the slight decrease in classification
+image captioning experiments using the BLIP image-to-text                   accuracy to 90% observed in the SVQ-WGAN model without
+model. The model generates textual descriptions from images                 the discriminator. In contrast, BPG’s accuracy plateaued near
+reconstructed after transmission through SVQ-WGAN and                       56%, reflecting its inability to preserve class-relevant visual
+BPG. These generated captions were then evaluated using                     information under compression and noise because of its pixel-
+BERTScore F1 [61] against human-annotated ground-truth                      based reconstruction. Despite being a strong baseline for
+captions from the COCO dataset. BERTScore F1 cap-                           pixel-level image reconstruction, the JSCC model exhibited
+tures deep semantic similarity at the language level. The                   significantly lower classification accuracy across all SNR
+
+VOLUME 3, 2025                                                                                                                         1065
+   FIGURE 15. Zoom image patch of CelebA-HQ and 4K image patch at zero channel noise scenario.
+
+
+
+
+                                                                  TABLE 3. Effective bitrate (bpp) for SVQ-WGAN and BPG with
+                                                                  LDPC coding.
+
+
+
+
+                                                                  only 0.438. This reflects a 56.2% reduction in transmission
+                                                                  load compared to JSCC.
+
+                                                                  I. RATE-DISTORTION PERFORMANCE
+                                                                  To reflect the impact of channel coding, we compute the
+                                                                  effective bitrate (bpp) after LDPC redundancy as bppeff =
+FIGURE 16. Classification accuracy for different SNRs for         Transmitted bits
+CIFAR-10 dataset.                                                     Rc ·h·w      . While the bandwidth efficiency measures the
+                                                                  number of physical-layer symbols required for transmission,
+                                                                  the rate-distortion analysis quantifies the perceptual quality
+                                                                  achieved per transmitted bit after channel coding. This anal-
+levels due to its sensitivity to the channel conditions under     ysis accounts for the redundancy introduced during channel
+which it was trained, which limits its generalization across      encoding.For SVQ-WGAN, a 256 × 256 image generates
+other noise levels. As a result, the encoder-decoder pair fails   4096 quantized indices (8 bits each for K = 256), yielding
+to preserve the discriminative features necessary for classi-     32,768 bits per image. For BPG (at maximum compression),
+fication, causing the accuracy to drop significantly. Addi-       the average output is 5 KB (40, 000 bits). Table 3 presents the
+tionally, JSCC focuses on pixel fidelity rather than semantic     effective bpp across codebook sizes and coding rates. At 5 dB
+retention, utilizing an autoencoder architecture that struggles   SNR, SVQ-WGAN consistently maintains ∼ 30 dB PSNR
+to maintain task utility under dynamic channel conditions.        even at lower bitrates (e.g., Rc = 0.67), while BPG ranges
+   These experiments confirm that the SVQ-WGAN                    between 27.0–29.5 dB. This demonstrates a favorable rate-
+framework provides robust and generalizable semantic rep-         distortion trade-off for SVQ-WGAN under identical channel
+resentations that preserve both human- and machine-level          conditions, achieving higher perceptual quality at reduced
+understanding under transmission distortions.                     bandwidth.
+
+H. BANDWIDTH EFFICIENCY                                           J. MODEL COMPLEXITY
+To present the bandwidth efficiency of our model, we nor-         The SVQ-WGAN total complexity is dominated by convo-
+malize all methods by computing the number of transmitted         lutional layers and latent-space vector quantization, yielding
+complex symbols per image pixel. JSCC requires 1.0 symbol         O(hwc2 k 2 Nl + hwLK ), where Nl is the number of layers.
+per pixel with a code rate of 0.5 QPSK modulation. BPG with       Unlike JSCC, which incurs a linear decoding overhead with
+LDPC uses 0.562, while our proposed SVQ-WGAN requires             the number of iterations T , SVQ-WGAN uses a single-pass
+
+1066                                                                                                                VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+TABLE 4. Encoder/Decoder FLOPs (×109 ) and asymptotic
+complexity at 256 × 256 resolution.
+
+
+
+
+TABLE 5. Comparison of SVQ-WGAN and deep JSCC [10] in
+terms of parameters.
+
+
+
+
+                                                                            FIGURE 17. Ablation studies for different codebook sizes and
+                                                                            training. n/n means no noise applied in training. (a) PSNR vs
+                                                                            SNR (b) MS-SSIM vs SNR (c) LPIPS vs. SNR (d) RI vs. SNR.
+
+
+
+                                                                            form (DCT), quantization, and entropy coding, achieving the
+                                                                            lowest latency of 0.2 ms.
+                                                                               This analysis is crucial for real-world deployment, par-
+                                                                            ticularly on resource-constrained receivers such as edge
+                                                                            devices or IoT platforms, striking a balance between com-
+decoder without iterative refinement. The quantization over-                putational complexity and structural fidelity. SVQ-WGAN
+head is modest due to its application on a spatially down-                  demonstrates a favorable balance between performance and
+sampled latent space. In contrast, BPG has a very low com-                  complexity.
+putational cost with the lowest Floating-Point Operations
+Per Second (FLOP)s, particularly in decoding, due to its                     K. ABLATION STUDY
+use of non-learned signal processing techniques such as                     We conducted an ablation study with varying codebook
+context-adaptive binary arithmetic coding (CABAC). How-                     sizes (K = 128, 256, 512) to assess the trade-off between
+ever, BPG shows significantly lower structural quality and                  semantic richness and transmission overhead. Larger code-
+semantic fidelity than SVQ-WGAN and JSCC, particularly                      books improved reconstruction quality (PSNR, MS-SSIM,
+under noisy or low-bitrate conditions. As shown in Table 4,                 LPIPS) due to richer feature representation as shown in
+SVQ-WGAN offers lower FLOPs than JSCC while maintain-                       Fig. 17. However, robustness (RI) remained consistent across
+ing high fidelity.                                                          sizes. We selected K = 256 as it provides a good balance
+   As summarized in Table 5, SVQ-WGAN comprises                             between semantic fidelity and transmission efficiency, with
+approximately 1.77 million parameters with a model param-                   additional improvements observed when noise regularization
+eter size of around 6.7 MB, whereas the Deep JSCC sys-                      was applied during training. This study shows that adding
+tem includes approximately 3.73 million parameters and                      noise to the quantized latent improves the reconstruction
+occupies 14.2 MB. Discriminator accounts for the majority                   quality, as shown in Fig. 17. Thus, it adds regularization to
+of parameters in SVQ-WGAN. Since the discriminator is                       the training process, allowing the generator to learn mean-
+only utilized during training, this design helps to reduce                  ingful representations of the original images from the noisy,
+inference cost. This highlights that SVQ-WGAN is over 2×                    quantized representations. It is noticeable that the codebook
+more compact, offering efficiency, deployability, and suitabil-             size does not affect the robustness against channel noise.
+ity for bandwidth-constrained applications. Model size for
+BPG-LDPC refers to codec binaries, typically < 1MB.                          L. MODEL EVALUATION FOR GENERALIZATION
+   Inference latency was approximated based on decoder                      The generalization enables the model to accurately interpret
+parameter counts and typical FLOP-to-time ratios on an                      and reconstruct information in diverse and unseen environ-
+NVIDIA T4 GPU, assuming realistic throughput of 2.4                         ments, rather than being confined to the patterns and charac-
+TFLOPs under 30% utilization for single-image inference.                    teristics of the training data. This feature is essential for prac-
+The SVQ-WGAN decoder achieves significantly lower infer-                    tical SemCom systems to operate effectively within diverse
+ence latency of 1.5 ms compared to the JSCC decoder 20 ms,                  contexts, content types, and real-world scenarios. Since
+due to its smaller model size and single-pass architecture.                 retraining for each new application or domain introduces
+BPG processes the entire image using Discrete Cosine Trans-                 substantial computational cost and deployment complexity,
+
+VOLUME 3, 2025                                                                                                                            1067
+TABLE 6. Model evaluation.                                        channel. The received encoding indices are passed through
+                                                                  a one-hot encoding layer. This is followed by a matrix mul-
+                                                                  tiplication with the codebook embeddings to recover the
+                                                                  quantized latent vectors and fed through the generator to
+                                                                  generate the reconstructed patches. The patches were blended
+                                                                  by a Gaussian blending mask [70] into a complete image
+                                                                  by leveraging the overlap and normalized to mitigate edge
+                                                                  effects. This approach ensured a robust reconstruction of
+                                                                  high-resolution images,even under challenging SNR scenar-
+TABLE 7. Task-oriented semantic distortion.                       ios. This ensures the reconstruction of varying resolution
+                                                                  images without retraining the model for different datasets.
+                                                                     Fig. 13 shows the transmitted image quality at varying
+                                                                  SNR levels for images from different datasets. It demon-
+                                                                  strates superior quality for the human face image dataset
+                                                                  and comparable good quality for high-resolution DIV2K
+                                                                  images, without relying on super-resolution mechanisms or
+                                                                  AI-based error correction methodologies at the receiver. Con-
+a model that performs well without such fine-tuning is highly     sequently, the proposed method is suitable for images of
+desirable for virtual applications such as rural telemedicine.    different resolutions without requiring specialized training.
+We calculated the FID [62] for a random image sample from         Fig. 14 and 15 illustrate the enlarged image patches of the
+the COCO dataset to quantify this aspect. The value is com-       transmitted images marked in Fig. 13 at no noise assumption.
+pared with other variants of GANs, as implemented in [63],        The proposed methodology shows superior perpetual quality.
+where the model is trained on the ImageNet dataset and
+evaluated the FID on the COCO stuff dataset. We assessed          VI. LIMITATIONS
+the model’s ability to maintain a high degree of semantic         The proposed task-oriented distortion matrix limits its ability
+fidelity as demonstrated by its lower FID. Additionally,          to generalize to a broader context because the object detection
+the near-zero kernel inception distance (KID) [64] score of       capability is restricted to the 80 classes on the COCO dataset,
+0.0073 highlights the model’s capacity to align well with the     which are the classes on which the object detection algorithm
+original data distribution, indicating minimal divergence in      is trained. We opted not to include a semantic error correction
+feature space. KID uses a polynomial kernel to compute the        module at the receiver to maintain low complexity, though
+similarity between real and generated images.                     this may limit extreme noise resilience below 3 dB. The
+                                                                  model is trained on natural images, and its domain adapt-
+M. SEMANTIC DISTORTION MEASUREMENT                                ability to content such as medical or satellite images remains
+Semantic distortion was evaluated using 5, 000 randomly           unexplored.
+selected sample images from the COCO-Stuff [67] dataset.
+We use a COCO-trained EfficientDet-D4 [68] model to eval-         VII. CONCLUSION
+uate semantic distortion via category and IoU errors.Table 7      In this work, we propose a generative AI-based SemCom
+summarizes the semantic distortion values. The semantic dis-      system conditioned on discrete feature vectors mapped to
+tortion is higher for images transmitted using BPG, indicating    a codebook, serving as the shared knowledge base. The
+higher distortion. In contrast, the proposed system demon-        architecture achieves compression by sending only the code-
+strates significantly lower task-oriented semantic distortion,    book indices through the physical communication chan-
+highlighting its ability to preserve the semantic integrity       nel. We have demonstrated that integrating a lightweight
+of the transmitted images. Our training datasets (DIV2K,          encoder-decoder architecture, enhanced by a novel spatial
+CelebA-HQ, Flickr15k) align with the domain of natural            attention mechanism that focuses on object edges, yields
+images, to which the detector is trained. Extending this metric   superior performance in semantic feature extraction. The
+with domain-adaptive detectors remains a key direction for        stability of the training process and perpetual quality are
+broader applicability.                                            ensured by using a Wasserstein distance-based discrimina-
+                                                                  tor. Experimental results confirm that across different cod-
+N. VISUAL ANALYSIS                                                ing rates, the GenAI-based SemCom system outperforms
+To evaluate the scalability of SVQ-WGAN across resolu-            BPG with LDPC channel coding in preserving perpetual
+tions, we tested the model on a variety of image sizes, includ-   quality, structural integrity, and robustness to noise. Quan-
+ing high-resolution (DIV2K), facial (CelebA-HQ), and 4K           titatively, SVQ-WGAN achieves approximately 5 dB gain
+images [69]. Images were divided into overlapping patches         on PSNR over BPG in 0.7 over MS-SSIM over 0.45 gain
+and encoded with SVQ-WGAN. Encoded output is flattened            in LPIPS and over 0.1 gain in RI. Moreover, introduc-
+and mapped to the codebook vector for quantization. The           ing new metrics to measure robustness and task-oriented
+indices were then transmitted through the communication           semantic distortion as a measure of semantic rate distortion
+
+1068                                                                                                                VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+underscores the model’s capability to surpass conventional                  where dY denotes a task-output distance metric (e.g., class
+bit-by-bit compression techniques. The model generalized to                 label mismatch or IoU divergence). If ∥x̂ − x∥22 ≤ ε, then
+out-of-distribution data and high-resolution images without                                                           √
+                                                                                             dY (f (x̂), f (x)) ≤ Lf · ε
+specialized training, reducing computational cost and sim-
+plifying deployment across diverse scenarios without task                   For sufficiently small ε, the output perturbation is below
+or specific adaptation. The model demonstrates strong per-                  any classification or localization threshold, resulting in iden-
+formance on both human-centric (captioning) and machine-                    tical task outputs: If f is piecewise constant (in classifi-
+centric (classification) tasks. This is enabled by a multi-level            cation tasks), or if the task-specific output metric satisfies
+contrastive strategy spanning latent, perceptual, and semantic              dY (f (x̂), f (x)) < δ for some task-dependent threshold δ, then
+                                                                                √ input perturbations(noise) ∥x̂ − x∥2 ≤ ε satisfying
+levels, which contributes to robustness and task consistency                small                                        2
+under varied SNR conditions. The channel-agnostic nature                    Lf · ε < δ ensure f (x̂) = f (x), and thus I(f (x̂) = f (x)) = 1.
+of the design, which is compatible with standard coding
+schemes such as LDPC, further reduces deployment com-                        a: JUSTIFICATION
+plexity across diverse scenarios without requiring task or                  The semantic manifold Msem is defined by the training distri-
+environment adaptation. These findings highlight the poten-                 bution, which combines DIV2K, CelebA-HQ, and Flickr15k
+tial of codebook-based generative semantic communication                    datasets, augmented for contrastive learning. Although task
+systems to achieve higher efficiency, accuracy, and robustness              utility is assessed on a different dataset (MS-COCO), the
+to semantic and channel noise, marking a promising direction                learned manifold during training provides a compressed
+for future research in SemCom.                                              semantic space that captures the structural and perceptual
+                                                                            regularities common across natural images. Our model is
+VIII. FUTURE WORK                                                           trained to project noisy or incomplete inputs back onto this
+In future work, the SVQ-WGAN framework will be expanded                     manifold, thereby preserving meaningful semantic content
+toward a multimodal semantic communication system for                       even under compression or transmission degradation, pro-
+video by incorporating a cross-modal feature fusion mecha-                  viding robustness and generalization, without explicit task-
+nism. This will include a semantic-level error correction mod-              based training. The low FID scores reported in Section V-
+ule at the video frame level to correct the channel-introduced              L, empirically supports that x̂ ∈ Msem .Thus, minimizing
+loss in frame transmission. This direction leverages the fusion             reconstruction loss preserves task-relevant semantics without
+of visual and text modalities to enhance semantic under-                    requiring explicit task supervision.
+standing and robustness during transmission. The method-
+ology aims to align latent visual features extracted by the                  b: EMPIRICAL VALIDATION
+SVQ-WGAN encoder with pre-trained textual embeddings                        The image classification results on the CIFAR-10 dataset in
+using a lightweight projection module. This enables joint                   Fig. 16 demonstrate that SVQ-WGAN maintains high clas-
+reasoning across modalities and supports complex tasks,                     sification accuracy (94%) at SNR levels above 4 dB, closely
+such as cross-modal retrieval, referring expression ground-                 approaching the clean baseline. Additionally, Table 2 shows
+ing, and Visual Question Answering (VQA), under channel                     higher BERTScore F1 values for SVQ-WGAN in image
+constraints. This multimodal fusion design surpasses the                    captioning tasks on the COCO dataset at moderate and high
+unimodal captioning employed in this manuscript, enabling                   SNRs.                                                    ■
+richer semantic reasoning and greater resilience in low-
+bandwidth, noisy environments. In a separate effort, the                    B. PROOF OF PROPOSITION 2
+domain adaptability of medical or satellite images will be                  1) LEARNED PRIOR OVER QUANTIZED LATENTS
+explored.                                                                   ENABLES STRUCTURED SEMANTIC DECODING
+                                                                                  Proof: Let T be a stochastic perturbation process
+APPENDIX A                                                                  applied to the quantized latent code zq , such that z̃q =
+MATHEMATICAL PROOFS                                                         T (zq ) = zq + ε, where ε ∼ N (0, σ 2 I ) or represents index
+In this section, we present mathematical proofs to support the              masking. Then,
+theoretical claims underlying our model architecture.
+                                                                                     ∥G(z̃q ) − G(zq )∥2 ≤ LG ∥z̃q − zq ∥2 = LG ∥ε∥2 .
+
+A. PROOF OF PROPOSITION 1                                                      Taking expectation over the noise distribution, the genera-
+1) RECONSTRUCTION LOSS PRESERVES TASK                                       tor’s output under perturbation satisfies:
+                                                                                     h            i           h      i
+UTILITY UNDER SEMANTIC EQUIVALENCE
+                                                                                 ET ∥G(z̃q )−x∥2 ≤ LG2 ET ∥ε∥2 + ∥G(zq )−x∥2 ,
+     Proof: Since f is Lipschitz continuous on Msem , there
+exists a constant Lf > 0 such that for all x, x̂ ∈ Msem ,                      This indicates that the generator learns to map sampled or
+                                                                            corrupted latents from a structured, quantized prior to seman-
+                                                                            tically consistent outputs. As the generator is constructed
+                 dY (f (x̂), f (x)) ≤ Lf · ∥x̂ − x∥2                        from Lipschitz-continuous layers and trained on codebook
+
+VOLUME 3, 2025                                                                                                                           1069
+embeddings, the function G(zq ) exhibits stable decoding             Minimizing Ladv with respect to G encourages Pεgen →
+behavior across the learned prior distribution. This supports      Pdata , implying G(z̃q ) ∈ Msem , even when z̃q ̸ = zq .
+our claim that the vector quantizer encodes a structured prior       Moreover, if G is Lipschitz continuous with constant LG ,
+enabling semantic generalization.                           ■      then:
+
+a: EMPIRICAL VALIDATION                                                           ∥G(z̃q ) − G(zq )∥2 ≤ LG · ∥ε∥2 .
+As illustrated in Ablation Study Fig. 17, different codebook       Hence, for small ∥ε∥, the output G(z̃q ) remains close to the
+sizes result in consistent performance across PSNR, MS-            clean reconstruction G(zq ), preserving semantic content. ■
+SSIM, and LPIPS, even under low SNR and fading channels.
+The generalization to the COCO with low FID (5.496) and            a: EMPIRICAL VALIDATION
+KID (0.0073) scores, as reported in Section V-L, validates         As illustrated in Ablation Study Fig. 17, the result with noise
+that the generator decodes quantized latent vectors in a struc-    regularization shows a degraded quality in the transmitted
+tured and semantically meaningful manner.                          images at all SNR levels. The ablation study on classification
+                                                                   without the adversarial training results in degraded classifi-
+C. PROOF OF PROPOSITION 3
+                                                                   cation accuracy, shown in Fig. 16
+1) SEMANTIC RATE-DISTORTION TRADE-OFF VIA
+QUANTIZED REPRESENTATION
+                                                                   E. PROOF OF PROPOSITION 5
+      Proof: Let ze (x) be a continuous latent representation      1) INDEX DROPOUT COMBINED WITH ADVERSARIAL
+and zq (x) its quantized counterpart. Assume quantization          TRAINING ENABLES ERROR-TOLERANT
+introduces bounded distortion ∥zq (x) − ze (x)∥2 ≤ δq .By          RECONSTRUCTION
+Lipschitz continuity of G with constant LG , the reconstruction
+                                                                        Proof: Let Sdrop = {i : mi = 0} denote the dropped
+satisfies:
+                                                                   indices. The difference between the corrupted and clean latent
+             ∥G(zq (x)) − G(ze (x))∥2 ≤ LG · δq .                  vectors is bounded by:
+  Decomposing the semantic distortion:
+       Dsem (x, x̂) ≤ ∥x − x̂∥22 + α · ∥φ(x) − φ(x̂)∥22 ,                E[∥z̃q − zq ∥2 ] ≤ N · Pmask · max ∥zq [i] − z0 ∥2 .
+                                                                                                           i
+and assuming G(ze (x)) ≈ x, we have:                                 Assuming G is Lipschitz with constant LG , we have:
+  ∥x − x̂∥2 ≤ ∥x − G(ze (x))∥2 + ∥G(ze (x)) − G(zq (x))∥2
+            ≤ ϵ + LG · δq                                            E[∥G(zq ) − G(z̃q )∥2 ] ≤ LG2 · E[∥z̃q − zq ∥2 ] = δ(Pmask ).
+  Therefore,                                                          The reconstruction loss ensures G(z̃q ) ≈ x, while the
+                                        h                i
+Ex Dsem (x, x̂) ≤ (ϵ + LG δq )2 + α · Ex ∥φ(x) − φ(x̂)∥22 .
+                                                                 adversarial loss ensures G(z̃q ) ∈ Msem . Thus, reconstruc-
+                    √                                              tions are semantically valid even under index masking.   ■
+  Since δq ∝ 1/ K (codebook resolution), and R =
+N log2 K , we express:                                             a: REMARK
+              √                                                    Here, N denotes the total number of latent vectors in the quan-
+   δq = O(1/ 2R ) ⇒ Ex Dsem (x, x̂) ≤ F(R, LG ).
+                                         
+                                                                   tized representation, and zq [i] ∈ Rd is the i-th latent embed-
+Thus, semantic distortion is bounded as a function of com-         ding. The index i ∈ {1, . . . , N } refers to positions within
+pression rate and generator sensitivity.                ■          the latent sequence. The term maxi ∥zq [i] − z0 ∥2 captures the
+                                                                   worst-case replacement error introduced by the default vector
+a: EMPIRICAL VALIDATION                                            z0 under index dropout.
+Rate-distortion analysis provided in Section V-I validated
+this, where SVQ-WGAN achieves higher quality( Fig. 8) with         b: EMPIRICAL VALIDATION
+lower effective bitrates(Fig. 3) compared to BPG.                  This is empirically validated through the ablation study
+                                                                   of different variants of the model in Fig. 18, where the
+D. PROOF OF PROPOSITION 4                                          SVQ-WGAN with Pmask = 0, shows a degraded quality in
+1) ADVERSARIAL TRAINING WITH CHANNEL NOISE                         PSNR and LPIPS.
+ENABLES SEMANTIC ROBUSTNESS
+      Proof: Let Pdata be the real image distribution and          F. PROOF OF PROPOSITION 6
+Pεgen the distribution of reconstructed images under perturbed     1) SEMANTIC GENERALIZATION THROUGH
+latents z̃q . The adversarial objective approximates the Wasser-   MULTI-LEVEL ROBUST REPRESENTATION LEARNING
+stein distance:                                                    VIA PIXEL AND LATENT PERTURBATIONS
+                                                                        Proof: Training with augmented samples x ′ ∼ T (x),
+                                h                          i
+   W (Pdata , Pεgen ) = sup Ex [D(x)] − Ez̃q [D(G(z̃q ))] .
+                      ∥D∥L ≤1                                      the encoder minimizes ∥zq (x) − zq (x ′ )∥ implicitly through
+
+1070                                                                                                                   VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+reconstruction and VQ alignment. Hence, we assume:                             Furthermore, B can be explicitly controlled by choosing N
+                                                                            (via encoder stride) and K (via codebook size). Hence, sym-
+                    E[∥zq (x) − zq (x )∥] ≤ δ1 .
+                                       ′
+                                                                            bolic quantized representations allow deterministic control
+   The Generator G is Lipschitz with LG , and the perceptual                over bandwidth usage, unlike continuous latent codes used
+feature extractor φ is Lipschitz with Lφ . Then, for a perturbed            in JSCC systems.
+latent z̃q = zq (x) + ε:                                                       Assume each symbol is transmitted over a channel using
+                                                                            LDPC coding with coding rate Rc ∈ (0, 1].
+               ∥G(zq (x)) − G(z̃q )∥ ≤ LG · ∥ε∥,                               Then, the total number of transmitted bits is:
+          ∥φ(G(zq (x))) − φ(G(z̃q ))∥ ≤ Lφ · LG · ∥ε∥.
+                                                                                                               N · log2 K
+                                                                                                       Btx =              ,
+  Taking expectation over perturbations gives:                                                                     Rc
+          Ez̃q ∥φ(G(zq (x))) − φ(G(z̃q ))∥ ≤ δ2 ,
+                                         
+                                                                            and the effective compression ratio becomes:
+with δ2 = Lφ LG E[∥ε∥].                                                                                Btx   N · log2 K
+                                                                                                           =            .
+  Additionally, the adversarial loss Ladv = E[D(x)] −                                                 HWC    Rc · HWC
+E[D(G(zq ))] minimizes the Wasserstein distance:                               Thus, the use of LDPC increases the transmission band-
+                                                                            width by a factor of 1/Rc , while providing robustness against
+    W (Pdata , PG ) = sup        Ex [D(x)] − Ezq [D(G(zq ))] ,
+                                                                           bit errors, making the model suitable for lossy channels. The
+                       ∥D∥L ≤1                                              encoder design enables explicit trade-off control between
+   enforcing that the distribution of reconstructed samples                 bandwidth efficiency and channel resilience.
+x̂ = G(zq ) approximates the true semantic data distribution.
+Therefore, even under latent perturbations z̃q , adversarial                 a: EMPIRICAL VALIDATION
+alignment ensures:                                                          The bandwidth efficiency of the symbolic latent represen-
+                                                                            tation is empirically verified in Section V-H. SVQ-WGAN
+                                                                            transmits fewer bits per pixel (0.438 bpp vs. 0.562 for BPG
+           G(z̃q ) ∈ Msem ,      with φ(G(z̃q )) ≈ φ(x).                    and 1.0 for JSCC) while achieving comparable or better
+   This strengthens the semantic robustness of G against both               perceptual quality as illustrated in Fig. 7,8             ■
+latent and input perturbations.
+   Together, the encoder and decoder enforce semantic con-                  APPENDIX B
+sistency across both augmented and corrupted views, even                    ADDITIONAL EXPERIMENTAL RESULTS
+without explicit contrastive loss.                         ■                A. PERFORMANCE WITH DIFFERENT CONFIGURATIONS
+                                                                            To analyze the effect of index masking, we conducted an
+a: EMPIRICAL VALIDATION                                                     ablation study by varying the dropout probability (Pmask ),
+Section V-L reports low FID and KID scores for COCO                         as shown in Fig. 18. This mechanism simulates the poten-
+images, while Fig. 13,14,15 illustrate visually coherent                    tial loss of latent symbols during transmission. The results
+reconstructions of high-resolution and facial images, without               across different SNR levels indicate that a small dropout
+domain-specific retraining. Additionally, the classification                probability (from 0.01 to 0.1) introduces a controlled degree
+ablation study validates this contrastive regularization in 16              of stochastic degradation, which encourages the model to
+                                                                            learn error-tolerant reconstructions. However, increasing the
+G. PROOF OF PROPOSITION 7                                                   dropout rate to 0.5 results in the removal of a significant
+1) SYMBOLIC SEMANTIC COMPRESSION BOUNDS                                     amount of latent information, which significantly degrades
+BANDWIDTH USAGE                                                             both semantic similarity and quality. Based on these results,
+     Proof: Each codebook vector zq [i] ∈ {1, . . . , K } is an             we selected Pmask = 0.01 as a practical trade-off, offering
+index into a codebook of size K , and requires log2 K bits                  improved robustness to latent perturbation while preserving
+to encode. Since the full latent sequence zq (x) contains N                 high reconstruction quality under realistic channel condi-
+codebook vectors, the total transmission bandwidth is:                      tions. Additionally, we experimented with the variant trained
+                                                                            without the Wasserstein discriminator, and it consistently
+                         B = N · log2 K .                                   exhibits lower performance, underscoring the role of the
+                                                                            WGAN-based critic in enhancing perceptual realism.
+  Let x ∈ RH ×W ×C be the original input, with total size D =
+HWC. Then, the compression ratio is:
+                                                                             B. TRAINING STABILITY
+                       B   N · log2 K
+                         =            .                                     Training and validation loss curves over 150 epochs for four
+                       D      HWC                                           key components of the SVQ-WGAN framework are pre-
+   In practice, N = H ′ W ′ , where H ′ , W ′ ≪ H , W , due                 sented in Fig. 19, illustrating training stability and conver-
+to spatial downsampling in the encoder. As such, this ratio                 gence. The reconstruction loss decreases sharply during the
+indicates substantial compression.                                          initial 40 epochs and gradually stabilizes for both training
+
+VOLUME 3, 2025                                                                                                                        1071
+                                                                     FIGURE 19. Losses (a) Reconstruction loss (b) VQ loss.
+                                                                     (c) Discriminator loss (d) Total loss.
+
+
+
+                                                                        The consistent convergence and alignment of the
+                                                                     loss curves across all components demonstrate that the
+                                                                     SVQ-WGAN model is stably trained. This stability is a
+                                                                     result of key architectural and training design choices, includ-
+                                                                     ing vector quantization with a well-regularized codebook,
+                                                                     Wasserstein GAN with a gradient penalty, noise injection, and
+                                                                     index dropout for robustness, as well as cosine learning rate
+                                                                     scheduling. These mechanisms collectively ensure smooth
+                                                                     optimization dynamics and effective learning under noisy
+FIGURE 18. Performance of the model with different
+configurations for varying SNRs: (a) PSNR (b) LPIPS.                 channel conditions.
+
+                                                                     REFERENCES
+                                                                      [1] C. E. Shannon, ‘‘Communication in the presence of noise,’’ Proc. IEEE,
+                                                                          vol. 72, no. 9, pp. 1192–1201, Sep. 1984.
+and validation sets. This indicates that the generator learns to      [2] T. Fukunaga and N. Ito, ‘‘Lifting link invariants by functors on
+                                                                          nanophrases,’’ 2024, arXiv:2401.04506.
+reconstruct images more accurately over time. The validation
+                                                                      [3] R. Navigli and P. Velardi, ‘‘Structural semantic interconnections: A
+loss initially fluctuates more, but after 70 epochs, it stabilizes        knowledge-based approach to word sense disambiguation,’’ IEEE Trans.
+closely with the training loss. The close tracking of the val-            Pattern Anal. Mach. Intell., vol. 27, no. 7, pp. 1075–1086, Jul. 2005.
+idation curve with the training curve shows effective gener-          [4] D. Ha and J. Schmidhuber, ‘‘World models,’’ 2018, arXiv:1803.10122.
+                                                                      [5] D. Ha and J. Schmidhuber, ‘‘Recurrent world models facilitate policy
+alization and no overfitting. The VQ loss consists of code-               evolution,’’ in Proc. Adv. Neural Inf. Process. Syst., vol. 31, S. Bengio,
+book and commitment terms, and converges smoothly after                   H. Wallach, H. Larochelle, K. Grauman, N. Cesa-Bianchi, and R. Garnett,
+an initial transient phase of approximately 50 epochs. The                Eds., 2018, pp. 2455–2467.
+consistent close convergence between training and valida-             [6] K. Papineni, S. Roukos, T. Ward, and W.-J. Zhu, ‘‘BLEU: A method for
+                                                                          automatic evaluation of machine translation,’’ in Proc. 40th Annu. Meeting
+tion losses reflects successful codebook learning and encoder             Assoc. Comput. Linguistics, 2002, pp. 311–318.
+commitment to the quantized representations. The discrimi-            [7] C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. Vincent Poor, ‘‘Less
+nator loss initially fluctuates, which is typical in adversarial          data, more knowledge: Building next-generation semantic communica-
+                                                                          tion networks,’’ IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp. 37–76,
+training. However, it rapidly stabilizes and remains steady               Feb. 2025.
+beyond 50 epochs. The curve validates the effectiveness of            [8] Z. Qin, F. Gao, B. Lin, X. Tao, G. Liu, and C. Pan, ‘‘A generalized semantic
+the Wasserstein loss with gradient penalty (λ = 10), which                communication system: From sources to channels,’’ IEEE Wireless Com-
+                                                                          mun., vol. 30, no. 3, pp. 18–26, Jun. 2023.
+prevents gradient explosion or vanishing. The stable discrim-
+                                                                      [9] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, ‘‘Varia-
+inator behavior contributes to more consistent updates for the            tional image compression with a scale hyperprior,’’ in Proc. 6th Int. Conf.
+generator, avoiding mode collapse and enabling high-fidelity              Learn. Represent., 2018. [Online]. Available: https://api.semanticscholar
+                                                                          .org/CorpusID:3611540
+reconstructions. The total loss, comprising reconstruction,
+                                                                     [10] C. S. G. Lee, X. Hu, and H.-S. Kim, ‘‘Deep joint source-channel coding
+Vector Quantization (VQ), adversarial, and perceptual losses,             with iterative source error correction,’’ in Proc. 26th Int. Conf. Artif. Intell.
+shows a steady trend and stabilizes after 40 epochs.                      Statist. (AISTATS), 2023, pp. 3879–3902.
+
+1072                                                                                                                                      VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+[11] M. Arjovsky, S. Chintala, and L. Bottou, ‘‘Wasserstein GAN,’’ in Proc.           [34] J. Masci, U. Meier, D. Ciresan, and J. Schmidhuber, ‘‘Stacked convolu-
+     34th Int. Conf. Mach. Learn., 2017, pp. 214–223.                                      tional auto-encoders for hierarchical feature extraction,’’ in Proc. Int. Conf.
+[12] NVIDIA. (2023). Sionna: A GPU-Accelerated Library for Link-Level Sim-                 Artif. Neural Netw., 2011, pp. 52–59.
+     ulations of Communication Systems. Accessed: Nov. 23, 2023. [Online].            [35] A. Makhzani, J. Shlens, N. Jaitly, I. Goodfellow, and B. Frey, ‘‘Adversarial
+     Available: https://nvlabs.github.io/sionna/api/fec.ldpc.html                          autoencoders,’’ 2015, arXiv:1511.05644.
+[13] T. Chen, S. Kornblith, M. Norouzi, and G. E. Hinton, ‘‘A simple framework        [36] D. J. Rezende, S. Mohamed, and D. Wierstra, ‘‘Stochastic backpropagation
+     for contrastive learning of visual representations,’’ in Proc. 37th Int. Conf.        and approximate inference in deep generative models,’’ in Proc. 31st Int.
+     Mach. Learn., 2020, pp. 1597–1607.                                                    Conf. Mach. Learn., 2014, pp. 1278–1286.
+[14] X. Chen, S. Xie, and K. He, ‘‘An empirical study of training self-supervised     [37] A. V. D. Oord, O. Vinyals, and K. Kavukcuoglu, ‘‘Neural discrete repre-
+     vision transformers,’’ in Proc. IEEE/CVF Int. Conf. Comput. Vis. (ICCV),              sentation learning,’’ in Proc. Adv. Neural Inf. Process. Syst., 2017.
+     Oct. 2021, pp. 9620–9629.                                                        [38] M. Nemati J. Park, and J. Choi, ‘‘VQ-VAE empowered wireless communi-
+[15] J. Wu et al., ‘‘Semantic segmentation-based semantic communication                    cation for joint source-channel coding and beyond,’’ in Proc. GLOBECOM
+     system for image transmission,’’ Digit. Commun. Netw., vol. 10, no. 3,                IEEE Global Commun. Conf., 2023, pp. 3155–3160.
+     pp. 519–527, Jun. 2024. [Online]. Available: https://www.sciencedirect.          [39] P. Ye, Y. Sun, S. Yao, H. Chen, X. Xu, and S. Cui, ‘‘Codebook-enabled gen-
+     com/science/article/pii/S235286482300041X                                             erative end-to-end semantic communication powered by transformer,’’ in
+[16] E. Erdemir, T.-Y. Tung, P. L. Dragotti, and D. Gündüz, ‘‘Generative                   Proc. IEEE Conf. Comput. Commun. Workshops (INFOCOM WKSHPS),
+     joint source-channel coding for semantic image transmission,’’ IEEE J.                May 2024, pp. 1–6.
+     Sel. Areas Commun., vol. 41, no. 8, pp. 2645–2657, Aug. 2023, doi:               [40] S. Guo, Y. Wang, J. Ye, A. Zhang, P. Zhang, and K. Xu, ‘‘Semantic
+     10.1109/JSAC.2023.3288243.                                                            importance-aware communications with semantic correction using large
+[17] D. Ye, X. Wang, and X. Chen, ‘‘Lightweight generative joint                           language models,’’ IEEE Trans. Mach. Learn. Commun. Netw., vol. 3,
+     source-channel coding for semantic image transmission with compressed                 pp. 232–245, 2025.
+     conditional GANs,’’ in Proc. IEEE/CIC Int. Conf. Commun. China (ICCC             [41] S. Guo, A. Zhang, Y. Wang, C. Feng, and T. Q. S. Quek,
+     Workshops), Aug. 2023, pp. 1–6.                                                       ‘‘Semantic-enabled 6G communication: A task-oriented and privacy-
+[18] X. Chen, D. Feng, Q. He, Y. Sun, and X.-G. Xia, Content-Aware Robust                  preserving perspective,’’ IEEE Netw., early access, Mar. 4, 2025, doi:
+     Semantic Transmission of Images Over Wireless Channels with GANs.                     10.1109/MNET.2025.3547760.
+     Hoboken, NJ, USA: Wiley, 2024, ch. 7, doi: 10.1002/9781394223336.ch7.            [42] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, ‘‘Robust informa-
+[19] Q. He, H. Yuan, D. Feng, B. Che, Z. Chen, and X.-G. Xia, ‘‘Robust                     tion bottleneck for task-oriented communication with digital modulation,’’
+     semantic transmission of images with generative adversarial networks,’’               IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+     in Proc. IEEE Global Commun. Conf., Dec. 2022, pp. 3953–3958.                    [43] I. Goodfellow et al., ‘‘Generative adversarial networks,’’ Commun. ACM,
+[20] M. Letafati, S. Ali, and M. Latva-Aho, ‘‘Conditional denoising diffu-                 vol. 63, no. 11, pp. 139–144, Oct. 2020, doi: 10.1145/3422622.
+     sion probabilistic models for data reconstruction enhancement in wireless        [44] R. C. Gonzalez and R. E. Woods, Digital Image Processing, 3rd ed., Upper
+     communications,’’ IEEE Trans. Mach. Learn. Commun. Netw., vol. 3,                     Saddle River, NJ, USA: Prentice-Hall, 2008.
+     pp. 133–146, 2025.                                                               [45] I. Gulrajani, F. Ahmed, M. Arjovsky, V. Dumoulin, and A. C. Courville,
+[21] Y. Miao, J. Yan, Y. Wang, Z. Li, and D. Hu, ‘‘A semantic communication                ‘‘Improved training of Wasserstein GANs,’’ in Proc. Adv. Neural Inf.
+     system based on vector quantization and generative model,’’ in Proc. 6th              Process. Syst. (NIPS), 2017, pp. 5767–5777.
+     Int. Conf. Commun., 2024, pp. 46–50.                                             [46] Z. Zhang, M. Li, and J. Yu, ‘‘On the convergence and mode collapse of
+[22] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, ‘‘Vector quantized semantic           GAN,’’ in Proc. SIGGRAPH Asia Tech. Briefs, 2018, pp. 1–4.
+     communication system,’’ IEEE Wireless Commun. Lett., vol. 12, no. 6,             [47] S. Kolouri, S. R. Park, M. Thorpe, D. Slepcev, and G. K. Rohde, ‘‘Optimal
+     pp. 982–986, Jun. 2023.                                                               mass transport: Signal processing and machine-learning applications,’’
+[23] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, ‘‘Robust semantic               IEEE Signal Process. Mag., vol. 34, no. 4, pp. 43–59, Jul. 2017.
+     communications with masked VQ-VAE enabled codebook,’’ IEEE Trans.                [48] I. Goodfellow et al., ‘‘Generative adversarial nets,’’ in Proc. Adv. Neural
+     Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.                          Inf. Process. Syst., 2014, pp. 2672–2680.
+[24] R. Carnap and Y. Bar-Hillel, An Outline of the Theory of Semantic Infor-         [49] S. Cui and Y. Jiang, ‘‘Effective Lipschitz constraint enforcement for
+     mation. Cambridge, MA, USA: MIT Press, 1952.                                          Wasserstein GAN training,’’ in Proc. 2nd IEEE Int. Conf. Comput. Intell.
+[25] Y. Zhong, ‘‘A theory of semantic information,’’ China Commun., vol. 14,               Appl. (ICCIA), Sep. 2017, pp. 74–78.
+     no. 1, pp. 1–17, Jan. 2017.                                                      [50] K. He, X. Zhang, S. Ren, and J. Sun, ‘‘Deep residual learning for image
+[26] S. Verdú, ‘‘Algorithmic information theory and Shannon theory: Complex-               recognition,’’ in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR),
+     ities and entropy bounds,’’ IEEE Trans. Inf. Theory, vol. 68, no. 1, pp. 1–23,        Jun. 2016, pp. 770–778.
+     Jan. 2022.                                                                       [51] R. G. Gallager, ‘‘Low-density parity-check codes,’’ IRE Trans. Inf. Theory,
+[27] H. Huang, H. Xie, Z. Qin, G. Zhou, and Z. Lu, ‘‘Toward a semantic                     vol. 8, no. 1, pp. 21–28, 1962.
+     communication system for text transmission,’’ IEEE Wireless Commun.,             [52] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, ‘‘The unrea-
+     vol. 29, no. 4, pp. 102–108, Apr. 2022.                                               sonable effectiveness of deep features as a perceptual metric,’’ in Proc.
+[28] Z. Weng and Z. Qin, ‘‘Semantic communication systems for speech trans-                IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018, pp. 586–595.
+     mission,’’ IEEE J. Sel. Areas Commun., vol. 39, no. 8, pp. 2434–2444,            [53] K. Simonyan and A. Zisserman, ‘‘Very deep convolutional networks for
+     Aug. 2021.                                                                            large-scale image recognition,’’ in Proc. Int. Conf. Learn. Represent., 2015.
+[29] H. Xie, Z. Qin, G. Li, Z. Lu, and T. Zhu, ‘‘A deep learning enabled              [54] W. Lindsey, ‘‘Design of block-coded communication systems,’’ IEEE
+     semantic communication system for image transmission,’’ IEEE Trans.                   Trans. Commun. Technol., vol. CT-15, no. 4, pp. 525–534, Aug. 1967.
+     Signal Process., vol. 69, pp. 2953–2966, 2021.                                   [55] M. Everingham, L. Van Gool, C. K. I. Williams, J. Winn, and A. Zisserman,
+[30] J. Wang et al., ‘‘Generative AI empowered semantic feature multiple access            ‘‘The PASCAL visual object classes (VOC) challenge,’’ Int. J. Comput.
+     (SFMA) over wireless networks,’’ IEEE Trans. Cognit. Commun. Netw.,                   Vis., vol. 88, no. 2, pp. 303–338, Jun. 2010.
+     vol. 11, no. 2, pp. 791–804, Apr. 2025.                                          [56] E. Agustsson and R. Timofte, ‘‘NTIRE 2017 challenge on single image
+[31] S. Thushan, S. Ali, N. H. Mahmood, N. Rajatheva, and M. Latva-Aho,                    super-resolution: Dataset and study,’’ in Proc. IEEE Conf. Comput. Vis.
+     ‘‘Deep learning-based blind multiple user detection for grant-free SCMA               Pattern Recognit. Workshops (CVPRW), Jul. 2017, pp. 1122–1131.
+     and MUSA systems,’’ IEEE Trans. Mach. Learn. Commun. Netw., vol. 1,              [57] L. Simon. (2021). CelebA-HQ Dataset. Accessed: Jan. 4, 2024. [Online].
+     pp. 61–77, 2023.                                                                      Available: https://www.kaggle.com/datasets/lamsimon/celebahq
+[32] G. E. Hinton and R. R. Salakhutdinov, ‘‘Reducing the dimensionality of           [58] M. Hodosh, P. Young, and J. Hockenmaier. (2013). Flickr8k: A Dataset
+     data with neural networks,’’ Science, vol. 313, no. 5786, pp. 504–507,                for Image and Sentence Based Image Description. Accessed: Oct. 3,
+     Jul. 2006.                                                                            2023. [Online]. Available: https://github.com/jbrownlee/Datasets/releases/
+[33] P. Samarathunga, H. Rezaei, M. Lokumarambage, T. Sivalingam, N.                       tag/Flickr8kDataset
+     Rajatheva, and A. Fernando, ‘‘An autoencoder-based task-oriented seman-          [59] Kodak Lossless True Color Image Suite, Kodak, Rochester, NY, USA,
+     tic communication system for M2M communication,’’ Algorithms, vol. 17,                2013.
+     no. 11, p. 492, Nov. 2024. [Online]. Available: https://www.mdpi.com/            [60] F. Bellard. (2014). BPG Image Format. Accessed: Jun. 26, 2024. [Online].
+     1999-4893/17/11/492                                                                   Available: https://bellard.org/bpg/
+
+VOLUME 3, 2025                                                                                                                                                      1073
+[61] T. Zhang, V. Kishore, F. Wu, K. Q. Weinberger, and Y. Artzi, ‘‘BERTScore:                                  FENG DONG received the Ph.D. degree from
+     Evaluating text generation with BERT,’’ in Proc. Int. Conf. Learn. Repre-                                  Zhejiang University, China. He is a Professor of
+     sent., 2019.                                                                                               computer science and the Head of the Human Cen-
+[62] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter,                                     tric AI Research Group, University of Strathclyde,
+     ‘‘GANs trained by a two time-scale update rule converge to a local Nash                                    U.K. His current research has addressed a range
+     equilibrium,’’ in Proc. 31st Int. Conf. Neural Inf. Process. Syst., Red Hook,                              of issues in human centric AI to support knowl-
+     NY, USA, 2017, pp. 6629–6640.                                                                              edge discovery, visual data analytics, image anal-
+[63] A. Casanova, M. Careil, J. Verbeek, M. Drozdzal, and A. Romero-Soriano,
+                                                                                                                ysis, pattern recognition, and parallel computing
+     ‘‘Instance-conditioned GAN,’’ in Proc. Adv. Neural Inf. Process. Syst.,
+                                                                                                                (GPU). In particular, he is interested in causality
+     vol. 34, 2021, pp. 27517–27529.
+                                                                                                                learning from data to support the generation of
+[64] M. Bińkowski, D. J. Sutherland, M. Arbel, and A. Gretton, ‘‘Demystifying
+     MMD GANs,’’ 2018, arXiv:1801.01401.                                             synthetic data for healthcare and virtual clinical trial emulations. He has sig-
+[65] A. Brock, J. Donahue, and K. Simonyan, ‘‘Large scale GAN training               nificant experience in leading and managing collaborative research projects
+     for high fidelity natural image synthesis,’’ in Proc. Int. Conf. Learn.         and teams across Europe to conduct cross-disciplinary research in AI and
+     Represent., 2018. [Online]. Available: https://openreview.net/forum?id          innovative technologies, with a substantial track record in attracting external
+     =B1xsqj09Fm                                                                     research funding.
+[66] T. Karras, M. Aittala, J. Hellsten, S. Laine, J. Lehtinen, and T. Aila,
+     ‘‘Training generative adversarial networks with limited data,’’ in Proc.
+     NeurIPS, 2020.
+[67] H. Caesar, J. Uijlings, and V. Ferrari, ‘‘COCO-stuff: Thing and stuff classes
+     in context,’’ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+     Jun. 2018, pp. 1209–1218.
+[68] M. Tan, R. Pang, and Q. V. Le, ‘‘EfficientDet: Scalable and efficient
+     object detection,’’ in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+     (CVPR), Jun. 2020, pp. 10778–10787.
+[69] E. Makov. (2020). Images 4K Dataset. Accessed: Jun. 7, 2025. [Online].
+     Available: https://www.kaggle.comdatasets/evgeniumakov/images4k                                             NANDANA RAJATHEVA (Senior Member,
+[70] R. C. Gonzalez and R. E. Woods, Digital Image Processing, 3rd ed.,                                          IEEE) received the B.Sc. degree (Hons.) in elec-
+     London, U.K.: Pearson Education, 2002.                                                                      tronics and telecommunication engineering from
+                                                                                                                 the University of Moratuwa, Sri Lanka, in 1987,
+                                                                                                                 and the M.Sc. and Ph.D. degrees from the Uni-
+                                                                                                                 versity of Manitoba, Winnipeg, MB, Canada, in
+                                                                                                                 1991 and 1995, respectively. He is currently a
+                                                                                                                 Professor with the Centre for Wireless Commu-
+                                                                                                                 nications, University of Oulu, Finland, and leads
+                          MAHESHI LOKUMARAMBAGE (Graduate                                                        the thematic area of wireless access technologies
+                          Student Member, IEEE) received the B.Sc. degree            in 6G flagship project. During his graduate studies, he was a Canadian
+                          (Hons.) specializing in computer engineering from          Commonwealth Scholar in Manitoba. From 1995 to 2010, he was with the
+                          the University of Peradeniya, Sri Lanka, in 2007,          University of Moratuwa, and Asian Institute of Technology, Thailand. He is
+                          the M.B.A. degree in finance from the University           contributing to intelligent radio air interface design task in EU project Hexa-
+                          of Colombo, Sri Lanka, in 2012, and the M.Sc.              X-II. He has co-authored more than 200 refereed papers published in journals
+                          degree in computer science from the University             and conference proceedings. His research interests include physical layer
+                          of Moratuwa, Sri Lanka, in 2014. She was an                (PHY) in 6G, machine learning for PHY and resource allocation, integrated
+                          Engineer with Sri Lanka Telecom PLC, Sri Lanka,            sensing and communications (ISAC), and channel coding.
+                          from 2007 to 2022. She is currently a Doctoral
+Researcher with the Department of Computer and Information Sciences,
+University of Strathclyde, U.K. Her research interests include semantic com-
+munication, computer vision, and deep learning-based resource optimization
+for multimedia applications.
+
+
+
+
+                                                                                                               ANIL FERNANDO (Senior Member, IEEE)
+                                                                                                               received the B.Sc. degree (Hons.) in electron-
+                          THUSHAN SIVALINGAM (Graduate Student                                                 ics and telecommunication engineering from the
+                          Member, IEEE) received the B.Sc. degree (Hons.)                                      University of Moratuwa, Sri Lanka, in 1995, the
+                          specializing in electrical and electronic engineer-                                  M.Sc. degree (Hons.) in communications from
+                          ing from the University of Peradeniya, Sri Lanka,                                    Asian Institute of Technology, Bangkok, Thailand,
+                          in 2015, and the double M.Sc. (Tech.) degree in                                      in 1997, and the Ph.D. degree in computer science
+                          wireless communication from the University of                                        (video coding and communications) from the Uni-
+                          Oulu, Finland, and the University of Peradeniya,                                     versity of Bristol, U.K., in 2001. He is currently
+                          Sri Lanka, in 2019. He is currently pursuing the                                     a Professor of video coding and communications
+                          Ph.D. degree with the Centre for Wireless Com-             with the Department of Computer and Information Sciences, University of
+                          munication, University of Oulu. He was a Planning          Strathclyde, U.K., where he leads the Video Coding and Communication
+Engineer for access network planning with Dialog Axiata PLC, Sri Lanka,              Research Team. He has graduated more than 130 Ph.D. students. He is
+from 2015 to 2018. His research interests include deep learning-based effi-          supervising 20 Ph.D. students. He has published more than 480 papers in
+cient and fast access methods for mMTC, grant-free NOMA, THz sensing,                international journals and conference proceedings and a book on 3D video
+and semantic communications. He won first place in the CWC-Doctoral The-             broadcasting. His research interests include video coding and communica-
+sis Pitch Competition in 2024. He served as a Technical Program Committee            tions, machine learning, artificial intelligence, semantic communications,
+Member for IEEE-VTC and IEEE-ANTS conferences.                                       media broadcasting, and quantum communications.
+
+1074                                                                                                                                                 VOLUME 3, 2025
+

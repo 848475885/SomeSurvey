@@ -1,0 +1,120 @@
+﻿                                    Received 10 February 2025; revised 24 July 2025; accepted 31 August 2025.
+                                  Date of publication 9 September 2025; date of current version 17 September 2025.
+                        The associate editor coordinating the review of this article and approving it for publication was Y. Deng.
+                                                      Digital Object Identifier 10.1109/TMLCN.2025.3607891
+
+
+
+
+               Generative AI-Based Vector Quantized
+               End-to-End Semantic Communication
+              System for Wireless Image Transmission
+                        MAHESHI LOKUMARAMBAGE 1 (Graduate Student Member, IEEE),
+                          THUSHAN SIVALINGAM 2 (Graduate Student Member, IEEE),
+                        FENG DONG 1 , NANDANA RAJATHEVA 2 (Senior Member, IEEE),
+                               AND ANIL FERNANDO 1 (Senior Member, IEEE)
+                        1 Department of Computer and Information Sciences, University of Strathclyde, G1 1XQ Glasgow, U.K.
+                                2 Centre for Wireless Communications (CWC), University of Oulu, 90570 Oulu, Finland
+
+                                    CORRESPONDING AUTHOR: T. SIVALINGAM (thushan.sivalingam@oulu.fi)
+                This work was supported in part by the Business Finland via the 6GBridge鈥揕ocal 6G Project under Grant 8002/31/2022,
+                            and in part by the Research Council of Finland through the 6G Flagship under Grant 369116.
+
+
+
+
+         ABSTRACT       Semantic communication (SemCom) systems enhance transmission efficiency by conveying
+         semantic information in lieu of raw data. However, challenges arise when designing these systems due to
+         the need for robust semantic source coding for information representation extending beyond the training
+         dataset, maintaining channel-agnostic performance, and ensuring robustness to channel and semantic noise.
+         We propose a novel generative artificial intelligence (AI) based SemCom architecture conditioned on
+         quantized latent. The system reduces the communication overhead of the wireless channel by transmitting
+         the index of the quantized latent over the communication channel by mapping the quantized vector to the
+         learned codebook vectors. The learned codebook is the shared knowledge base. The encoder is designed with
+         a novel spatial attention mechanism based on image energy, focusing on object edges. The critic assesses
+         the realism of generated data relative to the original distribution, with the Wasserstein distance. The model
+         introduces novel contrastive objectives at multiple levels, including pixel, latent, perceptual, and task output,
+         tailored for noisy wireless semantic communication. We validated the proposed model for transmission
+         quality and robustness with low-density parity-check (LDPC), which outperforms the baselines of better
+         portable graphics (BPG), specifically at low signal-to-noise ratio (SNR) levels (<5 dB). Additionally, it shows
+         comparable results with joint source-channel coding (JSCC) with lower complexity and latency. The model is
+         validated for human perception and machine perception-oriented task utility. The model effectively transmits
+         high-resolution images without requiring additional error correction at the receiver. We propose a novel
+         semantic-based matrix to evaluate the robustness to noise and task-specific semantic distortion.
+
+         INDEX TERMS Generative adversarial network (GAN), generative artificial intelligence (GenAI), knowl-
+         edge representation, LDPC code, semantic communication, semantic encoding, vector quantization.
+
+
+I. INTRODUCTION                                                                     transmission, which is concerned with pixel accuracy, was
+
+T     HE rapid growth of wireless content has been driven by
+      the emergence of modern multimedia applications such
+as augmented reality (AR), virtual reality (VR), autonomous
+                                                                                    governed by the classic information theory introduced by
+                                                                                    Shannon [1]. This theory has achieved great heights in infor-
+                                                                                    mation communication and introduced the basic concepts of
+vehicles, and intelligent healthcare. These applications are                        channel capacity, entropy, lossless and lossy compression of
+more concerned with the fidelity of the transmitted con-                            source and channel coding. The fundamental limitations of
+tent, particularly when interpreting high-level content such                        data compression and transmission are originally based on the
+as object identity/location, and spatial relationships, rather                      concept that the semantics of the information are unimportant
+than pixel-level details. In contrast, traditional content                          to the communication aspects, which is the technical problem
+                                     2025 The Authors. This work is licensed under a Creative Commons Attribution 4.0 License.
+                                             For more information, see https://creativecommons.org/licenses/by/4.0/
+1050                                                                                                                                  VOLUME 3, 2025
+Lokumarambage et al.: Generative AI-Based Vector Quantized End-to-End Semantic Communication System
+
+
+
+
+FIGURE 1. Semantics of a range of example applications such as
+classification, object detection for autonomous driving, and                FIGURE 2. Traditional communication system.
+high perpetual quality for multimedia applications.
+
+                                                                            challenging and involves minimizing semantic noise, which
+of communication. It has reached its theoretical limits due to              remains largely unexplored.
+the fast growth of modern multimedia-related applications.                     When it comes to defining a language, it involves repre-
+It has necessitated a paradigm shift in the design of com-                  senting the image or video frame with standardized symbols
+munication systems to cater to the increasing demand for                    agreeable to the transmitter and receiver. Semantic coding
+multimedia content.                                                         establishes a set of symbols to represent key features that
+                                                                            define an image. We can measure the amount of semantic
+A. THEORETICAL FOUNDATIONS                                                  information by calculating the probability of a message being
+Semantic communication (SemCom) considers level 2 of                        logically valid. In practical terms, this could be determined by
+Shannon鈥檚 information theory, which addresses the semantic                  the probability concerning the intended task (reconstruction,
+problem. It revolutionizes data transmission by emphasizing                 object identification, classification, etc.) of the receiver and
+the meaning and intent behind the information, rather than                  provide a quantitative measurement to assess the 鈥樷€榚ffective-
+its bit-level representation. As shown in Fig. 1, different                 ness problem鈥欌€?
+multimedia applications define semantics differently. Rather,                  According to the semantic information    P theory, semantic
+developing a SemCom system that can effectively represent                   entropy [2] Hsem (s) is defined as 鈭?log2 w|Hs p(w), where w
+the underlying information is beneficial for further advances.                                                P |H denotes the proposi-
+                                                                            denotes a world model [4], [5], where
+Fig. 2 shows the classical communication system, which                      tional satisfaction relation, and w|Hs p(w) is the probability
+encodes and decodes the information at the bit level. Opposed               of all world models in which s is true. In a probabilistic
+to this, a SemCom system identifies the semantics of the                    framework, world models represent a system鈥檚 possible states
+underlying message depending on the context and down-                       or interpretations. Similarly, each discrete code in a codebook
+stream task of the application, as shown in Fig. 3. The 鈥樷€楪oal鈥欌€?           represents a distinct feature or pattern that can be identified in
+is the intended task of the receiver related to the 鈥樷€楲evel C: the          the data. Thus, different codes can represent different aspects
+effectiveness problem鈥欌€?of Shannon鈥檚 communication theory.                  of the image. The reconstruction of an image can be thought
+Extraction of the meaning from the source and semantic                      of as finding the 鈥樷€榳orld model鈥欌€?that best represents the high
+coding is associated with 鈥樷€楲evel B: the semantic problem鈥欌€?                level features of the image. The semantic rate distortion can
+Semantic coding is mapping the extracted meaning of the                     be defined as follows:
+intended message into semantic symbols [2]. Channel coding,                                                         
+                                                                                        Rsem (D) = min Hsem (s|s虃)
+often called 鈥樷€楲evel A: the technical problem,鈥欌€?is taken as                                          p(s虃|s)
+mapping semantic symbols to channel symbols. Throughout                                               subject to E[Dsem (s, s虃)] 鈮?D      (1)
+this process, various types of noise are introduced. Noise
+introduced at level B can be considered semantic noise, while               where s is the original message, s虃 is the reconstructed mes-
+noise at level A is referred to as channel or technical noise.              sage after encoding and decoding, p(s虃|s) is the conditional
+To address the language problem that the transmitter and                    probability distribution of the reconstructed message given
+receiver understand, both parties should agree on a semantic                the original message, Hsem (s|s虃) is the conditional seman-
+and technical language that could translate the symbols effec-              tic entropy, representing the remaining uncertainty about s
+tively. Developing semantic language with semantic symbols                  given s虃, Dsem (s, s虃) is a semantic distortion measure, quan-
+for text-based SemCom can be augmented with methods                         tifying the difference in meaning between s and s虃 such as
+such as structural semantic interconnections (SSI) to enhance               bilingual evaluation understudy (BLEU) [6] score or percep-
+the precision of symbol interpretation for accurate seman-                  tual losses in images. Thus, the SemCom system involves
+tic understanding [3]. Developing a common language with                    encoding images into symbolic representations and decoding
+semantic symbols for multimedia-based SemCom systems is                     or generating them back into a visual format so that the
+
+VOLUME 3, 2025                                                                                                                           1051
+                                                                   鈥?We formulate a theoretical SemCom model aligned
+                                                                     with the semantic information theory and develop

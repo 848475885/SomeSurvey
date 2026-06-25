@@ -1,0 +1,766 @@
+                                                                                                                                                        DeepJSCC-Q: Channel Input Constrained
+                                                                                                                                                           Deep Joint Source-Channel Coding
+                                                                                                                                                               Tze-Yang Tung, David Burth Kurka, Mikolaj Jankowski, Deniz Gündüz
+                                                                                                                                                            Department of Electrical and Electronics Engineering, Imperial College London
+                                                                                                                                                             {tze-yang.tung14, d.kurka, mikolaj.jankowski17, d.gunduz}@imperial.ac.uk
+ICC 2022 - IEEE International Conference on Communications | 978-1-5386-8347-7/22/$31.00 ©2022 IEEE | DOI: 10.1109/ICC45855.2022.9838671
+
+
+
+
+                                                                                                                                              Abstract—Recent works have shown that the task of                         and difficulty in designing such codes. Recently, a method
+                                                                                                                                           wireless transmission of images can be learned with                          called DeepJSCC, which employs deep neural networks
+                                                                                                                                           the use of machine learning techniques. Very promising                       (DNNs) to perform a mapping from the input image space
+                                                                                                                                           results in end-to-end image quality, superior to pop-
+                                                                                                                                           ular digital schemes that utilize source and channel                         directly to channel input symbols in a joint manner was
+                                                                                                                                           coding separation, have been demonstrated through                            introduced in [2]. It shows appealing properties, such as
+                                                                                                                                           the training of an autoencoder, with a non-trainable                         better or similar performance compared with state-of-the-
+                                                                                                                                           channel layer in the middle. However, these methods                          art digital compression schemes [3], flexibility to adapt to
+                                                                                                                                           assume that any complex value can be transmitted over                        different source or channel models [2]–[4], ability to exploit
+                                                                                                                                           the channel, which can prevent the application of the
+                                                                                                                                           algorithm in scenarios where the hardware or protocol                        channel feedback [5], and capability to produce adaptive-
+                                                                                                                                           can only admit certain sets of channel inputs, such as                       bandwidth transmission schemes [6]. Importantly, graceful
+                                                                                                                                           the use of a digital constellation. Herein, we propose                       degradation of image quality with respect to decreasing
+                                                                                                                                           DeepJSCC-Q, an end-to-end optimized joint source-                            channel quality means that DeepJSCC is able to avoid the
+                                                                                                                                           channel coding scheme for wireless image transmission,                       cliff-effect that all separation-based schemes suffer from,
+                                                                                                                                           which is able to operate with a fixed channel input
+                                                                                                                                           alphabet. We show that DeepJSCC-Q can achieve sim-                           where the image becomes un-decodable due to the channel
+                                                                                                                                           ilar performance to models that use continuous-valued                        quality falling below what the channel code anticipates.
+                                                                                                                                           channel input. Importantly, it preserves the graceful                           One of the strengths of DeepJSCC is the fact that it
+                                                                                                                                           degradation of image quality observed in prior work                          learns a communication scheme from scratch, defining all
+                                                                                                                                           when channel conditions worsen, making DeepJSCC-                             transformations in a data-driven manner. This simplifies
+                                                                                                                                           Q much more attractive for deployment in practical
+                                                                                                                                           systems.                                                                     the code design procedure, and allows adaptation to any
+                                                                                                                                              Index Terms—Joint source-channel coding, wireless                         particular source or channel domain. We note that the
+                                                                                                                                           image transmission, deep neural networks                                     DeepJSCC approach not only combines source and chan-
+                                                                                                                                                                                                                        nel coding into one single mapping, but it also removes the
+                                                                                                                                                                 I. Introduction                                        constellation diagrams used in digital schemes. Instead, in
+                                                                                                                                                                                                                        DeepJSCC, the encoder can transmit arbitrary complex-
+                                                                                                                                              Source coding and channel coding are two essential
+                                                                                                                                                                                                                        valued channel inputs (within the power constraint). This
+                                                                                                                                           steps in modern data transmission. The former reduces
+                                                                                                                                                                                                                        can hinder the suitability of using DeepJSCC in current
+                                                                                                                                           the redundancy within source data, preserving only the
+                                                                                                                                                                                                                        commercial hardware and standardized protocols, which
+                                                                                                                                           essential information needed to achieve a prescribed re-
+                                                                                                                                                                                                                        are constrained to produce fixed sets of symbols.
+                                                                                                                                           construction fidelity. For example, in image transmission,
+                                                                                                                                                                                                                           In this work, we investigate the effects of constraining
+                                                                                                                                           commonly used source coding schemes are JPEG2000 and
+                                                                                                                                                                                                                        the channel input alphabet to a predefined constellation
+                                                                                                                                           BPG. Channel coding, on the other hand, introduces
+                                                                                                                                                                                                                        imposed externally. This constraint can be crucial for the
+                                                                                                                                           structured redundancy within the data to allow reliable
+                                                                                                                                                                                                                        adoption of DeepJSCC in commercially available hard-
+                                                                                                                                           decoding under the presence of channel noises. It was
+                                                                                                                                                                                                                        ware (e.g. radio transmitters), where modulators are hard-
+                                                                                                                                           proven by Shannon that, the separation of source and
+                                                                                                                                                                                                                        coded, limiting the output space available for the encoder,
+                                                                                                                                           channel coding is without loss of optimality when the
+                                                                                                                                                                                                                        or even in incorporating such techniques into established
+                                                                                                                                           blocklength goes to infinity and if the source is discrete
+                                                                                                                                                                                                                        standards such as cellular communications. Therefore, in
+                                                                                                                                           memoryless [1]. Nevertheless, in practical applications
+                                                                                                                                                                                                                        this paper, we introduce a new strategy for JSCC of
+                                                                                                                                           we are limited to finite blocklengths, and it has been
+                                                                                                                                                                                                                        images, DeepJSCC-Q, which allows for the transmission
+                                                                                                                                           known that such communication systems can benefit from
+                                                                                                                                                                                                                        of the content through fixed pre-defined constellations. A
+                                                                                                                                           combining the two coding steps, motivating the design
+                                                                                                                                                                                                                        series of experiments demonstrate that DeepJSCC-Q is
+                                                                                                                                           of joint source-channel coding (JSCC) schemes. Despite
+                                                                                                                                                                                                                        able to:
+                                                                                                                                           their potential advantages, JSCC schemes have found
+                                                                                                                                                                                                                           • Achieve similar performance results to unconstrained
+                                                                                                                                           limited use in practice due to their lack of modularity
+                                                                                                                                                                                                                              DeepJSCC, even when using a highly constrained
+                                                                                                                                             This work was supported by the European Research Council                         channel input representation.
+                                                                                                                                           (ERC) through project BEACON (No. 677854).                                      • Achieve superior performance when compared to
+
+
+
+
+                                                                                                                                                 Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                                                                                                                                                                  3880
+    capacity-achieving low density parity check (LDPC)                        using a finite set of symbols. An input image x ∈ RH×W ×C
+    codes [7] with BPG compression [8] under the same                         (where H, W and C represent the image’s height, width
+    channel input constraint.                                                 and color channels, respectively) is mapped with a non-
+  • Create coherent mapping on neighboring constella-                         linear encoder function fθ : RH×W ×C 7→ Ck into a latent
+    tion points, thus avoiding the cliff-effect present in                    vector z = fθ (x, σ̂ 2 ), where σ̂ 2 is the estimated channel
+    separation-based schemes.                                                 noise power. The latent vector z is then mapped to a
+                                                                              channel input alphabet C via the modulator qC : Ck 7→ Ck ,
+                     II. Related Works
+                                                                              which we will define in the sequel. There are M = |C|
+   JSCC for wireless image transmission using DNNs was                        possible symbols, and we refer to C as the constellation,
+first demonstrated in [2], and dubbed DeepJSCC. The                           denoted by C = {c1 , ..., cM }. That is, z̄ = qC (z), z̄i ∈ C,
+authors were able to show that by setting up the encoder                      where z̄i is the ith element of the channel input vector z̄.
+and decoder in an autoencoder configuration, with a non-                      We define the average power of the constellation assuming
+trainable channel layer in between, the DNN encoder                           equally likely inputs as
+was able to learn a function which maps images to con-                                                               M
+tinuous channel inputs, and vice versa at the decoder.                                                          1 X
+                                                                                                          P =         |cj |2 .                       (1)
+They demonstrated that the resultant JSCC encoder and                                                           M j=1
+decoder was able to surpass the performance of JPEG2000
+[9] compression followed by LDPC codes [7] for channel                        The channel input z̄ is transmitted through an AWGN
+coding. Importantly, they showed that such schemes can                        channel, producing the channel output y = z̄ + η, where
+avoid the cliff-effect, exhibited by all separation-based                     η ∼ CN (0, σ 2 Ik×k ) is a complex Gaussian vector with co-
+schemes, which is when the channel quality deteriorates                       variance matrix σ 2 Ik×k , and Ik×k is the k × k identity ma-
+below the minimum channel quality to allow successful                         trix. Finally, a receiver passes the channel output through
+decoding, leading to a cliff-edge drop-off in the end-to-end                  a non-linear decoder function gφ : Ck 7→ RH×W ×C to
+performance. Since then, various works have extended this                     produce a reconstruction of the input x̂ = gφ (y, σ̂ 2 ).
+result to further demonstrate the ability to exploit channel                    We assume that both the transmitter and the receiver
+feedback [5] and adapt to various bandwidth requirements                      can estimate the channel noise power, denoted by σ̂ 2 , in
+without retraining [6]. In [4], the viability of DeepJSCC                     order to select the best resource allocation strategy. We
+in an orthogonal frequency division multiplexing (OFDM)                       define the channel SNR as
+system is shown and in [10] it is shown that it can be                                                       P 
+extended to multi-user scenarios with the same decoder.                                       SNR = 10 log10         dB,             (2)
+                                                                                                               σ2
+   However, an implicit assumption in all of the works
+                                                                              and the SNR estimated by the encoder and decoder as
+above is the ability for the communication hardware to
+                                                                                                               P 
+transmit arbitrary complex-valued channel inputs. This                                       SNREst = 10 log10        dB.            (3)
+may not be feasible as many commercially available hard-                                                        σ̂ 2
+ware may have hard-coded standard protocols, making                           We also define the bandwidth compression ratio as
+these methods less viable for real world deployment. In                                         k
+[11], image transmission problem is considered over a                                     ρ=          channel symbols/pixel,                         (4)
+                                                                                          H ×W ×C
+discrete input channel, where the input representation is
+learned using a variational autoencoder (VAE) assuming a                      where a smaller number reflects more compression.
+Bernoulli prior. They consider the transmission of MNIST                         To this end, we propose DeepJSCC-Q, a DNN model
+images [12] over a binary erasure channel (BEC) and                           and an end-to-end training strategy, which learns the en-
+showed that their scheme performs better than a VAE that                      coder and decoder parameters θ, φ, and effectively utilize
+only performs compression paired with an LDPC code.                           the available symbols in order to recover the transmitted
+In [13], the channel coding problem with a fixed channel                      images with satisfactory quality. We will consider the
+input alphabet is considered, and it is shown that the                        use of quantization to represent our modulator qC , such
+probability distribution of the constellation points can be                   that each quantization level represents a point in the
+learned by optimizing the bit error rate for a given channel                  constellation. As in previous works [2], [3], we utilize
+signal-to-noise ratio (SNR). In contrast to these works,                      an autoencoder architecture to jointly train the encoder
+we investigate the transmission of natural images over an                     and the decoder. However, one of the drawbacks of the
+additive white Gaussian noise (AWGN) channel with a                           previous works was the need to train multiple networks,
+finite channel input alphabet.                                                one for each channel condition. To address this issue, [14]
+                                                                              proposed an attention feature (AF) module, motivated
+                 III. Problem Statement                                       by resource assignment strategies in traditional JSCC
+   Herein, we consider the problem of wireless transmission                   schemes [15], which allows the network to learn to assign
+of images over an additive white Gaussian noise (AWGN)                        different weights to different features for a given SNR.
+channel, in which communication should be performed                           This is done by deliberately randomizing the channel SNR
+
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                        3881
+                                                                                                                                                                                                                                                                                                                                      Residual block (C)                                                                                   Residual block stride 2 (C)
+
+
+
+
+                Residual block stride 2
+
+
+
+
+                                                                                                                                                          Residual block stride 2
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                         3x3 Conv, C, s2
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                             3x3 Conv, C, s1
+                                                                                                                 Attention module
+
+
+
+
+                                                                                                                                                                                                                                                             Attention module
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                 LeakyReLU
+                                                                                                                                                                                                                                                                                                                       3x3 Conv, C,
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                             3x3 Conv, C,
+                                                           Residual block
+
+
+
+                                                                            Residual block
+
+
+
+
+                                                                                                                                    Residual block
+
+
+
+
+                                                                                                                                                                                                     Residual block
+
+
+                                                                                                                                                                                                                      Residual block
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                        LeakyReLU
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                               LeakyReLU
+                                             AF module
+
+
+
+
+                                                                                                AF module
+
+
+
+
+                                                                                                                                                                                       AF module
+
+
+
+
+                                                                                                                                                                                                                                           AF module
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                               GDN
+                                                                                                                                                                                                                               )
+                                                               (256)
+
+
+
+                                                                                (256)
+
+
+
+
+                                                                                                                                        (256)
+
+
+
+
+                                                                                                                                                                                                         (256)
+                        (256)
+
+
+
+
+                                                                                                                                                                  (256)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                            s1
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                  s1
+                                                                                                                                                                                                                                                                                                      Quantizer
+                                                                                                                                                                                                                          (
+                                                                                                                                                                                                                                                                                                                                                                     Residual block upsample (C)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                    3x3 Conv, 4xC,
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                            Pixel shuffle, 2
+                                                                                                                                                                                                                                                                                                   Wireless channel
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                         s2
+                                                                                                                                                                                                                                                                                Attention module
+                                                                                                                                       Attention module
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                       3x3 Conv, C, s1
+                                          upsample (256)
+
+
+
+
+                                                                                                                                                                                    upsample (256)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                    3x3 Conv, 4xC,
+                                          Residual block
+
+
+
+                                                           Residual block
+
+
+
+
+                                                                                             Residual block
+
+
+
+                                                                                                              Residual block
+
+
+
+
+                                                                                                                                                                                    Residual block
+
+
+
+                                                                                                                                                                                                     Residual block
+
+
+
+
+                                                                                                                                                                                                                                        Residual block
+
+
+
+                                                                                                                                                                                                                                                          Residual block
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                            Pixel shuffle, 2
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                           LeakyReLU
+                     AF module
+
+
+
+
+                                                                                 AF module
+
+
+
+
+                                                                                                                                                               AF module
+
+
+
+
+                                                                                                                                                                                                                         AF module
+                                                               (256)
+
+
+
+
+                                                                                                 (256)
+
+
+
+                                                                                                                  (256)
+
+
+
+
+                                                                                                                                                                                                         (256)
+
+
+
+
+                                                                                                                                                                                                                                            (256)
+
+
+
+                                                                                                                                                                                                                                                              (256)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                GDN
+                                                                                                                                                                                                                                                                                                                                                         s2
+                                                                                                   Fig. 1. Architecture of the proposed encoder and decoder models.
+
+during training and providing the AF modules the current                                                                                                                                                                                                 approximation of the hard quantization operation, we will
+SNR, such that σ̂ 2 = σ 2 . By doing so, the results in [14]                                                                                                                                                                                             use the “soft” quantization approach, proposed in [20]. In
+show that the single model performs at least as well as the                                                                                                                                                                                              this approach, each quantized symbol is generated as the
+models trained for each SNR individually. We adopt the                                                                                                                                                                                                   softmax weighted sum of the symbols in C based on their
+AF module proposed by [14] in DeepJSCC-Q to obtain a                                                                                                                                                                                                     distances from zi ; that is,
+single model that can work over a range of SNRs given an                                                                                                                                                                                                                                                                              M
+estimate of the channel condition.
+                                                                                                                                                                                                                                                                                                                                      X     e−σq dij
+                                                                                                                                                                                                                                                                                                                      z˜i =               PM −σ d cj ,                                                                                                                               (5)
+   We propose a fully convolutional encoder and decoder                                                                                                                                                                                                                                                                                    n=1 e
+                                                                                                                                                                                                                                                                                                                                                    q in
+                                                                                                                                                                                                                                                                                                                                      j=1
+architecture as shown in Fig. 1. In the architecture, C
+                                                                                                                                                                                                                                                         where σq is a parameter controlling the “hardness” of the
+refers to the number of channels in the output tensor
+                                                                                                                                                                                                                                                         assignment, and dij = ||zi −cj ||22 , is l2 distance between the
+of the convolution operation. Cout refers to the number
+                                                                                                                                                                                                                                                         latent value zi and the constellation point cj . As such, in
+of channels in the final output tensor of the encoder fθ ,
+                                                                                                                                                                                                                                                         the forward pass, the quantizer uses the hard quantization,
+which controls the number of channel uses k per image.
+                                                                                                                                                                                                                                                         corresponding to the channel input z̄, and in the backward
+The ”Pixel shuffle” module, within the ”Residual block
+                                                                                                                                                                                                                                                         pass, the gradient from the soft quantization z̃ is used to
+upsample” module, is used to increases the height and
+                                                                                                                                                                                                                                                         update θ. That is,
+width of the input tensor dimensions by reshaping the                                                                                                                                                                                                                                ∂z̄    ∂z̃
+input tensor, such that the channel dimension is reduced                                                                                                                                                                                                                                 =      .                       (6)
+                                                                                                                                                                                                                                                                                     ∂z     ∂z
+while the height and width dimensions are increased.
+                                                                                                                                                                                                                                                         A diagram illustrating the soft-to-hard quantizer for 4-
+This was first proposed in [16] as a less computationally
+                                                                                                                                                                                                                                                         QAM, also known as the quadrature phase shift keying
+expensive method for increasing the CNN tensor dimen-
+                                                                                                                                                                                                                                                         (QPSK), is shown in Fig. 2.
+sions without requiring a large number of parameters,
+like transpose convolutional layers. The GDN layer refers                                                                                                                                                                                                   We consider constellation symbols that are uniformly
+to generalized divisive normalization, initially proposed                                                                                                                                                                                                distributed in a square lattice over the complex plane,
+in [17], and shown to be effective in density modeling                                                                                                                                                                                                   similar to QAM-modulation. For QAM constellation con-
+and compression of images. The Attention layer refers to                                                                                                                                                                                                 sisting of M symbols, denoted as q          M-QAM, we define
+the simplified attention module proposed in [18], which                                                                                                                                                                                                  the max amplitude Amax = (M2−1) (M12P            2 −1) , and inter
+                                                                                                                                                                                                                                                                                     q
+reduces the computation cost of the attention module orig-                                                                                                                                                                                               symbol distance dsym = (M12P      2 −1) , where P is the average
+inally proposed in [19]. While the attention layer has been
+                                                                                                                                                                                                                                                         power of the constellation     under  uniform distribution, i.e.,
+used in [18] and [19] to improve the compression efficiency                                                                                                                                                                                                        1
+                                                                                                                                                                                                                                                                     PM
+                                                                                                                                                                                                                                                         E[C 2 ] = M   i=1 |ci | 2
+                                                                                                                                                                                                                                                                                   = P .
+by learning to focus on image regions that require higher
+bit rate, in our model it is used to allow adaptive allocation
+of channel bandwidth and power resources.                                                                                                                                                                                                                B. Training Strategy
+
+A. Quantization                                                                                                                                                                                                                                             Given that our model is end-to-end optimized, we are
+                                                                                                                                                                                                                                                         free to choose any distortion metric. Two common distor-
+   In order to produce an encoder that outputs a fixed
+                                                                                                                                                                                                                                                         tion metrics for images are the mean squared error (MSE),
+constellation, we perform quantization of the latent vector
+generated by the encoder, z̄ = gC (z). Given the encoder                                                                                                                                                                                                                                                               MSE(x, x̂) = ||x − x̂||22 ,                                                                                                                                   (7)
+output z, we first obtain a “hard” quantization, which
+simply maps element zi ∈ z to the nearest symbol in C.                                                                                                                                                                                                   and the structural similarity index measure (SSIM),
+This forms the channel input z̄. However, this operation
+                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                             2µx µx̂ + v1       2σx σx̂ + v2
+is not differentiable. In order to obtain a differentiable                                                                                                                                                                                                 SSIM(x, x̂) =                                         ,                                                                                                                                                                   (8)
+                                                                                                                                                                                                                                                                            µ2x + µ2x̂ + v1    σx2 + σx̂2 + v2
+
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                                                                                                                                                                                       3882
+                   Q                                    Q
+                                                                                            34.0
+
+                                                                                            32.0
+
+                                 I                                    I                     30.0
+
+
+
+
+                                                                                PSNR (dB)
+                                                                                            28.0
+
+                                                                                            26.0
+                                                                                                                                DeepJSCC-Q QPSK (λ = 0.05, SNREst = 2dB)
+
+                                                                                                                                DeepJSCC-Q QPSK (λ = 0.05, SNREst = 6dB)
+                                                                                            24.0
+                                                                                                                                DeepJSCC-Q 16-QAM (λ = 0.05, SNREst = 8dB)
+
+                                                                                                                                         BPG + LDPC 1/2 QPSK
+
+Fig. 2. Illustration of the soft-to-hard quantization procedure for a                       22.0                                         BPG + LDPC 2/3 QPSK
+
+single value zi using a QPSK constellation. The hard quatized value                                                                     BPG + LDPC 1/2 16-QAM
+
+z̄i (left) simply maps the latent value zi to the nearest point in the                      20.0
+                                                                                                   0           2           4               6               8                 10
+constellation, while the soft quantized value z̃i (right) is the softmax                                                       SNR (dB)
+weighted sum of the constellation points according to l2 distance.
+                                                                                                                          (a) PSNR
+                  2
+where µx , σx2 , σxx̂ are the mean and variance of x, and the                           1.00
+covariance between x and x̂, respectively, and v1 , v2 are
+coefficients for numeric stability. When used on an RGB
+image, SSIM is computed for all three color channels and                                0.95
+then averaged. Note that a higher SSIM value indicates
+a lower distortion, with a maximum of 1, therefore when
+                                                                                        0.90
+
+                                                                                SSIM
+used as a training loss, 1 − SSIM is used.
+  A common complimentary metric to the MSE distortion
+to measure image reconstruction quality is the peak signal-                             0.85                                    DeepJSCC-Q QPSK (λ = 0.05, SNREst = 2dB)
+
+                                                                                                                                DeepJSCC-Q QPSK (λ = 0.05, SNREst = 6dB)
+to-noise ratio (PSNR) defined as                                                                                               DeepJSCC-Q 16-QAM (λ = 0.05, SNREst = 8dB)
+
+
+                                      A2
+                                                                                                                                      BPG + LDPC 1/2 QPSK
+                                                                                        0.80
+          PSNR(x, x̂) = log10                   dB,       (9)                                                                           BPG + LDPC 2/3 QPSK
+
+                                   MSE(x, x̂)                                                                                          BPG + LDPC 1/2 16-QAM
+
+
+
+where A is the maximum possible value for a given pixel.                                       0              2           4               6               8                 10
+                                                                                                                              SNR (dB)
+For a 24 bit RGB pixel, A = 255.
+                                                                                                                          (b) SSIM
+   In order to utilize the available constellation points
+                                                                               Fig. 3. Effect of channel estimation error. Here, we compare
+in the most optimal way and encourage the transmitted                          DeepJSCC-Q using different SNREst and distortion metrics to BPG
+signal to have an average power close to 1, we introduce                       using LDPC codes.
+a regularization term based on the Kullback-Leibler (KL)
+divergence between the distribution P (C|z) and a uniform                                                                 |B|     k                  v
+                                                                                                                        1 XX        e−σq dij
+distribution over the constellation set U(C). The KL di-                                               P̂ (cj |z) =               PM −σq dv ,                          (11)
+vergence between distributions PW and PV is defined as                                                                |B|k v=1 i=1 n=1 e     in
+
+
+
+                                                                               where dvij = ||ziv − cj ||22 is the l2 distance between the
+                                        
+                                       PW
+            DKL (PW || PV ) = E log           ,       (10)
+                                       PV                                      constellation point cj and the ith element in the vth latent
+                                                                               vector in the batch. Therefore, the final loss function we
+and it measures how different the two distributions are,
+                                                                               use for training is:
+with DKL (PW || PV ) = 0 ⇐⇒ PW = PV . The distribution
+P (C|z) represents the probability of selecting a point in                                     l(x, x̂) = d(x, x̂) + λDKL (P̂ (C|z) || U(C)),                          (12)
+the constellation set C given the encoded latent vector z.
+By regularizing the distortion loss with the KL divergence                     where d(·, ·) is the distortion metric (either MSE or 1 −
+DKL (P (C|z) || U(C)), we encourage the quantizer qC to                        SSIM) and λ is the weighting parameter to control the
+explore the available constellation points and thus force                      amount of regularization.
+the transmitted signal power to be as close to 1 as possible.
+                                                                                                           IV. Experimental Results
+To model the distribution P (C|z), we utilize the softmax
+weights used in the soft assignment in Eq. (5). Since the                         In this section we perform a series of experiments to
+weights sum to 1, we can treat them as probabilities and                       demonstrate the performance of DeepJSCC-Q. Herein, we
+average the probability of each constellation point over the                   consider the CIFAR10 dataset [21] which consists of 60000
+training batch to obtain an estimate of P (C|z). That is,                      RGB images of 32 × 32 resolution. We split the dataset
+the probability of selecting a constellation point cj given                    into 5 : 1 for training and testing, respectively. We use the
+                                |B|
+a batch of latent vectors {zv }v=1 , where B is a batch of                     Pytorch [22] library and Adam [23] optimizer with learning
+encoded latent vectors, can be estimated as                                    rate 0.0001, β1 = 0.9, and β2 = 0.999 to train our encoder
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                          3883
+            38.0                                                                                    To compare the performance of our solution, we con-
+                                                                                                 sider separation-based schemes, in which images are first
+            36.0
+                                                                                                 compressed using the BPG [8] codec, before an LDPC
+            34.0                                                                                 code [7] is used as the channel code. We compare the
+                                                                                                 average image quality over the test dataset, with error
+            32.0
+                                                                                                 bars showing the standard deviation of the image quality
+PSNR (dB)
+
+
+
+
+            30.0                                                                                 metric. Fig. 3 shows the effects of channel estimation error
+            28.0
+                                                                                                 on the performance of DeepJSCC-Q. The constellation
+                                                                                                 and SNREst values used for DeepJSCC-Q are chosen to
+            26.0                                                                                 coincide with the SNR values at which the separation
+            24.0
+                                                DeepJSCC-Q QPSK (λ = 0.05, SNREst = SNR)         schemes would fail, in order to highlight the behavior
+                                               DeepJSCC-Q 16-QAM (λ = 0.05, SNREst = SNR)
+
+                                               DeepJSCC-Q 64-QAM (λ = 0.00, SNREst = SNR)
+                                                                                                 of DeepJSCC-Q around the cliff edges of the separation-
+            22.0                                         BPG + LDPC 1/3 QPSK                     based schemes. Note that this is done by fixing the channel
+            20.0
+                                                         BPG + LDPC 1/2 QPSK
+
+                                                         BPG + LDPC 2/3 QPSK
+                                                                                                 noise estimate σ̂ 2 , while varying the actual channel noise
+                                                        BPG + LDPC 1/2 16-QAM                    power σ 2 . For all M-QAM modulation orders shown here,
+            18.0                                                                                 DeepJSCC-Q exhibited graceful degradation of image
+                −2           0          2        4               6            8             10
+                                              SNR (dB)                                           quality with decreasing channel quality. This is similar to
+                                            (a) PSNR                                             the DeepJSCC result from [2], but we are able to obtain
+        1.00                                                                                     the same behavior despite being constrained to a finite
+                                                                                                 digital constellation. Moreover, when compared to the
+        0.95                                                                                     separation-based results, the DeepJSCC-Q 16-QAM model
+                                                                                                 performed close to the envelope of all the separation-
+                                                                                                 based schemes, with the model trained using the SSIM
+        0.90
+                                                                                                 distortion performing considerably above the envelope.
+                                                                                                 This shows that the end-to-end optimized DeepJSCC-Q
+SSIM
+
+
+
+
+        0.85
+                                                                                                 is fundamentally different from separation-based schemes,
+                                                DeepJSCC-Q QPSK (λ = 0.05, SNREst = SNR)
+                                                                                                 as it is able to maintain a performance on par with
+        0.80                                   DeepJSCC-Q 16-QAM (λ = 0.05, SNREst = SNR)        separation-based schemes without the need to adapt its
+                                               DeepJSCC-Q 64-QAM (λ = 0.00, SNREst = SNR)
+
+                                                        BPG + LDPC 1/3 QPSK
+                                                                                                 code rate.
+        0.75                                            BPG + LDPC 1/2 QPSK
+
+                                                        BPG + LDPC 2/3 QPSK                         The reason DeepJSCC-Q performs this way is related
+                                                       BPG + LDPC 1/2 16-QAM
+                                                                                                 to the quantization error. A higher order modulation
+        0.70
+            −2              0          2        4               6            8              10   essentially corresponds to greater number of quantization
+                                             SNR (dB)
+                                                                                                 levels of the encoder output z, and thus lower quantization
+                                            (b) SSIM                                             error of z̄ in representing z. Since DeepJSCC has already
+Fig. 4. Comparison of DeepJSCC-Q for SNREst = SNR to BPG                                         been shown to surpass the performance of BPG and LDPC
+using LDPC codes.                                                                                codes by [3], naturally as we increase the constellation
+and decoder networks. We use a batch size of 32 and early                                        order M , the performance of DeepJSCC-Q will approach
+stopping with a patience of 8 epochs, where the maximum                                          that of DeepJSCC. This is also why DeepJSCC-Q with
+number of training epochs is 1000. We implement learning                                         16-QAM constellation performs better than both QPSK
+rate scheduling, where the learning rate is reduced by a                                         models in Fig. 3, except at the low SNR regime, although
+factor of 0.8 if the loss does not improve for 4 epochs                                          that is due to the SNREst used for the 16-QAM model
+in a row. We use an average constellation power P = 1                                            being much greater than the channel SNR in that region.
+and change the channel noise power σ 2 accordingly to                                            In Fig. 4, where the SNREst = SNR, we can see that
+obtain any given SNR. During training, the channel SNR is                                        not only does the 16-QAM DeepJSCC-Q model perform
+drawn uniformly randomly SNR ∼ U(0, 10). The softmax                                             better than the QPSK model, the 64-QAM model also
+hardness assignment parameter is chosen as σq = 100. We                                          performs better than either of those models, for all channel
+set the weighting for the regularizer λ = 0.05 when the size                                     SNRs tested. As further evidence that increasing the mod-
+of the constellation M is less than 64, as we experimentally                                     ulation order of DeepJSCC-Q leads to the performance
+found it to be helpful to encourage the channel input to                                         of DeepJSCC-Q approaching that of DeepJSCC [2], we
+be more uniformly distributed across the constellation set,                                      investigate very high order modulations M = 1024, 4096,
+while for larger constellations, λ = 0 performed better,                                         as shown in Fig. 5. To compare to DeepJSCC, we simply
+indicating that it is more beneficial to choose a subset of                                      remove the quantizer qC and normalize the output power
+available symbols with higher probability than using all                                         of the encoder, such that the channel input is
+                                                                                                                               √
+symbols with the same frequency. We use Cout = 40 for                                                                            kP
+all models, which corresponds to ρ = 0.4166.                                                                              z̄ =        z.                 (13)
+                                                                                                                               ||z||2
+
+
+
+
+                   Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                                             3884
+            38.0                                                                                             [3] D. Burth Kurka and D. Gündüz, “Joint source-channel coding of
+                                                                                                                 images with (not very) deep learning,” in International Zurich
+            36.0                                                                                                 Seminar on Information and Communication (IZS 2020). Pro-
+                                                                                                                 ceedings, pp. 90–94, ETH Zurich, 2020.
+                                                                                                             [4] M. Yang, C. Bian, and H.-S. Kim, “Deep joint source chan-
+PSNR (dB)
+
+
+
+            34.0
+                                                                                                                 nel coding for wireless image transmission with OFDM,”
+            32.0                                                                                                 arXiv:2101.03909 [cs, eess, math], May 2021.                 arXiv:
+                                                                                                                 2101.03909.
+            30.0                                                                                             [5] D. B. Kurka and D. Gündüz, “Deepjscc-f: Deep joint source-
+                                                    DeepJSCC-Q 1024-QAM (λ = 0.00, σ̂ 2 = σ 2 )
+                                                                                                                 channel coding of images with feedback,” IEEE Journal on
+            28.0                                    DeepJSCC-Q 4096-QAM (λ = 0.00, σ̂ 2 = σ 2 )
+                                                                                                                 Selected Areas in Information Theory, vol. 1, no. 1, pp. 178–
+                                                      DeepJSCC (z̄ ∈ Ck , ||z̄||22 = 1, σ̂ 2 = σ 2 )
+                                                                                                                 193, 2020.
+            26.0                                                                                             [6] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmis-
+                   0           2            4                 6                    8                   10        sion with deep joint source-channel coding,” IEEE Transactions
+                                                SNR (dB)
+                                                                                                                 on Wireless Communications, pp. 1–1, 2021.
+                                           (a) PSNR                                                          [7] R. Gallager, “Low-density parity-check codes,” IRE Transac-
+                                                                                                                 tions on Information Theory, vol. 8, pp. 21–28, Jan. 1962.
+        1.00                                                                                                     Conference Name: IRE Transactions on Information Theory.
+        0.99                                                                                                 [8] F. Bellard, Better Portable Graphics, 2014 (accessed March 13,
+                                                                                                                 2020). https://bellard.org/bpg/.
+        0.98                                                                                                 [9] C. Christopoulos, A. Skodras, and T. Ebrahimi, “The
+                                                                                                                 JPEG2000 still image coding system: an overview,” IEEE
+        0.97
+SSIM
+
+
+
+
+                                                                                                                 Transactions on Consumer Electronics, vol. 46, pp. 1103–1127,
+                                                                                                                 Nov. 2000.
+        0.96                                                                                                [10] M. Ding, J. Li, M. Ma, and X. Fan, “SNR-adaptive deep
+        0.95                                                                                                     joint source-channel coding for wireless image transmission,”
+                                                   DeepJSCC-Q 1024-QAM (λ = 0.00, σ̂ 2 = σ 2 )                   in ICASSP 2021 - 2021 IEEE International Conference on
+        0.94                                       DeepJSCC-Q 4096-QAM (λ = 0.00, σ̂ 2 = σ 2 )                   Acoustics, Speech and Signal Processing (ICASSP), pp. 1555–
+                                                     DeepJSCC (z̄ ∈ Ck , ||z̄||22 = 1, σ̂ 2 = σ 2 )              1559, June 2021. ISSN: 2379-190X.
+        0.93                                                                                                [11] K. Choi, K. Tatwawadi, T. Weissman, and S. Ermon, “NECST:
+               0               2            4                6                    8                    10
+                                                SNR (dB)                                                         Neural Joint Source-Channel Coding,” International Confer-
+                                                                                                                 ence on Machine Learning (ICML), 2019.
+                                           (b) SSIM                                                         [12] L. Deng, “The MNIST Database of Handwritten Digit Images
+Fig. 5. Comparison of DeepJSCC-Q using high modulation orders                                                    for Machine Learning Research [Best of the Web],” IEEE Signal
+to DeepJSCC with a continuous channel input, as in [2].                                                          Processing Magazine, vol. 29, pp. 141–142, Nov. 2012. Confer-
+                                                                                                                 ence Name: IEEE Signal Processing Magazine.
+                                                                                                            [13] M. Stark, F. A. Aoudia, and J. Hoydis, “Joint learning of geo-
+From Fig. 5, the performance of DeepJSCC-Q approaches                                                            metric and probabilistic constellation shaping,” IEEE Globecom
+DeepJSCC as the modulation order increases, with M =                                                             Workshops, Dec. 2019.
+                                                                                                            [14] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues,
+4096 the two models performing almost the same.                                                                  “Wireless image transmission using deep source channel coding
+                                    V. Conclusions                                                               with attention modules,” IEEE Transactions on Circuits and
+                                                                                                                 Systems for Video Technology, pp. 1–1, 2021.
+  In this paper, we have proposed DeepJSCC-Q, an end-                                                       [15] K. Sayood, H. H. Otu, and N. Demir, “Joint source/channel
+                                                                                                                 coding for variable length codes,” IEEE Transactions on Com-
+to-end optimized JSCC scheme for image transmission                                                              munications, vol. 48, pp. 787–794, May 2000. Conference Name:
+that is able to utilize a fixed modulation constellation and                                                     IEEE Transactions on Communications.
+achieve similar performance to unquantized DeepJSCC, as                                                     [16] W. Shi, J. Caballero, F. Huszár, J. Totz, A. P. Aitken, R. Bishop,
+                                                                                                                 D. Rueckert, and Z. Wang, “Real-time single image and video
+previously proposed by [2]. Even with such a constraint,                                                         super-resolution using an efficient sub-pixel convolutional neural
+we are able to achieve superior performance to separation-                                                       network,” pp. 1874–1883, June 2016. ISSN: 1063-6919.
+based schemes using BPG for source coding and LDPC for                                                      [17] J. Ballé, V. Laparra, and E. P. Simoncelli, “Density modeling
+                                                                                                                 of images using a generalized normalization transformation,”
+channel coding, all the while avoiding the cliff-effect that                                                     arXiv preprint arXiv:1511.06281, 2015.
+plagues the separation-based schemes. We also show that                                                     [18] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image
+with sufficiently high modulation order, DeepJSCC-Q can                                                          compression with discretized Gaussian mixture likelihoods and
+                                                                                                                 attention modules,” Conference on Computer Vision and Pat-
+approach the performance of DeepJSCC, which does not                                                             tern Recognition (CVPR), pp. 7939–7948, 2020.
+have a fixed channel input constellation. As such, if such                                                  [19] X. Wang, R. Girshick, A. Gupta, and K. He, “Non-local neural
+constellations are available on the hardware, DeepJSCC-Q                                                         networks,” in Conference on Computer Vision and Pattern
+                                                                                                                 Recognition (CVPR), pp. 7794–7803, June 2018. ISSN: 2575-
+can perform nearly as well as DeepJSCC. This makes the                                                           7075.
+viability of DeepJSCC-Q in existing commercial hardware                                                     [20] E. Agustsson et al., “Soft-to-hard vector quantization for end-
+with standardized protocols much more attractive.                                                                to-end learning compressible representations,” in Advances in
+                                                                                                                 Neural Information Processing Systems 30, pp. 1141–1151, Cur-
+                                                                                                                 ran Associates, Inc., 2017.
+                                       References                                                           [21] A. Krizhevsky, “Learning multiple layers of features from tiny
+ [1] C. E. Shannon, “A mathematical theory of communication,”                                                    images,” 2009.
+     Bell Syst. Tech. J., vol. 27, pp. 379–423 and 623–656, July and                                        [22] A. Paszke et al., “Pytorch: An imperative style, high-
+     October 1948.                                                                                               performance deep learning library,” in Advances in Neural In-
+ [2] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint                                              formation Processing Systems 32, pp. 8024–8035, Curran Asso-
+     source-channel coding for wireless image transmission,” IEEE                                                ciates, Inc., 2019.
+     Transactions on Cognitive Communications and Networking,                                               [23] D. P. Kingma and J. Ba, “Adam: A Method for Stochastic Op-
+     vol. 5, pp. 567–579, Sep. 2019.                                                                             timization,” arXiv:1412.6980 [cs], Jan. 2017. arXiv: 1412.6980.
+
+
+
+
+                   Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:13:44 UTC from IEEE Xplore. Restrictions apply.
+                                                                                                        3885
+

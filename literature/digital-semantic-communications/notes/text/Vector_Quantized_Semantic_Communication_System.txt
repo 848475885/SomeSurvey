@@ -1,0 +1,349 @@
+982                                                                                 IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 12, NO. 6, JUNE 2023
+
+
+
+
+                           Vector Quantized Semantic Communication System
+           Qifan Fu , Graduate Student Member, IEEE, Huiqiang Xie , Graduate Student Member, IEEE,
+                  Zhijin Qin , Senior Member, IEEE, Gregory Slabaugh , Senior Member, IEEE,
+                                   and Xiaoming Tao , Senior Member, IEEE
+
+
+
+   Abstract—Although analog semantic communication systems                      small scale features of the source data. Bourtsoulatze et al.
+have received considerable attention in the literature, there is                proposed a deep learning (DL) enabled joint source-channel
+less work on digital semantic communication systems. In this                    coding (JSCC) system for image transmission, named Deep-
+letter, we develop a deep learning (DL)-enabled vector quantized
+(VQ) semantic communication system for image transmission,                      JSCC, in which the source-channel encoder and decoder are
+named VQ-DeepSC. Specifically, we propose a convolutional                       jointly designed [3]. Then, Xie et al. developed a powerful
+neural network (CNN)-based transceiver to extract multi-scale                   transformer-based semantic communication system for text
+semantic features of images and introduce multi-scale semantic                  transmission, named DeepSC, which is robust to channel varia-
+embedding spaces to perform semantic feature quantization, ren-                 tions and applicable to many scenarios [4]. Besides, Weng and
+dering the data compatible with digital communication systems.
+Furthermore, we employ adversarial training to improve the                      Qin [5] designed a speech semantic reconstruction system that
+quality of received images by introducing a PatchGAN dis-                       leverages an attention mechanism.
+criminator. Experimental results demonstrate that the proposed                     To make semantic communication compatible with digi-
+VQ-DeepSC is more robustness than BPG in digital communica-                     tal communication systems, semantic features must be con-
+tion systems and has comparable MS-SSIM performance to the                      verted to bits for transmission. Vector quantization [6] can
+DeepJSCC method.
+                                                                                map features into indices, which can then be converted
+  Index Terms—Deep learning, semantic communication, vector                     to bits and transmitted by digital communication methods.
+quantization, image transmission.                                               Hu et al. [7] designed a robust vector quantized semantic
+                                                                                communication system to mitigate semantic noise, which out-
+                                                                                performs traditional methods on a classification task. Nemati
+                          I. I NTRODUCTION                                      and Choi [8] designed a vector quantized DL-based JSCC
+      S WE are moving towards an era of “Connected
+A     Intelligence” [1], intelligent communication systems
+have attracted extensive attention. Semantic communication
+                                                                                system and showed its robustness against noisy wireless chan-
+                                                                                nels. Although existing vector quantization-based semantic
+                                                                                communication systems show good performance for many
+is a new intelligent communication paradigm that has shown                      downstream tasks, their application to data reconstruction
+many advantages, particularly for the scenarios that involve                    remain limited.
+with large data volume, such as Internet of Things systems                         In this letter, we propose a vector quantization-based seman-
+and self-driving cars. Compared to the traditional communi-                     tic communication system, named VQ-DeepSC, which uses a
+cation system transmitting all the data regardless of its content,              semantic embedding space for wireless transmission of images
+semantic communication [2] extracts and transmits the most                      and is compatible with digital communication systems. By
+valuable task-oriented semantic features of the source data                     sharing semantic embedding spaces between the transmitter
+and thereby better utilizes communication resources. Existing                   and receiver, VQ-DeepSC can perform image transmission
+semantic communication systems can be divided into two                          with low transmission overheads. The main contributions of
+categories: data reconstruction and task execution.                             this letter can be summarized as follows:
+   For data reconstruction systems, the transmitter must extract                   • VQ-DeepSC excels at feature extraction and compres-
+and send the global semantic features of the source data to                           sion to reduce transmitted bits. Specifically, VQ-DeepSC
+the receiver, so that the receiver can recover the large and                          extracts multi-scale semantic features of an image with
+                                                                                      a U-Net structure [9], and compresses these features into
+   Manuscript received 11 December 2022; revised 3 February 2023; accepted            transmitted bit stream at transmitter. Then, the image can
+22 February 2023. Date of publication 10 March 2023; date of current
+version 9 June 2023. This work was supported in part by the National                  be reconstructed with multi-scale features at receiver.
+Natural Science Foundation of China (NSFC) under Grant 62293484 and                • In the model training process, we introduce a PatchGAN
+Grant 61925105, and in part by the Tsinghua University-China Mobile                   discriminator [10] for adversarial training and a gener-
+Communications Group Company Ltd. Joint Institute. The associate editor
+coordinating the review of this article and approving it for publication was          ative adversarial network (GAN)-based loss to improve
+C.-K. Wen. (Corresponding author: Zhijin Qin.)                                        the quality of image generation.
+   Qifan Fu, Huiqiang Xie, and Gregory Slabaugh are with the School of             Following notations are used in this letter: Rn×m , Zn×m ,
+Electronic Engineering and Computer Science, Queen Mary University of
+London, E1 4NS London, U.K. (e-mail: q.fu@qmul.ac.uk; h.xie@qmul.ac.uk;         and Cn×m represent sets of real, positive integer, and complex
+g.slabaugh@qmul.ac.uk).                                                         matrices of size n × m, respectively. Boldface lower-case and
+   Zhijin Qin and Xiaoming Tao are with the Department of Electronic            upper-case letters denote vectors and matrices, respectively.
+Engineering, Tsinghua University, Beijing 100084, China (e-mail: qinzhijin@
+tsinghua.edu.cn; taoxm@tsinghua.edu.cn).                                         and  are the element-wise multiplication and division,
+   Digital Object Identifier 10.1109/LWC.2023.3255221                           respectively. (·)H denotes the Hermitian. CN (μ, σ 2 ) means
+                      2162-2345 
+                                c 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:18 UTC from IEEE Xplore. Restrictions apply.
+FU et al.: VQ SEMANTIC COMMUNICATION SYSTEM                                                                                                           983
+
+
+
+the circularly-symmetric complex Gaussian distribution with
+mean μ and covariance σ 2 .
+
+                        II. S YSTEM M ODEL
+   In this section, we introduce the vector quantized semantic
+communication system with semantic embedding space. As
+shown in Fig. 1, we consider a DL-enabled end-to-end seman-
+tic communication system with a stochastic physical channel,
+where the transmitter and receiver share a pre-trained seman-
+tic embedding space that contains semantic vectors as prior
+information.
+
+A. Transmitter                                                                 Fig. 1. Vector quantized semantic communication system with multi-scale
+                                                                               semantic features.
+  As shown in Fig. 1, the transmitter consists of three parts:
+semantic encoder, vector quantization with semantic embed-                        Next, the channel decoder recovers the indices ŝ from x   ^.
+ding space, and channel encoder. We denote the input image                     Then, by selecting the corresponding embedding vectors in the
+as I. The semantic feature tensor F is extracted first as                      semantic embedding space with ŝ, the receiver can reconstruct
+                                                                               the semantic feature tensor F̂. Finally, the semantic decoder
+                            F = T (I; α),                               (1)
+                                                                               generates the reconstructed output Î = R(F̂; γ ), where R(·; γ )
+where T (·; α) is the semantic encoder with learnable param-                   is the semantic decoder with learnable parameters γ .
+eters α, and F = [f1 , f2 , . . . , fM ] ∈ RM ×K . Specifically,
+a local semantic embedding space shared by transceivers is                                      III. T HE P ROPOSED VQ-D EEP SC
+denoted as E = [e1 , e2 , . . . , eN ] ∈ RN ×K , where N represents
+                                                                                  As shown in Fig. 2, this section first introduces the frame-
+the number of vectors, and K represents the dimension of each
+                                                                               work of VQ-DeepSC, which consists of the transmitter,
+vector. In other words, a semantic embedding space contains
+                                                                               receiver, and discriminator. Then, the loss function and training
+N semantic embedding vectors with K dimensions. Then with
+                                                                               of the proposed model are discussed.
+vector quantization [6], the semantic features can be mapped
+to a set of indices in the embedding space and the transmit-
+ter only needs to send these indices rather than the semantic                  A. Model Description
+features to the receiver, which performs the nearest neighbor                     1) Transmitter: The transmitter consists of a semantic
+reconstruction:                                                                encoder, vector quantization, and channel encoder. In semantic
+                                                                               encoder, a convolution layer with a PReLU activation function
+                    n = arg min fm − en 2 ,                           (2)
+                              n                                                and L down-sample blocks are connected sequentially.
+                                                                                  The down-sample block shown in Fig. 2 is successively
+where m ∈ [1, M ], n ∈ [1, N ]. With the (2), the semantic fea-
+                                                                               connected by a residual block, a strided convolutional down-
+tures can be mapped into the sequence of indices, s ∈ ZM ×1 .
+                                                                               sample layer, and another residual block. After being pro-
+Then, after conventional channel coding and modulation, s is
+                                                                               cessed by batch normalization and PReLU activation function,
+processed as a transmitted complex signal x ∈ CB ×1 , where
+                                                                               it ends with a convolutional layer as the last layer. The con-
+B is the length of the transmitted signal.
+                                                                               volutional down-sample layer is a strided convolutional layer,
+                                                                               which can reduce the height and width of the feature tensor.
+B. Receiver                                                                    The output feature tensor of each down-sample block enters
+  The receiver also consists of three parts: channel decoder,                  the vector quantization part.
+de-quantization with semantic embedding space, and semantic                       The residual block consists of two convolution layers with a
+decoder. The received signal y ∈ CB ×1 can be expressed as                     batch normalization and a PReLU activation function between
+                                                                               them, and a skip connection between the input of the first con-
+                          y = h  x + w,                                (3)
+                                                                               volutional layer and the output of the second convolution layer.
+where h represents the coefficients of a linear channel between                Residual blocks can be used to train deeper neural networks
+the transmitter and receiver. For the Rayleigh fading channel,                 to achieve good performance [11].
+the channel coefficient follows CN (0, 1); for the Rician fading                 2) Receiver: The receiver consists a channel decoder, de-
+channel,
+         it follows CN (μ, σ 2 ) with μ =    r /(r + 1) and σ =               quantization, and semantic decoder. In the semantic decoder, a
+    1/(r + 1), where r is the Rician coefficient. w denotes the                convolutional layer with a PReLU activation function is used
+additive white Gaussian noise (AWGN) whose elements are                        as the input layer, followed by L up-sample blocks and ending
+i.i.d with zero mean and variance σn2 .                                        with a transposed convolution layer.
+    Assuming that the receiver has perfect channel state                          The up-sample block consists of a sequence connection of a
+information (CSI), the recovered signals are                                   residual block, an up-sample layer, and a convolutional layer,
+                                                                             followed by batch normalization and PReLU activation func-
+                   x̂ = hH  y  h  ĥH .                    (4)              tion. The up-sample layer and the convolutional down-sample
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:18 UTC from IEEE Xplore. Restrictions apply.
+984                                                                                  IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 12, NO. 6, JUNE 2023
+
+
+
+
+Fig. 2.   The multi-scale architecture of VQ-DeepSC represents the embedding space at different scales.
+
+
+
+layer achieve the opposite effect. In the above layers, only the                 where F̂l−1concat   =     concat(Rup l (F̂l ; γ l ), F̂l−1 ), where
+up-sample layers and the down-sample layers will change the                      c oncat(·) represents the concatenation operation. At
+height and width of feature tensor.                                              the end of the receiver, after all up-sample blocks, the image
+   For the pipeline of whole system, the fusion of multi-scale                   is reconstructed by a transposed convolution layer.
+features at the receiver is beneficial to restore detailed features
+and preserve the structural information of image. Given the
+                                                                                 B. Loss Function and Training Process
+input image, L different scales feature tensors Fl are extracted
+by the different down-sample blocks of the semantic encoder,                        To further improve the quality of the generated image, we
+                                                                                 introduce a PatchGAN discriminator [10] with binary cross
+                                   
+                                                                                 entropy (BCE) loss for adversarial training. The PatchGAN
+                   l
+             Fl = Tdown   Fl−1 ; α l , l = 1, 2, . . . , L,               (5)
+                                                                                 discriminator can make judgements of the patches of the gen-
+                                                                                 erated image, which makes the model pay more attention to
+where Tdownl   (; α l ) represents the l-th down-sample blocks in                image details. For the input image I that follows distribution
+the semantic encoder with learnable parameters α l .                             PI , Î is the recovered image generated by VQ-DeepSC. Then,
+    By (2), Fl can be further compressed into sl by embedding                    the loss function of adversarial training is as follows:
+space El . Then, feature indices are converted into bit streams,
+which are transmitted after channel coding and modulation.                                   LGAN = log D(I; μ) + log(1 − D(Î; μ)),                    (7)
+    After transmitting over the physical channel, the received
+symbols reach the receiver. The receiver inverts the operations                  where D(·; μ) is the discriminator with learnable parame-
+performed by the transmitter. The demodulation maps these                        ters μ. The introduction of the GAN loss not only enables
+symbols to bits and the channel decoder decodes the received                     VQ-DeepSC to generate realistic images, but also enables the
+bits into recovered indices ŝl . Next in the de-quantization part,              model to use unlabeled data for unsupervised training.
+the F̂l is recovered by selecting the corresponding embedding                       The back-propagation through (2) is a non-differentiable
+vectors from the embedding space with the ŝl . Then, the recon-                 due to the quantization operation. To solve this problem, we
+structed feature tensors of different scales F̂l are fed into the                use a straight-through gradient estimator approach [12] to
+corresponding layers of the semantic decoder.                                    copy the gradients from the receiver to the transmitter. In this
+    In the semantic decoder, feature fusion and reconstruction                   way, the entire model can be trained in an end-to-end fashion
+are carried out through L up-sample blocks. With the recovered                   using the following loss function:
+F̂l , the up-sample block can recover the multi-scale semantic                                                 
+                                                                                                               
+features by                                                                            LVQ-DeepSC = EI − Î
+                                                                                                              2                 2
+                                                                                                  l                          l 
+            F̂lconcat = concat Rup
+                                l
+                                     F̂l−1         l−1                                    + E sg fm       − eln  + βc sg eln − fm   , (8)
+                                       concat , F̂       ,                (6)                                           2                           2
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:18 UTC from IEEE Xplore. Restrictions apply.
+FU et al.: VQ SEMANTIC COMMUNICATION SYSTEM                                                                                                             985
+
+
+
+
+Fig. 3.   MS-SSIM performance comparisons with a similar number of transmitted symbols over different channels.
+
+
+
+where the first term is the mean absolute error (MAE) loss                       discriminator is 4 × 4 and the stride is two, respectively. The
+of the original input image I and generated image Î, eln is                     size of the last two convolution kernels is 4 × 4 and the stride
+the n-th semantic embedding vector from the l-th embedding                       is one. The Adam optimizer with learning rate 1.75×10−4 and
+space, fml is the m-th feature vector from the l-th feature tensor,              StepLR is used for VQ-DeepSC training, with betas of 0.5 and
+       l
+sg[fm ] − eln 22 is the embedding loss of l-th layer feature                   0.999, batch size of 24, and 400 epochs. The training setting
+vector and the corresponding embedding space, which moves                        of the discriminator is the Adam optimizer with learning rate
+the embedding vector toward the feature vector in training,                      1 × 10−5 and LambdaLR, betas of 0.5 and 0.999. The vec-
+sg[ · ] represents the stop-gradient operation, sg[eln ] − fm l 2
+                                                                  2              tor dimensions in the four embedding spaces are K1 = 128,
+is the so-called “commitment loss” [6] of the l-th layer feature                 K2 = 256, K3 = 512 and K4 = 1024.
+vector and the l-th scale embedding space, which is used to                         In particular, we test the performance of the following
+avoid instabilities resulting from large changes in the output                   methods and evaluated results using the MS-SSIM [14]
+of down-sample block, and βc is the commitment loss scalar.                         • UNet-DeepJSCC: The remaining 4-layer VQ-DeepSC
+   The final objective of training the entire VQ-DeepSC model                          structures without vector quantization, which transmits
+to the optimize G ∗ = {α ∗ , γ ∗ , β ∗ } as:                                           images in the form of direct features transmition and
+                                                                                       compress the transmitted features by 1 × 1 convolu-
+    G ∗ = arg min max EI∼p(I) [λLVQ-DeepSC + LGAN ], (9)
+                 α ,γ ,β   μ                                                           tion. The training channel conditions of UNet-DeepJSCC
+where β represents the learnable parameters of the embedding                           models are SNR = 9 dB for both AWGN and Rician
+spaces, λ is a weight to balance LVQ-DeepSC and LGAN .                                 channels.
+                                                                                    • BPG: The Better Portable Graphics (BPG) [15] codec.
+As [10] shows, the proper combination of the least absolute
+                                                                                    • The VQ-DeepSC1: uses three embedding spaces with
+deviation (LAD) loss and GAN loss can not only improve
+the clarity of the generated images, but also ensure that the                          vector number N2 = 8, N3 = 4, N4 = 2.
+                                                                                    • The VQ-DeepSC2: uses three embedding spaces with
+generated images are more realistic.
+                                                                                       vector number N2 = 64, N3 = 16, N4 = 4.
+              IV. D ISCUSSIONS AND S IMULATIONS                                     • The VQ-DeepSC3: uses four embedding spaces with
+                                                                                       vector number N1 = 2, N2 = 64, N3 = 4, N4 = 4.
+   This section evaluates the proposed VQ-DeepSC over dif-
+                                                                                    • The VQ-DeepSC4: uses four embedding spaces with
+ferent channels with perfect channel state information (CSI).
+                                                                                       vector number N1 = 8, N2 = 4, N3 = 2, N4 = 2.
+   The Cars196 dataset [13] is used for training and the size
+                                                                                    Fig. 3 illustrates the MS-SSIM performance comparison for
+of training input image is resized to 256 × 256. We save the
+                                                                                 various methods with the similar number of transmitted sym-
+model with the best performance in training for the final test,
+                                                                                 bols over AWGN and Rician channels, in which the adaptive
+which is carried out on the Kodak dataset1 and the testing input
+                                                                                 modulation and coding (AMC) is employed. Specifically, the
+image size is 768 × 512. Our models were trained in noiseless
+                                                                                 LDPC blocklength is 64800 bits. In the case of AWGN chan-
+conditions with the hyper-parameters βc = 0.25 and λ = 0.1.
+                                                                                 nels, at the low SNR regimes, the VQ-DeepSC can achieve
+Each convolutional layer of semantic encoder and decoder has
+                                                                                 cliff point about 1 dB lower in SNR than BPG when using
+a 3 × 3 kernel. Besides, the PatchGAN discriminator [10]
+                                                                                 the better AMC mode (LDPC with 1/2 rate and BPSK). As
+begins with a convolutional layer and activation function fol-
+                                                                                 the AMC mode changes, the VQ-DeepSC achieves the cliff
+lowed by 3 sets of convolution layers, batch normalization and
+                                                                                 point at lower SNR regimes than the BPG, which means
+activation function, and ends with another convolution layer
+                                                                                 that the proposed method has better robustness to the chan-
+as output. The size of the first three convolution kernels of the
+                                                                                 nel variations. In addition, VQ-DeepSC can achieve higher
+  1 http://r0k.us/graphics/kodak/                                                MS-SSIM than UNet-DeepJSCC in certain SNR regimes by
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:18 UTC from IEEE Xplore. Restrictions apply.
+986                                                                                IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 12, NO. 6, JUNE 2023
+
+
+
+                                                                               gain can approximately be 8dB. Obviously, the blocklength
+                                                                               of LDPC has less impact on VQ-DeepSC3 than on BPG,
+                                                                               which demonstrates the robustness of VQ-DeepSC3 to digital
+                                                                               communication systems.
+
+                                                                                                           V. C ONCLUSION
+                                                                                  In this letter, we have proposed a framework of vector
+                                                                               quantized semantic communication system and introduced
+                                                                               a GAN-based implementation for image transmission. Our
+                                                                               approach, named VQ-DeepSC, contains different scales of
+                                                                               semantic embedding space and realises different scales of
+                                                                               semantic features fusion at receiver with low transmission
+                                                                               overheads. Specifically, by leveraging vector quantization, the
+Fig. 4. MS-SSIM performance comparisons with a similar compression ratio       semantic feature vectors were compressed into a set of seman-
+of source over AWGN channels.                                                  tic feature indices in the corresponding embedding space,
+                                                                               which also made the model suitable for digital communication
+                                                                               systems. In particular, VQ-DeepSC was found to outperform
+                                                                               BPG and be comparable to DeepJSCC as measured with
+                                                                               MS-SSIM. Hence, the proposed VQ-DeepSC is a promising
+                                                                               candidate for image semantic communication systems.
+
+                                                                                                              R EFERENCES
+                                                                                [1] K. B. Letaief, W. Chen, Y. Shi, J. Zhang, and Y.-J. A. Zhang, “The
+                                                                                    roadmap to 6G: AI empowered wireless networks,” IEEE Commun.
+                                                                                    Mag., vol. 57, no. 8, pp. 84–90, Aug. 2019.
+                                                                                [2] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Y. Li, “Semantic communications:
+                                                                                    Principles and challenges,” 2021, arXiv:2201.01389v5.
+                                                                                [3] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+                                                                                    channel coding for wireless image transmission,” IEEE Trans. Cogn.
+                                                                                    Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+                                                                                [4] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+                                                                                    semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+Fig. 5. MS-SSIM comparisons with a similar compression ratio and different          pp. 2663–2675, Apr. 2021.
+LDPC blocklength over AWGN channels.                                            [5] Z. Weng and Z. Qin, “Semantic communication systems for speech
+                                                                                    transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+                                                                                    pp. 2434–2444, Aug. 2021.
+adjusting coding rates and modulation. For fading channels,                     [6] A. van den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+the VQ-DeepSC outperforms BPG in terms of MS-SSIM at                                representation learning,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+                                                                                    vol. 30, Nov. 2017, pp. 1–10.
+all SNR regimes and achieve the similar MS-SSIM (above 0.8)                     [7] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust seman-
+as the DeepJSCC when SNR is larger than 5dB. In general, the                        tic communications with masked VQ-VAE enabled codebook,” 2022,
+VQ-DeepSC is more robustness than BPG and has the similar                           arXiv:2206.04011.
+                                                                                [8] M. Nemati and J. Choi. “All-in-one: VQ-VAE for end-to-end joint
+MS-SSIM as the DeepJSCC method.                                                     source-channel coding.” 2022. [Online]. Available: https://doi.org/10.
+   Fig. 4 shows the MS-SSIM comparison for VQ-DeepSC3                               36227/techrxiv.19294622.v1
+and BPG method with a similar compression ratio of source                       [9] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional
+                                                                                    networks for biomedical image segmentation,” in Proc. Med. Image
+over AWGN channels. Compared to the BPG, VQ-DeepSC                                  Comput. Comput.-Assist. Intervent., Nov. 2015, pp. 234–241.
+can employ higher modulation order to achieve similar cliff                    [10] P. Isola, J.-Y. Zhu, T. Zhou, and A. A. Efros, “Image-to-image translation
+point with higher transmission rate. In Fig. 4, with the same                       with conditional adversarial networks,” in Proc. IEEE Conf. Comput. Vis.
+                                                                                    Pattern Recognit. (CVPR), Jul. 2017, pp. 5967–5976.
+channel coding rate, VQ-DeepSC with 32-QAM has higher                          [11] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+MS-SSIM than the BPG with 16-QAM at low SNR regimes,                                image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+and achieves the same cliff point at SNR = 20dB, which                              (CVPR), Sept. 2016, pp. 770–778.
+                                                                               [12] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating
+shows the high achievable transmission rate and robustness                          gradients through stochastic neurons for conditional computation,” 2013,
+of VQ-DeepSC.                                                                       arXiv:1308.3432.
+   Fig. 5 shows the impact of LDPC blocklength on MS-                          [13] J. Krause, M. Stark, J. Deng, and L. Fei-Fei, “3D object representations
+                                                                                    for fine-grained categorization,” in Proc. IEEE Int. Conf. Comput. Vis.
+SSIM of VQ-DeepSC3 and BPG with a similar compression                               Workshops (ICCV), Dec. 2013, pp. 554–561.
+ratio of source. Specifically, the blocklength of LDPC1,                       [14] Z. Wang, E. P. Simoncelli, and A. C. Bovik, “Multiscale structural
+LDPC2, and LDPC3 are 20 bits, 648 bits, and 64800 bits,                             similarity for image quality assessment,” in Proc. 37th Asilomar Conf.
+                                                                                    Signals, Syst. Comput., vol. 2, Nov. 2003, pp. 1398–1402.
+respectively. BPG with the longer LDPC blocklength out-                        [15] F. Bellard, “Better portable graphics.” 2014. [Online]. Available: https://
+performs BPG with shorter LDPC blocklength, in which the                            bellard.org/bpg/
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:18 UTC from IEEE Xplore. Restrictions apply.
+

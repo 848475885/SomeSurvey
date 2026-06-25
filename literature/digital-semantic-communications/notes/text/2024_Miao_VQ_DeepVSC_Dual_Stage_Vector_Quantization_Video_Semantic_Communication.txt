@@ -1,0 +1,667 @@
+                                                                                                                                                                               1
+
+
+
+
+                                           VQ-DeepVSC: A Dual-Stage Vector Quantization
+                                            Framework for Video Semantic Communication
+                                                          Yongyi Miao+ , Zhongdang Li+ , Yang Wang, Die Hu* , Jun Yan, and Youfang Wang
+
+
+
+
+                                           Abstract—In response to the rapid growth of global video             role in the next generation of communication technologies,
+                                        traffic and the limitations of traditional wireless transmission        demonstrating significant potential and advantages [5]–[7].
+                                        systems, we propose a novel dual-stage vector quantization frame-       Semantic communication, grounded in understanding before
+                                        work, VQ-DeepVSC, tailored to enhance video transmission over
+                                        wireless channels. In the first stage, we design the adaptive key-      transmitting, involves extracting semantic information [8], [9].
+arXiv:2409.03393v1 [cs.NI] 5 Sep 2024
+
+
+
+
+                                        frame extractor and interpolator, deployed respectively at the          It enables profound compression by analyzing and distilling
+                                        transmitter and receiver, which intelligently select key frames         the essence of original content, proving highly adaptable and
+                                        to minimize inter-frame redundancy and mitigate the cliff-effect        extensible across diverse domains, including text [10], speech
+                                        under challenging channel conditions. In the second stage, we           [11], [12], images [13]–[15], and video [16]. Thus, it heralds
+                                        propose the semantic vector quantization encoder and decoder,
+                                        placed respectively at the transmitter and receiver, which effi-        a new era of intelligent and context-aware communication
+                                        ciently compress key frames using advanced indexing and spatial         systems.
+                                        normalization modules to reduce redundancy. Additionally, we               Despite considerable focus on the application of deep learn-
+                                        propose adjustable index selection and recovery modules, enhanc-        ing to video compression [17]–[20], the advent of semantic-
+                                        ing compression efficiency and enabling flexible compression ratio      based deep learning to enhance wireless video transmission
+                                        adjustment. Compared to the joint source-channel coding (JSCC)
+                                        framework, the proposed framework exhibits superior compati-            was marked by the introduction of DeepWiVe by Tung et
+                                        bility with current digital communication systems. Experimental         al. in 2022 [16]. This pioneering approach presented an
+                                        results demonstrate that VQ-DeepVSC achieves substantial im-            integrated solution for video compression, channel coding, and
+                                        provements in both Multi-Scale Structural Similarity (MS-SSIM)          modulation through an end-to-end joint source-channel coding
+                                        and Learned Perceptual Image Patch Similarity (LPIPS) metrics           (JSCC) framework. Building upon this foundation, Zhang et al.
+                                        than the H.265 standard, particularly under low channel signal-
+                                        to-noise ratio (SNR) or multi-path channels, highlighting the           further innovated by incorporating dual optical flow estimation
+                                        significantly enhanced transmission capabilities of our approach.       for video transmission [21]. Dong et al. introduced Rosefinch,
+                                                                                                                a semantic communication model for live media streaming,
+                                          Index Terms—Semantic Communication, Video Transmission,               video conferencing, and low-rate image transmission [22].
+                                        Vector Quantization, Multipath Fading Channel, Deep Learning.           With these developments, JSCC framework has become the
+                                                                                                                main research paradigm for video semantic communication
+                                                                                                                (VSC) systems.
+                                                               I. I NTRODUCTION                                    Notably, Gong et al. [23] introduced an adaptive bit rate
+                                                                                                                VSC system, modulating the bit rate based on network con-
+                                        W       ITH the rapid advancement of information technology,
+                                                global data traffic, especially video traffic, has grown
+                                        exponentially, now constituting the predominant component
+                                                                                                                ditions. Niu et al. [24] added a channel and spatial attention
+                                                                                                                mechanism to their VSC framework, enhancing adaptability.
+                                        of internet data traffic [1], [2]. Despite enhancements in              Bao et al. [25] proposed a model division VSC scheme to
+                                        traditional wireless video transmission systems that focus on           extract shared semantic features and counteract noisy channels.
+                                        optimizing bit error rates (BER) [3], [4], challenges persist in        Liang et al. [26] developed the VISTA framework, using
+                                        ensuring high-quality transmission. These systems primarily             semantic location graphs to manage dynamic objects and adapt
+                                        emphasize compression efficiency but often fall short in ad-            to changing channel conditions. Specialized systems have also
+                                        dressing the semantic understanding and adaptability required           been developed for specific scenarios. Jiang et al. [27] created
+                                        for dynamic network conditions. Even with the adoption of the           a scalable video coding network for video conferencing,
+                                        latest H.265 technology, the impact of the cliff-effect remains         minimizing transmission resources. Liu et al. [28] introduced
+                                        unresolved. This effect describes a significant decline in video        a federated learning-enhanced vehicle semantic communica-
+                                        transmission quality when the channel signal-to-noise ratio             tion framework, optimizing semantic extraction and resource
+                                        (SNR) drops below a critical threshold.                                 allocation while maintaining data privacy. Wang et al. [29]
+                                                                                                                employed a nonlinear transformation and conditional coding
+                                                                                                                architecture to optimize the balance between transmission rate
+                                        A. Prior Work                                                           and distortion, underpinned by perceptual quality metrics.
+                                          The rapid development of deep learning (DL) technol-
+                                        ogy has propelled semantic communication into a crucial
+                                                                                                                B. Motivation and Contributions
+                                          Yongyi Miao, Zhongdang Li, Yang Wang, Die Hu, Jun Yan, and Youfang
+                                        Wang are with the School of Information Science and Technology, Fudan     While JSCC-based VSC systems have theoretically shown
+                                        University, Shanghai 200433, China.                                     promise in reducing distortion and enhancing transmission
+                                                                                                                                   2
+
+
+
+efficiency, these systems map source data directly to channel      source-channel coding systems, the proposed AKEI estimates
+symbols, causing constellation points to appear anywhere on        frame importance and models the relationship between SNR
+the constellation diagram, which deviates from the design of       and key-frame rate, prioritizing the retransmission of critical
+current digital communication systems. In addition, most stud-     key frames under poor channel conditions (e.g., when SNR
+ies simulate channels based on additive white Gaussian noise       is low). At the receiving end, an optical flow estimation-
+(AWGN) or other simplistic models. Although the AWGN               based interpolation algorithm restores the video to its original
+model is useful for controlled experiments, it fails to capture    frame rate, enhancing robustness and stability in challenging
+the complexities of real-world wireless communications, such       channel conditions. In the second stage, we leverage a multi-
+as multipath effects, signal decay, and the ever-fluctuating       channel spatially conditioned vector quantization (MSVQ)
+nature of channel conditions. Therefore, the robustness and        for the ultimate compression of key frames. Compared to
+suitability of JSCC methodologies in complex, dynamic wire-        existing methodologies such as Masked VQ-VAE [9] and
+less environments require thorough validation.                     VQ-DeepSC [30], MSVQ utilizes a shared latent embedding
+   To make semantic communication more compatible with             space for multi-channel index mapping [33], supporting high-
+digital communication systems, semantic communication sys-         resolution video transmission and promoting diversity without
+tems for image transmission based on discrete latent spaces        increasing latent space size. Spatial conditional normalization
+have been designed [9] [30] so that semantic features can be       in the MSVQ decoder mitigates quantization artifacts, ensur-
+quantized into feature indices through the latent embedding        ing high-quality image reconstruction. Additionally, key-frame
+space, thereby converting them into bitstreams. Subsequently,      indices are further compressed using adjustable index selection
+these bitstreams can be directly mapped into symbols for           and recovery algorithms, allowing flexible compression rates.
+transmission using existing constellation mapping schemes.         The main contributions of this paper are summarized as
+   The vector quantization (VQ) semantic communication sys-        follows:
+tem designed by Hu et al. [9], Masked VQ-VAE, reduces                 • We are the first to use DL-based VQ methods for video
+transmitted information by quantizing and transmitting only             transmission. Compared to JSCC-based VSC systems, the
+feature indices. However, due to the limitations of VQ-                 VQ-DeepVSC adapts better to the variable conditions of
+VAE in image reconstruction [31], it addresses downstream               real wireless channels and is more compatible with exist-
+tasks solely by transmitting task-relevant key feature indices          ing communication systems. The proposed MSVQ is de-
+within the latent embedding space. In addition, VQ-DeepSC,              signed to minimize intra-frame redundancies using multi-
+designed by Fu et al. [30], utilizes a U-Net structure [32]             channel indexing and spatial conditional normalization,
+to extract features at different scales and the input image             achieving a high compression degree while maintaining
+is mapped to single-channel indices at each scale. However,             frame quality.
+this method necessitates multiple latent embedding spaces of          • We design the AKEI module, a revolutionary framework
+different sizes, leading to excessive storage requirements at           that intelligently selects key frames based on content and
+both the transmitter and receiver ends. Furthermore, the infor-         wireless channel quality, thereby optimizing the semantic
+mation bottleneck problem within the U-Net structure limits             compression process, significantly reducing inter-frame
+its ability to capture remote global contextual information,            redundancies, and effectively tackling the cliff-effect in
+thereby reducing its effectiveness in handling high-resolution          video transmission.
+images. Additionally, the quantization operator is lossy, and         • We propose adjustable index selection and recovery al-
+similar patches are often embedded with the same index,                 gorithms that reduce redundancy between key frames by
+leading to the creation of pseudo-shadows and discontinuities           transmitting only indices significantly different from their
+in generated images.                                                    predecessors, as determined by a preset threshold. This
+   In addition to being limited by the image reconstruction             approach enhances compression efficiency, minimizes
+capabilities of current semantic communication network struc-           compression loss, and allows for more flexible adjustment
+tures, extending VQ-based semantic communication systems                of compression rates.
+from image to video transmission is challenging. This is due          • Extensive simulation experiments have validated that the
+to the unique demands of video transmission, such as the need           proposed VQ-DeepVSC achieves superior reconstruction
+to further reduce temporal redundancy.                                  quality at equivalent compression rates compared to other
+   In this paper, we firstly propose a dual-stage vector                methods. What’s more, our system demonstrates excep-
+quantization-based video semantic communication system                  tional robustness, maintaining high-performance trans-
+named VQ-DeepVSC. To enhance the physical interpretability              mission efficiency across various channel conditions.
+of the system, VQ-DeepVSC is divided into two distinct stages
+to improve transmission efficiency, each specifically aimed at
+reducing redundancy in the temporal and spatial dimensions,        C. Organization
+respectively.                                                         The structure of this paper is as follows: Section II pro-
+   In the first stage, we design an adaptive key-frame ex-         poses the framework of the VQ-DeepVSC system. Section III
+traction and interpolation (AKEI) module to reduce temporal        elaborates on the proposed AKEI. Section IV designs the
+redundancy, transforming video transmission into a key-frame       implementation of the MSVQ. Section V explores the strategy
+transmission task. Meanwhile, to mitigate the cliff-effect aris-   for reducing redundancy between key frames. Section VI
+ing from the constrained channel coding capacity in separated      presents experimental results that validate the performance
+                                                                                                                                         3
+
+
+
+of the proposed VQ-DeepVSC system. Finally, Section VII               we utilize a latent embedding space which is denoted by
+concludes the paper.                                                  E = {e1 , . . . , eL } ∈ RL×d , where L denotes the size of E, d
+   Notations: Superscripts T stands for transpose. IM ×N rep-         is the dimensionality of each latent embedding vector el in E,
+resents the M × N identity matrix and 0M ×N denotes the               and l = 1, . . . , L. Space E is trained during the training phase
+M × N all-zero matrix. For a matrix A, [A]i,: denotes the i-          and is shared between the transmitter and receiver. Following
+th row of A. For a vector a, ||a||2 denotes the Euclidean norm,       feature extraction by the semantic vector quantization encoder,
+a(m) denotes the m-th elements of a, and a(m : n) represents          M index sequences {sm }M     m=1 are generated, where sm repre-
+taking the m-th to n-th elements from vector a. For a scalar          sents the index sequence of the m-th keyframe corresponding
+x, ⌊x⌋ denotes the nearest integer smaller than or equal to x.        to the quantized vector in the E space, m = 1, . . . , M . Details
+For operations, ⟨·, ·⟩ represents the inner product, ⊗ indicates      will be provided in Section IV.
+the batch-wise matrix multiplication operation, and ⊙ denotes            To further reduce redundancy, we propose an adjustable
+the Hadamard product. Finally, Rm×n and Zm×n denote the               index selector that performs the final screening of the index
+spaces of m × n real and integer matrices, respectively.              sequence. The outputs from the adjustable index selector are
+                                                                      the resulting indices sη and the position sequence p. The
+        II. F RAMEWORK OF VQ- BASED S EMANTIC                         specific details will be provided in Section V.
+      C OMMUNICATIONS FOR V IDEO T RANSMISSION                           After the aforementioned modules, the video data {Fn }N    n=1
+   In this section, we introduce a novel framework for se-            can ultimately be encoded into a bitstream b, which is
+mantic communication systems specifically tailored for video          composed of the following three parts, i.e.:
+transmission. This framework, based on VQ, is illustrated
+                                                                                              b = [bs , bp , bv ],                    (2)
+in Fig. 1. The transmitter consists of an adaptive key-frame
+extractor, a semantic vector quantization encoder, an adjustable      where bs , bp and bv correspond to the bitstreams of sη , p
+index selector, channel coding and modulation, and orthogonal         and v, respectively.
+frequency division multiplexing (OFDM) modulation. The                   After obtaining b, operations identical to those used in
+receiver comprises OFDM demodulation, channel estimation              traditional communication systems can be employed, namely
+and channel equalization, a demodulation and channel decoder,         encoding and modulating the bitstream for transmission. To
+an adjustable index restorer, a semantic vector quantization          combat multipath fading in the channel, OFDM technology is
+decoder, and an adaptive key-frame interpolator.                      also utilized here. As can be seen from the figure, the semantic
+                                                                      communication system we propose is fully compatible with
+A. Transmitter                                                        existing communication systems.
+   As shown in Fig. 1, the video transmitter processes a
+sequence of video data, which spans an arbitrary duration             B. Receiver
+T and is composed of N individual frames. Each frame
+                                                                        The received time-domain signal at the receiver can be
+Fn ∈ RWF ×HF ×CF with n = 1, . . . , N is an RGB image with
+                                                                      expressed as:
+the width of WF , the height of HF , and the CF = 3 channels.
+   To avoid the cliff-effect, a feasible method is to retrans-                          y(t) = h(t, τ ) ∗ x(t) + n(t),                (3)
+mit video frames multiple times. However, this approach
+will undoubtedly increase the amount of transmitted data,             where h(t, τ ) represents the multi-path time-varying channel
+greatly affecting the compression effect. To ensure that the          impulse response, n(t) denotes the additive white Gaussian
+compression ratio remains unchanged during retransmission,            noise, and ∗ signifies convolution.
+we propose an adaptive key-frame extractor that assesses the             After applying OFDM demodulation, channel equalization,
+importance of each frame based on channel quality (such               demodulation, and channel decoding, we can finally obtain the
+as SNR) and content changes, and extracts the key frames.             estimates of sη , p and v, i.e., ŝη , p̂ and v̂, respectively.
+Only the key frames are transmitted and retransmitted under              Subsequently, the adjustable index restorer is employed
+poor channel conditions, and denote the m-th key frame as             based on ŝη and p̂, enabling us to retrieve {ŝm }M   m=1 . Given
+Km ∈ RWF ×HF ×CF , where m = 1, . . . , M , and M represents          v̂, the semantic vector quantization decoder is then used to re-
+the number of key frames, and we use the vector v ∈ ZN ×1             cover the key frames, i.e., to obtain {K̂m }M  m=1 . Finally, given
+to record the positions of the key frames. Specifically, if the       {K̂m }M m=1 and  v̂, we use  an adaptive    key-frame   interpolator
+n-th frame is the key frame, we set v(n) = 1 , otherwise we           to recover all video frames {F̂n }N   n=1 .
+set v(n) = 0, where n = 1, . . . , N . The specific details of this
+process and its implications will be elaborated in Section III.                         III. T HE P ROPOSED AKEI
+   We define the ratio of key frames to all frames ρ as:
+                                                                         Many frames within a video sequence are often similar,
+                                M                                     containing redundant information. Therefore, the transmission
+                           ρ=      ,                       (1)
+                                 N                                    of data can be reduced by only transmitting a subset of
+which can be adaptively adjusted according to the channel             frames and then performing frame interpolation at the receiver.
+conditions.                                                           These transmitted frames are known as key frames. Here, we
+  After extracting key frames, a semantic vector quantization         propose AKEI to achieve the extraction of key frames and the
+encoder is utilized for feature extraction and indexing. Here,        subsequent recovery of all frames.
+                                                                                                                                      4
+
+
+
+
+Fig. 1. The overall system architecture of the proposed VQ-DeepVSC.
+
+   AKEI aims to reduce inter-frame redundancies in video
+transmission and address cliff-effect. AKEI consists of two
+primary components: the adaptive key-frame extractor, located
+on the transmitter, and the adaptive key-frame interpolator,
+situated on the receiver.
+   When the SNR decreases, the quality of video transmission
+                                                                      Fig. 2. The structure of the adaptive key-frame extractor.
+may suddenly drop at a certain point, a phenomenon known as
+the cliff-effect. An effective method to address the cliff-effect        Suppose that the frame to be reconstructed is Fi , where
+is to perform multiple retransmissions of the video, but this         i = 2, . . . , N − 1, the FusionNet utilizes its preceding frame
+can lead to a significant decrease in compression capability          Fi−1 and succeeding frame Fi+1 , as well as the optical flow
+of the system. To solve the cliff-effect without increasing the       estimation Oi of Fi , to reconstruct Fi . Here, we denote the
+compression rate, we employ an adaptive key-frame extractor           reconstruction result by F̌i .
+to dynamically select key frames for transmission and perform            Following FusionNet, the frame importance score (FIS)
+multiple retransmissions under low SNRs. The adaptive key-            calculator outputs the score sequence β ∈ RN ×1 . These
+frame extractor dynamically selects key frames and generates          scores, derived from comparisons between {F̌n }N         −1
+                                                                                                                              n=2 and
+a vector to record the positions of these key frames within the             N −1
+                                                                      {Fn }n=2 , are assigned to β(2 : N − 1). β(1) and β(N ) are
+video sequence. This selection process is adaptively adjusted         set to sufficiently large values. In the end, the mask generator
+based on content variation between video frames and the               determines which frames among the N frames are key frames
+quality of the multi-path channel.                                    based on the β and channel conditions (e.g., SNR), and outputs
+   Conversely, the adaptive key-frame interpolator utilizes the       v.
+received key frames to reconstruct the full video sequence.
+                                                                         The details of the four modules in Fig. 2 are as follows:
+To facilitate practical deployment, AKEI is designed with
+                                                                         1) IFNet: IFNet diverges from traditional dual optical flow
+an asymmetric structure, featuring a simpler structure at the
+                                                                      networks by adopting a coarse-to-fine strategy that directly
+receiver.
+                                                                      estimates optical flow for intermediate frames. Simple linear
+                                                                      interpolation of forward and backward flows may falter in the
+A. Adaptive Key-frame Extractor                                       presence of rapid motion or complex backgrounds. In contrast,
+   As illustrated in Fig. 2, the input of the adaptive key-           our approach mitigates artifacts and blurriness by iteratively
+frame extractor is {Fn }N n=1 . And the output is the key frames
+                                                                      refining optical flow estimation. The specific structure of the
+{Km }M m=1  . Initially, an incremental flow network (IFNet)          IFNet comprises multiple incremental flow blocks (IFBlocks).
+is used to estimate the optical flow of frames and outputs            IFNet utilizes the preceding and succeeding frames of the
+        −1
+{Oi }Ni=2 . Each optical flow map Oi ∈ R
+                                            CO ×HO ×WO
+                                                         denotes      current frame, namely Fpre and Fnext , to calculate the optical
+the optical flow corresponding to frame Fi , where CO , HO ,          flow Ocur of the current frame. IFNet employs a coarse-to-fine
+and WO represent the number of channels, height, and width            strategy through three IFBlocks to progressively enhance the
+of Oi , respectively. These dimensions are consistent across          accuracy of optical flow estimation. Each IFBlock utilizes a
+all Oi . By default, we assume that F1 and FN are the key             distinct downsampling factor αi (set as 4, 2, 1 respectively)
+frames, i.e., we set v(1) = 1 and v(N ) = 1. Therefore,               to reduce the spatial dimensions of the image and extracts
+the IFNet only computes the optical flow for the intermediate         features using convolutional 2D layers, denoted as Conv2d.
+(N −2) frames. Unlike dual optical flow networks that provide         As resolution is incrementally enhanced, finer details are
+two optical flow estimations for each frame to represent the          captured. Finally, upsampling restores the image to its original
+content changes relative to the preceding and succeeding              resolution through deconvlutional 2d layers, coupled with Bi-
+frames, our approach only outputs one optical flow estimation         linear Resize operations, achieving high-precision optical flow
+for each frame, indicating the content changes relative to the        estimation.
+surrounding frames.                                                      This coarse-to-fine approach iteratively corrects motion esti-
+                                                                                                                                       5
+
+
+
+mation inaccuracies. By refining optical flow across stages, our
+method effectively reduces artifacts and blurriness, resulting in
+more precise and higher-quality interpolation of intermediate
+frames.
+   2) FusionNet: FusionNet utilizes two ContextNets to ex-
+tract background features from the video frames Fpre and             Fig. 3. The structure of the adaptive key-frame interpolator.
+Fnext , and considers the results of optical flow estimation
+                                                           1,2,3,4
+through WarpBlock operations, ultimately obtaining Opre              where ρ represents the predicted key-frame ratio based on γ,
+        1,2,3,4
+and Onext , respectively. ContextNet consists of four Warp-          ai are the coefficients of the polynomial regression model, and
+Blocks. The first WarpBlock accepts the optical flow results         I is the degree of the polynomial.
+generated by IFNet, along with either the previous frame Fpre           The polynomial coefficients a = [a0 , a1 , . . . , aI ] can be
+or the next frame Fnext as input. Subsequent WarpBlocks,             determined by minimizing the objective function Err, which
+specifically the i-th WarpBlock with i = 2, 3, 4, take as inputs     measures the discrepancy between observed and model-
+the intermediate results Oi−1 and Fi−1 , which are produced          predicted key-frame ratios:
+by the (i − 1)-th WarpBlock. The i-th WarpBlock utilizes
+Conv2d to extract features from Oi−1 , and employs Bilinear                            a = arg min {Err + υ · R(a)} .                (6)
+                                                                                                   a
+Resize to restore the size of Oi to obtain Oi . Concurrently,
+Oi is warped with Fi−1 to yield Fi . Each WarpBlock allows           Here, υ is a custom parameter that adjusts the balance between
+for the learning of background information to varying degrees.       the data fit and the regularization term, and R(a) is the
+Then a U-Net structured network is employed to continually           regularization function given by:
+perform Conv2d and supplement Oi to extract multi-scale                          (         PI
+features, and uses Deconv2d to perceive and reconstruct these                      ∥a∥1 = i=0 |ai |, for L1 regularization,
+features, ultimately yielding the frame reconstruction result.          R(a) =             PI                                   (7)
+                                                                                   ∥a∥22 = i=0 a2i , for L2 regularization.
+   3) Frame Importance Score Calculator: To assess the
+importance of frames based on video content changes and              Here, R(a) applies either L1 or L2 regularization to the
+motion information, we develop a new evaluative metric called        coefficients a, with L1 promoting sparsity and L2 encouraging
+the frame importance score, denoted by β, which can reflect          smaller values across the coefficients. Err is defined as:
+the degree of difference between the reconstructed frames                                                          !!2
+         −1                                N −1
+{F̌n }Nn=2 and the original frames {Fn }n=2 . A higher value
+                                                                                                 I
+                                                                                                 X
+                                                                                                                 i
+in β indicates a greater distinction between the two images,                     Err = ρ −          ai · (log(γ))      ,        (8)
+signifying that the frame is more challenging to reconstruct,                                          i=0
+
+and thus, this frame is deemed more significant. The score of        which quantifies the squared difference between the actual
+the n-th frame can be given by:                                      key-frame ratio and that predicted by the model.
+                     β(n) = fis (F̌n , Fn ),                  (4)      Given γ, we can obtain ρ and then M . Based on M and
+                                                                     β, we can determine the key-frames by selecting the frames
+where fis (·, ·) represents the assessment function, which is        corresponding to the top M values in β. These frames are
+contingent upon the specific application context. For instance,      then marked as key-frames by setting their positions in the
+one can calculate the Structural Similarity (SSIM) [34] or           sequence of N frames to 1.
+the Learned Perceptual Image Patch Similarity (LPIPS) [35]
+between F̌n and Fn .
+   4) Adaptive Frame Selection: Before selecting key frames,         B. Adaptive Key-frame Interpolator
+it is essential to determine the key frames ratio ρ. When the
+                                                                        The adaptive key-frame interpolator is designed with a
+channel condition is poor, it is essential to reduct transmission
+                                                                     simpler structure than the transmitter’s adaptive key-frame
+resources for retransmitting the most critical key frames,
+                                                                     extractor to accommodate the practical conditions of wire-
+specifically those with higher β values. This adjustment ef-
+                                                                     less communication. As illustrated in Fig. 3, its inputs are
+fectively mitigates the cliff-effect, which deteriorates video
+                                                                     {K̂m }Mm=1 and v̂, which are the estimates of {Km }m=1 and
+                                                                                                                               M
+quality significantly under extremely poor channel conditions.
+                                                                     v, repectively. Initially, the gap calculator generates a sequence
+By conserving bandwidth through prioritizing critical frames,
+                                                                     g ∈ Z(M −1)×1 , which records the number of non-key frames
+the strategy ensures reliable reception of essential information
+                                                                     between each pair of consecutive key frames based on v̂.
+even in challenging channel conditions.
+                                                                     Subsequently, all key frames along with g are input into the
+   Here, we adopt SNR, denoted by γ, to represent channel            IFNet to calculate the optical flow {Ôi }N   −M
+                                                                                                                       of the (N − M )
+                                                                                                                 i=1
+conditions because of its simplicity and ease of acquisition in      non-key frames interspersed between the key frames. The
+practice. We establish a quantitative relationship between γ         FusionNet then reconstructs the non-key frames {K̃i }N         −M
+                                                                                                                                  i=1 ,
+and ρ as follows:                                                                                                   N −M
+                                                                     by utilizing the information from {Ôi }i=1 . Finally, we
+                                                                                                                                −M
+                          I
+                          X                                          use the video seam module to stitch together {K̃i }N     i=1    and
+                     ρ=         ai · (log(γ))i ,              (5)           M
+                                                                     {K̂m }m=1 according to g, reconstructing the sequence of
+                          i=0                                        video frames {F̂n }N  n=1 .
+                                                                                                                                         6
+
+
+
+                 IV. T HE P ROPOSED MSVQ
+   To optimize compression efficiency for each key-frame,
+we propose MSVQ that can reduce intra-frame redundancies.
+MSVQ module consists of two key components: the semantic
+vector quantization encoder at the transmitter and the semantic
+vector quantization decoder at the receiver. The former pos-
+sesses exceptional image compression capability, encoding the
+frames into multi-channel indices, while the latter accurately       Fig. 4. The structure of semantic quantization vector encoder.
+reconstructs the original frames from these indices.
+
+                                                                     Km . Finally, a patch-based discriminator D is employed to
+A. Semantic Vector Quantization Encoder
+                                                                     assess the constructed frame K̂m . It should be pointed out
+   1) Procedure: As shown in Fig. 4, the encoder first applies       that during the training phase of this model, we directly assign
+a CNN encoder to extract multi-channel features zm =                 ŝm = sm .
+  (1)          (c)
+[zm , . . . , zm ] ∈ Rh×w×d×c from the m-th key-frame Km                2) Details of CNN Decoder and Discriminator: Compared
+          (j)
+where zm ∈ Rh×w×d denotes the j-th channel feature of the            to the CNN encoder, the CNN decoder in MSVQ exhibits a
+m-th frame, j = 1, 2, . . . , c, and c represents the number of      mirrored architecture in certain aspects. The decoder includes
+channels.                                                            an intermediate layer, multiple up-sample modules, and con-
+                   (j)                 (j)
+   The feature zm is reshaped to z̄m ∈ RU ×d , where U = hw          cludes with a final Norm, SiLU, and Conv2d. The structures
+                           (j)
+and its u-th row, i.e., [z̄m ]u,: , is then quantized to the index   of the residual block and the attention mechanism module are
+of the nearest vector in the latent embedding space E, i.e.,         consistent with those in the CNN encoder.
+              s̄(j)                (j)                                  However, the CNN decoder is not completely symmetrical
+                m (u) = arg min∥[z̄m ]u,: − el ∥2 ,           (9)
+                             l                                       to the CNN encoder. It is noteworthy that all Norms in the
+                           (j)                                       CNN decoder, including residual blocks and attention mod-
+where l = 1, . . . , L and s̄m ∈ ZU ×1 . Once L is given, each
+                      (j)                                            ule blocks, are replaced by spatial conditional normalization
+index value, i.e., s̄m (u), can be represented by B = log2 L
+                                                                     (SCN). This ensures that the same quantized indices produce
+bits.
+                                                                     results that are not identical but more natural at different
+   Subsequently, we concatenate these index sequences to
+                  (1)       (c)                                      positions, thereby reducing artifacts and discontinuities in the
+form sm = [s̄m ; . . . ; s̄m ] ∈ ZLs ×1 , where Ls = U c.            generated frames compared to conventional DL-based VQ
+Thus, employing the semantic vector quantization encoder             methods [30].
+compresses the data of a video frame into a vector of length
+                                                                        The SCN module initially standardizes the intermediate
+Ls , equivalent to a bitstream of length Ls B.
+                                                                     feature map f i ∈ RCf i ×Hf i ×Wf i via group normalization to
+   2) Details of CNN Encoder: The CNN encoder in MSVQ
+                                                                     eliminate stylistic variations, where Cf i represents the number
+is capable of encoding the input into a multi-channel vector
+                                                                     of channels, while Hf i and Wf i represent the height and
+rather than a single channel. The advantages of multi-channel
+                                                                     width of the feature map respectively. Then, it integrates the
+representation over single-channel representation include in-
+                                                                     embedded vectors ẑm as auxiliary information into the input
+creased information capacity, enhanced feature combinations,
+                                                                     feature maps. Specifically, this is achieved using (10):
+and improved image generation quality [33].
+   Our CNN encoder incorporates multi-level downsampling                                          
+modules to extract multi-scale features and expand the recep-              i+1     f i − µGN f i
+                                                                       f         =                  ⊙ Θy (Φ (ẑm )) + Θb (Φ (ẑm )) , (10)
+tive field of each feature point, thus improving the model’s                           σGN (f i )
+ability to capture global structure and semantic information
+                                                                     where function Φ(·) interpolates and adjusts the auxiliary
+from the input data. Each down-sample module consists of
+                                                                     input ẑm to match the size of the input feature map f i ,
+two residual blocks, which help mitigate the vanishing gra-
+                                                                     Φ (ẑm ) ∈ Rc×Hf i ×Wf i and c represents the number of
+dient problem, facilitate the training of deeper networks, and
+                                                                     channels described in Section IV-A. Θy and Θb are two
+improve overall network performance. To assist the network
+                                                                     learnable affine transformations that map the adjusted ẑm to
+in better understanding more abstract and complex patterns
+                                                                     the same number of channels as f i . Additionally, µGN and
+that may exist in the deep features, an attention mechanism
+                                                                     σGN respectively represent the mean and standard deviation
+module is added in the last down-sample module. Finally, the
+                                                                     of the group normalization applied to f i . In summary, the
+features are mapped to the latent embedding space through an
+                                                                     normalized feature map is multiplied and added with the
+intermediate layer and various operations.
+                                                                     convolutionally mapped auxiliary information to generate the
+                                                                     final output feature map f i+1 .
+B. Semantic Vector Quantization Decoder
+  1) Procedure: The semantic vector quantization decoder
+depicted in Fig. 5 takes the index sequence ŝm as input.            C. Loss Function
+This sequence is first mapped back to the corresponding                During the training phase of the encoder, the loss function
+vector ẑm in the latent embedding space. Subsequently, it is        we use consists of three components: reconstruction loss,
+decoded using a CNN decoder to reconstruct the key-frame             vector quantization loss, and adversarial loss.
+                                                                                                                                                 7
+
+
+
+                                                                               V. A DJUSTABLE I NDEX S ELECTOR AND R ESTORER
+                                                                              Using the semantic vector quantization encoder, the m-
+                                                                           th key frame is represented by the sequence of indices sm .
+                                                                           Letting qm ∈ RLs ×d represent the matrix that consists of Ls
+                                                                           quantized feature vectors for the m-th key frame, we have
+                                                                                                    [qm ]i,: = eTsm (i) ,                    (16)
+                                                                           where i = 1, 2, . . . , Ls and esm (i) refers to the sm (i)-th basis
+Fig. 5. The structure of semantic vector quantization decoder.
+                                                                           vector in the latent embedding space E.
+                                                                             In practice, the quantized feature vectors between adjacent
+   The reconstruction loss measures the difference between the             key frames may exhibit similarity. By computing the similarity
+frames generated by the model and the original ones, which                 between the feature vectors of the Km−1 and Km , we can
+is given by:                                                               assess the redundancy between consecutive frames.
+                                                                             Take cosine similarity as an example, which is given by:
+  Lrec (Km , K̂m ) = ∥Km − K̂m ∥22 + λLperceptual (Km , K̂m ),
+                                                           (11)                                        ⟨[qm−1 ]i,: , [qm ]i,: ⟩
+                                                                                           sim =                                  .          (17)
+                                                                                                    ∥[qm−1 ]i,: ∥2 · ∥[qm ]i,: ∥2
+where λ is the weight coefficient. Lperceptual quantifies the
+perceptual distance between the generated frames and the                   If sim exceeds a predefined threshold η, it indicates sub-
+original frames by computing the distance between the feature              stantial redundancy between the two frames. In such cases,
+maps extracted from the generated and input frames through                 transmission can be optimized by selectively transmitting only
+networks. In this paper, the feature outputs of five convo-                the indices that exhibit significant changes, thereby reducing
+lutional layers in the VGG-16 model [36] are selected to                   the volume of data transmitted while minimizing the impact
+compute the perceptual loss as:                                            on video reconstruction quality.
+                                                                              Let sη denote the final sequence of selected indices and
+                            4                                              define:
+                            X        1
+Lperceptual (Km , K̂m ) =                   ∥ φj (Km ) − φj (K̂m ) ∥22 ,
+                            j=0
+                                C j H j W j                                                        p = [p2 ; . . . ; pM ],                   (18)
+                                                                 (12)
+                                                                           where pm is a length Ls vector whose element is 0 or 1, and
+where φj is the output of the j-th layer of the feature extraction         m = 2, . . . , M . Specifically, if the cosine similarity between
+network, and Cj , Hj , Wj represent the number of channels,                [qm−1 ]i,: and [qm ]i,: is less than η, we set pm (i) = 1 and
+height, and width of the feature maps at the j-th layer,                   include sm (i) in sη . Otherwise, we set pm (i) = 0 and keep
+respectively.                                                              sη unchanged.
+   The vector quantization loss is incurred during the quanti-                Upon receiving the estimates of sη and p, i.e., ŝη and p̂
+zation process due to the straight-through gradient estimator              at the receiver, the adjustable index restorer reconstructs the
+method, which can be calculated as:                                        key frame index sequence {ŝm }M    m=1 . Initially, ŝ1 is initialized
+                                                                           using ŝη . Then for each subsequent key frame m = 2, . . . , M ,
+  LVQ (zm , ẑm ) = ∥sg[zm ] − ẑm ∥22 + ∥sg[ẑm ] − zm ∥22 . (13)         ŝm is reconstructed based on ŝm−1 and using ŝη with consid-
+                                                                           eration of p̂.
+Here sg[·] denotes the stop-gradient operation.                               As shown in Fig. 1, after processing the original video
+  The adversarial loss is given by:                                        frames {Fn }N  n=1 through the adaptive key-frame extractor,
+                                                                           semantic vector quantization encoder, and adjustable index
+ LGAN (Km , K̂m ; θ) = log D(Km ; θ) + log(1 − D(K̂m ; θ)),
+                                                                           selector modules, we can finally obtain v, sη , and p. Define
+                                                        (14)
+                                                                           the bit compression ratio (BCR) as the ratio of the number of
+where θ represents learnable parameters in D.                              bits required for the final transmission sequence to the original
+  The whole objective function for identifying the optimal                 video frames. Thus, the BCR of the proposed VQ-DeepVSC
+model can be expressed as:                                                 is given by:
+                                 h                      i                                        N + Lη × B + Ls × (M − 1)
+Q∗ = arg min maxEKm ∼p(Km ) Lrec + µ1 LVQ + µ2 LGAN ,                                  BCR =
+                                                                                                   CF × HF × WF × 8 × N
+                                                                                                                           ,                 (19)
+        wE ,wG ,wZ    θ
+                                                                 (15)      where Lη is the length of sη , and N , Lη B, and Ls (M − 1)
+                                                                           are the number of bits required for v, sη , and p, respectively.
+where wE , wG , and wZ denote the learnable parameters of
+the CNN encoder, the CNN decoder, and the latent embedding
+space, respectively. µ1 and µ2 are weighting coefficients                                          VI. E XPERIMENTS
+that adjust the contributions of the vector quantization loss                 In this section, we provide a detailed description of the
+and the generative adversarial network loss to the total loss.             training configurations for the AKEI and MSVQ stages, as
+EKm ∼p(Km ) represents the expected value over the distribu-               well as the conditions for the transmission experiments. We
+tion p(Km ) of the input frame Km .                                        focus on the significance of AKEI and the adjustable index
+                                                                                                                                      8
+
+
+
+
+Fig. 6. MS-SSIM comparisons between the proposed VQ-DeepVSC (BCR = 0.023) and H.265 (BCR = 0.024) under different channels.
+
+
+
+
+Fig. 7. LPIPS comparisons between the proposed VQ-DeepVSC (BCR = 0.023) and H.265 (BCR = 0.024) under different channels.
+
+selector and restorer and their impact on system performance.          video transmission. We utilize the FFMPEG [39] library to
+Finally, we compare VQ-DeepVSC with the traditional H.265              perform H.265 encoding and decoding. The BCR of H.265 is
+method through experiments.                                            given by:
+                                                                                                       Bs × 8
+                                                                                      BCR =                          ,            (20)
+A. Implementation Details                                                                       CF × HF × WF × 8 × N
+   In simulations, we employ low-density parity-check code             where Bs represents the file size in bytes after H.265 com-
+(LDPC) codes with a block length of 648 bits and a 3/4 rate to         pression. According to (20), the BCR for H.265 on the test
+encode b. Both quadrature phase shift keying (QPSK) and 16-            dataset is 0.024. For VQ-DeepVSC, we set η to 1, and based
+quadrature amplitude modulation (16QAM) signaling schemes              on (19), we can obtain the BCR of our system is 0.023, which
+are utilized.                                                          is slightly lower than that of H.265.
+   The subsequent experimental evaluation assesses the perfor-            Fig. 6 and Fig. 7 show the comparisons between the pro-
+mance of the proposed VQ-DeepVSC using the UCF101 [37]                 posed VQ-DeepVSC and H.265 video codecs under AWGN
+dataset. The UCF101 dataset, comprising 101 distinct video             and multipath fading channel, respectively. From the figures, it
+categories, allows for a thorough examination of the system’s          can be observed that the proposed VQ-DeepVSC outperforms
+capabilities. From each category, we randomly select a subset          H.265 in terms of both MS-SSIM and LPIPS, especially at
+of 10 videos, creating a test dataset of 1,010 videos. This            medium to low SNRs. This is due to H.265 being sensitive
+diverse test set allows for a rigorous evaluation of the effi-         to noise, thereby limiting its effectiveness at medium to low
+cacy and reliability of VQ-DeepVSC in video transmission,              SNRs. In contrast, our method not only achieves reliable
+ensuring a more robust assessment of the performance of the            video transmission at low SNRs but also maintains high video
+different modules within the system.                                   quality. It can also be observed that under multipath fading
+   To evaluate the system performance, we employ MS-                   channel, H.265 fails to transmit videos effectively, whereas
+SSIM [38] to compare the multiscale structural similarity at           the proposed method maintains robust video transmission and
+the pixel level between each frame of the original video and its       ensures high quality.
+reconstructed counterpart, and utilize LPIPS [35] to assess the
+perceptual quality of the reconstructed video from the human                                  VII. C ONCLUSIONS
+perspective.
+                                                                          In this paper, we present the VQ-DeepVSC system, which
+                                                                       employs an innovative dual-stage vector quantization frame-
+B. Comparative Analysis of Methods                                     work to enhance video transmission quality and efficiency
+  We compare the performance of VQ-DeepVSC with typical                over wireless channels. This system effectively mitigates the
+and commonly used H.265 video compression codecs for                   cliff-effect and maintains significant data compression even
+                                                                                                                                                     9
+
+
+
+under low SNR conditions, ensuring robust video transmis-                    [14] Qiyu Hu, Guangyi Zhang, Zhijin Qin, Yunlong Cai, Guanding Yu, and
+sion. The proposed VQ-DeepVSC system employs the AKEI                             Geoffrey Ye Li. Robust Semantic Communications With Masked VQ-
+                                                                                  VAE Enabled Codebook. IEEE Transactions on Wireless Communica-
+module in the first stage to extract key frames, reducing                         tions, 22(12):8707–8722, December 2023.
+inter-frame redundancy and enhancing transmission robustness                 [15] Eirina Bourtsoulatze, David Burth Kurka, and Deniz Gunduz. Deep
+under low SNR conditions. In the second stage, the MSVQ                           Joint Source-Channel Coding for Wireless Image Transmission. IEEE
+                                                                                  Transactions on Cognitive Communications and Networking, 5(3):567–
+module compresses these key frames using a shared latent                          579, September 2019.
+embedding space, effectively reducing intra-frame redundancy                 [16] Tze-Yang Tung and Deniz Gunduz. DeepWiVe: Deep-Learning-Aided
+and supporting high-resolution video transmission. Addition-                      Wireless Video Transmission. IEEE Journal on Selected Areas in
+                                                                                  Communications, 40(9):2570–2583, September 2022.
+ally, the adjustable index selector and restorer further reduce              [17] Siwei Ma, Xinfeng Zhang, Chuanmin Jia, Zhenghui Zhao, Shiqi Wang,
+inter-frame redundancy by compressing key-frame indices,                          and Shanshe Wang. Image and Video Compression With Neural
+enabling more flexible compression rates. Experimental results                    Networks: A Review. IEEE Transactions on Circuits and Systems for
+                                                                                  Video Technology, 30(6):1683–1698, June 2020.
+demonstrate that the proposed VQ-DeepVSC achieves higher                     [18] Ren Yang, Fabian Mentzer, Luc Van Gool, and Radu Timofte. Learn-
+compression degree and higher video quality than the H.265                        ing for Video Compression With Hierarchical Quality and Recurrent
+standard, especially under low SNRs or multi-path channels.                       Enhancement. In 2020 IEEE/CVF Conference on Computer Vision and
+                                                                                  Pattern Recognition (CVPR), pages 6627–6636, Seattle, WA, USA, June
+Simulation results also demonstrate that the proposed VQ-                         2020. IEEE.
+DeepVSC has excellent generalization capabilities, making it                 [19] Guo Lu, Xiaoyun Zhang, Wanli Ouyang, Li Chen, Zhiyong Gao, and
+suitable for various types of video transmission.                                 Dong Xu. An End-to-End Learning Framework for Video Compres-
+                                                                                  sion. IEEE Transactions on Pattern Analysis and Machine Intelligence,
+                                                                                  43(10):3292–3308, October 2021.
+                                                                             [20] Zhihao Hu, Guo Lu, and Dong Xu. FVC: A New Framework towards
+                            R EFERENCES                                           Deep Video Compression in Feature Space. In 2021 IEEE/CVF
+                                                                                  Conference on Computer Vision and Pattern Recognition (CVPR), pages
+ [1] Ala Al-Fuqaha, Mohsen Guizani, Mehdi Mohammadi, Mohammed                     1502–1511, Nashville, TN, USA, June 2021. IEEE.
+     Aledhari, and Moussa Ayyash. Internet of Things: A Survey on Enabling   [21] Zhenguo Zhang, Qianqian Yang, Shibo He, and Jiming Chen. Deep
+     Technologies, Protocols, and Applications. IEEE Communications               Learning Enabled Semantic Communication Systems for Video Trans-
+     Surveys & Tutorials, 17(4):2347–2376, 2015.                                  mission.     In 2023 IEEE 98th Vehicular Technology Conference
+ [2] Zhengquan Zhang, Yue Xiao, Zheng Ma, Ming Xiao, Zhiguo Ding,                 (VTC2023-Fall), pages 1–5, Hong Kong, Hong Kong, October 2023.
+     Xianfu Lei, George K. Karagiannidis, and Pingzhi Fan. 6G Wireless            IEEE.
+     Networks: Vision, Requirements, Architecture, and Key Technologies.     [22] Hao Dong, Weijie Yue, and Kai Niu. A Demo of Semantic Com-
+     IEEE Vehicular Technology Magazine, 14(3):28–41, September 2019.             munication: Rosefinch. In 2022 14th International Conference on
+ [3] T. Wiegand, G.J. Sullivan, G. Bjontegaard, and A. Luthra. Overview of        Wireless Communications and Signal Processing (WCSP), pages 373–
+     the H.264/AVC video coding standard. IEEE Transactions on Circuits           377, Nanjing, China, November 2022. IEEE.
+     and Systems for Video Technology, 13(7):560–576, July 2003.             [23] Wentao Gong, Haonan Tong, Sihua Wang, Zhaohui Yang, Xinxin He,
+ [4] Gary J. Sullivan, Jens-Rainer Ohm, Woo-Jin Han, and Thomas Wiegand.          and Changchuan Yin. Adaptive Bitrate Video Semantic Communication
+     Overview of the High Efficiency Video Coding (HEVC) Standard.                over Wireless Networks. In 2023 International Conference on Wire-
+     IEEE Transactions on Circuits and Systems for Video Technology,              less Communications and Signal Processing (WCSP), pages 122–127,
+     22(12):1649–1668, December 2012.                                             Hangzhou, China, November 2023. IEEE.
+ [5] Guangming Shi, Yong Xiao, Yingyu Li, and Xuemei Xie. From               [24] Haiwen Niu, Luhan Wang, Zhaoming Lu, Keliang Du, and Xiangming
+     Semantic Communication to Semantic-Aware Networking: Model, Ar-              Wen. Deep Learning Enabled Video Semantic Transmission Against
+     chitecture, and Open Problems. IEEE Communications Magazine,                 Multi-Dimensional Noise. In 2023 IEEE Globecom Workshops (GC
+     59(8):44–50, August 2021.                                                    Wkshps), pages 1267–1272, Kuala Lumpur, Malaysia, December 2023.
+ [6] Xuewen Luo, Hsiao-Hwa Chen, and Qing Guo. Semantic Communica-                IEEE.
+     tions: Overview, Open Issues, and Future Research Directions. IEEE      [25] Zhicheng Bao, Haotai Liang, Chen Dong, Xiaodong Xu, and Geng Liu.
+     Wireless Communications, 29(1):210–219, February 2022.                       MDVSC—Wireless Model Division Video Semantic Communication for
+ [7] Wanting Yang, Hongyang Du, Zi Qin Liew, Wei Yang Bryan Lim, Zehui            6G. In 2023 IEEE Globecom Workshops (GC Wkshps), pages 1572–
+     Xiong, Dusit Niyato, Xuefen Chi, Xuemin Shen, and Chunyan Miao.              1578, Kuala Lumpur, Malaysia, December 2023. IEEE.
+     Semantic Communications for Future Internet: Fundamentals, Appli-       [26] Chengsi Liang, Xiangyi Deng, Yao Sun, Runze Cheng, Le Xia, Dusit
+     cations, and Challenges. IEEE Communications Surveys & Tutorials,            Niyato, and Muhammad Ali Imran. VISTA: Video Transmission over
+     25(1):213–250, 2023.                                                         A Semantic Communication Approach. In 2023 IEEE International
+ [8] Jialong Xu, Bo Ai, Wei Chen, Ang Yang, Peng Sun, and Miguel                  Conference on Communications Workshops (ICC Workshops), pages
+     Rodrigues. Wireless Image Transmission Using Deep Source Channel             1777–1782, Rome, Italy, May 2023. IEEE.
+     Coding With Attention Modules. IEEE Transactions on Circuits and        [27] Peiwen Jiang, Chao-Kai Wen, Shi Jin, and Geoffrey Ye Li. Wireless
+     Systems for Video Technology, 32(4):2315–2328, April 2022.                   Semantic Communications for Video Conferencing. IEEE Journal on
+ [9] Qiyu Hu, Guangyi Zhang, Zhijin Qin, Yunlong Cai, Guanding Yu, and            Selected Areas in Communications, 41(1):230–244, January 2023.
+     Geoffrey Ye Li. Robust Semantic Communications Against Semantic         [28] Jiajia Liu, Yunlong Lu, Hao Wu, and Yueyue Dai. Efficient Resource
+     Noise. In 2022 IEEE 96th Vehicular Technology Conference (VTC2022-           Allocation and Semantic Extraction for Federated Learning Empowered
+     Fall), pages 1–6, London, United Kingdom, September 2022. IEEE.              Vehicular Semantic Communication. In 2023 IEEE 98th Vehicular
+[10] Qingyang Zhou, Rongpeng Li, Zhifeng Zhao, Chenghui Peng, and                 Technology Conference (VTC2023-Fall), pages 1–5, Hong Kong, Hong
+     Honggang Zhang. Semantic Communication With Adaptive Universal               Kong, October 2023. IEEE.
+     Transformer. IEEE Wireless Communications Letters, 11(3):453–457,       [29] Sixian Wang, Jincheng Dai, Zijian Liang, Kai Niu, Zhongwei Si, Chao
+     March 2022.                                                                  Dong, Xiaoqi Qin, and Ping Zhang. Wireless Deep Video Semantic
+[11] Haonan Tong, Zhaohui Yang, Sihua Wang, Ye Hu, Omid Semiari, Walid            Transmission. IEEE Journal on Selected Areas in Communications,
+     Saad, and Changchuan Yin. Federated Learning for Audio Semantic              41(1):214–229, January 2023.
+     Communication. Frontiers in Communications and Networks, 2:734402,      [30] Qifan Fu, Huiqiang Xie, Zhijin Qin, Gregory Slabaugh, and Xiaoming
+     September 2021.                                                              Tao. Vector quantized semantic communication system. IEEE Wireless
+[12] Zhenzi Weng and Zhijin Qin. Semantic Communication Systems for               Communications Letters, 12(6):982–986, 2023.
+     Speech Transmission. IEEE Journal on Selected Areas in Communica-       [31] Aaron van den Oord, Oriol Vinyals, and Koray Kavukcuoglu. Neural
+     tions, 39(8):2434–2444, August 2021.                                         discrete representation learning. In Proc. Advances in Neural Infor-
+[13] Jialong Xu, Bo Ai, Wei Chen, Ang Yang, Peng Sun, and Miguel                  mation Processing Systems (NeurIPS), Long Beach, Dec., volume 30,
+     Rodrigues. Wireless Image Transmission Using Deep Source Channel             2017.
+     Coding With Attention Modules. IEEE Transactions on Circuits and        [32] Olaf Ronneberger, Philipp Fischer, and Thomas Brox. U-net: Con-
+     Systems for Video Technology, 32(4):2315–2328, April 2022.                   volutional networks for biomedical image segmentation. In Proc.
+                                                                                10
+
+
+
+     International Conference on Medical Image Computing and Computer-
+     Assisted Intervention (MICCAI), Munich, Oct., pages 234–241, 2015.
+[33] Yingbin Zhou, Yaping Sun, Guanying Chen, Xiaodong Xu, Hao Chen,
+     Binhong Huang, Shuguang Cui, and Ping Zhang. Moc-rvq: Multilevel
+     codebook-assisted digital generative semantic communication. arXiv
+     preprint arXiv:2401.01272, 2024.
+[34] Zhou Wang, A.C. Bovik, H.R. Sheikh, and E.P. Simoncelli. Image
+     quality assessment: from error visibility to structural similarity. IEEE
+     Transactions on Image Processing, 13(4):600–612, 2004.
+[35] Richard Zhang, Phillip Isola, Alexei A. Efros, Eli Shechtman, and Oliver
+     Wang. The unreasonable effectiveness of deep features as a perceptual
+     metric. In 2018 IEEE/CVF Conference on Computer Vision and Pattern
+     Recognition, pages 586–595, 2018.
+[36] Karen Simonyan and Andrew Zisserman. Very deep convolutional
+     networks for large-scale image recognition. In Yoshua Bengio and Yann
+     LeCun, editors, 3rd International Conference on Learning Representa-
+     tions (ICLR 2015), San Diego, CA, USA, May 7-9, 2015, Conference
+     Track Proceedings, 2015.
+[37] Khurram Soomro, Amir Roshan Zamir, and Mubarak Shah. Ucf101: A
+     dataset of 101 human actions classes from videos in the wild. arXiv
+     preprint arXiv:1212.0402, 2012.
+[38] Z. Wang, E.P. Simoncelli, and A.C. Bovik. Multiscale structural
+     similarity for image quality assessment. In The Thrity-Seventh Asilomar
+     Conference on Signals, Systems & Computers, 2003, volume 2, pages
+     1398–1402 Vol.2, 2003.
+[39] S. Tomar. Converting video formats with FFmpeg. Linux Journal,
+     2006(146):10, 2006.
+

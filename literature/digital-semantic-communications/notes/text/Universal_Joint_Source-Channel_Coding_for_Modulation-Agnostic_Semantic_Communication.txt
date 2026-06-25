@@ -1,0 +1,959 @@
+2560                                                                  IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+
+        Universal Joint Source-Channel Coding for
+       Modulation-Agnostic Semantic Communication
+  Yoon Huh , Graduate Student Member, IEEE, Hyowoon Seo, Member, IEEE, and Wan Choi , Fellow, IEEE
+
+
+
+   Abstract—From the perspective of joint source-channel coding                  demands, heralding an anticipated paradigm shift from data-
+(JSCC), there has been significant research on utilizing semantic                oriented to service (or task)-oriented communication [1].
+communication, which inherently possesses analog characteris-                       A pivotal driver of this transition is semantic communication
+tics, within digital device environments. However, a single-model
+approach that operates modulation-agnostically across various                    [2], [3], [4], evolving in tandem with advancements in machine
+digital modulation orders has not yet been established. This                     learning (ML). Semantic communication targets the resolution
+article presents the first attempt at such an approach by                        of Level B (semantic) and Level C (effectiveness) communi-
+proposing a universal joint source-channel coding (uJSCC)                        cation issues [5], [6], with task-oriented joint source-channel
+system that utilizes a single-model encoder-decoder pair and                     coding (JSCC) at its core [7], [8], [9], [10]. Unlike traditional
+trained vector quantization (VQ) codebooks. To support various
+modulation orders within a single model, the operation of                        communication systems, which segregate source coding and
+every neural network (NN)-based module in the uJSCC system                       channel coding modules, often with some loss of optimality,
+requires the selection of modulation orders according to signal-                 semantic communication, geared towards enhancing task per-
+to-noise ratio (SNR) boundaries. To address the challenge of                     formance, underscores an undeniable optimality gap in such
+unequal output statistics from shared parameters across NN                       modular separation. Consequently, current research in seman-
+layers, we integrate multiple batch normalization (BN) layers,
+selected based on modulation order, after each NN layer. This                    tic communication focuses on harnessing ML capabilities to
+integration occurs with minimal impact on the overall model size.                jointly optimize task execution, source coding, and channel
+Through a comprehensive series of experiments, we validate that                  coding, culminating in the implementation of neural network
+the modulation-agnostic semantic communication framework                         (NN)-based JSCC encoder-decoder pairs.
+demonstrates superiority over existing digital semantic communi-                    The challenge lies in the nature of NN training reliant
+cation approaches in terms of model complexity, communication
+efficiency, and task effectiveness.                                              on backpropagation, necessitating the exploration of JSCC
+                                                                                 techniques to facilitate the exchange of feature vectors within
+   Index Terms—Semantic communication, modulation-agnostic,                      a continuous vector space between encoders and decoders.
+joint source-channel coding, vector quantization, batch normal-
+ization.                                                                         Although the implementation of semantic communication
+                                                                                 through analog transceivers might appear straightforward, it
+                      I. I NTRODUCTION                                           faces significant compatibility issues with the prevailing digital
+                                                                                 device infrastructure. An alternative strategy involves encoding
+W       E NOW have access to intelligent services encom-
+        passing smart X (e.g., home, city, vehicle factory,
+healthcare, etc.) and extended (augmented and virtual) reality,
+                                                                                 the entries of feature vectors at the bit level and utilizing tradi-
+                                                                                 tional digital modulation techniques. However, this approach
+previously confined to the realm of imagination. However,                        is often inefficient, diminishing the benefits associated with
+the widespread adoption of such services faces a significant                     semantic communication. Therefore, for effective semantic
+obstacle from the perspective of communication engineer-                         communication within a digital context, it is essential to incor-
+ing. This challenge pertains to meeting user demands, often                      porate digital modulation into the JSCC design considerations.
+referred to as quality of experience (QoE), by efficiently and                      In the contemporary research landscape, innovative methods
+swiftly transmitting vast amounts of data. In response, sixth-                   have been developed, notably the application of vector quanti-
+generation (6G) communication has emerged to address these                       zation (VQ) to the output feature vectors of encoders, followed
+                                                                                 by conventional digital modulation schemes (e.g., BPSK,
+   Received 15 May 2024; revised 15 December 2024; accepted 15 January           4QAM, 16QAM) or machine learning (ML)-based modula-
+2025. Date of publication 10 April 2025; date of current version 19 June 2025.
+This work was supported by the Institute of Information and Communications       tion utilizing a trained constellation map. These approaches,
+Technology Planning and Evaluation (IITP) Grant funded by Korea Govern-          cited in recent studies [11], [12], [13], demonstrate robust
+ment (MSIT) (Next Generation Semantic Communication Network Research
+Center) under Grant RS-2024-00398948. (Corresponding authors: Hyowoon
+                                                                                 performance within a specific modulation order. Yet, the
+Seo; Wan Choi.)                                                                  goal of achieving consistent semantic communication perfor-
+   Yoon Huh and Wan Choi are with the Department of Electrical and               mance across various modulation orders—-a concept termed
+Computer Engineering and the Institute of New Media and Communica-               modulation-agnostic semantic communication1 —-requires a
+tions, Seoul National University (SNU), Seoul 08826, South Korea (e-mail:
+mnihy621@snu.ac.kr; wanchoi@snu.ac.kr).
+   Hyowoon Seo is with the Department of Electrical and Computer Engi-              1 Throughout the article, the modulation techniques discussed all pertain to
+neering, Sungkyunkwan University, Suwon 16419, South Korea (e-mail:              digital modulation, and modulation-agnostic semantic communication refers
+hyowoonseo@skku.edu).                                                            to a digital semantic communication system designed to transmit or receive
+   Digital Object Identifier 10.1109/JSAC.2025.3559138                           information without being constrained by any specific modulation scheme.
+              0733-8716 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                       2561
+
+
+
+                                                                                in this context is clearly verified through ablation studies.
+                                                                                Additionally, DeepJSCC-Q [13] and conventional separate
+                                                                                source-channel coding (SSCC) methods are employed as
+                                                                                benchmark schemes. Furthermore, experiments demonstrate
+                                                                                that the proposed method consistently delivers excellent per-
+                                                                                formance across different encoder-decoder model sizes, with a
+                                                                                higher volume of symbol transmission, and for various datasets
+                                                                                including low and high-resolution images.
+
+
+                                                                                A. Related Works
+                                                                                   1) Digital Semantic Communication: A recent study [11]
+                                                                                introduced a deterministic encoder-decoder pair in a digi-
+                                                                                tal semantic communication system using a VQ-variational
+                                                                                autoencoder (VQ-VAE) [14] trained with a straight-through
+Fig. 1. An illustration of (a) dedicated JSCC encoders/decoders and (b) uni-
+                                                                                estimator and a vision transformer [15] backbone. The system
+versal encoder/decoder for semantic communication with channel-adaptive         enhances robustness against semantic noise through adver-
+modulation.                                                                     sarial training and selective masking of non-critical image
+                                                                                patches, identified via a feature importance module. However,
+                                                                                there is a mismatch between codebook cardinality and mod-
+comprehensive suite of JSCC encoder-decoder pairs, as                           ulation order, requiring two 16QAM symbols to transmit one
+depicted in the blue boxes of Fig. 1(a). This approach can                      index from a 256-cardinality codebook.
+certainly optimize the task performance under varying channel                      In [12], the authors proposed a VQ-based JSCC system
+conditions, which is a core objective of consistent semantic                    employing digital modulation and an information bottleneck
+communication, as the optimal modulation order is typically                     (IB) [16] loss function. The loss function’s hyperparameter
+dependent on the channel environment. However, maintaining                      regulates the balance between task-relevant information and
+such flexibility is often inefficient in terms of learning and                  coded redundancy, thereby adjusting codebook robustness.
+hardware costs, including memory usage. Consequently, the                       During training, they utilized Gumbel-softmax [17], using
+pursuit of a universal framework capable of operating seam-                     the inner product between feature vectors and codewords as
+lessly across different modulation orders remains crucial for                   logits. This results in stochastic encoding, where codeword
+enhancing efficiency.                                                           indices are sampled based on logits. However, despite the IB-
+   In response to the outlined challenges, as illustrated                       optimized number of encoded bits, the actual transmission did
+in Fig. 1(b), this article introduces a novel framework                         not reflect it because both codebook cardinality and modula-
+for modulation-agnostic semantic communication, which is                        tion order were fixed. Similarly, the encoder in [13] generates
+anchored in a single-model universal JSCC scheme that                           complex values, with symbols sampled based on logits from
+is adept at functioning across various modulation orders.                       distances between complex output values and constellation
+To realize this, an NN-based uJSCC encoder-decoder pair                         map symbols. Another approach in [18] involved a stochastic
+in conjunction with a VQ codebook is developed to uti-                          encoder trained with a mutual information-based loss function,
+lize conventional digital modulation schemes. Notably, our                      also utilizing Gumbel-softmax during training. In this system,
+proposed single-model encoder-decoder system demonstrates                       symbols are directly sampled from output logits, eliminating
+effective communication and task performance while maintain-                    the need for a learned codebook. However, these studies [12],
+ing reduced model complexity and training overhead compared                     [13], [18] face limitations in adapting to multiple modulation
+to other benchmark approaches. In addition, the VQ codebook                     orders as they require different neural network-based encoder-
+is not uniformly designed but is trained jointly with the uJSCC                 decoder parameter pairs for each order, just as illustrated in
+encoder-decoder, ensuring robust transmission of the feature                    Fig. 1(a).
+vectors.                                                                           2) Modulation-Agnostic Semantic Communication: In
+   The proposed framework is validated through a series                         recent work [19], the optimization of modulation order was
+of experiments in a semantic communication setting for                          addressed by solving a robustness verification problem to
+image transmission and reconstruction tasks. We compare                         achieve a certain robustness probability, following the train-
+the proposed uJSCC against benchmark schemes, including                         ing of a semantic encoder and decoder. Another study [20]
+model-efficient JSCC (which leverages a single model trained                    optimized the channel coding rate for conventional LDPC
+simultaneously for all modulation orders) and task-effective                    channel code through a similar robustness verification prob-
+JSCC (which independently trains multiple models for each                       lem. This work utilized the CROWN method [21] to assess
+modulation order). The proposed scheme outperforms the                          feature importance and measure output perturbation gaps from
+model-efficient approach and achieves comparable or superior                    pretrained semantic encoders and decoders. Since a sepa-
+task performance compared to the task-effective JSCC by                         rate source-channel coding system was employed, modulation
+employing multiple batch normalization (BN) modules at                          order was aligned with the coding rate. However, both [19]
+each CNN layer. The effectiveness of multiple BN modules                        and [20] did not incorporate digital modulation in the training
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2562                                                               IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+of their encoders and decoders; instead, they applied fixed-
+bit quantization to analog outputs from the semantic encoder
+during inference to facilitate digital modulation, indicating a
+lack of joint design with the digital communication framework.
+   Meanwhile, [22] describes a system where a stochastic
+encoder produces logits to sample bits, thereby creating bit
+sequences. The authors used a binary symmetric erasure
+channel in their training scenario, simplifying the process by
+assuming a 4QAM context. Following training, the modulation
+order is adjusted according to channel SNR, with thresholds
+established based on predetermined robustness levels for each
+bit position. These levels are taken into account during training
+as well. However, the rationale behind training under 4QAM
+conditions was not clearly articulated, and the determination of
+robustness levels and SNR threshold adjustments was heuristic
+in nature, with the goal of achieving a smooth performance
+curve at the cost of increased complexity in system design.
+
+B. Contributions                                                              Fig. 2. An illustration of (a) VQ codebook utilization and (b) constellation
+  The contributions of this article are summarized as:                        symbol mapping with 16QAM (m = 16).
+
+  • This study explores methodologies that enable semantic
+    communication within digital communication environ-                       distribution with mean vector µ and covariance matrix Σ. Im
+    ments. Notably, it proposes a modulation-agnostic seman-                  is m × m identity matrix. E[·] denotes the expected value of
+    tic communication framework that incorporates all the                     a given random variable.
+    digital modulation orders in training.
+  • The cornerstone of the proposed framework is a uJSCC                                                II. P RELIMINARIES
+    scheme that operates based on a trained encoder-decoder                   A. System Description
+    pair and a VQ codebook. The uJSCC scheme is capable
+                                                                                 Consider a point-to-point semantic communication system
+    of maintaining semantic communication as the optimal
+                                                                              designed for image transmission tasks, incorporating JSCC
+    modulation order adjusts to varying channel conditions.
+                                                                              encoder-decoder, vector quantizer-dequantizer, and modulator-
+    To the best of our knowledge, this article presents the first
+                                                                              demodulator pairs, as depicted in Fig. 2. For clarity and initial
+    instance of using a uJSCC scheme as a universal model
+                                                                              exposition, we assume a fixed digital modulation scheme
+    capable of digitalizing semantic communication across
+                                                                              characterized by order m. However, we subsequently inves-
+    multiple modulation orders.
+                                                                              tigate the system’s adaptability to accommodate a spectrum
+  • Through extensive experimentation, we demonstrate
+                                                                              of modulation-order options. The operational structure and
+    that the proposed uJSCC surpasses other benchmark
+                                                                              functionality of the system are described in full below.
+    schemes—-including model-efficient and task-effective
+                                                                                 The transmitter encodes a source image X ∈ RC×H×W ,
+    approaches—-in terms of model and training complexity,
+                                                                              where C, H, and W are the number of channels, the height
+    as well as task performance.
+                                                                              and width of the source image, respectively, into N feature
+  • The numerical results illustrate that the proposed model
+                                                                              vectors of D dimensions Y = [y1 , y2 , . . ., yN ]T ∈ RN ×D
+    achieves satisfactory reconstruction quality across all
+                                                                              via an encoder fθ parameterized by θ, such that Y = fθ (X).
+    signal-to-noise ratio (SNR) ranges on both low-resolution
+                                                                              Then, as depicted in Fig. 2(a), VQ is done utilizing a codebook
+    and high-resolution datasets, utilizing an efficiently
+                                                                              with m codewords C = [c1 , c2 , . . ., cm ]T ∈ Rm×D with the
+    trained universal NN structure. Additionally, the analysis
+                                                                              minimum distance criterion, i.e., the codeword index zi for the
+    confirms that uJSCC can be optimized for larger model
+                                                                              i-th feature vector yi is chosen as zi = arg minj kyi − cj k22
+    sizes and more transmitted symbols, demonstrating its
+                                                                              for all i ∈ [1:N ].
+    generality with fewer parameters.
+                                                                                 As illustrated in Fig. 2(b), each codeword is mapped one-
+                                                                              to-one to a symbol on a given modulation constellation map
+C. Notations                                                                  S = {s1 , s2 , . . ., sm }, where si ∈ R2 and E[ksi k22 ] = P for all
+   Vectors and matrices are expressed in lower case and upper                 i ∈ [1:m], e.g., if z2 = 1, its corresponding constellation sym-
+case bold, respectively. k · k2 denotes the l2 norm of a vector.              bol is s1 . The index vector z = [z1 , z2 , . . ., zN ]T ∈ [1:m]N is
+R and Z represent, respectively, the real number set and the                  modulated into a symbol sequence s = [sz1 , sz2 , . . ., szN ] ∈ SN
+integer set. [a:b] is a integer set of {a, a + 1, . . ., b}. [·]T             and sent through an additive white Gaussian noise (AWGN)
+denotes the transpose of a matrix or vector. [A]i:j,k:l and [a]i:j            channel. At the receiver side, the receiver gets the symbol
+represent, respectively, the sliced matrix of A with row indices              sequence with AWGN noise n ∼ CN (0, σ 2 IN ) as ŝ = s + n,
+from i to j and column indices from k to l, and the sliced vector             where SNR is calculated as σP2 . Then the receiver detects sym-
+of a with indices from i to j. CN (µ, Σ) is complex normal                    bol sequence s̄ = [sẑ1 , sẑ2 , . . ., sẑN ] ∈ SN , and dequantization
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                      2563
+
+
+
+is done from the detected index vector ẑ = [ẑ1 , ẑ2 , . . ., ẑN ]T ∈       coding scheme or modulation order in response to the channel
+[1:m]N utilizing the same codebook C as the transmitter side,                  state.
+and then results in Ŷ = [cẑ1 , cẑ2 , . . ., cẑN ]T ∈ RN ×D . Finally,         Hence, the main target of the article is to develop
+the receiver can reconstruct the image X̂ ∈ RC×H×W from                        a modulation-agnostic semantic communication framework,
+Ŷ via a decoder gφ , parameterized by φ, as X̂ = gφ (Ŷ).                     incorporating uJSCC encoder, decoder, and VQ codebook that
+   To optimize the system’s operation, it is essential to train                support K different modulation orders, i.e., m1 , m2 , . . .mK ,
+the encoder parameters θ, decoder parameters φ, and the                        where mk represents the k-th modulation order and without
+codebook C. The optimization is guided by the loss function                    loss of generality, m1 < m2 < . . . < mK . In mathematical
+proposed in [14], which encompasses three terms:                               expression, let B = [b1 , b2 , . . ., bK−1 ] be the SNR boundary
+                                                                               to choose modulation order among K types, where
+        L = EX [e(X̂, X) + αe(Ŷ, Yd ) + βe(Y, Ŷd )],                  (1)
+                                                                                                   
+where e(x, y) denotes the mean squared error between x and y,                                      m1 , if η < b1 ,
+                                                                                                   
+and Ad represents duplicated versions of A. The duplication                                  m = mk , if bk−1 ≤ η < bk ,                    (2)
+                                                                                                   
+is implemented to inhibit the flow of gradients through A,                                           mK , if η ≥ bK−1 ,
+                                                                                                   
+thereby preventing updates to A or the NN parameters involved
+in computing the matrix. The parameters α and β serve as                       where k ∈ [2:K − 1]. The designing condition of the SNR
+hyperparameters that regulate the relative significance of the                 boundary will be discussed in Section III-A.
+respective loss components. The role of each component is                         Assume that both transmitter and receiver are aware of
+summarized as follows.                                                         the SNR value η, enabling synchronization of the modulation
+   • The first term pertains to the quality of the reconstruc-                 order between the transmitter and receiver. The following com-
+       tion task, albeit hindered by the inability to apply the                munication process is conducted with respect to modulation
+       chain rule in gradient calculation due to VQ. Conse-                    order index k according to the SNR value η. A universal
+       quently, leveraging the straight-through gradient estimator             encoder parameterized by Θ, denoted by FΘ , encodes a
+       between Y and Ŷ, we establish a linkage between the                    source image X into feature vectors Y(k) given the SNR value
+       gradient from e(X̂, X) to Ŷ and the gradient from Y to                 bk−1 ≤ η < bk , such that Y(k) = FΘ (X, η) ∈ RN ×Dk where
+       X. This term significantly influences the training of both              Dk is the dimension of feature vector of the modulation order
+       encoder parameter θ and decoder parameter φ.                            mk . The encoded feature vectors are quantized via codebook
+   • The second term aims to minimize the disparity between                    C(k) and modulated into symbols s(k) . The codebook for
+       the detected codewords Ŷ and the duplicated original                   modulation order mk , which      should also be trained, can
+                                                                                                                              (k) T
+                                                                                                                                    ∈ Rmk ×Dk .
+                                                                                                          
+       feature vectors Yd , thereby guiding the training of the                be expressed as C(k) = c(k)       (k)
+                                                                                                            1 , c2 , . . ., cmk
+                                                                                                                            (k)
+       codebook C alone.                                                       At the receiver, the received symbols ŝ are detected and
+   • Due to challenges in achieving convergence of the code-                   dequantized into Ŷ(k) via the same codebook C(k) . Finally,
+       book, the third term serves to regularize the training of the           a universal decoder parameterized by Φ, denoted as GΦ ,
+       codebook C, which is not directly related to the update                 decodes Ŷ(k) into reconstructed image X̂ given η, such that
+       of the codebook but the JSCC encoder. It achieves this                  X̂ = GΦ (Ŷ(k) , η).
+       by minimizing the disparity between the original feature                   The objective is to determine an optimal NN structure
+       vectors Y and the duplicated detected codewords Ŷd ,                   for the universal encoder FΘ and universal decoder GΦ ,
+       thereby facilitating the alignment of the original feature              which include data processing paths for K modulation orders,
+       vectors with the nearest codewords in the codebook.                     codebook C(k) for all k ∈ [1:K], and the SNR boundary
+                                                                               B. When designing this system, considerations include model
+   Consequently, the parameters are obtained as
+                                                                               complexity, the total number of NN parameters, training
+(θ ∗ , φ∗ , C∗ ) = arg minθ,φ,C L. During the training process,
+                                                                               strategies, and task performance.
+it is crucial to manage the hyperparameter α with precision,
+while β usually works well setting to 0.25α [14]. If the sum
+of the second and third terms approaches zero too rapidly,                     C. Intuitive Benchmark Schemes
+the decoder will not receive sufficient training due to limited
+variation in the input codewords. In this scenario, reducing α                    Before delving into our proposed solution for the formulated
+is advisable. Conversely, if the sum of the second and third                   problem above, we first introduce three benchmark schemes
+terms remains excessively large, increasing α is recommended                   designed in a simplified manner to highlight the strengths
+since it indicates a substantial vector quantization error in the              and weaknesses of different approaches, aiding a deeper
+current codebook.                                                              understanding of our solution. Note that additional benchmarks
+                                                                               will be introduced in the experimental section for a more
+                                                                               comprehensive evaluation.
+B. Problem Formulation                                                            1) Model-Efficient JSCC: The first and second benchmark
+  In classical digital communication, a desired bit error rate                 schemes we introduce are what we refer to as the model-
+(BER) or data rate is attained by adjusting the coding scheme                  efficient (ME) JSCC. To minimize model complexity, this
+or modulation order according to the channel conditions.                       benchmark scheme utilizes a single encoder-decoder pair, but
+Similarly, semantic communication could be envisioned to                       utilizes distinct VQ codebooks optimized for each modulation
+achieve optimal task performance by selecting the appropriate                  order. Given that higher modulation orders necessitate larger
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2564                                                               IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+codeword dimensions, the codeword dimension Dk is stan-                                                    TABLE I
+dardized to DK for all k ∈ [1:K] within this benchmark,                             F EATURES OF U JSCC AND I NTUITIVE B ENCHMARK S CHEMES
+such that Y(k) ∈ RN ×DK , contrary to the proposed uJSCC.
+This approach enables a uniform representation across various
+modulation orders, simplifying model management and poten-
+tially reducing both training and operational complexities. The
+model can be trained using two distinct types of training
+strategies, details of which will be elaborated upon in the                   reduction in parameters simplifies the training process signif-
+following.                                                                    icantly. In terms of training complexity, ME JSCC methods
+   The first strategy, dubbed ME1 , consists of single-stage                  streamline the procedure compared to TE JSCC. Specifically,
+training. It jointly trains to optimize the image reconstruction              the ME1 variant optimizes NN parameters for K modulation
+performance of all modulation orders and obtains a single                     orders concurrently within a single epoch, whereas the TE
+encoder-decoder pair and K different codebooks for each                       strategy involves sequential training for each modulation order,
+modulation order. The loss function for the k-th modulation                   focusing on individual encoder-decoder pairs. For ME2 , the
+order can be represented as                                                   initial training phase parallels the TE approach, targeting the
+                                                                              K-th modulation order. Subsequently, the process becomes
+          Lk = EX [e(X̂(k) , X) + αk e(Ŷ(k) , Yd(k) )
+                                                                              less complex by exclusively focusing on joint training of the
+                  + βk e(Y(k) , Ŷd(k) )],                             (3)    codebooks for the remaining orders. This bifurcated strategy
+                                                                              not only simplifies the training but also enhances efficiency
+where the computation is done with the SNR value η randomly                   by concentrating efforts on refining the most critical system
+sampled from the SNR range of the k-th modulation order.                      elements.
+Then, the lossPfunction to jointly train ME1 can be expressed                    Regarding task performance, TE JSCC is engineered to
+                   K
+as LME1 =          k=1 λk Lk , where λk is a hyperparameter to                achieve superior performance across all SNR ranges. Con-
+control the importance of loss terms for each modulation order                versely, the ME strategies exhibit inherent limitations and
+and Lk is calculated with a randomly sampled single η value                   performance constraints. The ME1 approach suffers from a
+within the corresponding SNR range for one iteration.                         performance ceiling due to parameter sharing across multiple
+   The second strategy, termed ME2 , employs a double-stage                   modulation orders, ultimately constrained by TE capabilities.
+training process. Initially, ME2 focuses on optimizing the per-               Moreover, with a uniform codeword dimension Dk = DK
+formance of semantic communication for the K-th modulation                    across all orders, the vector quantization error disproportion-
+order, which is the highest in the sequence. The loss function                ately affects lower modulation orders, degrading performance.
+for the initial stage is given by LME(1)
+                                         2
+                                           = Eη [LK ].                        In ME2 , although performance for the K-th modulation order
+   Upon completion of the first stage, the second training stage              may approach optimality due to targeted optimization, the
+commences. This stage is designed to optimize the codebooks                   lack of synergistic optimization between the encoder-decoder
+C(k) for the remaining modulation orders, encompassing all                    pair and the codebooks for other orders restricts performance
+k ∈ [1:K − 1], while keeping the encoder and decoder                          across these lower orders.
+parameters fixed. The  PK−1loss function for the second stage is                 To summarize, these solutions illustrate a compromise
+defined as LME(2)
+                  2
+                    = k=1 λk EX [αk e(Ŷ(k) , Yd(k) )].                       between model efficiency and task effectiveness within
+   2) Task-Effective JSCC: The third benchmark aims to opti-                  a modulation-agnostic semantic communication framework.
+mize the performance of JSCC for all SNR ranges. To this end,                 This reveals a pressing need for an innovative, universally
+a set of encoder-decoder pair and codebook for each modu-                     efficient system design that effectively balances satisfactory
+lation order mk should be trained independently with respect                  task performance with a suitable training algorithm.
+to k, different from ME approach and the proposed uJSCC.
+Then, during inference, a certain set for mk is switched to                          III. M ODULATION -AGNOSTIC U NIVERSAL J OINT
+be used among K sets, chosen according to the SNR value                                        S OURCE -C HANNEL C ODING
+η and B. Such an approach is dubbed task-effective (TE)
+approach. As the codebook cardinality for each modulation                       This section presents a novel modulation-agnostic uJSCC
+order increases with respect to k, we correspondingly scale                   scheme for digital semantic communication with its features
+the codeword dimensions Dk to increase in length, such                        summarized in TABLE I. A primary challenge in uJSCC
+that D1 < D2 < . . . < DK . The escalation in codeword                        development is the shared use of CNN parameters across
+dimension is strategically designed to ensure that the image                  multiple data processing paths for each modulation order,
+reconstruction performance is not compromised by VQ errors.                   which can lead to statistical discrepancies and degrade perfor-
+                                                                              mance. We address this issue by implementing a switchable
+                                                                              batch normalization layer. The training methodology for the
+D. Discussions on Intuitive Benchmark Schemes                                 proposed uJSCC system is also detailed.
+   The ME JSCC framework enables the accommodation
+of K different modulation orders using a singular encoder-                    A. Universal Joint Source-Channel Coding
+decoder pair, yielding a parameter count approximately 1/K                      Before proceeding, it is essential to discuss the method-
+times smaller than its TE JSCC counterpart. This substantial                  ology for setting the SNR boundaries mentioned previously.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                      2565
+
+
+
+In accordance with the 3GPP technical specification [23],
+the modulation and coding scheme (MCS) table delineates
+channel coding rates and modulation orders to maintain the
+block error rate (BLER) below 0.1. Our proposed system
+utilizes an ML strategy to train the channel coding scheme
+across various digital modulation methods and corresponding
+SNR ranges. Also note that, in the proposed system, one
+symbol corresponds to a single feature vector which contains
+much more information than information-theoretic bits in one
+symbol. Inspired by [23], regarding a feature vector as the
+block in the conventional communication system, we establish
+SNR boundaries B ∈ ZK−1 aiming for a symbol error rate
+(SER) [24] around 0.1. This adjustment adapts conventional
+communication standards to the feature vectors in our sys-
+tem, facilitating joint training of the uJSCC encoder-decoder                 Fig. 3. A detailed illustration of the conceptually divided universal encoder
+                                                                              and decoder of uJSCC for the k-th modulation order, corresponding to the
+pair and enhancing robustness against data compression and                    condition bk−1 ≤ η < bk .
+channel distortion. For example, with modulation types such
+as BPSK, 4QAM, 16QAM, 64QAM, and 256QAM, where
+K = 5, the SNR boundaries would be set at b1 = 5 dB,                          the channel condition in SNR, denoted as η, is known in
+b2 = 12 dB, b3 = 20 dB, and b4 = 26 dB, respectively.                         advance to both the transmitter and receiver, facilitating the
+   Similar to ME JSCC, the proposed modulation-agnostic                       predetermined selection of the modulation order mk as delin-
+semantic communication structure incorporates a uJSCC                         eated by (2) and consequently the index k. Initially, at the
+encoder FΘ , decoder GΦ , and a quantizer/dequantizer based                   transmitter, the source image X is encoded into intermediate
+on codebooks C(k) for all k ∈ [1:K]. For easier understanding,                feature vectors Yinter ∈ Rc1 ×h1 ×w1 through the outer encoder,
+the encoder and decoder can be conceptually divided into inner                represented by fθouter , such that
+and outer components. Specifically, as illustrated in Fig. 3,
+the encoder FΘ comprises an outer encoder fθouter and an                                              Yinter = fθouter (X, k).                         (4)
+inner encoder fθinner , while the decoder GΦ consists of an
+                                                                                 The intermediate vectors are subsequently processed by the
+inner decoder gφinner and an outer decoder gφouter . Note that
+                                                                              inner encoder fθinner tailored for the k-th modulation order.
+the inner encoder and decoder are responsible for efficiently
+                                                                                                       (k) (k)these vectors
+                                                                              The inner encoder transforms                    into reshaped
+processing data within the shaded area at the bottom of the                                     (k)                   (k) T
+                                                                                                                         
+figure, adapting to the varying output and input shapes required              feature vectors Y = y1 , y2 , . . ., yN , appropriate for
+by the chosen modulation order, which will be described in                    k ∈ [1:K], such as
+detail later. In contrast, the outer encoder and decoder handle                                      Y(k) = fθinner (Yinter , k),                      (5)
+the preprocessing and postprocessing of data, respectively, in
+support of the inner coding process. Both the outer encoder                   where θ inner denotes the NN parameters of the inner encoder.
+and decoder are structured with multiple CNN layers, and                      As illustrated in Fig. 3, the input tensor of fθinner has c1
+the inner components are each composed of a single CNN                        channels and fθinner can generate the output tensor with up to
+layer. The detailed NN architectures for both the encoder and                 DK channels using a single CNN layer. When bk−1 ≤ η < bk ,
+decoder will be described in Section IV and features of uJSCC.                corresponding to the k-th modulation order, the inner encoder
+Additionally, the operation of the proposed JSCC system is                    operates with computational efficiency to yield Y(k) in the
+explained in detail below and summarized in Algorithm 1.                      desired configuration of N ×Dk , where Dk ≤ DK , as depicted
+                                                                              by the solid line in the figure. Such a process avoids simply
+Algorithm 1 Universal Joint Source-Channel Coding                             slicing an output tensor of dimension N × DK , represented
+ 1: Input: X, η, B = [b1 , b2 , . . ., bK−1 ], FΘ , GΦ , C(k) for             by the dashed line of Y(k) at the bottom of the figure. Instead,
+    k ∈ [1:K]                                                                 it leverages the capabilities of the inner encoder to adapt the
+ 2: Choose mk according to η and B using (2)                                  dimensions effectively for each specific modulation order.
+ 3: Encode source image X into feature vectors Y (k) via FΘ                       Let θ CNN             DK ×c1 ×f ×f
+                                                                                         inner ∈ R                   represent the tensor of CNN
+ 4: Quantize Y (k) into codeword indices z(k) using C(k)                      parameters in θ inner , where f × f denotes the kernel size.
+ 5: Modulate z(k) into symbol sequence s(k)                                   The tensor comprises DK convolutional filters, each of shape
+ 6: Transmit s(k) via AWGN channel with η                                     c1 × f × f , which are applied to a zero-padded input
+ 7: Detect received values into s̄(k) and get ẑ(k)                           tensor using striding techniques. Depending on the chosen
+ 8: Dequantize ẑ(k) into Ŷ (k) using C(k)                                   modulation order mk , only the first Dk filters, denoted as
+ 9: Reconstruct X̂(k) from Ŷ (k) via GΦ                                      [θ CNN
+                                                                                 inner ]1:Dk ,:,:,: , are utilized by the CNN layer of the inner
+10: Output: X̂(k)                                                             encoder for encoding purposes. This corresponds to the solid-
+                                                                              line segment of the inner encoder at the bottom of Fig. 3, while
+  The operational mechanism of the proposed uJSCC sys-                        the dashed-line segment is unused. As k increases, so does
+tem is described in detail as follows. It is presupposed that                 the dimension of the feature vector for each modulation order,
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2566                                                                IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+with D1 < D2 < . . . < DK , resulting in reduced computa-                      mirrors the efficiency of a decoder specifically tailored for the
+tional load for lower modulation orders due to the utilization                 k-th modulation order, consistent with the TE approach.
+of fewer parameters. Consequently, the inner encoder requires                     Finally, the receiver reconstructs the image X̂(k) from Ŷinter
+2N Dk c1 f 2 floating-point operations (FLOPs) for encoding,                   using the outer decoder gφouter , described as
+in contrast to 2N DK c1 f 2 FLOPs when all filters are used,
+which is DK /Dk times more. This sophisticated encoding                                               X̂(k) = gφouter (Ŷinter , k),                   (8)
+process achieves the same data processing efficacy as an                       where φouter are the NN parameters of the outer decoder. The
+encoder specifically designed for the k-th modulation order,                   overall operation of the universal decoder GΦ is encapsulated
+consistent with the TE approach. The universal encoder FΘ                      by
+can be mathematically expressed as                                                        GΦ (Ŷ, η) = gφouter (gφinner (Ŷ(k) , k), k). (9)
+
+              FΘ (X, η) = fθinner (fθouter (X, k), k).                  (6)
+                                                                               B. Switchable Batch Normalization Layer
+     Subsequently, VQ is performed using a codebook C ,                 (k)       Batch normalization (BN) layers [25] significantly facilitate
+which should also be optimized jointly with the encoder                        the training of NN models and enhance their performance by
+and decoder during training, based on the minimum distance                     standardizing the statistics of an output tensor from each NN
+criterion. For each i-th feature vector yi(k) , a symbol index z(k)      i
+                                                                               layer. This ensures that subsequent layers receive inputs with
+is selected according to the equation z(k)                           (k)
+                                                    i = arg minj kyi −
+                                                                               consistent statistical properties during each forward pass.
+c(k)    2                        (k)
+   j k2 . Each codeword cj corresponds one-to-one to a sym-
+                                                                                  Let Tn,i denote the i-th channel of the output tensor from
+        (k)
+bol sj indexed on the corresponding constellation map S(k) .                   the n-th NN layer, and let tn,i,j represent its j-th element,
+                                                  (k) T
+                                                                              both pertaining to a single mini-batch. The BN layer first
+An index vector z(k) = z(k)            (k)
+                                  1 , z2 , . . ., zN     is then modulated
+                                                N                              normalizes each tn,i,j into a normalized value t̂n,i,j using
+into a symbol sequence s(k) ∈ (S(k) ) , which is subsequently
+                                                                               the mini-batch mean µn,i and standard deviation σn,i . The
+transmitted through an additive white Gaussian noise (AWGN)
+                                                                               normalized values are then scaled and biased to produce the
+channel.
+                                                                               batch-normalized value t̃n,i,j , as described by the following
+     Upon receiving the symbol sequence altered by AWGN
+                                                                               equations:
+noise, such that ŝ(k) = s(k) + n, the receiver detects
+                               N
+it into s̄(k) ∈ (S(k) ) . Subsequently, vector dequantiza-                                                   tn,i,j − µn,i
+                                                                                                   t̂n,i,j =                 ,             (10)
+        is performed using the detected index vector ẑ(k) =                                                  σn,i + 
+tion                  (k) T
+    (k)
+  ẑ1 , ẑ(k)
+          2 , . . ., ẑN     and the same codebook C(k) employed                                   t̃n,i,j = γn,i t̂n,i,j + βn,i ,         (11)
+at the transmitter, yielding the received feature vectors Ŷ(k) .
+                                                                               where γn,i and βn,i are the parameters learned for rescaling
+These vectors are then decoded by the inner decoder into
+                                                                               and bias adjustment, respectively, and  is a small constant for
+recovered intermediate feature vectors
+                                                                               numerical stability.
+                                                                                  During inference, where batch-level computations are
+                     Ŷinter = gφinner (Ŷ(k) , k),                     (7)
+                                                                               absent, the mean µn,i and standard deviation σn,i from the
+where φinner denotes the NN parameters of the inner decoder.                   training phase are replaced with running estimates µ̄n,i and
+As visualized in Fig. 3, the input tensor of gφinner can have up               σ̄n,i , calculated via a moving average. Simplified expressions
+to DK channels and gφinner generate the output tensor with c1                  during inference are:
+channels utilizing a single transpose CNN layer. When bk−1 ≤                                                    γn,i
+                                                                                                     γ̃n,i =           ,                  (12)
+η < bk , corresponding to the k-th modulation order, the inner                                               σ̄n,i + 
+decoder efficiently processes Ŷ(k) with Dk (≤ DK ) channels,                                           β̃n,i = βn,i − γ̃n,i µ̄n,i ,                  (13)
+depicted by the solid line, without requiring zero-padding to
+                                                                                                      t̃n,i,j = γ̃n,i tn,i,j + β̃n,i ,                (14)
+conform to the shape N × DK , which is represented by the
+dashed line of Ŷ(k) at the bottom.                                            which require only two adjusted variables per channel.
+                      DK ×c1 ×f ×f
+   Let φCNNinner ∈ R                denote the tensor of CNN                      The architecture of the proposed model integrates a BN
+parameters in φinner , where f × f represents the kernel size.                 layer following each CNN layer. Given that the proposed
+The tensor comprises DK transpose convolution filters, each of                 uJSCC model’s input tensor size for the inner decoder
+shape c1 ×f ×f , while the i-th filter is applied to the i-th chan-            gφinner varies with each modulation order, it is essential to
+nel of the input tensor via the Kronecker product, followed                    manage the differing statistics of the output tensor across
+by striding, summation, and edge cutting for size adjustment.                  modulation orders. To accommodate the K different modu-
+Similarly to the encoder, the inner decoder employs only                       lation orders in uJSCC, we employ K specific BN layers,
+the first Dk filters, denoted as [φCNN
+                                     inner ]1:Dk ,:,:,: , for decoding,        each configured to manage the statistics for its respective
+corresponding to the modulation order mk . This is illustrated                 data processing path, thus maintaining optimal task perfor-
+as the solid-line segment of the inner decoder at the bottom                   mance despite modulation-agnostic characteristics, which is
+of Fig. 3, while the dashed-line segment is not utilized. The                  the biggest difference with the ME approach. Furthermore, the
+selective filter usage necessitates 2N Dk c1 f 2 FLOPs for lower               variability in statistics impacts other CNN layers, necessitating
+modulation orders, in contrast to 2N DK c1 f 2 FLOPs required                  K switchable BN (S-BN) layers post each CNN layer, selected
+if all filters were utilized. This optimized decoding process                  based on the modulation order mk . Specifically, as illustrated
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                       2567
+
+
+                                                                                Algorithm 2 uJSCC Training Algorithm
+                                                                                 1: Input: D, Btrain = [b0 , b1 , . . ., bK ], (αk , βk , λk ) for k ∈
+                                                                                    [1:K], Imax
+                                                                                 2: Initialize: Θ = {θ outer , θ inner }, Φ = {φouter , φinner },
+                                                                                    C(k) for k ∈ [1:K]
+                                                                                 3: ϕ ← {Θ, Φ, C(1) , C(2) , . . ., C(K) }
+                                                                                 4: i = 0.Iteration index
+                                                                                 5: while i < Imax or early stopping criterion is not met do
+                                                                                 6:    J = [ ].Empty array
+                                                                                 7:    for k = 1:K do
+                                                                                 8:       Sample η such that bk−1 ≤ η < bk
+                                                                                 9:       Append η into J
+                                                                                10:    end for
+Fig. 4. The processes and output probability distributions of (a) S-BN layer
+and (b) BN layer for the first channel of the output tensor from the n-th NN    11:    Ltotal = 0.Clear loss value
+layer across three different paths.                                             12:    for η in J do
+                                                                                13:       Choose mk by η and Btrain using (2)
+                                                                                14:       Compute Lk via Algorithm 1 and (3)
+in Fig. 4, where T(k)  n,i corresponds to the tensor of the k-                  15:       Ltotal ← Ltotal + λk Lk
+th data processing path and d1 < d2 < d3 , using the                            16:    end for
+same BN layer, BN(d3 ), results in varying output tensor                        17:    Update ϕ using Ltotal of (15) via Adam optimizer
+statistics across the three paths. In contrast, employing the S-                18:    i←i+1
+BN layer, S−BN(d1 , d2 , d3 ) incorporating BN(d1 ), BN(d2 )                    19: end while
+and BN(d3 ), ensures greater consistency in the output tensor                   20: Output: ϕ
+statistics across the paths. Moreover, this multi-layered S-BN
+concept, referred to in [26], ensures model efficiency given
+that the parameter count of S-BN is minimal compared to the
+total model parameters.                                                         at both the transmitter and receiver. The task of image
+                                                                                reconstruction is quantified using peak SNR (PSNR) and
+                                                                                the structural similarity index measure (SSIM) [28], with
+C. Training Strategy                                                            modulation schemes of BPSK, 4QAM, 16QAM, 64QAM, and
+   The training procedure for the uJSCC system is conducted                     256QAM across modulation orders K = 5. The benchmark
+jointly across all modulation orders. The method optimizes the                  schemes under consideration are listed as follows:
+universal encoder parameters Θ = {θ outer , θ inner }, universal                   • ME1 , ME2 , and TE JSCC: These are detailed in Sec-
+decoder parameters Φ = {φouter , φinner }, and codebooks                             tion II-C.
+C(k) for k ∈ [1:K]. The overall training process is outlined                       • DeepJSCC-Q [13]: It utilizes fixed 2-dimensional code-
+below and summarized in Algorithm 2.                                                 words based on a predefined constellation map, and its
+   The training utilizes a dataset D, with hyperparameters such                      ME1 variant is also included as a benchmark. Both use
+as αk , βk , and λk , and an SNR boundary Btrain , which includes                    the same neural network structure as uJSCC for a fair
+upper and lower bounds added to B for training conditions.                           comparison.
+All parameters are initialized before training begins. For each                    • SSCC: It combines better portable graphics (BPG) [29]
+training cycle, one SNR value per modulation order for all                           for source coding with low-density parity check (LDPC)
+k ∈ [1:K] is sampled. The corresponding loss value Lk is                             [30] for channel coding, while maintaining the same
+computed for each SNR using Algorithm 1 according to the                             number of channel uses as uJSCC. According to the IEEE
+modulation loss function (3). The overall system is trained                          802.11ad standard, an LDPC block length of 672 bits is
+jointly, and the total loss is computed as                                           used with code rates of 1/2, 2/3, and 3/4.
+                                     K
+                                     X                                            The NN structure for the proposed model, for sizes N =
+                          Ltotal =         λk Lk ,                     (15)     256 and N = 1024, is detailed in TABLE II. Below, the
+                                     k=1
+                                                                                notation used within the table is clarified:
+where λk weighs the importance of the loss terms for each                          • Conv(cin , cout , f, s, p): Represents a 2D convolutional
+modulation order. Parameter updates are performed using the                          layer with input channel cin , output channel cout , kernel
+Adam optimizer [27] based on Ltotal . The training process                           size f, stride s, and padding p.
+continues iteratively until the maximum number of iterations is                    • T−Conv(cin , cout , f, s, p): A 2D transpose convolutional
+reached or an early stopping criterion is met, ensuring optimal                      layer, parameterized similarly to the Conv layer.
+parameter optimization across the system.                                          • Res(c) and T−Res(c): Indicate a residual layer [31] and
+                                                                                     transpose residual layer, respectively, each preserving the
+                  IV. E XPERIMENTAL R ESULTS                                         input data’s dimensions and utilizing S-BN layers.
+   This section evaluates the uJSCC scheme’s performance                           • Reshape: Used for reordering dimensions and altering
+in an AWGN channel, assuming perfect channel knowledge                               dimensions via merging or splitting.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2568                                                               IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+                                                               TABLE II
+               NN S TRUCTURE FOR CIFAR-10 DATASET (“/” I S U SED TO S EPARATELY D ESCRIBE C ASES N = 256 AND N = 1024)
+
+
+
+
+                            TABLE III                                                                          TABLE IV
+H YPERPARAMETERS FOR T RAINING W ITH CIFAR-10 DATASET (α AND λ                N UMBER OF PARAMETERS IN NN M ODELS (T HE R ATIO OF BN PARAM -
+  FOR E ACH M ODULATION A RE W RITTEN S EQUENTIALLY IN I NCREAS -               ETERS I S W RITTEN IN P ERCENTAGE . T HE R ATIO OF THE T OTAL
+   ING M ODULATION O RDER . F OR ME 2 , THE F IRST S TAGE I S FOR                        PARAMETERS C OMPARED TO U JSCC I S W RITTEN
+     256QAM AND THE S ECOND S TAGE I S FOR THE R EST OF THE                                          IN M ULTIPLE S CALES )
+                      M ODULATION O RDERS )
+
+
+
+
+                                                                                • More Symbols (or MS): This configuration sets the
+                                                                                   symbol count at N = 1024 and retains the codeword
+                                                                                   dimensions and channel numbers of the Basic setup:
+                                                                                   (D1 , D2 , D3 , D4 , D5 ) = (2, 4, 8, 12, 16) and (c1 , c2 ) =
+                                                                                   (32, 64).
+  • ReLU and Tanh: Activation functions using rectified                         Each configuration aims to evaluate the performance of the
+    linear unit and hyperbolic tangent functions, respectively.               system under varying structural complexities and transmission
+                                                                              capacities.
+   Training employs Algorithm 2 with SNR boundary Btrain =
+[0, 5, 12, 20, 26, 30]. CIFAR-10 dataset [32] usage includes
+50,000 training, with a 20% validation subset, and 10,000                     A. Model Efficiency of uJSCC
+test images. Training parameters include an initial learning                     TABLE IV shows that BN layer parameters account for only
+rate of 0.001 except for DeepJSCC-Q using that of 0.0008,                     1-2% of total model parameters, indicating that S-BN layers
+halved every 20 epochs, a batch size of 64, and a maximum                     in uJSCC minimally impact overall model size, with ME1
+of Imax = 400 epochs. Hyperparameters α and λ are noted in                    and ME2 comprising about 98-99% of uJSCC’s parameters.
+TABLE III, with β fixed at 0.25α.                                             Conversely, TE’s parameter count is nearly fivefold higher due
+   Three simulation configurations are:                                       to its five separate JSCC encoder-decoder pairs for each mod-
+  • Basic (or B): This setup configures the number of sym-                    ulation order, underscoring the proposed model’s parameter
+    bols to N = 256. It features codeword dimensions                          efficiency.
+    (D1 , D2 , D3 , D4 , D5 ) = (2, 4, 8, 12, 16) and NN channel                 TABLE V details the FLOPs for the encoder and decoder
+    counts (c1 , c2 ) = (32, 64).                                             during forward pass, primarily affected by the CNN layers,
+  • Large (or L): Maintaining the same number of symbols,                     with nearly identical figures for uJSCC’s universal encoder
+    N = 256, this configuration increases the codeword                        and decoder. FLOPs for uJSCC are on par with TE, indicating
+    dimensions to (D1 , D2 , D3 , D4 , D5 ) = (4, 8, 16, 24, 32)              comparable operational efficiency across all of the modulation
+    and adjusts the channel counts to (c1 , c2 ) = (64, 128).                 orders. uJSCC, employing parameter sharing and joint training
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                     2569
+
+
+
+                               TABLE V
+FLOP S AND T RAINING E POCHS OF NN M ODELS (FLOP S A RE W RITTEN
+ IN “E NCODER FLOP S /D ECODER FLOP S ” F ORMAT AND THE N UMBER
+             OF E POCHS OF TE I S S UMMED R IGHT S IDE )
+
+
+
+
+                                                                              Fig. 5. Performance comparison between uJSCC vs. benchmark schemes
+across modulation orders, requires far fewer training epochs                  under Basic setting.
+than TE, which trains each modulation order separately.
+This efficient training approach of uJSCC leads to fewer
+epochs especially as TE’s training epochs increase with higher                due to suboptimal training across remaining codebooks. The
+modulation orders due to greater codebook cardinality and                     performance of DeepJSCC-Q is evaluated using a model
+longer codeword dimensions, highlighting uJSCC’s efficiency                   trained for each modulation order within its corresponding
+in training complexity.                                                       SNR range, similar to TE. DeepJSCC-Q outperforms TE at
+                                                                              low SNR values in the range of 64QAM and 256QAM.
+B. UJSCC Versus Benchmarks Under Basic Setting                                However, as its variant in ME1 style shows poorer performance
+                                                                              than uJSCC, DeepJSCC-Q is not appropriate for a single
+   Fig. 5 demonstrates that uJSCC, with only a single uni-
+                                                                              model for supporting multiple modulation orders.
+versal encoder and decoder, surpasses benchmark schemes in
+                                                                                 Fig. 6 displays reconstructed images from various models
+low SNR environments when transmitting 256 symbols using
+                                                                              for BPSK, 4QAM, and 16QAM. The results for 64QAM and
+BPSK and 4QAM. It highlights the advantage of semantic
+                                                                              256QAM are omitted as all models, except ME1 , demonstrate
+communication where uJSCC, benefiting from joint training
+                                                                              satisfactory image quality. uJSCC clearly outperforms other
+and parameter sharing across multiple modulation orders,
+                                                                              models in lower modulation orders like BPSK and 4QAM.
+enhances image reconstruction in lower modulation orders
+                                                                              For 16QAM, uJSCC and TE show comparable and superior
+using the capabilities of higher orders. Notably, the graph
+                                                                              image quality over DeepJSCC-Q, ME1 and ME2 , affirming
+exhibits a wave-like pattern, rather than a smooth curve,
+                                                                              uJSCC’s advantage in low SNR settings through effective
+because the performance converges at high SNR values within
+                                                                              semantic communication.
+the range of each modulation order. Therefore, as the perfor-
+mance degrades due to channel distortion, the graph displays
+a concatenated form of five distinct curves. ME1 lacks S-                     C. UJSCC Versus Benchmarks Under Large Setting
+BN layers, impairing its ability to equalize output tensor                      Fig. 7 depicts the image reconstruction performance of
+statistics across CNN layers for each modulation order. For                   uJSCC and benchmark schemes using an enlarged model.
+higher orders like 64QAM and 256QAM, TE and ME2 excel,                        This setup exhibits a trend similar to the Basic configuration.
+with ME2 matching TE’s performance initially trained for                      According to the SSIM metric, uJSCC generally outperforms
+256QAM, yet showing weaker performance in lower orders                        except in the BPSK range, where ME1 leads narrowly but
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2570                                                                IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+
+                                                                               Fig. 7. Performance comparison between uJSCC vs. benchmark schemes
+                                                                               under Large setting.
+
+
+                                                                               approximately five times more parameters. The slight PSNR
+                                                                               shortfall in the high SNR region is not detrimental as uJSCC
+                                                                               nearly reaches peak performance in terms of SSIM, which is
+                                                                               more reflective of the structural integrity of the reconstructed
+                                                                               image. Given that ME1 underperforms compared to uJSCC in
+                                                                               the BPSK range, both SSIM and PSNR metrics are crucial
+                                                                               for a comprehensive evaluation of the image reconstruction
+                                                                               quality. This simulation confirms that a larger uJSCC model,
+                                                                               when implemented with the devised training strategy, can
+                                                                               achieve superior or competitive reconstruction across all SNR
+                                                                               ranges with reduced training complexity relative to TE.
+
+                                                                               D. UJSCC Versus Benchmarks Under More Symbols Setting
+Fig. 6. Original image and reconstructed images for BPSK, 4QAM,
+and 16QAM under Basic setting. (Performance is numerically written in
+                                                                                  Fig. 8 evaluates the image reconstruction performance of
+“MSE/PSNR/SSIM” format.)                                                       uJSCC and benchmark schemes with a transmission of 1024
+                                                                               symbols, i.e., N = 1024. Transmitting more symbols enhances
+                                                                               overall performance compared to the Basic setting. Likewise
+shows weaker performance across other modulation orders.                       in the Basic setting, although DeepJSCC-Q outperforms TE
+Notably, uJSCC significantly surpasses other models in the                     for 64QAM and 256QAM, it is not suitable as a universal
+4QAM range, crucial for the visual quality of the reconstructed                model when considering its ME1 version. TE excels across all
+image.                                                                         SNR ranges than uJSCC, as its multiple encoder-decoder pairs
+  In terms of the PSNR metric, uJSCC excels in the low                         are specifically trained for individual modulation orders at
+SNR zones like BPSK and 4QAM and closely matches TE’s                          corresponding SNR levels. However, uJSCC closely rivals TE,
+performance in higher modulation orders, despite TE having                     particularly matching its performance in the high SNR region
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                     2571
+
+
+
+
+Fig. 8. Performance comparison between uJSCC vs. benchmark schemes
+under More Symbols setting.
+
+
+
+with 64QAM and 256QAM, as measured by SSIM. ME1
+consistently underperforms across all SNR ranges, while ME2
+performs poorly in low SNR settings with BPSK and 4QAM
+but well in higher SNR areas. This discrepancy highlights
+the challenge of optimizing a model across all SNR ranges
+through joint training, which is not the case for uJSCC. The
+effectiveness of the proposed NN structure, particularly with
+increased codeword dimension order and the integration of S-
+BN layers, alongside the training algorithm, is demonstrated
+in achieving high-quality outcomes for the downstream task.
+uJSCC maintains moderate to high performance across a broad
+SNR spectrum, supporting multiple modulation orders with a
+single universal model.
+                                                                              Fig. 9. Original image and reconstructed images for BPSK, 4QAM, and
+   Fig. 9 presents the reconstructed images from each model                   16QAM under More Symbols setting. (Performance is numerically written
+for BPSK, 4QAM, and 16QAM when transmitting 1024                              in “MSE/PSNR/SSIM” format.)
+symbols. As higher modulation orders like 64QAM and
+256QAM generally yield satisfactory results, the focus is
+on lower orders. ME2 , optimized only for 256QAM, shows                       structure and training strategy, can be optimized to maintain
+compromised image quality in lower modulation orders despite                  satisfactory task quality across all SNR ranges when transmit-
+the high symbol count. ME1 exhibits better performance in                     ting a higher number of symbols.
+low SNR regions, showcasing the strength of joint training.
+Nonetheless, as uJSCC mirrors TE’s optimal performance,                       E. UJSCC Versus Benchmarks With CelebA Dataset
+it delivers superior image quality in low SNR regions. This                      In order to evaluate the proposed model with higher resolu-
+simulation confirms that uJSCC, with a robustly designed NN                   tion images, we utilize the CelebA dataset [33] cropped into
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2572                                                                IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+
+Fig. 10. Performance comparison between uJSCC vs. benchmark schemes            Fig. 11. Performance comparison between uJSCC vs. benchmark schemes
+using CelebA dataset.                                                          selecting S-BN layer with CelebA dataset.
+
+
+                                                                               highlights the versatility and effectiveness of our proposed
+the size of 3 × 128 × 128. NN structure for Large setting
+                                                                               method.
+is modified to generate N = 1024 symbols such that the
+second and the fourth layer of the outer encoder and decoder
+is changed to Conv(c1 , c2 , 4, 2, 1) and T-Conv(c2 , c1 , 4, 2, 1),           F. Ablation Study on S-BN Layer
+respectively. When training uJSCC, α and λ are set to                             Fig. 11 illustrates the critical role of S-BN layers in enabling
+(2, 1.5, 1, 0.7, 0.5) and (1, 1, 2, 4, 16), respectively. Hyperpa-             a single model to effectively and efficiently support multiple
+rameters for benchmark schemes are the same with More                          modulation orders with the CelebA dataset. uJSCC without
+Symbol setting. For convenience, we refer to this configuration                S-BN layers exhibits significantly poor performance and even
+as Basic setting for the CelebA dataset.                                       worse than DeepJSCC-Q in the ME1 style, underscoring that
+   Fig. 10 verifies that uJSCC exhibits a consistent perfor-                   S-BN layers are essential for uJSCC to achieve TE’s perfor-
+mance trend for high-resolution images. The proposed method                    mance. Furthermore, without S-BN layers, uJSCC struggles to
+closely aligns with the task performance of TE, showcasing                     show an improvement in the quality of reconstructed images
+that uJSCC, when combined with our training algorithm,                         as SNR increases into 256QAM range. Although DeepJSCC-
+effectively reaches the target capability. Additionally, uJSCC                 Q performs below uJSCC considering both SSIM and PSNR
+achieves higher SSIM and PSNR values for BPSK and 4QAM                         values, DeepJSCC-Q with S-BN layers outperforms its ME1
+than DeepJSCC-Q, which is trained for a specific modulation                    variant. These findings confirm that S-BN layers are crucial for
+order, and displays comparable performance across other mod-                   a single neural network model with multiple data processing
+ulation orders. Meanwhile, ME1 continues to underperform                       paths to enhance the task quality across each path by equal-
+across all SNR ranges, and ME2 falls short of matching TE for                  izing the data statistics.
+BPSK, 4QAM, and 16QAM due to its training suboptimality.                          Fig. 12 visualizes the actual values of parameters in the
+As uJSCC supports multiple modulation orders well with only                    S-BN layer in each inner decoder for two datasets under
+a single encoder-decoder pair for lower-resolution CIFAR-                      Basic setting. Note that the input tensor size for the inner
+10 images, it demonstrates similar adaptability and robust                     decoder gφinner varies with each modulation order. Given that
+performance for high-resolution CelebA images. This result                     the decoder consists of T-Conv layer, the output tensor is
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+HUH et al.: uJSCC FOR MODULATION-AGNOSTIC SEMANTIC COMMUNICATION                                                                                        2573
+
+
+
+                                                                                    [23], making these boundaries learnable could enhance
+                                                                                    performance by optimizing modulation order selection
+                                                                                    within SNR ranges, requiring updates to the training
+                                                                                    algorithm.
+                                                                                  • Power-efficient codeword assignment: The proposed
+                                                                                    algorithm lacks an average power constraint and does
+                                                                                    not regularize the uniformity of codeword usage. While
+                                                                                    uniform codeword usage balances power, it may impede
+                                                                                    JSCC learning. Instead, advanced methods could improve
+                                                                                    power efficiency by assigning high-power symbols to rare
+                                                                                    features without compromising task performance.
+                                                                                  • SNR-adaptive feature generation: Adaptive feature gen-
+                                                                                    eration, inspired by [10], could be integrated into a
+                                                                                    VQ-based JSCC system by employing a hypernetwork
+                                                                                    [34] to fine-tune VQ codebooks for different SNRs,
+                                                                                    enabling optimal performance under varying channel con-
+                                                                                    ditions.
+
+                                                                                                           V. C ONCLUSION
+                                                                                  In this paper, we introduced a uJSCC framework that facil-
+                                                                               itates modulation-agnostic digital semantic communication.
+                                                                               The data processing path within uJSCC mimics a traditional
+                                                                               JSCC encoder-decoder pair tailored to a specific modulation
+                                                                               order. Utilizing parameter sharing, which enhances model effi-
+                                                                               ciency, the output statistics of each CNN layer are regulated by
+                                                                               S-BN layers tailored for each modulation order to standardize
+                                                                               the output statistics across different data processing paths.
+                                                                               Through our proposed joint training strategy, experimental
+                                                                               results on both low-resolution and high-resolution datasets
+                                                                               demonstrate that uJSCC, with significantly fewer parame-
+                                                                               ters and reduced training epochs, either matches or closely
+                                                                               approaches the task performance of traditional encodings as
+                                                                               evaluated by metrics such as SSIM, PSNR, and the quality of
+                                                                               reconstructed images for each modulation order. Furthermore,
+                                                                               we have validated the versatility of uJSCC in larger models
+Fig. 12. Parameter values of the S-BN layer of uJSCC inner decoder under
+Basic setting.                                                                 and with different numbers of transmitted symbols. This study
+                                                                               aims to illuminate the practical applicability of JSCC-based
+                                                                               semantic communication using digital communication devices
+generated by summing filtered tensors of the same size, with                   in real-world scenarios.
+the summation repeated to match the number of channels
+in the input tensor. Consequently, as shown in the graphs                                                    R EFERENCES
+of the running standard deviation, these values increase as
+                                                                               [1]   Y. Shi, Y. Zhou, D. Wen, Y. Wu, C. Jiang, and K. B. Letaief, “Task-
+the modulation order becomes higher. The fluctuation in the                          oriented communications for 6G: Vision, principles, and technologies,”
+graphs also reflects that S-BN parameters used in forward                            IEEE Wireless Commun., vol. 30, no. 3, pp. 78–85, Jun. 2023.
+operations vary across the five data processing paths. In                      [2]   D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+                                                                                     task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+particular, the learnable scale and bias parameters exhibit                          no. 1, pp. 5–41, Jan. 2023.
+significant variation, highlighting the importance of S-BN                     [3]   H. Seo, J. Park, M. Bennis, and M. Debbah, “Semantics-native commu-
+layers to effectively support multiple modulation orders in                          nication via contextual reasoning,” IEEE Trans. Cognit. Commun. Netw.,
+                                                                                     vol. 9, no. 3, pp. 604–617, Jun. 2023.
+uJSCC.                                                                         [4]   H. Seo, Y. Kang, M. Bennis, and W. Choi, “Bayesian inverse contextual
+                                                                                     reasoning for heterogeneous semantics-native communication,” IEEE
+                                                                                     Trans. Commun., vol. 72, no. 2, pp. 830–844, Feb. 2024.
+G. Further Discussions for Future Work                                         [5]   W. Weaver, “Recent contributions to the mathematical theory
+   While uJSCC achieves TE-level performance with notable                            of communication,” ETC, Rev. Gen. Semantics, vol. 74, no. 1,
+                                                                                     pp. 261–281, 1953.
+efficiencies in model size, training, and data processing, there               [6]   X. Luo, H. Chen, and Q. Guo, “Semantic communications: Overview,
+is room for improvement. We outline three key directions for                         open issues, and future research directions,” IEEE Wireless Commun.,
+future work below:                                                                   vol. 29, no. 1, pp. 210–219, Feb. 2022.
+                                                                               [7]   N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+   • Learnable SNR boundaries: Instead of intuitively set-                           channel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+      ting SNR boundaries based on the 3GPP specification                            Process. (ICASSP), Apr. 2018, pp. 2326–2330.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+2574                                                                    IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 43, NO. 7, JULY 2025
+
+
+
+[8]  E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-                                     Yoon Huh (Graduate Student Member, IEEE)
+     channel coding for wireless image transmission,” IEEE Trans. Cogn.                                      received the B.S. degree (summa cum laude) from
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.                                                   the School of Electrical and Electronics Engineering,
+[9] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled                                        Yonsei University, Seoul, South Korea, in 2022.
+     semantic communication systems,” IEEE Trans. Signal Process.,                                           He is currently pursuing the Ph.D. degree with the
+     vol. 69, pp. 2663–2675, 2021.                                                                           Department of Electrical and Computer Engineer-
+[10] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless                                     ing, Seoul National University, Seoul. His research
+     image transmission using deep source channel coding with attention                                      interests include wireless communications, semantic
+     modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,                                    communication, and deep learning.
+     pp. 2315–2328, Apr. 2022.
+[11] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+     communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+     Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+[12] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+     bottleneck for task-oriented communication with digital modulation,”                                     Hyowoon Seo (Member, IEEE) received the B.S.,
+     IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.                                    M.S., and Ph.D. degrees in electrical engineering
+[13] T. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-                                          from Korea Advanced Institute of Science and Tech-
+     Q: Constellation constrained deep joint source-channel coding,” IEEE                                     nology (KAIST), Daejeon, South Korea, in 2012,
+     J. Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.                                        2014, and 2020, respectively. From 2020 to 2021, he
+[14] A. V. D. Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete                                          was a Post-Doctoral Researcher with Seoul National
+     representation learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30,                             University and later at the Centre for Wireless Com-
+     2017.                                                                                                    munications (CWC), University of Oulu, Finland.
+[15] A. Dosovitskiy et al., “An image is worth 16×16 words: Transformers                                      He was an Assistant Professor with the Department
+     for image recognition at scale,” 2020, arXiv:2010.11929.                                                 of Electronics and Communications Engineering,
+[16] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck                                     Kwangwoon University, Seoul, South Korea. In
+     method,” 2000, arXiv:0004057.                                                  2025, he joined Sungkyunkwan University, Suwon, South Korea, as a Faculty
+[17] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with             Member, where he is currently an Assistant Professor with the College of
+     gumbel-softmax,” 2016, arXiv:1611.01144.                                       Information and Communication Engineering. His research interests include
+[18] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for              wireless communications, semantic communication, the Internet of Things
+     digital semantic communications via variational autoencoder,” IEEE             (IoT), physical-layer security and privacy, vehicle-to-everything (V2X) com-
+     Trans. Commun., vol. 72, no. 9, pp. 5626–5640, Sep. 2024.                      munications, and deep and distributed learning.
+[19] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+     scheme for semantic communication systems,” IEEE Trans. Cognit.
+     Commun. Netw., vol. 10, no. 1, pp. 150–163, Feb. 2024.
+[20] Y. He, G. Yu, and Y. Cai, “Rate-adaptive coding mechanism for semantic
+     communications with multi-modal data,” IEEE Trans. Commun., vol. 72,
+     no. 3, pp. 1385–1400, Mar. 2024.                                                                       Wan Choi (Fellow, IEEE) received the B.Sc.
+[21] H. Zhang, T.-W. Weng, P.-Y. Chen, C.-J. Hsieh, and L. Daniel,                                          and M.Sc. degrees from the School of Electrical
+     “Efficient neural network robustness certification with general activation                             Engineering and Computer Science (EECS), Seoul
+     functions,” in Proc. Adv. Neural Inf. Process. Syst., vol. 31, 2018.                                   National University (SNU), Seoul, South Korea, in
+[22] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding                                   1996 and 1998, respectively, and the Ph.D. degree
+     for channel-adaptive digital semantic communications,” IEEE Trans.                                     from the Department of Electrical and Computer
+     Cognit. Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.                                           Engineering, The University of Texas at Austin, in
+[23] NR; Physical Layer Procedures for Data, document (TS) 38.214, version                                  2006.
+     18.2.0, 3GPP, Mar. 2024.                                                                                  From 1998 to 2003, he was a Senior Member of
+[24] J. G. Proakis and M. Salehi, Fundamentals of Communication Systems.                                    the Technical Staff of the Research and Development
+     London, Pearson, 2007.                                                                                 Division, KT, South Korea, where he researched 3G
+[25] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep               CDMA systems. From February 2007 to February 2020, he was a Professor
+     network training by reducing internal covariate shift,” in Proc. Int. Conf.    with the School of Electrical Engineering, Korea Advanced Institute of
+     Mach. Learn., 2015, pp. 448–456.                                               Science and Technology (KAIST), Daejeon, South Korea. He is currently
+[26] J. Yu, L. Yang, N. Xu, J. Yang, and T. Huang, “Slimmable neural                a Professor with the Department of Electrical and Computer Engineering,
+     networks,” 2018, arXiv:1812.08928.                                             SNU. He was a recipient of the IEEE Vehicular Technology Society Jack
+[27] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”          Neubauer Memorial Award (Best System Paper Award) in 2002. He also
+     2014, arXiv:1412.6980.                                                         received the IEEE Vehicular Technology Society Dan Noble Fellowship Award
+[28] A. Hore and D. Ziou, “Image quality metrics: PSNR vs. SSIM,” in Proc.          in 2006, the IEEE Communication Society Asia Pacific Young Researcher
+     20th Int. Conf. Pattern Recognit., Aug. 2010, pp. 2366–2369.                   Award in 2007, the Haedong Young Scholar Award from KICS in 2012,
+[29] F. Bellard. Better Portable Graphics. Accessed: Oct. 16, 2024. [Online].       and the Irwin-Jacobs Award from Qualcomm and KICS in 2015. While
+     Available: https://bellard.org/bpg/                                            at The University of Texas at Austin, he was a recipient of the William
+[30] R. G. Gallager, “Low-density parity-check codes,” IRE Trans. Inf.              S. Livingston Graduate Fellowship and Information and Telecommunication
+     Theory, vol. 8, no. 1, pp. 21–28, Jan. 1962.                                   Fellowship from the Ministry of Information and Communication (MIC),
+[31] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for               South Korea. He has been an Area Editor of IEEE T RANSACTIONS ON
+     image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.         W IRELESS C OMMUNICATIONS since August 2022 and an Editor of IEEE
+     (CVPR), Jun. 2016, pp. 770–778.                                                T RANSACTIONS ON V EHICULAR T ECHNOLOGY since April 2011. He has
+[32] A. Krizhevsky et al., “Learning multiple layers of features from tiny          been the Co-Editor-in-Chief of KICS/IEEE J OURNAL OF C OMMUNICA -
+     images,” 2009. [Online]. Available: https://www.cs.toronto.edu/∼kriz/          TIONS AND N ETWORKS since December 2024. He served as the Executive
+     learning-features-2009-TR.pdf                                                  Editor Chair for IEEE T RANSACTIONS ON W IRELESS C OMMUNICATIONS
+[33] Z. Liu, P. Luo, X. Wang, and X. Tang, “Deep learning face attributes           from 2019 to 2021 and an Executive Editor from 2014 to 2019. He was also
+     in the wild,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV), Dec. 2015,         an Editor of IEEE T RANSACTIONS ON W IRELESS C OMMUNICATIONS from
+     pp. 3730–3738.                                                                 2009 to 2014 and IEEE W IRELESS C OMMUNICATIONS L ETTERS from 2012
+[34] D. Ha, A. Dai, and Q. V. Le, “HyperNetworks,” 2016,                            to 2017. He was the Guest Editor of IEEE J OURNAL ON S ELECTED A REAS
+     arXiv:1609.09106.                                                              IN C OMMUNICATIONS .
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:08:22 UTC from IEEE Xplore. Restrictions apply.
+

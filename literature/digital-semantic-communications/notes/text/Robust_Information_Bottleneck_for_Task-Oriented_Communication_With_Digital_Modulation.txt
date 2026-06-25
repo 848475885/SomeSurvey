@@ -1,0 +1,1034 @@
+IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023                                                                         2577
+
+
+
+
+    Robust Information Bottleneck for Task-Oriented
+       Communication With Digital Modulation
+       Songjie Xie , Student Member, IEEE, Shuai Ma, Member, IEEE, Ming Ding , Senior Member, IEEE,
+            Yuanming Shi , Senior Member, IEEE, Mingjian Tang, and Youlong Wu , Member, IEEE
+
+
+
+   Abstract— Task-oriented communications, mostly using                                                 I. I NTRODUCTION
+learning-based joint source-channel coding (JSCC), aim to
+design a communication-efficient edge inference system by
+transmitting task-relevant information to the receiver. However,
+only transmitting task-relevant information without introducing
+                                                                               W       ITH the rapid development of artificial intelligence
+                                                                                       (AI) in a variety of domains such as virtual/augmented
+                                                                               reality (VR/AR) [1], [2], brain-computer interfaces [3],
+any redundancy may cause robustness issues in learning due                     autonomous vehicular networks [4] and smart healthcare [5],
+to the channel variations, and the JSCC which directly maps                    the sixth-generation communications (6G) are expected to
+the source data into continuous channel input symbols poses
+                                                                               bring a new paradigm of wireless networks with the assistance
+compatibility issues on existing digital communication systems.
+In this paper, we address these two issues by first investigating              of AI [6]. To support ubiquitous connected intelligent devices
+the inherent tradeoff between the informativeness of the encoded               and AI services, it is conceived that 6G will beyond the
+representations and the robustness to information distortion in                Shannon paradigm to satisfy the stringent requirements includ-
+the received representations, and then propose a task-oriented                 ing ultra-reliability, low latency, and scalable connectivity [7],
+communication scheme with digital modulation, named discrete
+task-oriented JSCC (DT-JSCC), where the transmitter encodes
+                                                                               [8]. Recently, task-oriented communication that extracts and
+the features into a discrete representation and transmits it                   transmits only necessary information for the downstream tasks
+to the receiver with the digital modulation scheme. In the                     has received increasing attention from both academia and the
+DT-JSCC scheme, we develop a robust encoding framework,                        industry [9], [10], [11]. Different from conventional bit-level
+named robust information bottleneck (RIB), to improve the                      communication systems, which ignore the semantic meaning
+communication robustness to the channel variations, and derive
+a tractable variational upper bound of the RIB objective
+                                                                               of the transmitted messages, task-oriented communication
+function using the variational approximation to overcome                       aims at extracting and transmitting only task-relevant infor-
+the computational intractability of mutual information. The                    mation, which in turn can significantly compress the source,
+experimental results demonstrate that the proposed DT-JSCC                     improve communication efficiency and achieve low end-to-
+achieves better inference performance than the baseline methods                end latency. In order to extract and transmit task-relevant
+with low communication latency, and exhibits robustness to
+channel variations due to the applied RIB framework.
+                                                                               information, the learning-based joint source-channel coding
+                                                                               (JSCC) [12], [13] technique is widely studied. In learning-
+   Index Terms— Task-oriented communication, joint source-                     based JSCC, deep neural networks (DNNs) are utilized to learn
+channel coding, variational inference, discrete representation
+learning.                                                                      and extract the relevant information and map the extracted
+                                                                               task-relevant information to the continuous channel input. It is
+                                                                               shown that JSCC outperforms the separate source-channel
+  Manuscript received 1 September 2022; revised 22 March 2023; accepted        coding strategy, e.g., in finite block-length coding cases [14]
+3 May 2023. Date of publication 21 June 2023; date of current version
+7 August 2023. The work of Shuai Ma was supported in part by the               and task-oriented communication systems [9].
+National Key Research and Development Program of China under Grant                Although the learning-based JSCC has achieved empirical
+2019YFA0706604 and in part by the Natural Science Foundation (NSF) of          success in a variety of areas, two main issues remain in its
+China under Grant 61976169 and Grant 62293483. The work of Yuanming
+Shi was supported in part by the Natural Science Foundation of Shanghai        application in task-oriented communication. The first one is
+under Grant 21ZR1442700 and in part by the Shanghai Rising-Star Program        the robustness issue, which comes from the fact that the
+under Grant 22QA1406100. The work of Youlong Wu was supported in part          compacted task-relevant information could be more vulnerable
+by the National Natural Science Foundation of China (NSFC) under Grant
+61901267. (Corresponding authors: Youlong Wu; Yuanming Shi.)                   to information distortion. In task-oriented communication, the
+  Songjie Xie, Yuanming Shi, and Youlong Wu are with the School of Infor-      redundancy elimination reduces the communication overhead,
+mation Science and Technology, ShanghaiTech University, Shanghai 201210,       but if no redundancy is added, the information retained in
+China (e-mail: xiesj@shanghaitech.edu.cn; shiym@shanghaitech.edu.cn;
+wuyl1@shanghaitech.edu.cn).                                                    the received representation is more likely to be distorted by
+  Shuai Ma is with the Peng Cheng Laboratory, Shenzhen 518055, China           perturbation factors such as transmission unreliability, infor-
+(e-mail: mash01@pcl.ac.cn).                                                    mation obfuscation due to data privacy concerns [15], etc. The
+  Ming Ding is with the Data61, CSIRO, Sydney, NSW 2015, Australia
+(e-mail: ming.ding@data61.csiro.au).                                           second one is the compatibility issue of JSCC in universal
+  Mingjian Tang is with Atlassian, Sydney, NSW 2000, Australia (e-mail:        digital communication systems. As the worldwide deployment
+mtang2@atlassian.com).                                                         of 5G [16], modern mobile systems are based on digital
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/JSAC.2023.3288252.                                     modulation [17], while in JSCC the direct transmission of
+  Digital Object Identifier 10.1109/JSAC.2023.3288252                          continuous feature representations needs to be modulated with
+                      0733-8716 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2578                                                           IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+analog modulation or a full-resolution constellation, which                   due to the high complexity. Inspired by the recent advance-
+brings huge burdens for resource-constrained transmitter and                  ment of deep learning, the leaning-based JSCC schemes are
+poses implementation challenges on the current radio fre-                     proposed for wireless image [12], [29] and text [30] transmis-
+quency (RF) systems. In this paper, we aim to address the                     sion, which is mainly modeled by DNN-based autoencoders
+robustness and compatibility issues described above. Our goal                 with a noise-injection layer to simulate the noisy channel.
+is to investigate the inherent trade-off between the informa-                 Driven by their great performance in data transmission, the
+tiveness of the encoded representations and the robustness of                 learning-based JSCCs have been adopted in inference prob-
+communication systems and propose a discrete task-oriented                    lems such as wireless image retrieval [23] and task-oriented
+JSCC method that jointly extracts task-oriented information                   communication systems [9], [20].
+to reduce the communication overhead, achieves robustness                        As the transmitted representations are formatted as
+to channel variations and is compatible with current digital                  continuous-valued vectors, the learning-based JSCCs are com-
+communication systems.                                                        monly implemented over analog channels [31], [32]. For
+                                                                              digital communication, the transmission of continuous values
+A. Related Works                                                              output by JSCC encoders requires the full-resolution constel-
+   1) Task-Oriented Communication: The current studies on                     lation design of modulation, which brings a huge burden to
+task-oriented communication facilitate a paradigm shift for                   the hardware and makes it infeasible to implement in RF
+communication systems design from the bit-level to the seman-                 systems. Although there are certain researches on affordable
+tic level. There exist certain attempts to apply such a design                constellation design for deep learning applications in digital
+principle in various tasks. In [18], an effective framework                   communication [33], [34], [35], the continuous-valued repre-
+is developed for edge inference with a constraint of on-                      sentation transmission exhibit weak compatibility with digital
+device computation, where the task-oriented encoding of the                   modulation based wireless systems, which greatly limits the
+intermediate feature is proposed to reduce the communication                  deployment in the current and future communication systems.
+overhead. The same idea is adopted by a generic framework for                 This restriction motivates us to develop a JSCC scheme for
+task-oriented communication [9], which is based on the infor-                 task-oriented communication with discrete representations to
+mation bottleneck (IB) principle [19]. This framework prunes                  support digital transmission.
+the redundant dimension of encoded representation to reduce
+the communication overhead by utilizing the sparsity-inducing                 B. Contributions
+variational prior. Moreover, the recent work [20] extended                       In this work, we propose a theoretical framework for
+this task-oriented communication framework to multi-device                    task-oriented communication to enhance the robustness of
+cooperative edge inference by adopting the distributed infor-                 learned systems to information distortion in received repre-
+mation bottleneck (DIB) [21] for distribute feature encoding.                 sentations. Based on the proposed framework, we design a
+Meanwhile, the IB principle is also adopted in [7] to iden-                   task-oriented communication scheme using discrete represen-
+tify the relevant semantic information to accomplish a goal.                  tation encoding and digital modulation. The proposed digital
+Besides, [22] has presented a deep learning based semantic                    task-oriented communication scheme, together with the robust
+communication system aiming at extracting semantic informa-                   encoding framework, addresses the robustness issue and adapts
+tion from text data and maximizing the semantic transmission                  to digital communication systems. The main contributions of
+rate. A similar strategy is also applied to the image retrieval               this paper are summarized as follows:
+task [23] by transmitting the feature vectors compressed by the                  • We propose a robust encoding framework for task-
+DNN-based joint source-channel coding scheme. Although the                         oriented communication, named Robust Information
+redundancy elimination in task-oriented communication has                          Bottleneck (RIB). The proposed RIB framework for-
+been proven effective in reducing communication overhead,                          mulates the informativeness-robustness tradeoff in the
+there is a lack of research to investigate the utility of redun-                   encoded representation and aims at maximizing the coded
+dancy, particularly for the robustness to information distortion                   redundancy to improve the robustness, while retaining
+in received representations.                                                       sufficient information for the downstream inference tasks.
+   2) Joint Source Channel Coding (JSCC): The conven-                              Therefore, it addresses the tension between improving the
+tional communication system performs source coding and                             robustness and keeping sufficient relevant information for
+channel coding separately, which guarantees the theoretical                        downstream inference tasks without extra communication
+optimality in the asymptotic infinite limit of block-length                        overhead.
+according to Shannon’s separation theorem [24]. Although                         • Due to the computational intractability of mutual infor-
+the separate design of source coding and channel coding are                        mation, we derive the tractable variational upper bound of
+widely employed in modern communication systems, it is                             the RIB objective by utilizing the variational approxima-
+hard to approach the theoretical optimality due to the finite                      tion technique. The variational distribution is parameter-
+block-length of source and channel code in practice. It is                         ized by the learning-based inference model at the receiver
+widely perceived that the JSCC owns significant advantages in                      and optimized via end-to-end training.
+global optimality compared to separate designs. Over decades,                    • Based on the RIB framework, we develop a task-oriented
+Many JSCC schemes have been proposed in [14], [25], [26],                          communication scheme with discrete representations to
+[27], and [28], which are designed to target specific underlying                   support digital communication, named Discrete Task-
+source and channel distribution, and are hard to implement                         oriented JSCC (DT-JSCC). Specifically, a probabilistic
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                        2579
+
+
+
+      vector-quantization mechanism is introduced to encode                                                     TABLE I
+      the data samples into the informative discrete representa-                                       S UMMARY OF N OTATION
+      tions, and a digital modulation module with a finite-point
+      constellation transmits the discrete representations to the
+      receiver for inference tasks. The proposed DT-JSCC
+      addresses the challenge of the cooperative inference
+      between the transmitter and the receiver under digital
+      transmission.
+   • To validate the inference performance of the pro-
+      posed method, we conduct extensive experiments on
+      image classification tasks, which show that the proposed
+      DT-JSCCs outperform the baseline methods and exhibit
+      remarkable robustness to channel variations. Furthermore,
+      the experimental results demonstrate the advantages of
+      the proposed RIB framework in achieving a better
+      informativeness-robustness tradeoff.
+   The rest of the paper is organized as follows. The sys-
+tem model is introduced and the problems are described in
+Section II. In Section III, we present the robust framework
+for the learning of task-oriented communication systems.
+Section IV proposes the task-oriented communication schemes
+based on neural discrete representation learning. The extensive
+numerical results validate the performance of the proposed
+task-oriented communication system in Section V, followed by
+the discussion and conclusion in Section VI and Section VII,
+respectively.
+   For notation, we denote random variables by capital letters
+(e.g. X) and their realizations by lowercase letters (e.g. x).
+We use E[·] to denote the statistical expectation. The Shannon
+entropy of variable Ẑ is denoted as H(Ẑ), the entropy of
+                                                                              Fig. 1.   Block diagram of the task-oriented communication system model.
+conditional distribution given z is denoted as H(Ẑ|z), the
+mutual information between Ẑ and Y is denoted as I(Ẑ; Y ),
+and the Kullback-Leibler (KL) divergence between two dis-                     There is a data source that generates the data x and the corre-
+tributions p(x) and q(x) is denoted as DKL (p(x)∥q(x)).                       sponding target y (e.g. label) with a joint distribution p(x, y).
+We use the subscript to emphasize the dependence of mea-                      Given a dataset {x(i) }ni=1 consisting of n independent and
+sures on our choice of distribution parameterization, i.e.,                   identically distributed (i.i.d.) data points, the communication
+Hϕ (Z|x) = Epϕ (z|x) [− log pϕ (z|x)]. Let [K] denote the set                 system aims to estimate the underlying targets {y(i) }ni=1 by
+{1, 2, . . . , K} for the positive integer K ≥ 1. We further                  conducting cooperative inference between the transmitter and
+denote the circularly symmetric complex Gaussian distribution                 the receiver.
+as CN (·, ·). The notations used in this paper are summarized in                 At the transmitter side, the input data x is encoded into
+Table I.                                                                      discrete representation vector z using a probabilistic encoder
+                                                                              pϕ (z|x) parameterized by the adjustable parameters ϕ. The
+                                                                              probabilistic model of encoder pϕ (z|x) is determined by the
+     II. S YSTEM M ODEL AND P ROBLEM D ESCRIPTION
+                                                                              DNNs deployed on the transmitter. We assume that z =
+   We consider a point-to-point task-oriented communication                   (z1 , z2 . . . , zd ) is a d-dimensional discrete vector and each
+system consisting of a single transmitter and a receiver,                     dimension zj ∈ [K] is discrete variable. For simplicity,
+where the encoded discrete representation is transmitted over                 we adopt the mean-field assumption [36] and model the
+the physical channel for the inference tasks. To transmit                     pϕ (z|x) as a factorial categorical distribution with the proba-
+the discrete representation, the digital modulation scheme is                 bility mass function
+introduced in the system for reliable information transmission.
+                                                                                                                    d
+Despite the end-to-end training under a specific channel qual-                                                      Y
+                                                                                                     pϕ (z|x) =          pϕ (zj |x),                 (1)
+ity, we aim to learn the discrete representations that are robust
+                                                                                                                   j=1
+to channel quality fluctuation.
+                                                                              where the pϕ (zj |x) is the K-way categorical distribution for
+                                                                              each dimension zj ∈ [K].
+A. System Model                                                                 Then, the encoded representation z is modulated into chan-
+  To formalize the task-oriented communication framework,                     nel input symbols by a digital modulator hm and transmitted
+we define a probabilistic system model as shown in Fig. 1.                    over a noisy channel. Without loss of generality, we consider
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2580                                                           IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+a general channel model, the additive white Gaussian noise                    between the transmitted representation z and the received
+(AWGN) channel, due to its widespread adoption in repre-                      representation ẑ:
+senting realistic channel conditions. The additive noise vector
+                                                                                                            max I(Z; Ẑ),                            (6)
+ϵ is sampled from an isotropic Gaussian distribution with                                                   pϕ (z)
+variance σ 2 , i.e., ϵ ∼ CN (0, σ 2 I). After transmitting over
+                                                                              where pϕ (z) is the marginal distribution depending on the
+a noisy channel, the noisy symbols are demodulated into the
+                                                                              parameters ϕ.
+corrupted representation ẑ with a demodulation scheme gm .
+                                                                                 We aim to maximize the relevant information in Z about
+With a digital modulation scheme, the modulation, physical
+                                                                              target Y considering the stochastic process of corrupting
+channel, and demodulation are considered as an extended
+                                                                              Z into Ẑ. By combining the goals of relevant information
+channel model from encoded representation z to corrupted
+                                                                              extraction and transmission rate maximization, we propose a
+representation ẑ with a conditional distribution p(ẑ|z). Note
+                                                                              new principle, Robust Information Bottleneck (RIB), which
+that p(ẑ|z) is independent of parameters ϕ of the encoder
+                                                                              is formulated by an optimization problem that maximizes the
+at the transmitter, we obtain a Markov chain of the above
+                                                                              following objective function
+variables:
+                                   ϕ                                                        max I(Y ; Ẑ) + β[I(Z; Ẑ) − I(X; Ẑ)],                  (7)
+                   Y ←→ X ←→ Z ←→ Ẑ.                                  (2)                 pϕ (z|x)           |        {z       }
+                                                                                                                              R(ϕ)
+From the encoding perspective, the encoder pϕ (z|x) induces
+                                                                              for some fixed β ≥ 0. To interpret the RIB principle, we fur-
+the conditional distribution pϕ (ẑ|y), the marginal distribution
+                                                                              ther investigate the encoding process from the target Y to the
+pϕ (ẑ), and the corresponding posterior pϕ (y|ẑ) by the follow-
+                                                                              received representation Ẑ in task-oriented communication by
+ing integrals and application of Bayes law:
+                           Z                                                  defining the following quantities.
+                 pϕ (ẑ) = p(x, y)pϕ (ẑ|y)dxdy,               (3)               Definition 1 (Task-relevant information): Task-relevant
+                           R                                                  information is the preserved information in Ẑ about target Y ,
+                             p(x, y)pϕ (ẑ|y)dx                               which is characterized by I(Y ; Ẑ).
+               pϕ (y|ẑ) =                      .              (4)               Definition 2 (Task-irrelevant information): The amount of
+                                  pϕ (ẑ)
+                                                                              task-irrelevant information is measured by I(X; Ẑ)−I(Y ; Ẑ),
+   Theoretically, the optimal inference model of the encoder                  where I(X; Ẑ) is the amount of total information encoded in
+pϕ (z|x) and the channel model p(ẑ|z) is given by the                        Ẑ given X.
+posterior pϕ (y|ẑ). However, due to the intractability of                       Definition 3 (Coded redundancy): Coded          redundancy
+the high-dimensional integrals in the posterior computation,                  R(ϕ) refers to the amount of redundancy deliberately
+we replace the optimal inference model with a variational                     introduced in the reconstructed representation Ẑ, defined by
+approximation qθ (y|ẑ) parameterized by adjustable param-                    R(ϕ) ≜ I(Z; Ẑ) − I(X; Ẑ), which is utilized to improve the
+eters θ. At the receiver side, the inference model qθ (y|ẑ)                  robustness of the communication system against information
+receives the corrupted representation ẑ and performs inference               distortion that may occur in the received representation Ẑ.
+to output the result ŷ.                                                         From the underlying Markov chain presented in (2), the
+   Note that the considered task-oriented communication                       relation among the above quantities can be obtained by the
+model includes the JSCC scheme and the modulation mod-                        data processing inequality [38]:
+ule. One can extend this probabilistic model to the JSCC
+scheme with continuous representation z by substituting digital                               I(Y ; Ẑ) ≤ I(X; Ẑ) ≤ I(Z; Ẑ) ≤ C,                   (8)
+modulation with analog modulation.
+                                                                              where C denotes Shannon’s channel capacity of extended
+                                                                              channel p(ẑ|z), defined by C = maxpϕ (z) I(Z; Ẑ). As illus-
+B. Problem Description                                                        trated in Fig. 2a, the transmission rate is the summation
+   To design a communication-efficient model for downstream                   of task-oriented information, task-irrelevant information, and
+inference tasks, the encoder pϕ (z|x) needs to extract the                    coded redundancy. Note that I(Z; Ẑ) is upper bounded by
+informative messages about the target Y , while neglecting the                the channel capacity C, there is a tradeoff between the
+irrelevant information in Z given X. From the view of data                    task-relevant information and the coded redundancy when the
+compression, the optimal Z is the minimal sufficient statis-                  task-irrelevant information is minimized in representation Ẑ.
+tics [37] of X for target Y , and can be approximated through                    Therefore, as presented in (7), the optimization prob-
+the optimization of the information bottleneck (IB) [19] prob-                lem of the proposed RIB principle formulates this inherent
+lem where the I(Y ; Ẑ) is maximized with the constraint on                   informativeness-robustness tradeoff controlled by the parame-
+the amount of the preserved information I(X; Ẑ), computed                    ters β. Specifically, a small value of β privileges inference
+by                                                                            performance in a specific channel condition by retaining
+                                                                              maximal task-relevant information, whereas a large value of
+                   max I(Y ; Ẑ) − βI(X; Ẑ).                          (5)    β privileges the robustness against information distortion in
+                  pϕ (z|x)
+                                                                              Ẑ by preserving more redundancy in Ẑ, as illustrated in
+Apart from data compression, another essential goal of com-                   Fig. 2b and Fig. 2c respectively. Furthermore, regardless of the
+munication system design is to maximize the transmission                      value of β, the maximization of the RIB optimization problem
+rate, which is attained by maximizing the mutual information                  is equivalent to maximizing the transmission rate I(Z; Ẑ)
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                              2581
+
+
+
+
+Fig. 2. (a): The illustration of the relation between the channel capacity C, the transmission rate I(Ẑ; Z), coded redundancy R(ϕ), the amount of task-relevant
+information I(Ẑ; Y ) and task-irrelevant information I(Ẑ; X) − I(Ẑ; Y ). (b): The RIB with a small value of β induces that maximal transmission rate
+I(Ẑ; Z) = C, a large amount of task-relevant information, and the small coded redundancy. (c): The RIB with a big value of β induces that maximal
+transmission rate I(Ẑ; Z) = C, the small amount of task-relevant information, and the large redundancy encoded in the representation Z to improve the
+robustness of the communication system.
+
+
+and minimizing the amount of task-irrelevant information                          retains more redundancy in ẑ to handle information distortion
+simultaneously. In summary, the key idea of the RIB principle                     caused by channel noise, ultimately improving the robustness
+is to keep minimal but sufficient task-relevant information and                   of the task-oriented communication system. The parameter
+leave the rest redundancy utilized for robust encoding.                           β ≥ 0 controls the tradeoff between inference performance and
+                                                                                  model robustness.
+          III. ROBUST E NCODING FOR TASK -O RIENTED
+                       C OMMUNICATION                                             B. Variational Upper Bound of Robust Information
+   In this section, we develop a robust encoding framework                        Bottleneck Objective
+based on the proposed RIB principle. Furthermore, we derive                          In the distortion term of objective LRIB (ϕ), the compu-
+a variational upper bound of the RIB objective function by                        tation of the posterior pϕ (y|ẑ) is intractable for the most
+leveraging a variational distribution parameterized by the DNN                    high-dimensional data sources, as we state in (4). We resort
+on the receiver.                                                                  to the variational Bayesian method to approximate pϕ (y|ẑ),
+                                                                                  which has been widely used in machine learning applications
+A. Robust Encoding With Robust Information Bottleneck                             such as variational autoencoder [39] and variational infor-
+                                                                                  mation bottleneck [40]. Specifically, we adopt the inference
+   We now turn our attention to how the RIB optimization                          model qθ (y|ẑ) as a variational approximation where θ denotes
+problem is solved to develop robust task-oriented communica-                      learnable the parameters of the neural networks at the receiver.
+tion systems. To develop a robust encoder pϕ (z|x), we turn the                   By introducing the variational distribution qθ (y|ẑ), we derive
+RIB optimization problem presented in (7) into the objective                      the variational upper bound of the distortion term in (11) as
+function LRIB (ϕ):                                                                follows:
+  min −I(Y ; Ẑ) − β[I(Z; Ẑ) − I(X; Ẑ)]                                  (9)           Ep(x,y) {Epϕ (ẑ|x) [− log pϕ (y|ẑ)]}
+pϕ (z|x)
+
+    = min Ep(x,y) {Epϕ (ẑ|x) [− log pϕ (y|ẑ)]                                                  = Ep(x,y) {Epϕ (ẑ|x) [− log qθ (y|ẑ)]}
+           ϕ
+                                                                                                                                 pϕ (y|ẑ)
+        + βEpϕ (z|x) [H(Ẑ|z)] − βHϕ (Ẑ|x)} − H(Y )                     (10)                        − Epϕ (ẑ) {Epϕ (y|ẑ) [log           ]}             (13)
+                                                                                                                                 qθ (y|ẑ)
+    (a)                                                                                                |                {z                 }
+    = min Ep(x,y) Epϕ (ẑ|x) [− log pϕ (y|ẑ)]                                                                    DKL (pϕ (y|ẑ)||(qθ (y|ẑ))
+       ϕ           |           {z            }
+                                     Distortion                                                  ≤ Ep(x,y) {Epϕ (ẑ|x) [− log qθ (y|ẑ)]},                (14)
+            + βEpϕ (z|x) [H(Ẑ|z)] − βHϕ (Ẑ|x)                          (11)     where the last inequality follows from the non-negative
+              |               {z              }
+                                −βR(ϕ)                                            KL-divergence DKL (pϕ (y|ẑ)||(qθ (y|ẑ)) ≥ 0. Furthermore,
+    ≜ min LRIB (ϕ),                                                      (12)     since Ẑ is the transmitted representation corrupted by addi-
+           ϕ                                                                      tional Gaussian noise, we can derive a lower bound for the
+where the equivalence (a) holds by ignoring the constant                          entropy term Hϕ (Ẑ|x) as follows:
+terms H(Y ) given the data source. In (11), the first term                                                Hϕ (Ẑ|x) ≥ Hϕ (Z|x).                           (15)
+represents the accuracy of the inference model with the
+corrupted representation ẑ, denoted as the distortion term.                         Having proposed the above variational upper bound of the
+The subsequent terms, denoted by −βR(ϕ), aim to maximize                          distortion term, the tractable variational objective function
+the coded redundancy and enhance the robustness of the                            LVRIB (ϕ, θ) is obtained by:
+system. The second term maximizes the transmission rate for                          LRIB (ϕ) ≤ LVRIB (ϕ, θ)                                              (16)
+a given channel model p(ẑ|z), while the third term measures                                           
+the uncertainty of Ẑ given data x. By jointly maximiz-                                       ≜ Ep(x,y) Epϕ (ẑ|x) [− log qθ (y|ẑ)]
+ing the transmission rate and uncertainty of Ẑ, the system                                               + Epϕ (z|x) [H(Ẑ|z)] − βHϕ (Z|x) .             (17)
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2582                                                                IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+Recalling the probabilistic model of the task-oriented commu-                        communication, we propose to transmit the discrete represen-
+nication, the DNN-based Qdencoder is defined by the factorial                        tations in cooperative inference between the transmitter and
+distribution pϕ (z|x) = i=1 pϕ (zi |x), and the channel model                        the receiver. In this section, we design a robust task-oriented
+is given by the conditional distribution p(ẑ|z). The conditional                    communication scheme with digital modulation, named dis-
+entropy terms in LVRIB (ϕ, θ), H(Ẑ|z) and Hϕ (Z|x), are                             crete task-oriented JSCC (DT-JSCC), where the task-relevant
+analytically computable with respect to the parameters ϕ.                            information and coded redundancy are encoded into a vector
+Specifically, the entropy terms can be decomposed into the                           of integers, and transmitted for downstream tasks by digital
+following summations:                                                                modulation.
+                                        d
+                                                                                        An overview of our proposed framework is shown in
+                    Hϕ (Z|x) =
+                                        X
+                                              Hϕ (Zj |x),                     (18)   Fig. 3. We first encode the data sample x into the dis-
+                                        j=1
+                                                                                     crete representation vector z by the DNN-based encoder
+                                        d
+                                                                                     and the trainable codebook stored at both the transmitter and
+                                                                                     the receiver. Then, the discrete vector z is modulated into
+                                        X
+                     H(Ẑ|z) =                H(Ẑj |zj ).                    (19)
+                                        j=1
+                                                                                     the channel input symbols, and those symbols are transmitted
+                                                                                     over bandwidth-limited wireless channels. On the receiver, the
+Given a dataset of N data points {x(i) }N i=1 as well as the                         noisy transmitted symbols are demodulated into the corrupted
+corresponding labels {y(i) }N
+                            i=1 , we can now form the Monte                          discrete representation vector ẑ, and the inference model
+Carlo estimation for LVRIB (ϕ, θ) by sampling L realizations                         leverages ẑ with the trainable codebook to output the inference
+of z from the encoder p(z|x) with physical channel noise ϵ,                          result.
+the deterministic modulator hm and the deterministic demod-
+ulator gm . We have the Monte Carlo estimate L̃VRIB (ϕ, θ) ≃                         A. DT-JSCC
+LVRIB (ϕ, θ):                                                                           The inference procedure in the proposed task-oriented com-
+                        N           L
+                                                                                     munication scheme, DT-JSCC, can be summarized into three
+                   1 X 1X                                                            steps: feature splitting, Gumbel-based vector quantization and
+L̃VRIB (ϕ, θ) =         {  [− log qθ (y(i) |ẑ(i,l) )
+                   N i=1 L                                                           digital modulation.
+                                    l=1
+                        d                               d                               1) Feature Splitting: Since the intermediate features pro-
+                                       (i,l)                                         duced by a DNN-based feature extractor are high-dimensional,
+                        X                               X
+                  +β           H(Ẑj |zj )] − β               Hϕ (Zj |x(i) )},
+                        j=1                             j=1
+                                                                                     the vector quantization on the entire features requires a large
+                                                                              (20)   codebook to guarantee the quantization quality, which leads
+                                                                                     to heavy memory occupation at both the transmitter and
+                            (i,l)             (i,l)                   (i,l)
+where ẑ(i,l) = (ẑj )dj=1 , ẑj         = gm (hm (zj ) +                            the receiver. In order to quantize the intermediate features
+ (i,l)   (i,l)                    (i,l)
+ϵj ), zj ∼ pϕ (zj |x(i) ), and ϵj ∼ CN (0, σ 2 ).                                    with a small-scale codebook, we propose to equally split the
+   Remark 1: In the proposed robust encoding framework,                              high-dimensional intermediate features into d feature vectors
+RIB, the variational optimization is developed without                               with lower dimensionality. Formally, we define d DNN-based
+introducing any prior distribution on the intractable marginal                       feature extractor functions {fϕ,j }dj=1 where fϕ,j : X →
+distribution pϕ (z). Therefore, the optimization by the RIB                          RD to output d feature vectors {fϕ,j (x)}dj=1 . Specifically,
+framework does not restrict the learned marginal distribution                        we adopt different feature splitting strategies for the DNN
+pϕ (z) to be close to a given prior, allowing it to maximize                         with different structure of layers. For the neural networks with
+the transmission rate and reach the capacity of the extended                         dense layers (i.e., fully connected layers), we equally split
+channel (see Fig. 10 in the later experiments section).                              the output vector of the last dense layer into a set of feature
+This flexibility in optimizing the transmission rate without                         vectors as illustrated in Fig. 4a. For the neural networks with
+being constrained by prior assumptions is a significant                              convolutional layers, the features produced by the last convo-
+advantage of the RIB framework over the variational                                  lutional layer are simply split among channels as illustrated in
+IB frameworks [9], [40].                                                             Fig. 4b.
+   Remark 2: The robust encoding framework instantiates the                             2) Gumbel-Based Vector Quantization: As shown in
+RIB principle and provides a generic design for robust                               Fig. 3, the d extracted feature vectors {fϕ,j (x)}dj=1 are
+task-oriented communication. It can be applied not only to                           vector-quantized into a d-dimensional discrete vector z =
+task-oriented communication systems with continuous z but                            (z1 , z2 , . . . , zd ) ∈ [K]d .
+also to systems with discrete z, which makes it possible to                             We start by defining a learnable codebook, denoted by
+further propose a task-oriented communication system opti-                           M = [m1 , m2 , . . . , mK ] ∈ RD×K , which consists of K
+mized jointly with digital modulation.                                               D-dimensional codewords. This codebook is a set of param-
+                                                                                     eters shared between the encoder on the transmitter and the
+                                                                                     inference network on the receiver, and is part of the overall
+       IV. TASK -O RIENTED J OINT S OURCE C HANNEL                                   parameter set ϕ and θ that are trained jointly in an end-to-end
+           C ODING W ITH D IGITAL M ODULATION                                        manner through backpropagation.
+  The RIB-based framework developed in Section III is                                   To obtain the associated logits for a given feature vec-
+a generic framework for robust encoding. Considering the                             tor fϕ,j (x), we directly project it onto the codebook M.
+challenges of continuous representation transmission in digital                      Specifically, the logits ℓj are computed as the inner product
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                          2583
+
+
+
+
+Fig. 3. The proposed task-oriented communication scheme with discrete representations, DT-JSCC, where the feature extractor, the learnable codebook, and
+the inference model are optimized jointly via end-to-end training.
+
+
+                                                                                z is determined by the softmax function of the corresponding
+                                                                                logit ℓj,k ,
+                                                                                                                          exp(ℓj,k )
+                                                                                                  pϕ (zj = k|x) =        K
+                                                                                                                                        .              (24)
+                                                                                                                         P
+                                                                                                                            exp(ℓj,k′ )
+                                                                                                                        k′ =1
+
+                                                                                The above conditional distribution pϕ (zj |x) is used to com-
+                                                                                pute the entropy term Hϕ (Z|x) of LVRIB (ϕ, θ), as presented
+                                                                                in (18).
+                                                                                   In order to perform Monte Carlo estimation of LVRIB (ϕ, θ),
+                                                                                we need to sample from the categorical distribution pϕ (zj |x).
+                                                                                However, direct sampling is not differentiable, so we use the
+                                                                                Gumbel-softmax distribution and its continuous reparameter-
+                                                                                ization technique, known as the Gumbel-softmax trick [41],
+                                                                                to make the probabilistic model differentiable and trainable
+                                                                                with backpropagation.
+                                                                                   The Gumbel-Softmax trick is a technique that enables differ-
+                                                                                entiable sampling from a categorical distribution, commonly
+Fig. 4. The proposed strategy to split the encoded features into d vectors      used to train neural networks with discrete output spaces. This
+{fϕ,j (x)}dj=1 for the neural network with (a) dense layers and (b) convolu-
+tional layers.                                                                  is achieved by adding Gumbel noise to the logits and applying
+                                                                                the softmax function, allowing for continuous optimization of
+                                                                                categorical variables through temperature annealing. Specifi-
+between M and fϕ,j (x),
+                                                                                cally, to obtain a differentiable approximation of categorical
+     ℓj = MT fϕ,j (x)                                                  (21)     sampling for zj using logits ℓj , we compute a sample vector
+         = (mT1 fϕ,j (x), mT2 fϕ,j (x), . . . , mTK fϕ,j (x))          (22)     wj = (wj,1 , wj,2 , . . . , wj,K ) ∈ RK :
+         = (ℓj,1 , ℓj,2 , . . . , ℓj,K ),                              (23)                                    exp((ℓj,k + υk )/τ )
+                                                                                                 wj,k =     K
+                                                                                                                                            ,          (25)
+                                                                                                            P
+where each ℓj,k of the resulting logits ℓj represents                                                              exp((ℓj,k′ + υk′ )/τ )
+the similarity score between fϕ,j (x) and the k-th                                                         k′ =1
+
+codeword mk .                                                                   where υ1 , υ2 , . . . , υK are i.i.d samples from the Gumbel
+   Given the logits ℓj , the probabilistic encoder pϕ (zj |x)                   distribution computing by υk = − log(− log(uk )) where
+is modeled as a categorical distribution. Specifically, the                     uk ∼ Uniform(0, 1), and τ ≥ 0 is the softmax tempera-
+probability of index k in the discrete representation vector                    ture. As τ approaches 0, the sample vector wj is close to
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2584                                                            IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+Algorithm 1 Training DT-JSCC                                                   side, the demodulator demodulates the noisy complex-valued
+Input: T (number of epochs), d (number of dimension                            symbol into the corrupted discrete representation ẑj using a
+    of encoded discrete representation), K (number of                          demodulation function gm : C → [K]. Each corrupted discrete
+    codewords in codebook), L (number of encoding repre-                       dimension ẑj can be formally obtained by:
+    sentation samples per data sample), batch size N , the
+    temperature τ , channel variance δ 2 , modulation function                                          ẑj = gm (hm (zj ) + ϵj ).                    (27)
+    hm and the demodulation function gm .                                      Note that the conditional distribution p(ẑ|z) is determined
+ 1: while epoch t = 1 to T do                                                  by hm , gm and noise variance σ 2 , the entropy H(Ẑj |zj )
+ 2:   Sample a mini-batch of data samples {(x(i) , y(i) )}N      i=1 .         can be computed for different discrete value of zj , and
+ 3:   while i = 1 to N do                                                      the entropy term H(Ẑ|z) is the summation of H(Ẑj |zj ) as
+ 4:      while j = 1 to d do                                                   presented in (19). In the training stage, the maximization
+ 5:         Compute the logits ℓj with (21).                                   of Epϕ (z|x) [H(Ẑ|z)] in LVRIB (ϕ, θ) optimizes the encoder
+ 6:         Compute conditional distribution pϕ (zj |x(i) )                    pϕ (zj |x) to minimize the transmission rate and induce the
+            with (24).                                                         optimal marginal distribution pϕ (zj ) for the digital modulation
+ 7:         Compute       the   conditional     entropy         term           in the DT-JSCC systems.
+            Hϕ (Zj |x(i) ).                                                       The training procedures for DT-JSCC are summarized in
+                                                          (i,l)
+ 8:         Sample the discrete representation {zj }L             l=1          Algorithm 1.
+            using the Gumbel-softmax trick in (26) and com-
+                                             (i,l)
+            pute the entropy terms {H(Ẑj |zj )}L   l=1 .
+                                                                               B. Practical Advantages of DT-JSCC
+ 9:      end while
+         Sample the noise {ϵ(i,l) }L                2                            With the RIB framework, our proposed task-oriented
+10:                                l=1 ∼ CN (0, σ I).
+11:      Estimate the corrupted discrete representation                        communication scheme DT-JSCC owns several practical
+         {ẑ(i,l) }L                                                           advantages, highlighted as follows.
+                   l=1 .
+12:   end while                                                                  1) Robustness to channel fluctuation. As outlined in
+13:   Compute the loss L̃VRIB (ϕ, θ) based on (20).                                 Section III, the RIB framework is developed to control
+14:   Update the parameters ϕ and θ (including M) through                           the coded redundancy for robust encoding. When applied
+      backpropagation.                                                              to DT-JSCC systems, the level of coded redundancy
+15: end while                                                                       depends on the degree of uncertainty of the encoded
+                                                                                    representation z. Specially, the small value of β in
+                                                                                    LRIB (ϕ, θ) encourages the minimization of Hϕ (Ẑj |x),
+the one-hot like vector and the Gumbel-softmax distribution                         leading to the one-hot categorical pϕ (Zˆj |x), where only
+approaches the categorical distribution pϕ (zj |x). With the                        one codeword can be utilized for correct inference result.
+Gumbel-Softmax trick, the sampling of categorical distribu-                         Whereas the large β induces the distribution pϕ (ẑj |x)
+tion pϕ (zj |x) is estimated by using argmax function on the                        with large entropy and multiple codewords are accept-
+vector wj :                                                                         able for the following inference model qθ (y|ẑ) to output
+                                                                                    correct inference results.
+                         zj = argmax wj,k .                           (26)       2) Compatibility with modern mobile systems. The
+                                  k∈[K]
+                                                                                    proposed DT-JSCC method is well-suited for modern
+   On the transmitter, we compute the sample vector wj                              mobile systems. Modern mobile networks such as 5G
+with (25) for each dimension zj . Then, the discrete represen-                      are worldwide deployed with digital modulation instead
+tation vector z is generated by sampling from pϕ (z|x) based                        of analog modulation. Without extra efforts to transmit
+on (26) for each discrete dimension zj , and backpropagate                          the continuous feature vectors, our proposed DT-JSCC
+the differentiable samples vectors {wj }dj=1 with an annealing                      method can be deployed in modern wireless networks
+temperature τ . For the dequantization part at the receiver, the                    based on affordable digital modulation schemes. Specif-
+corrupted discrete vector ẑ is mapped into a set of feature                        ically, the high-resolution modulation for continuous
+vectors {mẑj }dj=1 with the learnable codebook M.                                  value transmission brings a huge burden to the hardware
+   3) Digital Modulation: To transmit the encoded discrete                          of communication systems. But, in DT-JSCC com-
+representation z under the channel models, the digital modu-                        munication systems, the modulation with finite-points
+lation scheme is used to map each discrete dimension zj into                        constellation design makes the discrete representation
+the constellation symbols. We propose to couple the discrete                        transmission affordable for the capacity-limited commu-
+space with the constellation of modulation. Specifically, note                      nication systems.
+that each discrete dimension zj ∈ [K] is K-way categorical,                      3) Extendability to other AI applications. The informa-
+we adopt the digital modulation with K-points constellation                         tion capacity of discrete representations is intrinsically
+design. Formally, each discrete dimension zj is mapped into                         limited by the cardinality of discrete alphabets. The
+a complex-valued channel symbol by a modulation function                            compactness of discrete representation is beneficial in
+hm : [K] → C. The following AWGN channel model is                                   modeling perceptual signals. For instance, the seman-
+simulated by a non-trainable physical layer with the injection                      tic information of images or audio can be effectively
+of the Gaussian noise ϵ ∼ CN (0, σ 2 I). On the receiver                            represented by a sequence of discrete symbols. This
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                          2585
+
+
+
+       advantage presents opportunities for the future adap-                                                      TABLE II
+       tation of DT-JSCC in generative modeling tasks such                                     T HE N EURAL N ETWORK A RCHITECTURE FOR
+                                                                                                      MNIST C LASSIFICATION TASK
+       as speech synthesis [42], image generation [43], and
+       text-to-image generation [44]. Such capabilities would
+       be particularly advantageous for serving AI applica-
+       tions including digital twin [45] and metaverse [46] in
+       future 6G.
+
+                          V. E XPERIMENTS                                                                        TABLE III
+                                                                                               T HE N EURAL N ETWORK A RCHITECTURE FOR
+   In this section, we present the experimental evaluations                                         CIFAR-10 C LASSIFICATION TASK
+of the inference performance and robustness of the pro-
+posed DT-JSCC methods on image classification benchmarks
+compared with the state-of-the-art task-oriented communi-
+cation schemes. Then, the ablation studies are conducted
+to verify that the RIB framework can achieve an optimal
+informativeness-robustness tradeoff, and investigate the effect
+of codebook size on the inference performance of DT-JSCC.1
+
+
+A. Datasets                                                                        2) Evaluations: Our experiments on task-oriented commu-
+                                                                                nication center around classification tasks using the MNIST
+   The experiments are conducted on two benchmark datasets                      and CIFAR-10 benchmark datasets. As these datasets have
+with random realizations of the channel under consideration,                    balanced classes and a substantial number of classes, the
+including MNIST [47] and CIFAR-10 [48].                                         standard metric top-1 error rate or top-1 accuracy are used to
+   The MNIST dataset is a set of handwritten character digits                   evaluate the classification results. A lower error rate or a higher
+from 0 to 9. It contains a training set of 60, 000 gray-scale                   accuracy value indicates superior performance in classification.
+images and a test set of 10, 000 sample images.                                    We simply adopt the full-resolution constellation to mod-
+   The CIFAR-10 dataset is a set of 32 × 32 color images                        ulate the continuous representation encoded by DeepJSCC
+in 10 classes. It contains 50, 000 training images with                         and VFE, while for the proposed discrete method DT-JSCC,
+5, 000 images per class and 10, 000 test images. In the                         we use K-points constellation modulation K-PSK to modulate
+following experiments, we apply data augmentation to the                        the discrete representations encoded by DT-JSCC. Note that
+CIFAR-10 dataset in the training process of neural networks.                    the communication latency is determined by the dimension
+The augmentation policy consists of random cropping and                         d of the encoded representation. For a fair comparison, the
+horizontal flipping.                                                            representations encoded by all the evaluated methods have the
+                                                                                same dimensionality d = 16. Following the same setting used
+B. Experimental Settings                                                        in [9] to set up a fixed bandwidth 12.5kHz with symbol rate
+                                                                                9, 600 Baud, all the methods are evaluated with relatively low
+   1) Compared Methods: We select two state-of-the-art task-
+                                                                                latency t = 1.67ms throughout the experiments.
+oriented communication schemes as baseline methods for
+                                                                                   3) Implementions: To ensure fair comparisons, we use the
+performance comparison, including DeepJSCC [12], [23] and
+                                                                                same neural network backbone with limited computation and
+Varitional Feature Encoding (VFE) [9]. All the baseline
+                                                                                memory resources on all local devices for both the proposed
+methods are learning-based techniques with end-to-end JSCC
+                                                                                schemes and the compared methods. Since we are considering
+architectures.
+                                                                                multi-class classification tasks, the inference network employs
+   • DeepJSCC is initially proposed for data-oriented commu-                    a neural network-based multi-class classifier, which includes
+     nication systems, which map the data to the channel input                  a dense layer and a softmax layer.
+     symbols by DNN-based encoders.                                                For the classification tasks for datasets MNIST and
+   • VFE is a learning-based scheme for task-oriented com-                      CIFAR-10, the corresponding backbones are designed as
+     munication, which is optimized to reduce communication                     follows.
+     overhead using the variational Information Bottleneck                         • For the experiments of the MNIST dataset, we adopt
+     principle. The task-relevant features are extracted by                          dense neural networks as the backbone shown in Table II.
+     a variational encoder and are mapped into the sym-                              On the transmitter, the encoder is based on a single-layer
+     bols transmitted across noisy channels. By introducing                          neural network, and the multi-layer dense network is
+     sparsity-inducing prior distributions (i.e., the log-uniform                    adopted as the inference model on the receiver. Besides,
+     distribution [49]) and pruning on the zero dimensions, the                      we use the tanh activate function to map the encoded fea-
+     symbols are transmitted over fewer dimensions to achieve                        tures into d-dimensional continuous representations for
+     low-latency communication for VFE.                                              DeepJSCC and VFE. For DT-JSCC, we adopt Gumbel-
+  1 The source code is available at https://github.com/SongjieXie/Discrete-          based vector quantization (GVQ) to map the encoded
+TaskOriented-JSCC.                                                                   features to d-dimensional discrete representations.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2586                                                               IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+                                 TABLE IV                                                                         TABLE V
+         T HE I NFERENCE ACCURACY OF E VALUATED M ETHODS                                  T HE I NFERENCE ACCURACY OF E VALUATED M ETHODS
+                 FOR THE MNIST C LASSIFICATION TASK                                             FOR THE CIFAR-10 C LASSIFICATION TASK
+
+
+
+
+   • For the experiments of the CIFAR-10 dataset, we use                          the superiority of the discrete representation encoded by DT-
+     the convolutional layers and ResNet [50] blocks to form                      JSCC. The significant increase in accuracy confirms that our
+     the learning backbones for local encoders and the central                    method successfully encodes informative messages that are
+     inference model. The DT-JSCC quantizes the encoded                           shared between the transmitter and the receiver. Interestingly,
+     features on local devices by Gumbel-based vector quan-                       both DeepJSCC and VFE achieve similar accuracies, suggest-
+     tization (GVQ). The compared methods (i.e., DeepJSCC                         ing that the continuous encoded representation may reach its
+     and VFE) map the encoded features into channel input                         limit in inference performance when the dimension is low.
+     symbols by adding a dense layer at the end of the back-                         Moving on to the CIFAR-10 dataset, Table V shows that
+     bone of the encoder. At the central server, the DT-JSCC                      our method performs better than the baselines, especially
+     leverages the transmitted discrete representation with the                   when the PSNR is less than 8 dB. It is worth noting that
+     learned codebook, while the compared methods map the                         VFE outperforms DeepJSCC because it identifies and reduces
+     received symbols into feature tensors with an additional                     the redundant dimensions in the encoded continuous repre-
+     dense layer. The overall architecture of the neural network                  sentation. However, the discrete representation of DT-JSCC
+     backbone is shown in Table III.                                              contains more informative messages due to the learned
+  The AWGN channels are simulated by adding Guassian                              codebook, leading to superior performance. In summary,
+noise ϵ ∼ CN (0, σ 2 I) to channel input signals with the                         our proposed method, DT-JSCC, achieves better inference
+channel PSNR defined as:                                                          performance in both datasets, demonstrating the effective-
+                               Pmax                                               ness of discrete representation encoding in task-oriented
+                     PSNR = 10 log10(dB)            (28)                          communication.
+                                σ2
+                                                                                     2) Robustness: Next, we validate the robustness of the
+where Pmax denote the maximal power of the channel input
+                                                                                  proposed DT-JSCC scheme to the variations in channel quality.
+signal.
+                                                                                  All the evaluated methods are end-to-end trained for a specific
+                                                                                  channel PSNR, denoted as PSNRtrain ∈ {8dB, 12dB, 16dB, },
+C. Experimental Results                                                           and then deployed in the AWGN channel model with the test-
+   In the experiments, we evaluate the performance of the                         ing PSNR changing from 4dB to 20dB, denoted as PSNRtest ∈
+proposed DT-JSCC compared to the baselines with relatively                        [4dB, 20dB].
+low transmission latency. We set up the dimension of the                             The experimental results shown in Fig.5 and Fig.6 indi-
+encoded representation equal to 16 for all the discrete and                       cate the inference performance of the evaluated methods for
+continuous methods. In the proposed DT-JSCC method, we use                        different channel quality conditions from those used during
+an acceptable codebook size K = 16 and adopt a simple                             the training stage. We observe that the inference accuracy
+digital modulation scheme 16-PSK in the end-to-end system.                        improves gradually and then saturates with the increase of
+Furthermore, the hyperparameter β ∈ [10−4 , 10−1 ] is deter-                      PSNRtest . Interestingly, we found that the DeepJSCC out-
+mined by using the grid search to find the optimal β for                          performs the VFE when the channel conditions are worse
+the CIFAR-10 and MNIST classification tasks.2 For VFE, the                        than those used for training, i.e., PSNRtest < PSNRtrain.
+initial dimension is set by 20 and we adjust the sparsity-control                 Conversely, when PSNRtest > PSNRtrain , the VFE performs
+parameter to reduce the dimension from 20 to 16.                                  better than the DeepJSCC, confirming our insight that reducing
+   1) Inference Performance: We first evaluate the cooperative                    redundancy in the encoded representation degrades robustness
+inference performance of the proposed DT-JSCC with the ideal                      to channel quality fluctuations.
+assumption that the channel models at the training and testing                       For the MNIST classification task, our proposed DT-JSCC
+stage have the same PSNR. Table IV presents the inference                         method consistently outperforms the two baselines with a sig-
+accuracy of the evaluated methods on the MNIST dataset for                        nificant increase in accuracy, demonstrating the effectiveness
+classification tasks. Our proposed method, DT-JSCC, outper-                       of our proposed approach. In addition, we observe that our
+forms the two baseline methods in all cases, demonstrating                        method exhibits better gradual performance degradation than
+                                                                                  VFE and DeepJSCC when the channel quality in the test
+    2 For the MNIST and CIFAR-10 classification tasks, the target variable        phase is worse than that in the training phase, as indicated
+Y ∈ {0, 1, . . . , 9} limits the task-relevant information by its entropy         by PSNRtest < PSNRtrain . This indicates that our proposed
+I(Y ; Ẑ) ≤ H(Y ) ≤ log 10, which indicates a small range compared to the         method is more robust than the baselines in handling channel
+amount of coded redundancy R(ϕ) ≤ H(Ẑ) ≤ 64 that may be present in
+ẑ. Therefore, a small β can effectively control the informativeness-robustness   quality variations. The improved robustness of our method can
+tradeoff, as formulated by the RIB framework.                                     be attributed to the combination of discrete representation and
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                         2587
+
+
+
+
+Fig. 5. Performance of DT-JSCC and the compared methods on MNIST classification task over testing AWGN channels with PSNRtest ∈ [4dB, 20dB].
+Each method is trained over AWGN channels with a specific PSNR value, (a) PSNRtrain = 8dB, (b) PSNRtrain = 12dB and (c) PSNRtrain = 16dB, which is
+marked by a vertical dash line.
+
+
+
+
+Fig. 6. Performance of DT-JSCC and the compared methods on CIFAR-10 classification task over testing AWGN channels with PSNRtest ∈ [4dB, 20dB].
+Each method is trained over AWGN channels with a specific PSNR value, (a) PSNRtrain = 8dB, (b) PSNRtrain = 12dB and (c) PSNRtrain = 16dB, which is
+marked by a vertical dash line.
+
+
+coded redundancy introduced by the RIB framework, which
+enables our method to better tolerate the channel noise and
+fluctuations.
+   The experimental results on the CIFAR-10 image classi-
+fication task demonstrate the superior performance of our
+proposed method compared to the two baselines for the
+channel models with PSNRtest in the [8dB, 20dB] range.
+Interestingly, we found that the DeepJSCC achieves the best
+inference accuracy for the channel model with low testing
+PSNR, i.e., PSNRtest < 6dB, but the inference performance in
+the saturation region is much worse than that of the VFE and
+DT-JSCC. This tradeoff between informativeness and robust-
+ness is consistent with the principle presented in Section III.                Fig. 7.       Performance comparison of DT-JSCC on CIFAR-10 clas-
+Our proposed methods exhibit more robustness than VFE to                       sification task with respect to the training PSNR, i.e, PSNRtrain ∈
+                                                                               {8dB, 12dB, 16dB, 20dB}. Each curve is obtained by training with the
+channel fluctuations and perform better than the two baselines                 LRIB (ϕ, θ) where β = 0. The gray dash curve is the symbol error rate
+when PSNRtest > PSNRtrain . The proposed DT-JSCC methods                       of 16-PSK modulation scheme.
+leverage the compactness of discrete representation and coded
+redundancy introduced by the RIB framework to achieve high                     β ∈ [0, 1] to control the amount of redundancy encoded
+performance in good channel conditions and robustness to                       in z. Additionally, we conducted an ablation analysis to
+variations in channel quality, to a certain extent. Overall, these             investigate the impact of the feature splitting strategy and the
+results demonstrate the effectiveness of our proposed DT-JSCC                  codebook size K on the inference performance of the proposed
+method for challenging image classification tasks.                             DT-JSCC.
+                                                                                  1) Robust Encoding in RIB Framework: We firstly eval-
+D. Ablation Study                                                              uate the DT-JSCC methods with β = 0 in the objective
+  To evaluate the effectiveness of our proposed method,                        LRIB (ϕ, θ), where the coded redundancy is minimized to keep
+we conducted ablation studies on the robust encoding of                        maximal task-relevant information. As depicted in Fig. 7, each
+the RIB framework by varying the redundancy parameter                          curve represents the inference error rate the DT-JSCC method
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2588                                                             IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+
+                                                                                Fig. 10. The mutual information I(Z; Ẑ) learned from RIB objectives with
+                                                                                different values of β ∈ [0, 1] under AWGN channels with varying levels of
+                                                                                PSNR ∈ {4dB, 8dB, 12dB, 16dB, 20dB}, shown as (a) functions of β and
+                                                                                (b) functions of PSNR.
+
+
+
+                                                                                discrete representation z more robust to the channel noise.
+                                                                                On the other hand, the excessive redundancy may degrade
+                                                                                the proposed communication model due to the insufficient
+                                                                                task-relevant information are encoded into the representation.
+                                                                                This validates the tradeoff between the robustness to channel
+                                                                                quality variations and the informativeness of the encoded
+Fig. 8.   Performance of the DT-JSCC with different β ∈ [0, 1] trained          representation.
+under variant channel PSNR, (a) PSNRtrain = 8dB, (b) PSNRtrain = 12dB,              We conducted experiments to evaluate the effectiveness of
+(c) PSNRtrain = 16dB and (d) PSNRtrain = 20dB.
+                                                                                the RIB framework in maximizing transmission rate as stated
+                                                                                in Remark 1, by examining the value of I(Z; Ẑ) learned using
+                                                                                RIB objectives with different β ∈ [0, 1]. The experimental
+                                                                                results are depicted as functions of β and functions of PSNR
+                                                                                in Fig. 10a and Fig. 10b, respectively. In Fig. 10a, we observe
+                                                                                that the value of I(Z; Ẑ) remains relatively constant over the
+                                                                                range of β ∈ [10−4 , 1] when the channel conditions are poor
+                                                                                (i.e., PSNR ∈ 4dB, 8dB, 12dB). In Fig. 10b, we find that
+                                                                                larger values of β (i.e., β ∈ [10−2 , 1]) lead to I(Z; Ẑ) values
+                                                                                that are close to the capacity of 16-PSK modulation. These
+Fig. 9.       Probability mass function of the categorical distribution
+pϕ (Z0 = k|x) learned with different β ∈ [0, 1] in the objective LRIB (ϕ, θ)    results demonstrate that minimizing the RIB objectives can
+for a sample image in (a) MNIST and (b) CIFAR-10.                               lead to an optimal marginal distribution of z that maximizes
+                                                                                the transmission rate, as indicated in Remark 1. Furthermore,
+optimized with specific AWGN channel PSNR. We can                               we observed that smaller values of β in good channel con-
+observe that the inference error rate of each method remains                    ditions result in values of I(Z; Ẑ) substantially smaller than
+low even if symbol error rate of modulation is increasing,                      the capacity. This is because in this case the transmitter only
+especially for the methods trained with low PSNRtrain . The                     transmits signals mostly containing task-relevant information
+end-to-end training with the noise injection not only implicitly                (constrained by the number of classes I(Y ; Ẑ) ≤ log 10)
+achieves the channel coding, but also exhibits certain robust-                  with little coding redundancy, and needs not to take up
+ness to variations in channel conditions.                                       channel capacity. Consequently, when faced with poor channel
+   To justify the robust encoding of the RIB framework,                         conditions or a need for prioritizing robustness (e.g., by setting
+we further compare the performance of proposed DT-JSCC                          a larger value of β), the proposed RIB framework facilitates
+methods with different β ∈ [0, 1]. Fig. 8 shows that the                        task-oriented communication systems to attain a transmission
+DT-JSCC methods with certain β > 0 outperform the                               rate approaching the capacity of extended channels.
+DT-JSCC with β = 0 on the aspects of inference accuracy                             2) Feature Splitting and Codebook Size: In this section,
+and the robustness to the channel fluctuation, implying that                    we examine the impact of feature splitting and codebook
+the coded redundancy controlled by β can effectively improve                    size through the ablation experiments on the MINST clas-
+the robustness. We further investigate the coded redundancy                     sification tasks. Since the robustness of RIB framework has
+encoded in the representation z by presenting the categorical                   been confirmed in previous ablation studies, we conduct the
+distribution pϕ (Zi = k|x) of the DT-JSCC methods with                          following experiments by training and evaluating the systems
+different β ∈ [0, 1]. Fig. 9 depicts the probability mass                       under AWGN channel models with the same PSNR.
+function pϕ (Z0 = k|x) with different β for MNIST and                               We first conduct experiments by varying the number of par-
+CIFAR-10 classification tasks. We can observe that the objec-                   titions for feature splitting d and the number of codewords K.
+tive LRIB (ϕ, θ) with larger β induces the denser probability                   It is worth noting that feature splitting can affect the size of
+mass function, which allows more discrete distortion of Zi                      codebook M due to the dimension of split vectors being that
+introduced by the channel noise and makes the encoded                           of codewords. To assess its impact on memory occupation of
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                         2589
+
+
+
+                                                                        TABLE VI
+T HE I MPACT OF F EATURE S PLITTING ON THE N UMBER OF PARAMETERS OF C ODEBOOK M AND THE ACCURACY OF DT-JSCC FOR VARYING VALUES
+                      OF d ( THE N UMBER OF PARTITIONS FOR F EATURE S PLITTING ) AND K ( THE N UMBER OF CODEWORDS )
+
+
+
+
+                                                                               words allows more redundancy in the communication model
+                                                                               (i.e., allows for a larger value of β), but cannot improve the
+                                                                               inference performance, indicating that there exists no direct
+                                                                               correlation between the codebook size and the value of β when
+                                                                               the channel quality remains the same.
+                                                                                                       VI. D ISCUSSION
+                                                                                  In this work, the RIB principle is proposed to include
+                                                                               the coded redundancy for robust channel encoding, and the
+                                                                               neural vector quantization is proposed in the task-oriented
+                                                                               communication system to learn the compact discrete rep-
+                                                                               resentation. The above experiments empirically demonstrate
+Fig. 11. Performance comparison of DT-JSCC with different codebook sizes
+on MNIST classification task over AWGN channels with different PSNR and        the superiority of our proposed DT-JSCC model on the
+different values of β.                                                         aspects of inference performance and the robustness to channel
+                                                                               quality fluctuation. However, there are two primary concerns
+M and the inference performance, we present the number of                      that we identify in this work. The first concern pertains to
+parameters of M and the accuracy of DT-JSCC in Table VI.                       the communication overhead incurred by the coded redun-
+It is evident that splitting features into more partitions can                 dancy, while the second concerns the memory cost associated
+significantly decrease the parameters of M and enhance the                     with the learnable codebook residing on both the transmitter
+inference performance. However, the number of partitions for                   and receiver. We discuss each of these concerns in detail
+feature splitting d is also the dimension of z that determines                 below.
+the communication latency. Therefore, it is essential to choose                   • The communication overhead is determined by the
+an appropriate feature splitting strategy that balances usage,                      dimensions over which the channel symbols are trans-
+inference performance, and communication latency.                                   mitted. For the task-oriented communication system with
+   Then, we investigate the impact of codebook size K on                            continuous representation, the encoded redundancy may
+the inference performance of DT-JSCC and its correlation                            expand the dimensionality of the encoded representation.
+with the value of β in the RIB framework. Initially, we fix                         The recent work proposes to reduce the communica-
+the hyperparameter β = 0.001 and vary the codebook size                             tion overhead by pruning the redundant dimensions of
+K ∈ [2, 64] over AWGN channels with different PSNR.                                 the encoded continuous representation. However, for the
+Subsequently, we vary the codebook size K ∈ [2, 64] with                            discrete task-oriented communication system, DT-JSCC,
+different β over AWGN channels with PSNR = 12dB. The                                the encoded redundancy is not necessarily induced
+experimental results depicted in Fig. 11 reveal that increasing                     by the redundant dimensions. A large codebook with
+the codebook size K leads to a gradual improvement in                               redundant codewords can provide sufficient redundancy
+inference performance, but the performance soon saturates.                          in the discrete representation. Therefore, the proposed
+Moreover, DT-JSCC systems with large codebooks perform                              DT-JSCC method can encode additional redundancy
+similarly to those with an appropriate codebook size of around                      without increasing the communication overhead, but at
+16. It is worth noting that the capacity of the extended                            the expense of expanding the storage space for a large
+channel is determined by K, and is also the upper limit of                          codebook.
+task-relevant information and redundancy controlled by β,                         • From the ablation experiments in Section V-D, we can
+as stated in our theoretical analysis (refer to Figure 2). While                    observe that the performance of the system model with
+increasing K can increase the upper bound, the task-relevant                        large codebooks is similar to that of the model with
+information is limited by the cardinality of the target variable                    an appropriate codebook size. Theoretically, the more
+and cannot be increased. Additionally, the experimental results                     complex inference task requires more task-relevant infor-
+show that the DT-JSCC systems trained by RIB with different                         mation transmitted to the receiver so that the larger
+β achieve similar inference accuracy when training channels                         codebooks consume more memory on the transmitter and
+and evaluating channels have the same PSNR. This verifies                           the receiver. After all, there exists an inherent tradeoff
+our theoretical insight that increasing the number of code-                         between the informativeness of the discrete representation
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+2590                                                               IEEE JOURNAL ON SELECTED AREAS IN COMMUNICATIONS, VOL. 41, NO. 8, AUGUST 2023
+
+
+
+       and the memory resource saving on the communication                        [13] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+       system.                                                                         joint source-channel coding,” in Proc. Int. Conf. Mach. Learn., 2019,
+                                                                                       pp. 1182–1192.
+                                                                                  [14] A. Guyader, E. Fabre, C. Guillemot, and M. Robert, “Joint source-
+                          VII. C ONCLUSION                                             channel turbo decoding of entropy-coded sources,” IEEE J. Sel. Areas
+                                                                                       Commun., vol. 19, no. 9, pp. 1680–1696, Sep. 2001.
+   In this work, we investigate the tradeoff between the infor-                   [15] K. Wei et al., “Low-latency federated learning over wireless channels
+mativeness of the encoded representation and the robustness                            with differential privacy,” IEEE J. Sel. Areas Commun., vol. 40, no. 1,
+against channel variation in task-oriented communications.                             pp. 290–307, Jan. 2022.
+To formalize the informativeness-robustness tradeoff, we pro-                     [16] M. Shafi et al., “5G: A tutorial overview of standards, trials, challenges,
+                                                                                       deployment, and practice,” IEEE J. Sel. Areas Commun., vol. 35, no. 6,
+pose a theoretical framework, named robust information                                 pp. 1201–1221, Jun. 2017.
+bottleneck (RIB). Our proposed framework enhances the                             [17] M. Bhagyaveni, R. Kalidoss, and K. Vishvaksenan, Introduction to
+robustness of the communication systems by utilizing the                               Analog and Digital Communication, vol. 46. Copenhagen, Denmark:
+                                                                                       River Publishers, 2016.
+coded redundancy in the encoded representation. Since the                         [18] J. Shao and J. Zhang, “BottleNet++: An end-to-end approach for feature
+computation intractability of the mutual information, we adopt                         compression in device-edge co-inference systems,” in Proc. IEEE Int.
+a variational upper bound of the objective function by a                               Conf. Commun. Workshops (ICC Workshops), Jun. 2020, pp. 1–6.
+                                                                                  [19] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+variational distribution parameterized by DNNs.                                        method,” 2000, arXiv:physics/0004057.
+   Furthermore, we propose a task-oriented communication                          [20] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for mul-
+scheme with digital modulation, DT-JSCC, where informa-                                tidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+                                                                                       vol. 22, no. 1, pp. 73–87, Jan. 2023.
+tive messages for inference tasks are encoded into discrete
+                                                                                  [21] I. E. Aguerri and A. Zaidi, “Distributed variational representation
+representations. It is compatible with canonical finite-point                          learning,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43, no. 1,
+constellations in modern mobile systems. Our simulation                                pp. 120–138, Jan. 2021.
+results demonstrate that the proposed method outperforms the                      [22] H. Xie, Z. Qin, G. Y. Li, and B. Juang, “Deep learning enabled
+                                                                                       semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+baselines with low communication latency. With the above                               pp. 2663–2675, 2021.
+advantages of DT-JSCC, one can further explore the usage of                       [23] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless image
+the proposed method for other AI applications in 6G, e.g.,                             retrieval at the edge,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+                                                                                       pp. 89–100, Jan. 2021.
+the deployment of generative models on the network edge,
+                                                                                  [24] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+reliable semantic information transmission, privacy-sensitive                          Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+task-oriented communication, etc.                                                 [25] A. Goldsmith, “Joint source/channel coding for wireless channels,” in
+                                                                                       Proc. IEEE 45th Veh. Technol. Conf. Countdown Wireless 21st Century,
+                                                                                       Jul. 1995, pp. 614–618.
+                              R EFERENCES                                         [26] F. Zhai, Y. Eisenberg, and A. K. Katsaggelos, “Joint source-channel
+ [1] C. Anthes, R. J. García-Hernández, M. Wiedemann, and D. Kran-                     coding for video communications,” in Handbook of Image and Video
+     zlmüller, “State of the art of virtual reality technology,” in Proc. IEEE         Processing. Burlington, VT, USA: Academic, 2005, pp. 1065–1082.
+     Aerosp. Conf., Mar. 2016, pp. 1–19.                                          [27] M. Fresia, F. Perez-Cruz, H. V. Poor, and S. Verdu, “Joint source
+ [2] A. Voulodimos, N. Doulamis, A. Doulamis, and E. Protopapadakis,                   and channel coding,” IEEE Signal Process. Mag., vol. 27, no. 6,
+     “Deep learning for computer vision: A brief review,” Comput. Intell.              pp. 104–113, Nov. 2010.
+     Neurosci., vol. 2018, Feb. 2018, Art. no. 7068349.                           [28] C. Chen, L. Wang, and F. C. M. Lau, “Joint optimization of protograph
+ [3] J. van Erp, F. Lotte, and M. Tangermann, “Brain-computer interfaces:              LDPC code pair for joint source and channel coding,” IEEE Trans.
+     Beyond medical applications,” Computer, vol. 45, no. 4, pp. 26–34,                Commun., vol. 66, no. 8, pp. 3255–3267, Aug. 2018.
+     Apr. 2012.                                                                   [29] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+ [4] H. Ye, L. Liang, G. Y. Li, J. Kim, L. Lu, and M. Wu, “Machine learning            coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+     for vehicular networks: Recent advances and application examples,”                no. 1, pp. 178–193, May 2020.
+     IEEE Veh. Technol. Mag., vol. 13, no. 2, pp. 94–101, Jun. 2018.              [30] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+ [5] S. K. Zhou et al., “A review of deep learning in medical imaging: Imag-           channel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+     ing traits, technology trends, case studies with progress highlights, and         Process. (ICASSP), Apr. 2018, pp. 2326–2330.
+     future promises,” Proc. IEEE, vol. 109, no. 5, pp. 820–838, May 2021.        [31] Y. M. Saidutta, A. Abdi, and F. Fekri, “Joint source-channel coding
+ [6] K. B. Letaief, W. Chen, Y. Shi, J. Zhang, and Y. A. Zhang, “The roadmap           over additive noise analog channels using mixture of variational autoen-
+     to 6G: AI empowered wireless networks,” IEEE Commun. Mag., vol. 57,               coders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 2000–2013,
+     no. 8, pp. 84–90, Aug. 2019.                                                      Jul. 2021.
+ [7] E. C. Strinati and S. Barbarossa, “6G networks: Beyond Shannon               [32] J. Dai et al., “Nonlinear transform source-channel coding for seman-
+     towards semantic and goal-oriented communications,” Comput. Netw.,                tic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,
+     vol. 190, May 2021, Art. no. 107930.                                              pp. 2300–2316, Aug. 2022.
+ [8] J. Hoydis, F. A. Aoudia, A. Valcarce, and H. Viswanathan, “Toward a 6G       [33] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep
+     AI-native air interface,” IEEE Commun. Mag., vol. 59, no. 5, pp. 76–81,           joint source-channel coding,” IEEE Signal Process. Lett., vol. 29,
+     May 2021.                                                                         pp. 1442–1446, 2022.
+ [9] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication         [34] H. Xie and Z. Qin, “A lite distributed semantic communication system
+     for edge inference: An information bottleneck approach,” IEEE J. Sel.             for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+     Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.                            pp. 142–153, Jan. 2021.
+[10] K. B. Letaief, Y. Shi, J. Lu, and J. Lu, “Edge artificial intelligence for   [35] B. Zhu, J. Wang, L. He, and J. Song, “Joint transceiver optimization
+     6G: Vision, enabling technologies, and applications,” IEEE J. Sel. Areas          for wireless communication PHY using neural network,” IEEE J. Sel.
+     Commun., vol. 40, no. 1, pp. 5–36, Jan. 2022.                                     Areas Commun., vol. 37, no. 6, pp. 1364–1373, Jun. 2019.
+[11] Y. Shi, Y. Zhou, D. Wen, Y. Wu, C. Jiang, and K. B. Letaief, “Task-          [36] D. M. Blei, A. Kucukelbir, and J. D. McAuliffe, “Variational inference:
+     oriented communications for 6G: Vision, principles, and technologies,”            A review for statisticians,” J. Amer. Stat. Assoc., vol. 112, no. 518,
+     2023, arXiv:2303.10920.                                                           pp. 859–877, Apr. 2017.
+[12] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-            [37] S. Kullback and R. A. Leibler, “On information and sufficiency,” Ann.
+     channel coding for wireless image transmission,” in Proc. IEEE                    Math. Statist., vol. 22, no. 1, pp. 79–86, 1951.
+     Int. Conf. Acoust., Speech Signal Process. (ICASSP), May 2019,               [38] T. M. Cover, Elements of Information Theory. Hoboken, NJ, USA:
+     pp. 4774–4778.                                                                    Wiley, 1999.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+XIE et al.: ROBUST IB FOR TASK-ORIENTED COMMUNICATION WITH DIGITAL MODULATION                                                                               2591
+
+
+
+[39] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in                                    Ming Ding (Senior Member, IEEE) received
+     Proc. 2nd Int. Conf. Learn. Represent., (ICLR), Banff, AB, Canada,                                    the B.S. and M.S. degrees (Hons.) in electron-
+     Apr. 2014, pp. 1–14.                                                                                  ics engineering and the Ph.D. degree in signal
+[40] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational                               and information processing from Shanghai Jiao
+     information bottleneck,” in Proc. 5th Int. Conf. Learn. Represent.,                                   Tong University (SJTU), Shanghai, China, in 2004,
+     (ICLR), Toulon, France, Apr. 2017, pp. 1–19.                                                          2007, and 2011, respectively. From April 2007 to
+[41] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with                                    September 2014, he was with Sharp Laborato-
+     Gumbel–Softmax,” in Proc. 5th Int. Conf. Learn. Represent., (ICLR),                                   ries of China, Shanghai, as a Researcher/Senior
+     Toulon, France, Apr. 2017, pp. 1–13.                                                                  Researcher/Principal Researcher. He is currently a
+[42] A. Baevski, Y. Zhou, A. Mohamed, and M. Auli, “wav2vec 2.0:                                           Principal Research Scientist with Data61, CSIRO,
+     A framework for self-supervised learning of speech representations,” in                               Sydney, NSW, Australia. He has authored more than
+     Proc. Adv. Neural Inf. Process. Syst., vol. 33, 2020, pp. 12449–12460.      200 papers in IEEE journals and conferences, all in recognized venues, and
+[43] A. Van Den Oord et al., “Neural discrete representation learning,” in       around 20 3GPP standardization contributions, and two books, i.e., Multi-point
+     Proc. Adv. Neural Inf. Process. Syst., vol. 30, 2017, pp. 6309–6318.        Cooperative Communication Systems: Theory and Applications (Springer,
+[44] A. Razavi, A. Van den Oord, and O. Vinyals, “Generating diverse high-       2013) and Fundamentals of Ultra-Dense Wireless Networks (Cambridge Uni-
+     fidelity images with VQ-VAE-2,” in Proc. Adv. neural Inf. Process. Syst.,   versity Press, 2022). He also holds 21 U.S. patents and has co-invented another
+     vol. 32, 2019, pp. 14837–14847.                                             more than 100 patents on 4G/5G technologies. His research interests include
+                                                                                 information technology, data privacy and security, and machine learning
+[45] F. Tao, H. Zhang, A. Liu, and A. Y. C. Nee, “Digital twin in
+                                                                                 and AI. He has served as a guest editor/co-chair/co-tutor/TPC member for
+     industry: State-of-the-Art,” IEEE Trans. Ind. Informat., vol. 15, no. 4,
+                                                                                 multiple IEEE top-tier journals/conferences and received several awards for
+     pp. 2405–2415, Apr. 2019.
+                                                                                 his research work and professional services, including the prestigious IEEE
+[46] M. Maier, A. Ebrahimzadeh, S. Rostami, and A. Beniiche, “The Internet       Signal Processing Society Best Paper Award in 2022. He is currently an
+     of no Things: Making the Internet disappear and ‘See the Invisible”,”       Editor of IEEE T RANSACTIONS ON W IRELESS C OMMUNICATIONS and
+     IEEE Commun. Mag., vol. 58, no. 11, pp. 76–82, Nov. 2020.                   IEEE C OMMUNICATIONS S URVEYS AND T UTORIALS.
+[47] Y. Lecun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based learn-
+     ing applied to document recognition,” Proc. IEEE, vol. 86, no. 11,
+     pp. 2278–2324, Nov. 1998.                                                                            Yuanming Shi (Senior Member, IEEE) received the
+[48] A. Krizhevsky, “Learning multiple layers of features from tiny images,”                              B.S. degree in electronic engineering from Tsinghua
+     Univ. Toronto, Toronto, ON, Canada, Tech. Rep. 0, 2009.                                              University, Beijing, China, in 2011, and the Ph.D.
+                                                                                                          degree in electronic and computer engineering from
+[49] D. P. Kingma, T. Salimans, and M. Welling, “Variational dropout and
+                                                                                                          The Hong Kong University of Science and Tech-
+     the local reparameterization trick,” in Proc. Adv. Neural Inf. Process.
+                                                                                                          nology (HKUST), Hong Kong, in 2015. Since
+     Syst., vol. 28, 2015, pp. 2575–2583.
+                                                                                                          September 2015, he has been with the School of
+[50] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for                                     Information Science and Technology, ShanghaiTech
+     image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.                               University, where he is currently a tenured Associate
+     (CVPR), Jun. 2016, pp. 770–778.                                                                      Professor. He visited the University of California at
+                                                                                                          Berkeley, Berkeley, CA, USA, from October 2016 to
+                                                                                 February 2017. His research interests include optimization, machine learning,
+                                                                                 wireless communications, and their applications to 6G, the IoT, and edge AI.
+                                                                                 He was a recipient of the 2016 IEEE Marconi Prize Paper Award in Wireless
+                                                                                 Communications, the 2016 Young Author Best Paper Award by the IEEE
+                                                                                 Signal Processing Society, the 2021 IEEE ComSoc Asia-Pacific Outstanding
+                                                                                 Young Researcher Award, and the 2022 Chinese Institute of Electronics First
+                         Songjie Xie (Student Member, IEEE) received             Prize in Natural Science. He is an Editor of the IEEE T RANSACTIONS
+                         the B.S. degree from ShanghaiTech University,           ON W IRELESS C OMMUNICATIONS , IEEE J OURNAL ON S ELECTED A REAS
+                         Shanghai, China, in 2020, where he is currently         IN C OMMUNICATIONS , and Journal of Communications and Information
+                         pursuing the master’s degree. His research interests    Networks.
+                         include information theory, wireless communica-
+                         tions, and machine learning.
+                                                                                                           Mingjian Tang received the Ph.D. degree (Hons.)
+                                                                                                           in computer science from La Trobe University,
+                                                                                                           Melbourne, VIC, Australia, in 2009. He is cur-
+                                                                                                           rently a Principal Data Scientist with Atlassian,
+                                                                                                           Sydney, NSW, Australia. He has participated in
+                                                                                                           several industry-based research projects, including
+                                                                                                           unsupervised fraud detection, unstructured threat
+                                                                                                           intelligence, cyber risk analysis and quantification,
+                                                                                                           and big data analytics.
+
+
+                         Shuai Ma (Member, IEEE) received the B.S. and                                     Youlong Wu (Member, IEEE) received the B.S.
+                         Ph.D. degrees in communication and information                                    degree in electrical engineering from Wuhan Uni-
+                         systems from Xidian University, Xi’an, China, in                                  versity, Wuhan, China, in 2007, the M.S. degree
+                         2009 and 2016, respectively. From 2014 to 2015,                                   in electrical engineering from Shanghai Jiao Tong
+                         he was a Visiting Scholar with the Depart-                                        University, Shanghai, China, in 2011, and the
+                         ment of Electrical and Computer Engineering,                                      Ph.D. degree from Telecom ParisTech, Paris, France,
+                         Texas A&M University, College Station, TX, USA.                                   in 2014. In December 2014, he was a Post-Doctoral
+                         From 2016 to 2019, he was an Associate Profes-                                    Researcher with the Institute for Communica-
+                         sor with the School of Information and Control                                    tion Engineering, Technical University of Munich
+                         Engineering, China University of Mining and Tech-                                 (TUM), Munich, Germany. In 2017, he joined the
+                         nology, Xuzhou, China. From 2019 to 2022, he was                                  School of Information Science and Technology,
+a Post-Doctoral Fellow with Telecom Paris, France. Since 2023, he has            ShanghaiTech University. His research interests include communication the-
+been an Associate Researcher with the Peng Cheng Laboratory, Shenzhen,           ory, information theory and its applications, such as coded caching, distributed
+China. His research interests include semantic communications, visible light     computation, and machine learning. He obtained the TUM Fellowship in
+communications, and network information theory.                                  2014 and is an Alexander von Humboldt Research Fellow.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:48:35 UTC from IEEE Xplore. Restrictions apply.
+

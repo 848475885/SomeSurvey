@@ -1,0 +1,831 @@
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025                                                                                          13525
+
+
+
+
+             Low-Bitrate High-Quality Digital Semantic
+               Communication Based on RVQGAN
+                 Xiaojiao Chen , Jing Wang , Senior Member, IEEE, Jingxuan Huang , Ming Zeng ,
+                        Zhong Zheng , Member, IEEE, and Zesong Fei , Senior Member, IEEE
+
+
+
+   Abstract—Digital semantic communication has attracted con-                   existing communication systems face significant challenges
+siderable attention attributed to its potential for integration with            due to limited bandwidth and spectrum resources [1]. In
+modern digital communication systems, which has demonstrated                    addition, most IoT devices typically have low bandwidth,
+significant performance gains. However, despite its ability to
+save transmission bandwidth, digital semantic communication                     which imposes requirements for low-bitrate transmission on
+can degrade the performance of tasks at the receiver, particularly              communication systems [2]. As an emerging communication
+in low-bitrate scenarios. In this article, we propose a novel                   method, semantic communication technology, which conveys
+low-bitrate digital semantic communication method based on                      semantic information rather than data or signals, is expected
+a generative model for speech transmission to achieve high-                     to effectively address these challenges in the future.
+quality reconstructed speech at low-bitrate transmission. In
+particular, we first investigate a multiscale semantic codec based                 Researchers are increasingly exploring the potential of
+on residual vector quantization with a generative adversary                     semantic communication systems [3], [4], [5], [6]. This trend
+network (RVQGAN) model for extracting semantic information                      is due to the significant difference between semantic commu-
+and obtaining high speech reconstruction quality while trans-                   nication and traditional communication: it focuses not only
+mitting at a low bitrate. We then, design a channel noise                       on the reliable transmission of data but also on the accuracy
+suppression (CNS) module based on U-Net to alleviate the
+channel effect at low signal-to-noise ratio (SNR) by restoring                  of downstream tasks at the receiver. By accurately transmit-
+high-quality semantic features, which is capable of improving the               ting from symbol to meaning, semantic communication can
+performance of the proposed method under challenging channel                    transmit only semantically relevant information, significantly
+conditions. Moreover, a Transformer-based code predictor is                     increasing communication efficiency.
+utilized to further improve the robustness of the proposed method                  Deep learning technology has evolved into the founda-
+by accounting for both the channel impact and reconstruction
+quality. Finally, a three-stage training strategy is also presented             tion of semantic communication as artificial intelligence
+in this article to ensure the effective operation of the proposed               has advanced. Researchers have investigated various modal-
+multiscale semantic codec, CNS module, and code predictor                       ities in semantic communication systems, such as the
+module. Experimental results demonstrate that the proposed                      transmission of images [3], [7], [8], text [4], [9], [10], and
+method operating at 3 kb/s can save at least 50% of bandwidth                   speech [5], [10], [11], in both single-modal and multimodal
+while achieving higher speech restoration quality than the
+baseline method.                                                                settings. Compared to images and text, speech is one of
+                                                                                the most fundamental forms of human communication, capa-
+  Index Terms—Digital semantic communication, generative                        ble of accurately conveying the content and emotions that
+model, low bitrate, speech transmission.
+                                                                                both parties wish to express, making it indispensable. Thus,
+                                                                                researching how to transmit speech signals efficiently is critical
+                                                                                to the advancement of semantic communication.
+                          I. I NTRODUCTION                                         Several studies [5], [11], [12], [13] have been conducted
+       ITH the rapid advancement of information technology,                     on semantic speech transmission, with the primary goal of
+W      numerous novel Internet of Things (IoT) devices have
+emerged, including virtual reality, Internet of Vehicles (IoV),
+                                                                                ensuring high-quality recovered speech signals at the receiver.
+                                                                                Weng and Qin [5] first proposed a deep-learning-based seman-
+smart manufacturing, and telemedicine. The communication                        tic communication system known as DeepSC-S. This system
+requirements of these IoT applications place strict demands                     employs an attention module to extract relevant semantic
+on communication methods, including considerable data trans-                    information and optimizes the model through joint semantic-
+mission, exceptional reliability, and low latency. However,                     channel coding, facilitating the restoration of the speech signal
+                                                                                at the receiver. Wei et al. [13] developed a streaming semantic
+  Received 30 October 2024; revised 30 December 2024; accepted 12
+January 2025. Date of publication 13 February 2025; date of current version
+                                                                                communication system aimed at real-time speech transmission.
+9 May 2025. This work was supported in part by the National Key Research        This system utilizes Transformer-XL for semantic information
+and Development Program of China under Grant 2022YFB2902003, and                extraction and incorporates a chunk-based masked attention
+in part by the National Natural Science Foundation of China under Grant
+62201044. (Corresponding author: Jingxuan Huang.)
+                                                                                mechanism to enhance transmission quality while minimizing
+  The authors are with the School of Information and Electronics, Beijing       latency. In [12], a multiuser speech semantic communication
+Institute of Technology, Beijing 100081, China (e-mail: xiaojiaochen76@         system leveraging federated learning is proposed, which sig-
+gmail.com; wangjing@bit.edu.cn; jxhbit@gmail.com; mzengzm@163.com;
+zhong.zheng@bit.edu.cn; feizesong@bit.edu.cn).
+                                                                                nificantly enhances both the accuracy and efficiency of speech
+  Digital Object Identifier 10.1109/JIOT.2025.3534462                           transmission. Deep speech semantic transmission (DSST) [11]
+               2327-4662 
+                         c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13526                                                                                  IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+is introduced for end-to-end speech transmission over wireless                 reconstruction quality at a low bitrate. The bandwidth bur-
+channels. DSST features a nonlinear transformation that maps                   den could be significantly reduced owing to the low-bitrate
+speech sources to a semantic latent space, subsequently feed-                  transmission, and the proposed method can be applied to
+ing these semantic features into the source channel encoder to                 digital communication with a high reconstruction quality.
+produce channel input sequences. In [14], a Transformer-based                  Specifically, we present a three-stage training strategy. In
+semantic communication system for speech is introduced.                        the first stage, a multiscale codec is pretrained to precisely
+Although these methods have improved bandwidth saving and                      extract semantic information with low bitrate and obtain high
+recovery performance, they still have limitations as they do                   reconstructed speech quality. In the second stage, the channel
+not transmit digital bits. These methods are challenging to                    noise suppression (CNS) module is trained to mitigate the
+integrate with modern digital communication systems, and                       impact of the channel on system performance in a low SNR
+existing mature and efficient digital communication technolo-                  channel condition. In the third stage, a Transformer-based code
+gies cannot be fully utilized.                                                 predictor module is finetuned with the semantic decoder to
+   Vector quantization (VQ) based on semantic communi-                         improve the performance of the proposed method.
+cation systems [15], [16], [17], [18], [19] is proposed to                        The main contributions of this article are summarized as
+improve compatibility with digital communication systems.                      follows.
+Zhou et al. [15] proposed a multilevel codebook-assisted                          1) This article proposes a digital semantic communication
+digital generative semantic communication to address the                              system based on RVQGAN, which aims at recovering
+incompatibility between conventional VQ and digital constel-                          high-quality speech at the receiver while transmitting
+lation modulation, as well as the mismatch between code                               at a low rate. This method takes into account the
+indices and code vectors. Fu et al. [16] designed a VQ-based                          compatibility with digital communication systems as
+semantic communication system for image transmission called                           well as the bandwidth burden.
+VQ-DeepSC, which extracts semantic features from UNet                             2) We propose a multiscale semantic codec based on
+structures and compresses them into bitstreams before trans-                          RVQGAN to precisely extract semantic information
+mission. Zhang et al. [17] proposed a unified codebook by                             with low bitrate and produce high-quality speech at the
+employing a VQ-based mechanism to support digital com-                                receiver, which can effectively save the transmission
+munication and reduce transmission overhead. Xie et al. [18]                          bandwidth and integrate with digital communications by
+proposed a task-oriented communication scheme with digital                            bitstream.
+modulation, and the concept of a robust information bottleneck                    3) To mitigate the impact of the channel on system
+was introduced to enable robust model training across various                         performance, we design a CNS module that removes
+signal-to-noise ratio (SNR) levels. VQ-DeepVSC, as presented                          channel interference from the semantic features at the
+in [19], introduces an adaptive keyframe extraction and inter-                        receiver as much as possible, consequently improving
+polation (AKEI) module to minimize temporal redundancy,                               system performance under low SNR and alleviating
+along with a multichannel spatially conditioned VQ (MSVQ)                             the cliff effect. We introduce a Transformer-based code
+for the final compression of keyframes in a video. The afore-                         predictor at the receiver to further improve reconstructed
+mentioned studies have shown that the VQ mechanism can be                             quality.
+effective in digital semantic communication systems. However,                     4) To verify the effectiveness of the proposed approach,
+given the constraints of limited bandwidth resources in IoT,                          extensive experiments are conducted in the speech
+more in-depth research is required to advance digital semantic                        reconstruction task. The experimental results show
+communication systems in low-bandwidth environments.                                  that the proposed approach outperforms the baseline
+   Recently, IoT communication technology has also attracted                          methods in both transmission rate and reconstruction
+the attention of researchers [20], [21], [22], [23], [24]. The                        performance.
+integration of generative artificial intelligence (GAI) mod-                      The remainder of this article is organized as follows. In
+els with various IoT devices has demonstrated enormous                         Section II, we introduced the proposed semantic communi-
+potential, allowing for more efficient and intelligent IoT                     cation system model. Section III elaborates on the proposed
+applications. At the same time, generative-based semantic                      multiscale semantic codec to achieve the low bitrate. In
+communication systems have attracted significant research                      Section IV, we introduce the proposed low-bitrate digital
+attention [20], [21], [22]. In [20], a joint source–channel cod-               semantic communication method in detail. Experimental setup
+ing scheme using StyleGAN was proposed for semantic image                      and results are presented, respectively, in Sections V and VI.
+transmission. In [21], a joint coding-modulation framework                     Section VII is the conclusion of this article.
+based on VAE was introduced for digital semantic commu-
+nication. Similarly, Grassucci et al. [22] presented an audio
+semantic communication framework using a latent diffusion                                                II. S YSTEM M ODEL
+model conditioned on textual semantics. These studies demon-                      In this section, we present a digital semantic commu-
+strate the ability of generative models to produce high-quality                nication framework. As shown in Fig. 1, this framework
+recovery signals in semantic communication.                                    mainly includes an encoder, a digital modulation scheme, a
+   Building on the aforementioned observations, this article                   wireless channel, and a decoder. Specifically, in order to adapt
+proposes a digital semantic communication method based                         the digital communication scheme, the encoder first extracts
+on a generative model, which is designed to achieve high                       semantic information from the source signal and quantizes it
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                    13527
+
+
+
+                                                                                 C. Decoder
+                                                                                    After demodulation of the received signal Y, the decoder
+                                                                                 obtains the bitstream Zˆq . The bitstream will first be dequan-
+                                                                                 tized to recover the semantic features. Subsequently, the
+                                                                                 semantic decoder will reconstruct the transmitted signal Ŝ from
+                                                                                 semantic features, which can be formulated by
+                                                                                                                          
+                                                                                                 Ŝ = fd Zˆq = gd Q−1 (Zˆq )                   (3)
+
+                                                                                 where fd (·) include the semantic decoder gd (·) and dequantizer
+                                                                                 Q(·) with learnable parameters. In order to obtain the recon-
+                                                                                 structed signal Ŝ, the output of the dequantizer Ẑ = Q−1 (Zˆq ),
+                                                                                 which is a series of continuous semantic features, is directly
+                                                                                 transmitted to the semantic decoder.
+                                                                                    To design an effective semantic communication system,
+Fig. 1.   System model of the proposed digital semantic communication.           the optimization goal is to minimize the semantic distortion
+                                                                                 between the transmitter and receiver while enhancing the task
+                                                                                 performance at the receiver. Specifically, the mean-square error
+to obtain a bitstream. Then, the bitstream is modulated by a                     (MSE) function is adopted to measure the semantic distortion
+digital modulation scheme and sent to the receiver through                       and the task performance, which can be computed as
+the wireless channel. Finally, the received data is demodulated                                       Lsem = Z − Ẑ22                     (4)
+to obtain the semantic feature and then semantic features are
+                                                                                                               1
+decoded to reconstruct the sent source information through the                                        Ltask = Ŝ − S22                    (5)
+decoder.                                                                                                       T
+                                                                                 where Lsem and Ltask denote the semantic distortion and the
+                                                                                 task performance, respectively. To achieve these objectives,
+A. Encoder                                                                       the overall optimization objective is formulated as a joint
+   Given the input data S ∈ R1×T , where T is the length of                      loss function, incorporating both semantic distortion and task
+input data, the encoder first utilizes a semantic encoder to                     performance at the receiver, which can be expressed as
+extract semantic features from S and a quantizer is adopted to
+                                                                                                           min αLsem + βLtask                            (6)
+transform semantic features into bits stream Zq which can be                                                θ
+expressed by                                                                     where θ is the parameter of the encoder and decoder; α and β
+                                                                                 are hyperparameters; and Lsem and Ltask denote the semantic
+                        Zq = fe (S) = Q(ge (S))                           (1)    distortion and the task performance, respectively.
+
+where fe (·) include the semantic encoder ge (·) and quantizer                      III. M ULTISCALE S EMANTIC C ODEC AT L OW B ITRATE
+Q(·) with learnable parameters. The output of the semantic
+encoder Z = ge (S), which is a series of continuous semantic                       In this section, we first develop a low-bitrate multiscale
+features, cannot be directly transmitted to digital communica-                   semantic codec that delivers high-quality decoded speech.
+tion. Hence, the quantizer Q(·) is adopted to map the semantic                   As shown in Fig. 2, this module includes semantic codec,
+feature Z into the bitstream Zq .                                                quantizer, and discriminator. Then, the training strategy will
+                                                                                 be introduced.
+
+B. Modulation and Wireless Channel                                               A. Multiscale Semantic Codec
+   Then, the bitstream Zq is modulated by a digital modulation                      In order to implement a digital semantic communication
+scheme, which can be a traditional method (e.g., BPSK, QAM,                      system for low bitrate transmission with high reconstruction
+etc.), and transmitted over a wireless channel. This article                     quality, we propose a multiscale semantic codec module based
+considers a general model of fading channels with the function                   on RVQGAN, an encoder–decoder network with residual VQ
+denoted as follows                                                               (RVQ) [25], [26], [27]. The multiscale semantic codec is a
+                                                                                 generative model primarily composed of a semantic encoder,
+                             Y =h∗X+n                                     (2)    a quantizer, and a semantic decoder. It operates by gener-
+                                                                                 ating high-quality semantic features, which are subsequently
+where h denotes the channel state information (CSI) vector,                      quantized, dequantized, and decoded to produce high-quality
+n ∼ N (0, σ 2 I) is an independent and identically distributed                   reconstructed audio. During training, the process is guided and
+(i.i.d.) Gaussian noise vector with variance σ 2 for each                        constrained by a discriminator. Specifically, this module first
+channel, and I is the identity matrix.                                           performs semantic feature extraction on the input signal at
+    Subsequently, the received signal Y is demodulated to                        the receiver. Then, in order to adapt to the existing digital
+recover the bitstream Zˆq via a demodulator.                                     communication systems, the continuous semantic features are
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13528                                                                                      IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+
+Fig. 2.   Illustration of the proposed multiscale semantic codec at a low bitrate.
+
+
+                                                                                                                                                        q
+discretized into a bitstream using a quantizer module, which is                      where Zq is the quantized results of (VQ)q (·), and Zr is the
+mainly implemented by the RVQ method [25]. At the receiver,                          residual with Z1r = Z. The codebook vectors in RVQ are
+the received bitstream is first converted into semantic features,                    initialized using k-means clustering.
+and then the semantic features are decoded to recover the                               In the dequantization stage, the semantic features repre-
+transmitted signal.                                                                  sented by code words are obtained based on the indexes
+   1) Multiscale Semantic Encoder and Decoder: Similar                               obtained. Given that this discretization process is bro-
+to [10], the encoder consists of a convolution layer followed                        ken throughout the gradient backpropagation of the neural
+by a stack of four encoder blocks. Each encoder block is com-                        network, a straight-through estimator [29] is used to compute
+posed of multiscale residual units (MSRUs). Compared with                            the gradient of the encoder.
+simple convolution, MSRU can extract multiscale information                             3) Discriminator Architecture: To further improve the
+to enrich signal information and reduce information loss in                          fidelity of the speech, a discriminator is introduced to
+the process of semantic extraction. The decoder mirrors the                          evaluate the speech quality through multiscale analysis and
+structure of the encoder, replacing convolutions with trans-                         guide the generator to improve its output. The combination of
+posed convolutions for upsampling. To reduce quantization                            the two enables the generator to optimize between compres-
+error, we add a compensation module [28] to the encoder,                             sion rate and speech quality, thereby generating high-quality
+which contains two convolution layers with a kernel size of                          speech that meets the requirements of low bit rate and high
+5 and 1, and ReLU is used as an activation function between                          restoration. We apply the multiscale STFT-based (MS-STFT)
+two convolution layers.                                                              discriminator [26] to improve the quality of the reconstructed
+   2) Quantizer: We employ the RVQ to quantize the seman-                            speech signal. The MS-STFT discriminator utilizes networks
+tic feature as introduced by [25]. The VQ method finds the                           to discriminate multiscale complex spectra, which is com-
+nearest code word in the codebook by going to the codebook                           posed of three subnetworks. Each subnetwork composes a
+for each dimension of the semantic feature separately, and then                      2-D convolutional layer followed by 2-D convolutions with
+the index of the code word is used to represent the discretized                      increasing dilation rates in the time dimension. In this article,
+semantic feature. However, the VQ requires a larger codebook,                        we use three different scales with short-time discrete Fourier
+which increases the demand for storage. To address this issue                        transform (STFT) window lengths of [512, 256, 128].
+RVQ is adopted in this article, which calculates the residuals
+between the input and output of the quantizer, and the residuals                     B. Loss Function
+are quantized to get the discrete index values. Given the vector                        To achieve high-quality reconstructed speech, the training
+quantizer (VQ)q (·) for q = 1, 2, . . . , Nq , the RVQ process can                   goal of this article is to minimize semantic distortion and
+be described as                                                                      make the reconstructed speech at the receiver as similar to the
+                                                                                     speech at the transmitter as possible. During the training phase,
+                                 q                                                 this article trains both the generator and the discriminator,
+                      Zq = (VQ)q Zr                                        (7)
+                                                                                   where the generator is a reconstruction task. To train the
+                                                 q−1
+                      Zqr = Zq−1
+                             r   − (VQ)q        Zr                         (8)       proposed method for reconstruction, we employ a joint loss
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                 13529
+
+
+
+function, which includes reconstruction loss, least square GAN                codec aims to recover high-quality speech at the receiver
+[27] loss, RVQ commitment loss, and a semantic loss from                      while operating at a low transmission rate, which encompasses
+the compensation model. Reconstruction loss and least square                  semantic codec, quantizer, dequantizer, and discriminator only
+GAN loss are two methods for determining the similarity                       at the training stage. The CNS module aims to reduce the influ-
+between recovered and sent speech. RVQ commitment loss                        ence of channel noise, especially to alleviate the cliff effect
+and semantic loss aim to reduce semantic distortion. The                      at low SNR. To further improve the quality of reconstructed
+discriminator is trained to minimize the least squares GAN                    speech at the receiver, we adopt a Transformer-based code pre-
+loss function. The reconstruction loss comprises a time and a                 dictor to minimize the influence of channel noise and improve
+multiscale frequency domain loss. For the time domain, the                    the reconstructed speech quality. As depicted in Fig. 3, at the
+L1 distance function is utilized to minimize the difference                   transmitter, the semantic encoder extracts semantic features
+between the received speech waveform Ŝ and the transmitted                   from the input speech and quantizes them to get a bitstream,
+speech waveform S. The multiscale frequency domain loss                       which is subsequently modulated and transmitted through a
+Lstft combines the L1 and L2 loss over the mel-spectrogram                    wireless channel. At the receiver, the received signal is first
+with STFT window lengths of [512, 256, 128]. The recon-                       demodulated into bitstreams and processed by code predictor.
+struction loss can be expressed by                                            Then, the processed bitstream is dequantized and sent to the
+                                                                              CNS module. Finally, the received speech is reconstructed by
+        Lrec = Ŝ − S1 + Lstft                                       (9)
+                                                                            the semantic decoder. The overall training pipeline is depicted
+        Lstft = |STFT(S)| − |STFT Ŝ |1                                     by Algorithm 1.
+                                               
+                 +  log |STFT(S)| − log |STFT Ŝ |1                (10)     A. Pretraining Multiscale Semantic Codec at Low Bitrate
+where  · 1 indicates the L1 norm. |STFT(·)| represent the                      To ensure semantic feature extraction with low bitrate and
+STFT function to compute magnitudes.                                          high-quality speech waveform recovery at the receiver, we
+   The RVQ commitment loss, consisting of the MSE between                     first pretrain multiscale semantic codecs and quantizers free
+the input of the quantizer and its output, with a gradient only               of channel noise, and learn a codebook with rich prior speech
+computed with respect to its input, is added to the overall                   representations, which strengthens the expressiveness of the
+training loss                                                                 entire system and is shared at both the transmitter and receiver.
+                                                                                 As illustrated in Fig. 2, an input speech waveform S ∈
+                      Lcommit = Z − Ẑ22 .                         (11)     R1×T , where T is the speech length, is first embedded as a
+   Semantic loss aims to minimize the distance of semantic                    semantic feature Z ∈ RD×F by a semantic encoder
+features between the transmitter and receiver. In this article,                                           Z = Encoder(S)                             (15)
+we employ a compensation model to predict quantization error
+and replace the semantic loss in (4) with the new loss function               where the Encoder(·) is the semantic encoder module.
+                                                                               Following the semantic encoder, we utilize the RVQ
+                  Lsemantic = Z − C Ẑ 22                (12)               to quantize each frame in semantic features Z =
+                                                                              [Z0 , Z1 , . . . , ZF−1 ] to the discrete representation, where the F
+where C(·) denotes the compensation model.                                    is the frame length of semantic features. The vector quantized
+  For the generator loss, we adopt the least square GAN loss,                 Zq and the corresponding index sequences E = {et ∈
+which is defined as                                                           {0, 1, . . . , K − 1}}t=0F−1
+                                                                                                            can be computed by the Nq learnable
+                                      2                                   codebooks C (i.e., C q , q ∈ {0, 1, . . . , Nq − 1} is the qth
+                Ladv = ES Dk (Ŝ) − 1                   (13)
+                                                                              codebook)
+where D(·) is the discriminator, and the discriminator is                                           Zqt = arg minZrt − cqk 2                       (16)
+trained by the discriminator loss function LD = ES [(Dk (S) −                                               cqk ∈C q
+1)2 ] + EŜ [Dk (Ŝ)2 ].                                                                            eqt = arg minZrt − cqk 2                       (17)
+   The different loss components contribute to a weighted                                                       k
+overall loss                                                                  where K is the size of the codebook. For the qth VQ layer,
+                                                                              codebook is C q = {cqk ∈ RD }K−1
+                                                                                                            k=0 and cqk is the kth codeword
+     Lall =                                                                   of C q . The index sequences E forming a new latent discrete
+              λ1 Ladv + λ2 Lrec + λ3 Lcommit + λ4 Lsemantic (14)              representation is converted into the bitstream. It is worth
+                                                                              noting that the transmission rate is affected by the number of
+where λ1 , λ2 , λ3 , and λ4 are hyperparameters.
+                                                                              residual layers and the size of the codebook. As a concrete
+                                                                              example, we consider a codec targeting a bitrate at 3000 b/s.
+IV. L OW-B ITRATE D IGITAL S EMANTIC C OMMUNICATION                           When using a striding factor M = 320, each second of
+                       M ETHOD                                                speech as sampling rate fs = 16 000 Hz is represented by
+   In this section, we present the proposed low-bitrate digi-                 S = 16 000/320 = 50 frames at the output of the semantic
+tal semantic communication approach, including pretraining                    encoder. This corresponds to r = 3000/50 = 60 bits allocated
+multiscale codec at low bitrate based on RVQGAN, a digital                    to each frame. When using Nq = 6, each quantizer uses a
+modulation scheme, CNS, and code predictor. The multiscale                    codebook of size 260/6 = 1024. For a target rate budget r,
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13530                                                                                      IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+
+Fig. 3.   Illustration of the proposed method framework.
+
+
+
+the parameter Nq controls the tradeoff between computational
+complexity and transmission rate. Therefore, under identical
+conditions, varying the number of Nq layers allows for the
+direct manipulation of transmission rates, a process known as
+structured dropout [25], [30]. This method allows the model
+to be trained only once, enabling dynamic adjustment of the
+transmission rate during the inference phase based on specific
+bandwidth requirements or communication environments. This
+approach improves the system’s flexibility by allowing the
+model to adapt to changing transmission rate requirements                        Fig. 4.    Architecture of the CNS module.
+based on available bandwidth.
+   Based on the received bitstream, the corresponding code-
+words are retrieved from the codebooks, and these codewords                      noise interference and make the output information closer to
+represent the received semantic feature Ẑ. Then, we send                        the original semantic information at the transmitter.
+the semantic feature to the semantic decoder as described in                        The CNS module is realized by a single-layer U-Net
+Section III-A. The reconstructed speech is formulated as                         as illustrated in Fig. 4, which efficiently fuses deep and
+                                                                               shallow features to suppress noise while preserving critical
+                      Ŝ = Decoder Ẑ .                  (18)                    information. Specifically, the noisy semantic features Zˆn are
+                                                                                 input into the CNS module, which can be expressed as
+In this pretraining stage, this multiscale codec is trained by                                                     
+(14). Moreover, the impact of a wireless channel is not taken                                           Ẑ = CNS Zˆn                       (19)
+into account at this stage.
+                                                                                 where CNS(·) denotes the CNS module.
+B. Channel Noise Suppression Module                                                 For training this module, we first load the pretrained
+                                                                                 multiscale codec and codebook from Section IV-A and freeze
+   To reduce the impact of channel noise on transmission,                        all the parameters. To restore the semantic feature at the
+especially the cliff effect at low SNR, we implement the                         receiver, the objective of the CNR model is to minimize
+CNS module based on the U-Net network [31]. The CNS                              the semantic distortion of the semantic feature between the
+strives to restore high-quality received semantic features by                    transmitter Z and receiver Ẑ at the low SNR. Therefore, we
+reducing the distance between the semantic features at the                       utilize the MSE function as the objective of this finetuning
+transmitter and receiver, as channel noise has a significant                     stage
+impact on the recovery process of the receiver. As shown in                                                                
+Fig. 3, the bitstream received by the receiver is contaminated                               Lcns = Z − Ẑ22 = Z − CNS Zˆn 22        (20)
+by channel noise, and the semantic features obtained after
+dequantization contain the influence of this noise. We utilize                   where the ground truth of Z is generated from the pretrained
+a CNS module to process these features, aiming to minimize                       semantic encoder.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                 13531
+
+
+
+C. Code Predictor                                                             Algorithm 1 Training Process in Three Stages
+    The CNS module improves speech reconstruction                             Stage I: Pretraining multiscale semantic codec and codebook
+performance under low SNR conditions, while under high                        following Subsection IV-A;
+SNR conditions, there are some degradations in speech quality,                Input: The transmitted speech signals S from datasets;
+demonstrated by ablation experiments in Fig. 8. Therefore,                    1) Extract the semantic feature Z by semantic encoder;
+it is necessary to investigate some improved techniques in                    2) Get the bitstream Zq from Z by RVQ;
+order to maintain the quality of the reconstructed speech                     3) Obtain the received semantic feature Ẑ by dequantizing the
+under varying SNR conditions. To this end, we introduce a                     bitstream Zq ;
+Transformer-based [32] code predictor to model the global                     4) Output the received speech Ŝ by decoding received semantic
+and local contextual dependencies of input noisy sequence for                 feature Ẑ by semantic decoder;
+high-quality received speech.                                                 5) Compute loss function Lall in (14).
+    Similar to the finetuning for CNS, the pretrained multiscale              6) Update the weights in semantic encoder and decoder;
+semantic codec is first loaded and obtains a bitstream with                   Output: The trained multiscale semantic codec.
+channel noisy Zˆc ∈ RNq ×F . Then, inspired by [33] and [34],                 Stage II: Loading the weights from stage I and finetuning
+we adopt a Transformer-based code predictor to improve                        CNS following Subsection IV-B;
+the quality of reconstructed speech Ŝ at the channel impact.                 Input: The transmitted speech signals S from datasets;
+Specifically, we first map Zˆc ∈ RNq ×F into embedding vectors                Channel type and channel SNR.
+  
+Ẑc ∈ R(F∗Nq )×D and then feed them to the transformer                        1) Get the X by modulating Zq derived from semantic encoder
+module, which consists of a cascade of M Transformer encoder                  in Stage I;
+blocks. The mth transformer encoder block of the Transformer                  2) Transmite X and receive Y via (2);
+computes as follows:                                                          3) Get the Ẑn by demodulating and dequantizing Y;
+                                                                            4) Obtaining the Ẑ = CNS(Ẑn );
+               Hm = LN Ẑm + MHA(Ẑm , Ẑm , Ẑm )          (21)              5) Compute loss function Lcns via (20).
+                                                                              6) Update the weights in CNS module;
+           Ẑm+1 = LN(Hm + FFN(Hm ))                                 (22)
+                                                                              Output: The trained CNS module;
+              
+where Ẑ0 = Ẑc , LN(·) denotes the layer normalization layer                 Stage III: Loading the weights from stage I and stage II and
+and MHA(·) denotes multihead attention network [32]. After                    finetuning Code Predictor following Subsection IV-C;
+the Transformer encoder blocks, a Linear layer is adopted to                  Input: The transmitted speech signals S from datasets;
+project features dimension, followed by a softmax layer to                    Channel type and channel SNR.
+generate code prediction outputs Ẑq .                                        1) Get the X by modulating Zq derived from semantic encoder
+   In this stage, we train this code predictor module as well                 in Stage 1;
+as finetune the semantic decoder, while the codebook C ,                      2) Transmite X and receive Y via (2);
+semantic encoder, and CNS are frozen. We employ the cross-                    3) Get the Ẑc by demodulating;
+entropy loss Lce for code predictor supervision and the Lfeat                 4) Get the Ẑq from Ẑc produced by Code Predictor;
+for semantic features                                                         5) Get the Ẑ by demodulating Ẑq and passing it through CNS
+                                                                            in Stage II.
+                     Lce = Et −et log(êt )              (23)                 6) Output the received speech Ŝ by decoding received semantic
+                     Lfeat = Zq − Ẑn 22 .                         (24)     feature Ẑ by semantic decoder;
+                                                                              7) Compute loss function Lcode via (25).
+The final objective of this code predictor training is
+                                                                              8) Update the weights in Code Predictor and semantic decoder;
+           Lcode = λce Lce + λfeat Lfeat + λrec Lrec                 (25)     Output: The trained Code Predictor and semantic decoder.
+where λce and λrec are both set to 1, and Lfeat is set to 0.8 in
+our system.
+                                                                              following Section IV-C to improve the performance of the
+                                                                              proposed approach under different SNR. The details of training
+D. Training Strategy
+                                                                              processing are described in Algorithm 1.
+   We further introduce a three-stage training strategy to ensure
+the proposed multiscale semantic codec, CNS, and code pre-                                          V. E XPERIMENTAL S ETUP
+dictor model function properly. We first pretrain the multiscale
+semantic codec at stage I to achieve the high reconstruction                     In this section, we first introduce the experimental setup
+quality at a low bitrate transmission in an end-to-end training               in detail, including datasets for system evaluation. The exper-
+way following Section IV-A. Then, to mitigate the impact                      imental configurations for the three-stage strategy are then
+of the channel on system performance, we load the weights                     presented, along with the multiscale semantic codec pretrain-
+from stage I with the pretrained multiscale semantic codec                    ing, CNS, and code predictor finetuning settings.
+being fixed, and we conduct stage II to train the CNS module
+at a low SNR channel condition following Section IV-B. In                     A. Datasets
+stage III, with the semantic encoder and CNS being fixed, the                    As for the dataset, the LibriSpeech [35] train-clean-100
+semantic encoder and the code predictor are finetuned together                is used for training and the test-clean is used for testing.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13532                                                                                  IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+The train-clean-100 speech corpus comprises approximately                         2) SoundStream: SoundStream [25] is an end-to-end neural
+100 h of 16-kHz sampled English speech obtained from                           network audio codec that can efficiently compress speech,
+speechbooks. In the training stage, we randomly extracted                      music, and audio. SoundStream utilizes end-to-end joint train-
+a 1-s long segment from each speech file. We randomly                          ing, combining residual vector quantizers and discriminator
+selected 100 sentences as the test set. We should point out that               loss to generate high-quality audio content. In this article,
+the proposed method, including all of the compared baseline                    we retrained the SoundStream model at 3 kb/s with the
+methods, is trained and tested on the same datasets.                           LibriSpeech dataset, incorporating LDPC and BPSK modula-
+                                                                               tion for wireless channel transmission.
+B. Evaluation Metrics                                                             3) DeepSC-S: DeepSC-S [5] is an end-to-end semantic
+                                                                               communication system based on an attention mechanism for
+   We employ the short-time objective intelligibility
+                                                                               speech transmission. In this article, we retrained this model
+(STOI) [36], and virtual speech quality objective listener score
+                                                                               using the Librispeech dataset as the comparison method, with
+(ViSQOL) [37] as performance metrics to evaluate the quality
+                                                                               the same settings as [5]. It is important to note that the input
+of the received speech.
+                                                                               data to the model data is processed frame by frame and
+   STOI is an important indicator for measuring speech intel-
+                                                                               silent segments are removed, which may have an impact on
+ligibility, and measure the quality of speech by calculating
+                                                                               testing fairness and does not meet the VISQOL requirement
+the ratio between speech clarity and interference noise in
+                                                                               for speech length of 8–10 s. As a result, this article randomly
+a short period in speech signals. For a word in a speech
+                                                                               selected 100 speech samples from the eligible pool that met
+signal, there are only two possibilities: it can be understood
+                                                                               these criteria.
+or not understood. From this perspective, intelligibility can be
+considered as binary. Therefore, the range of STOI values is
+quantified from 0 to 1, representing the percentage of correct                 D. Experimental Configurations
+understanding of the word. A value of 1 indicates that the                        As illustrated in Algorithm 1, we utilize a three-stage
+speech can be fully understood.                                                training strategy. In stage I, we utilize LibriSpeech train-
+   ViSQOL is a full reference metric that compares a reference                 clean-100 to pretrain multiscale codec and the codebook. We
+signal with a degraded test signal and outputs a prediction of                 randomly crop a 2-s segment from the speech samples at each
+the subjective mean opinion score (MOS) of audio quality.                      training iteration. The RVQ layer Nq is set to 6 while the bitrate
+ViSQOL has three major processing stages: 1) preprocessing;                    is 3 kb/s. The dimension D of codeword cqk and semantic
+2) feature selection and comparison; and 3) a regression fitted                features are set to 256. For the number of codebook entries
+transfer function. The preprocessing stage scales the test signal              K, we empirically set it to 1024, which is sufficient to restore
+to match the reference signal’s sound pressure level. The aim                  high-quality speech. The loss function (14) is employed to
+of the feature selection and comparison stage is to identify                   train this stage with weights λ1 = 1, λ2 = 2, λ3 = 0.85, and
+corresponding patches in the reference and degraded spectro-                   λ4 = 0.9. The learning rate in this stage is 0.0001.
+grams. The neurogram similarity index measure (NSIM) [38]                         In stage II, to adapt the channel condition, we first load the
+is used to predict the similarity and quality of the aligned                   weights from stage I with the pretrained multiscale semantic
+patches. ViSQOL offers two modes for evaluation: 1) an audio                   codec being fixed, and then we finetune the CNS module with
+mode for 48 kHz samples and 2) a speech mode for 16 kHz                        the loss function (4). BPSK is used as the modulation scheme
+samples. In this article, we employ the speech mode to evaluate                for its simplicity. We set channel conditions with SNR = 2 dB
+the received speech quality.                                                   in both the AWGN and Rician channels. The learning rate in
+                                                                               this stage is 0.0001.
+C. Baseline                                                                       In stage III, the Transformer-based code predictor consists
+                                                                               of M = 8 layers of Transformer encoder block with 8-head
+   To demonstrate the superiority of the proposed method,
+                                                                               attention. The channel SNR is consistently set at 2 dB,
+the comparison baselines include the traditional transmission
+                                                                               mirroring the value from the previous stage II. During the
+methods Opus [39], a deep-learning-based codec method
+                                                                               training, the semantic encoder and CNS are fixed and the
+called SoundStream [25], and a semantic communication for
+                                                                               semantic decoder and the code predictor are finetuned together.
+speech transmission called DeepSC-S [5].
+                                                                               We train the code predictor by the loss function (25) with
+   1) Opus: Opus [39] is a highly versatile and powerful
+                                                                               weights λce = 1, λfeat = 1, and λrec = 0.8. The learning rate
+speech and audio codec, widely used in applications, such
+                                                                               in this stage is 0.0005.
+as IP telephony, video conferencing, and even remote live
+                                                                                  For all stages of training, we use the Adam [40] optimizer
+music performances. It supports signal sampling rates from
+                                                                               with β1 = 0.9, β2 = 0.999, α = 0.001, and  = 10−8 . The
+8 to 48 kHz and offers bitrates ranging from 6 to 510 kb/s.
+                                                                               three stages are trained with 2.1M , 50K, and 50K iterations,
+Opus is standardized by the Internet Engineering Task Force
+                                                                               respectively. Our method is implemented with the PyTorch
+(IETF) as RFC 6716, and it has been widely deployed for
+                                                                               framework and trained using two NVIDIA RTX 4090 GPUs.
+speech communication over the Internet. In this article, the
+Opus at 6 kb/s is used as one of the baseline methods and
+combines the widely used channel error correction code known                                      VI. E XPERIMENTAL R ESULTS
+as low-density parity check (LDPC) with BPSK modulation                           In this section, we present experimental results and analysis
+for transmission.                                                              to verify the effectiveness of our proposed approach.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                    13533
+
+
+
+
+                                        (a)                                                                             (b)
+
+Fig. 5.   ViSQOL score versus SNR under (a) AWGN channels and (b) Rician channels for different approaches.
+
+
+
+
+                                        (a)                                                                             (b)
+
+Fig. 6.   STOI score versus SNR under (a) AWGN channels and (b) Rician channels for different approaches.
+
+
+
+A. Performance Evaluation of the Proposed Digital Semantic                       communication system at higher SNRs, which proves the
+Communication                                                                    effectiveness of our proposed method. However, when the SNR
+   Fig. 5 illustrates the speech reconstruction quality of the                   drops below 2 dB in AWGN channels, our method slightly
+proposed method and baseline approach under varying channel                      underperforms compared to DeepSC-S. This may be attributed
+conditions, as assessed by ViSQOL metrics. It is noted that                      to differences in training strategies, as DeepSC-S employs
+semantic feature extraction accuracy is also reflected in the                    an end-to-end training approach that explicitly incorporates
+speech recovery quality at the receiver. Compared to the                         channel effects. While our three-stage strategy effectively
+traditional Opus at 6 kb/s, our proposed method demonstrates                     mitigates the cliff effect, its performance under extremely low
+significant performance advantages across various channels                       SNR conditions still requires further refinement to achieve
+and SNR even when operating at half the bitrate of Opus.                         comparable robustness in such challenging environments.
+When compared to the neural network-based SoundStream at                         Compared to the performance of the proposed method across
+3 kb/s, our method has significant benefits, particularly in the                 different channels, as shown in Fig. 5(a) and (b), both exhibit
+AWGN channel when the SNR is less than 8 dB as shown in                          nearly identical performance scores and upward trends, which
+Fig. 5(a), and in the Rician channel when the SNR falls below                    is evident that our approach exhibits a certain level of robustness
+10 dB in Fig. 5(b). This could be attributed to the proposed                     in varying channel conditions.
+method, which effectively alleviates the “cliff effect,” reducing                   As shown in Fig. 6, we further illustrate the reconstructed
+the sudden and severe performance degradation observed in                        speech intelligibility of the proposed method and the base-
+SoundStream when below 8 dB. Furthermore, our approach                           lines in terms of STOI score. Fig. 6(a) shows the results
+shows significant superiority over the DeepSC-S semantic                         obtained under AWGN conditions, demonstrating that our
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13534                                                                                   IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+
+                         (a)                                                  (b)                                                 (c)
+
+Fig. 7. Training loss versus epoch under AWGN channel at different stages. (a) Training loss of Stage 1. (b) Training loss of Stage 2. (c) Training loss of
+Stage 3.
+
+                             TABLE I
+             C OMPARISON OF B ITRATE U NDER THE AWGN                            proposed in this article achieves higher speech reconstruction
+                     C HANNEL AT SNR = 10 D B                                   quality while using half the transmission bitrate. At the
+                                                                                same bitrate, the proposed method has a ViSQOL score of
+                                                                                approximately 0.5 higher than SoundStream, and its PESQ
+                                                                                score is 0.8 higher. We also show the performance of the
+                                                                                proposed approach at lower rates, demonstrating that it can
+                                                                                achieve a comparable performance at 1 kb/s as SoundStream
+                                                                                at 3 kb/s. This may contribute to the effectiveness of the
+                                                                                proposed multiscale semantic codec, which ensures high-
+                           TABLE II                                             quality speech transmission while lowering the transmission
+  C OMPARISON OF T RANSMITTED S YMBOLS IN D IFFERENT M ETHODS                   bitrate. And we will further study the impact of different
+                                                                                multiscale analysis strategies on the overall performance in
+                                                                                future work.
+                                                                                   To further demonstrate the bandwidth reductions of the
+                                                                                proposed semantic communication method, Table II explores
+                                                                                the number of symbols transmitted through the channel.
+                                                                                The results indicate that the proposed method, operating at
+method consistently outperforms both Opus and SoundStream                       3 kb/s, transmits merely 18.75% of the symbols compared
+at across SNR. Our approach outperforms the semantic                            to the baseline method while compressing the input speech
+communication system DeepSC-S in terms of intelligibility                       sample points to 37.5%. The proposed method can compress
+when the SNR exceeds 4 dB. On the other hand, below                             the input speech sample points to 25% and 12.5% at 2
+4 dB, our proposed method has some loss in intelligibility                      and 1 kb/s, respectively. The performance enhancement is
+compared with DeepSC-S, suggesting that there is still room                     ascribed to the multiscale semantic encoder, which effectively
+for improvement in ensuring accurate data transmission while                    extracts accurate semantic features and then compresses them
+effectively suppressing channel noise at low SNR. Similar                       efficiently utilizing RVQ. The observations suggest that the
+to the results in Fig. 6(a), our proposed method obtains                        proposed method demonstrates superiority in data representa-
+better performance than the traditional method Opus and                         tion and encoding, potentially improving resource efficiency
+SoundStream, especially in the low SNR regime in Fig. 6(b).                     and communication performance with fewer and information-
+Based on the simulated results, the proposed method is able                     rich representations.
+to yield better performance than the traditional method and
+DeepSC-S in a high SNR regime.
+   Table I compares various methods for transmitting bitrate
+and reconstructed speech quality on an AWGN channel with                        B. Ablation Study
+an SNR at 10 dB. The bitrate used in this study does not                           Fig. 7 presents the relationship between the loss function
+include any channel coding. The proposed method at 2 and                        (9) and the training epoch. We can observe that the value
+1 kb/s transmission rates are obtained by selecting different                   of the loss function tends to converge and produce a robust
+numbers of residual quantization layers Nq in the second-stage                  model after 200, 50, and 50 epochs of training for Stages I–III,
+model, specifically setting Nq to 4 and 2, respectively. The                    respectively. Simultaneously, we note that following training
+models are then finetuned in the third stage. It is important                   in Stages II and III, the loss function attains a level comparable
+to note that these models do not require retraining in the first                to that observed in Stage I without channel effects. This further
+and second stages. This approach significantly reduces the                      illustrates that the three-stage training method proposed in this
+training time and computational resources, while providing                      article can obtain high-quality restored speech at low bitrates
+flexible rate control. Compared to Opus at 6 kb/s, the method                   while significantly reducing channel impact.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                    13535
+
+
+                                                                                                              TABLE III
+                                                                                     T RADEOFF B ETWEEN R ESIDUAL V ECTOR Q UANTIZER D EPTH AND
+                                                                                            C ODEBOOK S IZE OF S EMANTIC C ODEC AT 3 KB / S
+
+
+
+
+                                                                                 This proves the code predictor module considers the speech
+                                                                                 quality and channel condition and is effective in improving
+                                                                                 the robustness of the proposed method.
+                                                                                    Fig. 9 shows the comparison of CNS finetuned under
+                                                                                 different SNR at AWGN channel in Stage II. It can be observed
+                                                                                 that as trained SNR decreases, the CNS module performs
+                                                                                 better at low SNR, while performance shows a slight decrease
+                                                                                 under high SNR.
+Fig. 8. Performance of the proposed CNS module and code predictor under             To better demonstrate how the residual vector quantizer
+AWGN channel.
+                                                                                 depth and codebook size in the proposed multiscale semantic
+                                                                                 codec affect its performance and efficiency, Table III presents
+                                                                                 three configurations, all operating at 3 kb/s. The number of
+                                                                                 bits required to encode a single frame is Nq log2 N, where
+                                                                                 Nq represents the number of quantizers and N denotes the
+                                                                                 codebook size. It can be observed that using fewer vector
+                                                                                 quantizers Nq leads to a larger codebook N, which in turn
+                                                                                 results in improved speech quality but at the cost of increased
+                                                                                 storage requirements. Thus, to tradeoff the number of vector
+                                                                                 quantizers Nq and codebook size, we set Nq = 6 and N = 1024
+                                                                                 with the consideration of speech quality and storage size.
+
+                                                                                                           VII. C ONCLUSION
+                                                                                    In this article, we proposed a three-stage digital semantic
+                                                                                 communication method to achieve high reconstructed speech
+                                                                                 quality at a low bitrate. In stage I, in order to extract the
+Fig. 9.   Comparison of CNS finetuned under different SNRs with ViSQOL           semantic features with low bitrate, we pretrained the proposed
+score.
+                                                                                 RVQGAN-based multiscale semantic codec free of the channel
+                                                                                 impact. In stage II, we finetuned the proposed CNS module
+   To verify the effectiveness of the proposed module, in
+                                                                                 to mitigate channel interference by minimizing the distance
+Fig. 8, we compare the ViSQOL performance of the proposed
+                                                                                 between semantic features at the transmitter and receiver,
+method in the CNS module and the codebook predictor
+                                                                                 which can improve the performance under challenging channel
+module. The “Semantic codec + LDPC” is a method where the
+                                                                                 conditions and mitigating the cliff effect. In stage III, we
+output of the multiscale semantic codec is encoded by LDPC
+                                                                                 finetuned a Transformer-based code predictor to consider
+followed by BPSK modulation. The “Semantic codec w/ CNS”
+                                                                                 both the channel impact and reconstruct quality, resulting
+is no codebook predictor based on the proposed method. It
+                                                                                 in a significant performance gain. Extensive experimental
+is worth noting that a cliff effect is present in “Semantic
+                                                                                 results demonstrate that the proposed method significantly
+codec + LDPC,” with performance degrading sharply when
+                                                                                 outperforms the baseline methods with respect to the quality
+the SNR falls below 8 dB. This suggests that traditional
+                                                                                 of reconstructed speech when operating at a low bitrate of
+channel coding methods are insufficient to address this issue
+                                                                                 3 kb/s.
+and that additional improvements are needed to improve model
+performance under low SNR conditions. At low SNR levels,
+                                                                                                               R EFERENCES
+the “Semantic codec w/ CNS” significantly surpasses the
+performance of “Semantic codec + LDPC,” whereas at high                           [1] X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,
+                                                                                      open issues, and future research directions,” IEEE Trans. Wireless
+SNR, its performance is inferior to the latter. This indicates                        Commun., vol. 29, no. 1, pp. 210–219, Feb. 2022.
+that the CNS module can effectively improve the performance                       [2] J. Xu, J. Yao, L. Wang, Z. Ming, K. Wu, and L. Chen, “Narrowband
+of the proposed method at low SNR, albeit at a tradeoff of                            Internet of Things: Evolutions, technologies, and open issues,” IEEE
+                                                                                      Internet Things J., vol. 5, no. 3, pp. 1449–1462, Jun. 2018.
+reduced performance in high SNR scenarios. The performance                        [3] Z. Zhang, Q. Yang, S. He, M. Sun, and J. Chen, “Wireless transmission
+degradation curve of method “Semantic codec w/ CNS” is                                of images with the assistance of multi-level semantic information,” in
+more moderate, which indicates the CNS module mitigates                               Proc. Int. Symp. Wireless Commun. Syst. (ISWCS), 2022, pp. 1–6.
+                                                                                  [4] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+the cliff effect. When compared to the “Semantic codec w/                             semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+CNS,” the proposed method outperforms it in all SNR regimes.                          pp. 2663–2675, Apr. 2021.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+13536                                                                                   IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 10, 15 MAY 2025
+
+
+
+ [5] Z. Weng and Z. Qin, “Semantic communication systems for speech             [28] L. Xu, J. Wang, J. Zhang, and X. Xie, “LightCodec: A high fidelity
+     transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,                      neural audio codec with low computation complexity,” in Proc. IEEE
+     pp. 2434–2444, Aug. 2021.                                                       Int. Conf. Acoust., Speech Signal Process. (ICASSP), 2024, pp. 586–590.
+ [6] Y. Sun et al., “Multi-functional RIS-assisted semantic anti-               [29] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating
+     jamming communication and computing in integrated aerial-ground                 gradients through stochastic neurons for conditional computation,” 2013,
+     networks,” IEEE J. Sel. Areas Commun., vol. 42, no. 12, pp. 3597–3617,          arXiv:1308.3432.
+     Dec. 2024.                                                                 [30] N. Srivastava, G. Hinton, A. Krizhevsky, I. Sutskever, and
+ [7] K. Yang, S. Wang, J. Dai, K. Tan, K. Niu, and P. Zhang, “WITT: A wire-          R. Salakhutdinov, “Dropout: A simple way to prevent neural networks
+     less image transmission transformer for semantic communications,” in            from overfitting,” J. Mach. Learn. Res., vol. 15, no. 1, pp. 1929–1958,
+     Proc. IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), 2023,           2014.
+     pp. 1–5.                                                                   [31] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional
+ [8] W. Hua et al., “Classification-driven discrete neural representation            networks for biomedical image segmentation,” in Proc. 18th Int.
+     learning for semantic communications,” IEEE Internet Things J., vol. 11,        Conf. Med. Image Comput. Comput.-Assist. Interv. (MICCAI), 2015,
+     no. 9, pp. 16061–16073, May 2024.                                               pp. 234–241.
+ [9] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. S. Quek, “OFDM-based             [32] A. Vaswani et al., “Attention is all you need,” in Proc. 31st Neural Inf.
+     digital semantic communication with importance awareness,” IEEE                 Process. Syst. (NIPS), 2017, pp. 6000–6010.
+     Trans. Commun., vol. 72, no. 10, pp. 6301–6315, Oct. 2024.                 [33] S. Zhou, K. Chan, C. Li, and C. C. Loy, “Towards robust blind face
+[10] X. Chen, J. Wang, L. Xu, J. Huang, and Z. Fei, “A perceptually                  restoration with codebook lookup transformer,” in Proc. 36th Int. Conf.
+     motivated approach for low-complexity speech semantic communica-                Neural Inf. Process. Syst. (NIPS), 2022, pp. 30599–30611.
+     tion,” IEEE Internet Things J., vol. 11, no. 12, pp. 22054–22065,          [34] Y. Hu, C. Chen, Q. Zhu, and E. S. Chng, “Wav2code: Restore
+     Jun. 2024.                                                                      clean speech representations via codebook lookup for noise-robust
+[11] Z. Xiao, S. Yao, J. Dai, S. Wang, K. Niu, and P. Zhang, “Wireless deep          ASR,” 2024, arXiv:2304.04974.
+     speech semantic transmission,” in Proc. IEEE Int. Conf. Acoust., Speech    [35] V. Panayotov, G. Chen, D. Povey, and S. Khudanpur, “Librispeech: An
+     Signal Process. (ICASSP), 2023, pp. 1–5.                                        ASR corpus based on public domain audio books,” in Proc. IEEE Int.
+[12] H. Tong, Z. Yang, S. Wang, Y. Hu, W. Saad, and C. Yin,                          Conf. Acoust., Speech Signal Process. (ICASSP), 2015, pp. 5206–5210.
+     “Federated learning based audio semantic communication over wireless       [36] C. H. Taal, R. C. Hendriks, R. Heusdens, and J. Jensen, “An algo-
+     networks,” in Proc. IEEE Glob. Commun. Conf. (GLOBECOM), 2021,                  rithm for intelligibility prediction of time–frequency weighted noisy
+     pp. 1–6.                                                                        speech,” IEEE Trans. Audio, Speech, Lang. Process., vol. 19, no. 7,
+[13] H. Wei, W. Xu, F. Wang, X. Du, T. Zhang, and P. Zhang, “SemAudio:               pp. 2125–2136, Sep. 2011.
+     Semantic-aware streaming communications for real-time audio trans-         [37] M. Chinen, F. S. C. Lim, J. Skoglund, N. Gureev, F. O’Gorman, and
+     mission,” in Proc. IEEE Glob. Commun. Conf.(GLOBECOM), 2022,                    A. Hines, “ViSQOL v3: An open source production ready objective
+     pp. 3965–3970.                                                                  speech and audio metric,” in Proc. 12th Int. Conf. Qual. Multimedia
+[14] Z. Zhou, S. Zheng, J. Chen, Z. Zhao, and X. Yang, “Speech seman-                Exp. (QoMEX), 2020, pp. 1–6.
+     tic communication based on Swin transformer,” IEEE Trans. Cogn.            [38] A. Hines and N. Harte, “Speech intelligibility prediction using a
+     Commun. Netw., vol. 10, no. 3, pp. 756–768, Jun. 2024.                          neurogram similarity index measure,” Speech Commun., vol. 54, no. 2,
+                                                                                     pp. 306–320, 2012.
+[15] Y. Zhou et al., “MOC-RVQ: Multilevel codebook-assisted digital gen-
+                                                                                [39] J.-M. Valin, K. Vos, and T. Terriberry, “Definition of the opus audio
+     erative semantic communication,” 2024, arXiv:2401.01272.
+                                                                                     codec,” Internet Eng. Task Force, RFC 6716, 2012. [Online]. Available:
+[16] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector quantized
+                                                                                     https://datatracker.ietf.org/doc/html/rfc6716
+     semantic communication system,” IEEE Trans. Wireless Commun.,
+                                                                                [40] D. P. Kingma and J. L. Ba, “Adam: A method for stochastic
+     vol. 12, no. 6, pp. 982–986, Jun. 2023.
+                                                                                     optimization,” in Proc. Int. Conf. Learn. Represent. (ICLR), 2015,
+[17] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified multi-
+                                                                                     pp. 1–15. [Online]. Available: http://arxiv.org/abs/1412.6980
+     task semantic communication system for multimodal data,” IEEE Trans.
+     Commun., vol. 72, no. 7, pp. 4101–4116, Jul. 2024.
+[18] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust                                         Xiaojiao Chen received the B.S. degree from Xidian
+     information bottleneck for task-oriented communication with dig-                                    University, Xi’an, China, in 2020, and the M.S.
+     ital modulation,” IEEE J. Sel. Areas Commun., vol. 41, no. 8,                                       degree from the School of Information Science and
+     pp. 2577–2591, Aug. 2023.                                                                           Engineering, Xinjiang University, Ürümqi, China, in
+[19] Y. Miao, Z. Li, Y. Wang, D. Hu, J. Yan, and Y. Wang, “VQ-DeepVSC:                                   2023. She is currently pursuing the Ph.D. degree
+     A dual-stage vector quantization framework for video semantic commu-                                with the School of Information and Electronics,
+     nication,” 2024, arXiv:2409.03393.                                                                  Beijing Institute of Technology, Beijing, China.
+[20] E. Erdemir, T.-Y. Tung, P. L. Dragotti, and D. Gündüz, “Generative joint                              Her research interests include speech signal pro-
+     source-channel coding for semantic image transmission,” IEEE J. Sel.                                cessing, speech codec, and semantic communication.
+     Areas Commun., vol. 41, no. 8, pp. 2645–2657, Aug. 2023.
+[21] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+     digital semantic communications via variational autoencoder,” IEEE                                   Jing Wang (Senior Member, IEEE) received the
+     Trans. Commun., vol. 72, no. 9, pp. 5626–5640, Sep. 2024.                                            Ph.D. degree in communication and information
+[22] E. Grassucci, C. Marinoni, A. Rodriguez, and D. Comminiello,                                         system from Beijing Institute of Technology (BIT),
+     “Diffusion models for audio semantic communication,” in Proc.                                        Beijing, China, in 2007.
+     IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), 2024,                                        She was a Visiting Scholar with The Chinese
+     pp. 13136–13140.                                                                                     University of Hong Kong, Hong Kong, in 2012, and
+[23] Z. Lin et al., “Pain without gain: Destructive beamforming from a                                    The Ohio State University, Columbus, OH, USA,
+     malicious RIS perspective in IoT networks,” IEEE Internet Things J.,                                 in 2020. She is currently an Associate Professor
+     vol. 11, no. 5, pp. 7619–7629, Mar. 2024.                                                            with the Research Institute of Communication
+[24] Z. Lin, M. Lin, T. De Cola, J.-B. Wang, W.-P. Zhu, and J. Cheng,                                     Technology, School of Information and Electronics,
+     “Supporting IoT with rate-splitting multiple access in satellite and                                 BIT. She has authored/co-authored more than 60
+     aerial-integrated networks,” IEEE Internet Things J., vol. 8, no. 14,      peer-reviewed articles and owns more than ten patents. Her research interests
+     pp. 11123–11134, Jul. 2021.                                                include speech and audio signal processing, multimedia communication, and
+[25] N. Zeghidour, A. Luebs, A. Omran, J. Skoglund, and M. Tagliasacchi,        virtual reality.
+     “SoundStream: An end-to-end neural audio codec,” IEEE/ACM                     Dr. Wang is currently a Senior Member of the Chinese Institute of
+     Trans. Audio, Speech, Lang. Process., vol. 30, pp. 495–507, 2022,          Electronics and the China Institute of Communications; a member of the
+     doi: 10.1109/TASLP.2021.3129994.                                           Audio Engineering Society, the China Computer Federation, and the Chinese
+[26] A. Défossez, J. Copet, G. Synnaeve, and Y. Adi, “High fidelity neural      Association for Artificial Intelligence; and an Expert for the Digital Audio
+     audio compression,” 2022, arXiv:2210.13438.                                and Video Coding Standard Workgroup in China. She has also been actively
+[27] R. Kumar, P. Seetharaman, A. Luebs, I. Kumar, and K. Kumar, “High-         involved with ITU/MPEG/3GPP international standard organizations and
+     fidelity audio compression with improved RVQGAN,” in Proc. 37th Adv.       domestic standard groups in the field of multimedia quality evaluation where
+     Neural Inf. Process. Syst., 2024, pp. 1–14.                                she drafted and helped draft several standards.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+CHEN et al.: LOW-BITRATE HIGH-QUALITY DIGITAL SEMANTIC COMMUNICATION BASED ON RVQGAN                                                                     13537
+
+
+
+                     Jingxuan Huang received the B.S. degree and the                                      Zhong Zheng (Member, IEEE) received the B.Eng.
+                     Ph.D. degree in electronics engineering from Beijing                                 degree from Beijing University of Technology,
+                     Institute of Technology (BIT), Beijing, China, in                                    Beijing, China, in 2007, the M.Sc. degree from
+                     2016 and 2021, respectively.                                                         Helsinki University of Technology, Espoo, Finland,
+                        From 2021 to 2023, he was a Postdoctoral Fellow                                   in 2010, and the D.Sc. degree from Aalto University,
+                     with the School of Information and Electronics, BIT,                                 Espoo, in 2015.
+                     where he is currently an Assistant Professor. His                                       From 2015 to 2018, he held visiting positions with
+                     research interests include channel coding and mod-                                   the University of Texas at Dallas, Richardson, TX,
+                     ulation, semantic communications, and integrated                                     USA, and the National Institute of Standards and
+                     sensing and communications.                                                          Technology, Gaithersburg, MD, USA. In 2019, he
+                        Dr. Huang serves as a Senior Reviewer for the                                     joined the School of Information and Electronics,
+IEEE O PEN J OURNAL OF THE C OMMUNICATIONS S OCIETY.                           Beijing Institute of Technology, Beijing, as an Associate Professor. His
+                                                                               research interests include massive MIMO, secure communications, millimeter-
+                                                                               wave communications, random matrix theory, and free probability theory.
+
+
+
+
+                                                                                                         Zesong Fei (Senior Member, IEEE) received the
+                                                                                                         Ph.D. degree in electronic engineering from Beijing
+                                                                                                         Institute of Technology (BIT), Beijing, China, in
+                       Ming Zeng received the B.E. and Ph.D. degrees in                                  2004.
+                       communication and information systems from the                                       Since September 2004, he has been with the
+                       University of Electronic Science and Technology                                   School of Information and Electronics, BIT, where
+                       of China, Chengdu, China, in 2009 and 2016,                                       he is currently a Full Professor. His current research
+                       respectively.                                                                     interests include wireless communications, channel
+                          She worked as a Postdoctoral Researcher with                                   coding, multiple access, physical layer security,
+                       Tsinghua University, Beijing, China. She is currently                             integrated sensing and communications, and MIMO
+                       an Assistant Professor with Beijing Institute of                                  systems.
+                       Technology, Beijing. Her research interests include       Prof. Fei serves as an Associate Editor for the IEEE O PEN J OURNAL OF
+                       data-driven network optimization, mobile-edge com-      THE C OMMUNICATIONS S OCIETY . He is a Senior Member of the Chinese
+                       puting, and spatial–temporal data mining.               Institute of Electronics and the China Institute of Communications.
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:49:02 UTC from IEEE Xplore. Restrictions apply.
+

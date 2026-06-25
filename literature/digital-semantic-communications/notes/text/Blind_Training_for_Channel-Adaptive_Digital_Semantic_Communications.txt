@@ -1,0 +1,1223 @@
+11274                                                                         IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+
+            Blind Training for Channel-Adaptive Digital
+                    Semantic Communications
+             Yongjeong Oh , Graduate Student Member, IEEE, Joohyuk Park , Student Member, IEEE,
+        Jinho Choi , Fellow, IEEE, Jihong Park , Senior Member, IEEE, and Yo-Seb Jeon , Member, IEEE
+
+
+
+    Abstract—Semantic encoders and decoders for digital semantic                  a specific task, rather than accurately transmitting every bit
+communication (SC) often struggle to adapt to variations in                       of raw data as in traditional communication [1], [2], [3].
+unpredictable channel environments and diverse system designs.                    By sending only essential task-relevant information, it has
+To address these challenges, this paper proposes a novel frame-
+work for training semantic encoders and decoders to enable                        great potential to enhance bandwidth efficiency and robustness
+channel-adaptive digital SC. The core idea is to use binary                       to channel perturbations [4], [5]. A key application is in
+symmetric channel (BSC) as a universal representation of generic                  image and video transmission, where SC extracts semantics
+digital communications, eliminating the need to specify chan-                     through object recognition, scene understanding, and advanced
+nel environments or system designs. Based on this idea, our                       compression algorithms, and transfers perceptually similar
+framework employs parallel BSCs to equivalently model the
+relationship between the encoder’s output and the decoder’s                       content using minimal bandwidth, even under poor channel
+input. The bit-flip probabilities of these BSCs are treated as                    conditions [6], [7].
+trainable parameters during end-to-end training, with varying                        Despite its potential, SC remains in its nascent stage, with
+levels of regularization applied to address diverse requirements                  most of existing frameworks relying on analog-like commu-
+in practical systems. The advantage of our framework is jus-                      nication architectures that transmit continuous-valued signals
+tified by developing a training-aware communication strategy
+for the inference stage. This strategy makes communication                        over additive noisy channels [8], [9], [10]. This approach is
+bit errors align with the pre-trained bit-flip probabilities by                   well-suited for deep neural networks (DNNs), which naturally
+adaptively selecting power and modulation levels based on                         process continuous outputs in their hidden layers, and additive
+practical requirements and channel conditions. Simulation results                 channels can be modeled by a single DNN layer, enabling
+demonstrate that the proposed framework outperforms existing                      end-to-end DNN differentiation and trainability. However, this
+training approaches in terms of both task performance and power
+consumption.                                                                      assumption deviates significantly from digital communication
+                                                                                  systems, limiting the broader adoption and practical deploy-
+  Index Terms—Semantic communication, joint source-channel                        ment of SC. To address this limitation, recent studies have
+coding, blind training, bit-flip probability, adaptive modulation
+and power control.                                                                begun exploring ways to integrate SC into digital communi-
+                                                                                  cation systems as we will review next.
+
+                           I. I NTRODUCTION                                       A. Digital SC: Recent Studies and Limitations
+    EMANTIC communication (SC) is a transformative                                   The transition from analog to digital communication sys-
+S   approach to data communication that focuses on con-
+veying the meanings or semantics of raw data relevant to
+                                                                                  tems presents new challenges for SC, as digital environments
+                                                                                  require the handling of discrete bits and symbols. To address
+                                                                                  this, earlier works focused on mapping the real-valued output
+   Received 22 February 2025; revised 21 April 2025 and 27 May 2025;              of the encoder to discrete symbols or bits to improve com-
+accepted 26 June 2025. Date of publication 3 July 2025; date of current           patibility with digital communication architectures [11], [12],
+version 14 November 2025. This work was supported in part by the National
+Research Foundation of Korea (NRF) funded by Korean Government (MSIT)             [13]. This approach was further extended by incorporating
+under Grant RS-2024-00453301 and in part by the Institute of Information          non-orthogonal multiple access to enhance bandwidth effi-
+& Communications Technology Planning & Evaluation (IITP)-ITRC (Infor-             ciency [14], and lightweight DNN structures were developed
+mation Technology Research Center) Grant funded by the Korea Government
+(MSIT) (IITP-2025-RS-2023-00259991, 50%). The associate editor coordi-            to accommodate the limited computational power of edge
+nating the review of this article and approving it for publication was J. Kang.   devices [15].
+(Corresponding authors: Yo-Seb Jeon; Jihong Park.)                                   Despite these advancements, digital SC still faces significant
+   Yongjeong Oh, Joohyuk Park, and Yo-Seb Jeon are with the Department
+of Electrical Engineering, POSTECH, Pohang, Gyeongbuk 37673, Republic             challenges, particularly in optimizing power and modula-
+of Korea (e-mail: yongjeongoh@postech.ac.kr; joohyuk.park@postech.ac.kr;          tion levels, to achieve high task performance across various
+yoseb.jeon@postech.ac.kr).                                                        communication environments. This multi-dimensional opti-
+   Jinho Choi is with the School of Electrical and Mechanical Engineer-
+ing, The University of Adelaide, Adelaide, SA 5005, Australia (e-mail:            mization differs from that of analog SC, which primarily
+jinho.choi@adelaide.edu.au).                                                      focuses on power optimization alone. The primary difficulty
+   Jihong Park is with the Information Systems Technology and Design Pillar,      in addressing this optimization problem is that the relationship
+Singapore University of Technology and Design, Singapore 487372 (e-mail:
+jihong park@sutd.edu.sg).                                                         among power, modulation, and task performance is intractable;
+   Digital Object Identifier 10.1109/TCOMM.2025.3585587                           thus, it is challenging to derive an analytical optimal solution.
+              0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                        similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                        11275
+
+
+
+Moreover, since the optimal power-modulation pair varies                       strategy that ensures communication bit errors align with
+depending on channel conditions, addressing all possible chan-                 the pre-trained bit-flip probabilities by adaptively adjusting
+nel conditions, via training either multiple specialized models                power and modulation levels. Simulation results show that our
+or a single generalized model, leads to significant training                   framework outperforms existing training methods that rely on
+overhead and large amounts of communication data.                              predefined channel environments or system designs.
+   Due to the difficulty of determining the optimal power                         The major contributions of this paper are summarized as
+and modulation for varying channel conditions, most digi-                      follows:
+tal SC methods train the semantic encoder and decoder in
+predefined communication environments where the channel                           • We propose a novel framework for training K represen-
+distributions, modulation schemes, or transmission power are                        tative sets of semantic encoders and decoders that are
+predetermined [16], [17], [18]. In addition, it is common to                        independent of specific channel environments or com-
+impose unnecessary constraints such as equal transmit power                         munication system designs. Our key idea is to replace
+and modulation schemes for all symbols [19], [20]. Since                            the digital communication process between the seman-
+the encoder and decoder trained under these constraints do                          tic encoder and decoder with parallel BSCs that have
+not generalize well to unexpected environments, their task                          varying bit-flip probabilities. Although a similar approach
+performance significantly deteriorates with variations in chan-                     was proposed in [21], it treated the bit-flip probabilities
+nel conditions, modulation order, and transmit power levels.                        as fixed hyperparameters that were not updated during
+Furthermore, the strict power and modulation constraints fail                       training, resulting in substantial training overhead due to
+to enable prioritization of critical bits or achieve robustness,                    extensive tuning and limited adaptability to the varying
+resulting in task performance degradation.                                          importance of individual bits. To overcome this limita-
+   Recently, to tackle the difficulty in adapting to diverse                        tion, our framework treats the bit-flip probabilities as
+channel conditions, a model-based training method was pro-                          trainable parameters and applies a continuous relaxation
+posed [21], in which a one-bit quantizer is applied to the                          technique to enable end-to-end training of the bit-flip
+output of the semantic encoder. The quantizer’s output is                           probabilities alongside the semantic encoder and decoder.
+then assumed to undergo statistical channel models, such as                         Then, we develop a novel one-parameter regulariza-
+the binary symmetric channel (BSC) or the binary symmetric                          tion technique based on a flip vanishing phenomenon.
+erasure channel (BSEC). During the communication stage,                             Specifically, in this phenomenon, we found that end-
+the modulation level for each symbol is adjusted based on                           to-end training with BSC modeling inherently favors
+the channel conditions, while ensuring that the bit error                           zero bit-flip probabilities on average, corresponding to an
+remains below the predefined bit-flip probability used during                       error-free channel. Leveraging this insight, we introduce
+training. In this strategy, however, the bit-flip probabilities are                 a regularization term that penalizes training when the
+treated as fixed hyperparameters and therefore not updated                          average bit-flip probability is small. This enables the
+during training. Consequently, this approach requires extensive                     encoder-decoder set trained with low penalty to cover
+hyperparameter tuning and lacks adaptability to the varying                         good channels and with high penalty to adapt to poor
+importance of individual bits throughout the training process.                      channels. By controlling the degree of penalization using
+Additionally, due to the difficulty of jointly optimizing power                     a single parameter, we obtain K representative sets, each
+and modulation, only modulation was adjusted, leading to                            covering a distinct average channel condition.
+performance limitations. In addition to digital SC methods                        • For the inference stage, we develop a training-aware
+that consider training, adaptive transmission strategies based                      communication strategy tailored to our blind training
+on pre-trained models were proposed, such as power control                          framework. Our key idea is to align actual bit error rates
+[22] and modulation adaptation [23]. However, these methods                         (BERs) with the trained bit-flip probabilities to ensure
+do not account for the effects of modulation, powers, and                           reliable task performance. Specifically, in this framework,
+fading channels during training, so their task performance is                       we select the most suitable encoder-decoder pair based
+inevitably limited.                                                                 on the given channel conditions under total power and
+                                                                                    transmission rate constraints, while also determining the
+B. Contributions                                                                    appropriate power allocation and modulation scheme for
+   In this paper, we propose a novel framework for training                         each transmitted symbol. To achieve this, we devise two
+semantic encoders and decoders in digital SC to address two                         optimization methods. In the first method, we adjust
+key challenges: (i) the difficulty of optimizing power and                          transmission power for each transmission symbol while
+modulation, and (ii) the challenge of adapting to unpredictable                     keeping modulation levels fixed. In the second method,
+channel conditions and varying system requirements. In the                          we jointly adjust both transmission power and modu-
+proposed framework, we use a BSC model as a universal repre-                        lation levels to minimize overall power consumption.
+sentation of generic digital communication processes, allowing                      Although adaptive modulation has been considered in
+us to eliminate the need to specify channel environments or                         [17], [21], and [23], none of these works explore the
+communication system designs. Building on this idea, we                             joint optimization of both power and modulation levels.
+jointly train the bit-flip probabilities of parallel BSCs with the                  This joint optimization provides a significant advantage
+semantic encoder-decoder pair in an end-to-end manner. For                          in reducing overall power consumption while adhering to
+the inference stage, we design a training-aware communication                       transmission rate constraints.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11276                                                                      IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+  • For image transmission tasks with the MNIST [24],                          After the modulation process, the transmitter allocates a power
+    CIFAR-10 [25], and STL-10 [26] datasets, our proposed                      pt to each symbol xt under the total power constraint, which
+    BlindSC achieves up to a 10% improvement in the peak                       is given by
+                                                                                                           T
+    signal-to-noise ratio (PSNR) and reduces total transmis-                                              X
+    sion power by up to 70%, at an SNR of 20 dB, compared                                         Psum ,       pt ≤ Ptot ,                 (6)
+    to other digital SC frameworks. Further, the proposed                                                         t=1
+
+    BlindSC achieves the highest structural similarity index                   where Ptot denotes the total available transmission power for
+    measure (SSIM) across varying transmission rate.                           transmitting the symbol sequence x.
+                                                                                  The wireless channel between the transmitter and receiver
+                        II. S YSTEM M ODEL                                     is modeled as a block fading channel, where the channel
+                                                                               coefficients remain constant during the coherence time [27].
+   In this work, we consider a typical digital SC system in                    Under this assumption, the received signal at time slot t is
+a wireless network. Specifically, in the system model, we                      expressed as
+employ a digital deep joint source-channel coding for image                                        √
+transmission [12]. This system model can be readily extended                                 yt = h pt xt + nt , t ∈ {1, . . . , T },    (7)
+to support other machine-learning tasks and alternative SC                     where h ∈ C is a complex-valued channel coefficient, and
+approaches.                                                                    nt ∼ CN (0, σ 2 ) represents the additive white Gaussian noise
+   Let u ∈ RM be an image data and θ enc be the parameter                      (AWGN). The maximum achievable SNR is defined as
+vector of the encoder. Then, the transmitter encodes the image
+data as follows:                                                                                                             Ptot E[γ]
+                                                                                                   SNRmax = 10 log10                   ,               (8)
+                                                                                                                               NB
+                                              N
+                        v = fθenc (u) ∈ R ,                             (1)                          2
+                                                                               where γ = |h|   σ 2 is the channel-gain-to-noise-power ratio.
+where fθenc is the encoding function, and v is the semantic                    Assume that the channel coefficient h is accurately estimated at
+feature vector of length N. After the encoding process, the                    the receiver using pilot-assisted channel estimation during each
+transmitter quantizes each element of v using a B-bit quantizer.               channel coherence time. Then, the receiver performs channel
+The resulting quantized value is given by                                      equalization on the received signal in (7), resulting in the
+                                                                               equalized signal at time slot t:
+               qi = Q(vi ) ∈ Q, i ∈ {1, · · · , N },                    (2)
+                                                                                                   h∗       √
+                                                                                          ỹt =         yt = pt xt + ñt , t ∈ {1, . . . , T },        (9)
+where vi represents the ith element of v, Q =                                                     |h| 2
+
+{q̃1 , q̃2 , · · · , q̃2B } is the codebook of the quantizer, and Q :
+                                                                               where h∗ is the complex conjugate of h, and ñt = h∗ nt /|h|2 .
+R → Q is the quantization function. For each codeword q̃j ,
+                                                                               After this, the receiver recovers the estimated symbol sequence
+the corresponding bit sequence is determined as b̃j = B(q̃i ) ∈
+                                                                               x̂, followed by demodulation to determine the estimated bit
+{0, 1}B , where B : Q → {0, 1}B is a mapping function that                                       T            T
+converts each codeword q̃j into a unique binary sequence of                    sequence b̂ = [b̂1 , . . . , b̂N ]T ∈ {0, 1}N B .
+length B. Based on this, the transmitter converts the quantized                   After reconstructing the bit sequence, the receiver deter-
+value qi of (2) into its corresponding binary sequence, as                     mines the estimated quantized value by performing the inverse
+follows:                                                                       process of B, as follows:
+
+            bi = B(qi ) ∈ {0, 1}B , i ∈ {1, · · · , N }.                (3)                    q̂i = B−1 (b̂i ) ∈ Q, i ∈ {1, · · · , N },             (10)
+                                                                                          −1              B
+                                                                               where B      : {0, 1} → Q. Once the quantized values
+After quantizing all elements of v, the transmitter obtains the
+                                                                               are obtained, the receiver can reconstruct the original image
+bit sequence b = [bT             T T
+                    1 , . . . , bN ] ∈ {0, 1}
+                                             NB
+                                                . Then, through a
+                                                                               data using a semantic decoder parameterized by θ dec . This
+digital modulation process, this bit sequence is converted into
+                                                                               decoding operation is denoted as
+a symbol sequence x of length T.
+   The transmission rate, representing the average number of                                             û = fθdec (q̂) ∈ RM .                       (11)
+transmitted bits per channel use, is defined as
+                                                                                 In our work, we do not delve into the design and opti-
+                                 NB                                            mization of the quantization-related functions Q, B, and B−1 ;
+                              R=    ,                                   (4)
+                                  T                                            thereby, we assume that these functions are predefined by
+implying how densely the bits are packed for each channel use.                 employing well-established quantization methods (e.g., [28],
+It should be noted that, unlike the transmission rate defined in                                                           uniform quantizer
+                                                                               [29], [30]). In this context, we employ the
+Shannon’s classical information theory, which assumes error-                   defined as qi = Q(vi ) = ∆· vi −v ∆
+                                                                                                                  min
+                                                                                                                      + 1
+                                                                                                                        2 +vmin , where vmin
+free recovery of all transmitted bits, the rate in (4) does                    and vmax are the minimum and maximum values of quantized
+                                                                                                                      −vmin
+not impose any constraint on bit-level accuracy. To ensure                     values, respectively, and ∆ = vmax   2B −1
+                                                                                                                            . The relationship
+                                                                                                                              PB           (k)
+efficient communication, the transmission rate needs to satisfy                between qi and bi is given by qi = vmin + ∆ k=1 2k−1 bi ,
+or exceed a predefined target transmission rate, denoted as                            (k)
+                                                                               where bi is the kth element of bi .
+Rtarget , as follows:                                                            Under the system model described above, we propose a
+                          R ≥ Rtarget .                      (5)               novel digital SC framework named BlindSC. Traditional SC
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                         11277
+
+
+
+
+Fig. 1. The overall structure of BlindSC framework illustrating the approximate equivalence between blind training and actual digital communication systems.
+
+
+
+
+Fig. 2. The proposed blind training strategy in BlindSC with trainable NB parameters and K training procedures.
+
+
+
+methods often struggle to adapt to diverse communication                        detection, complicates the training process. To address this,
+environments because their training requires substantial over-                  we first characterize these processes to a more manageable
+head and large amounts of communication data to create                          form by modeling their combined effects using NB BSCs [11],
+either multiple specialized models or a single generalized                      [12], [21]. It is worth emphasizing that this BSC modeling is
+model for predefined communication conditions. BlindSC                          used exclusively during training and is not applied in actual
+addresses these issues by introducing an error-adaptive blind                   communication circumstances, as illustrated in Fig. 1. Details
+training strategy, which eliminates the need for prior knowl-                   of the actual communication strategy, including modulation,
+edge of communication factors. Furthermore, it incorporates                     power allocation, fading channels, and detection, are provided
+a training-aware communication strategy that dynamically                        in Sec. IV.
+adjusts transmission parameters based on varying channel con-                      During training, the relationship between the transmitted nth
+ditions. In Sec. III, we discuss the training strategy of BlindSC               bit bn and the corresponding received bit b̂n for the nth BSC
+in detail, and in Sec. IV, we explain its communication                         is modeled as follows:
+strategy. The high-level procedure of BlindSC is summarized                                            (2bn − 1)en + 1
+in Fig. 1.                                                                                      b̂n =                   ∈ {0, 1},           (12)
+                                                                                                              2
+       III. E RROR -A DAPTIVE B LIND T RAINING                                  where n ∈ {1, · · · , N B}, en ∈ {−1, 1} is a binary error
+                  S TRATEGY OF B LIND SC                                        determined as
+                                                                                                         (
+   In this section. we introduce an error-adaptive blind training                                          1,    w.p. 1 − µn ,
+strategy of BlindSC, which allows the semantic encoder and                                          en =                                    (13)
+                                                                                                           −1, w.p. µn ,
+decoder to be trained without prior knowledge of communi-
+cation factors such as channel conditions, transmission power,                  and µn ∈ (0, 0.5) represents the bit-flip probability for the
+and modulation scheme.                                                          nth BSC. Note that µn plays a crucial role in characterizing
+                                                                                the various processes in digital communication systems. For
+A. BSC Modeling                                                                 example, if the nth bit is transmitted in the tth symbol
+  In digital SC, the complex and non-differentiable nature                      xt using 2mt -quadrature amplitude modulation (QAM) with
+of various communication processes, such as modulation and                      transmission power pt over a fading channel, the bit-flip
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11278                                                                      IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+probability µn for the ML detection can be approximated as                        To further elaborate on our parametric training approach,
+follows [31]:                                                                  we start by defining a trainable raw parameter vector, µ0 =
+              √                     s                !                         [µ01 , µ02 , · · · , µ0N B ]T ∈ RN B . Then, we transform these raw
+                 2mt − 1                  3pt γ
+     µn ≈ √            √      erfc                                             parameters to represent the bit-flip probabilities as follows:
+             2mt log2 2mt              2(2mt − 1)
+                 √                      s              !                                                      sigmoid(µ0n )
+                   2mt − 2                     3pt γ                                                  µn =                  , ∀n,                     (15)
+           +√            √      erfc 3                    ,   (14)                                                 2
+               2mt log2 2mt                2(2mt − 1)
+                          Rx                                                   where sigmoid(x) = 1+e1−x is the sigmoid function. This
+where erfc(x) = 1− √2π 0 exp(−u2 )du is the complementary                      transformation ensures that the µn falls within the appropriate
+error function, which is a function of several key factors in                  bit-flip probability range (0, 0.5).
+digital communication systems, including transmission power                       In the following subsections, we elaborate a more detailed
+pt , channel-gain-to-noise-power ratio γ, and modulation level                 exploration for training the bit-flip probabilities in (15). Specif-
+mt . We have empirically observed that the BER function                        ically, in Sec. III-B, we focus on deriving the gradient for
+in (14) provides a close approximation to the actual BER                       µn to enable end-to-end learning. Then, in Sec. III-C, we
+across a wide range of SNR levels and modulation schemes,                      describe the loss function that guides {µn }∀n to converge
+as demonstrated in Fig. 11.                                                    to the appropriate values, along with the training method
+    A key advantage of BSC modeling is its ability to unify the                designed to ensure effective adaptation to diverse commu-
+modeling for diverse and unpredictable digital communication                   nication environments. The overall procedure of our training
+systems. This modeling also facilitates end-to-end learning                    strategy is summarized in Fig. 2.
+for the semantic encoder and decoder by regarding the linear
+equation in (12) as a layer of a DNN [11]. However, when
+employing this modeling, it is crucial to determine the bit-                   B. End-to-End Learning via Continuous Relaxation
+flip probabilities {µn }N  B
+                         n=1 , as they significantly influence the                The primary challenge in computing the gradient for µn
+performance of image reconstruction during training. One of                    arises from the discrete nature of the BSC described in (12).
+the primary challenges in determining these bit-flip probabil-                 Specifically, since the binary error en in (13) follows a discrete
+ities is that the relationship between µn and reconstruction                   Bernoulli distribution with µn , it is non-trivial to calculate the
+performance is intricate and intractable, making it difficult to               gradient for µn . To facilitate the training of µn , our training
+derive an analytical optimal solution. Most existing digital SC                strategy employs the continuous relaxation method in [32],
+methods have failed to account for this relationship, as their                 which effectively approximates discrete random variables with
+training is typically performed in a specific communication                    their continuous counterparts. A representative example of this
+environment, where all symbols are assumed to experience the                   method is the relaxation of the max function in the Gumbel-
+same bit-flip probability. Additionally, although the concept of               max trick to a softmax function, commonly known as the
+BSC-based training was introduced in [11], [12], and [21],                     Gumbel-softmax trick.
+these prior works rely on either fixed or heuristic settings                      To derive the continuous counterpart of en , we first consider
+to determine the bit-flip probabilities µn ∀n . For example,                   a Bernoulli random variable dn ∈ {0, 1}, which takes the value
+[11], [12] assumed a fixed and identical bit-flip probability                  1 with probability 1−µn and 0 with probability µn . According
+for all bits, i.e., µn = µ ∈ [0, 0.5], ∀n, which remains                       to the result presented in [32], the continuous relaxation of this
+unchanged during training and thus fails to account for                        Bernoulli random variable is given by
+the varying importance of individual bits. Meanwhile, [21]                                                                          
+assigned distinct bit-flip probabilities to each bit, but treats                 ˜                   1            µn                 u
+                                                                                 dn = sigmoid −          log             + log                 ,
+them as hyperparameters that are fixed throughout training.                                          τ̃        1 − µn              1−u
+As a result, it requires extensive hyperparameter tuning and                                                                                  (16)
+still lacks adaptivity to the varying importance of bits during
+training.                                                                      where u1 , . . . , uN B are independent and identically distributed
+    To address these challenges, in our training strategy, we                  random variables, each following the uniform distribution
+introduce the end-to-end learning-based parametric training                    U(0, 1), and τ̃ ≥ 0 is the temperature parameter. Because
+approach. In this approach, the bit-flip probabilities {µn }∀n                 en = 2dn − 1, the continuous relaxation of en is determined
+are treated as trainable parameters, rather than fixed constants               as
+predetermined by a specific communication environment. This
+                                                                               ẽn = 2d˜n − 1
+implies that our training approach eliminates the need for                                                                  
+explicit knowledge of communication factors, thereby sig-                                         1          µn               u
+                                                                                = 2 · sigmoid −       log            + log           −1
+nificantly reducing training overhead and the necessity for                                       τ̃       1 − µn            1−u
+                                                                                                                        
+extensive communication data collection. Further, by incor-                     (a)         1           µn               u
+                                                                                = −tanh         log            + log             ,   (17)
+porating the bit-flip probabilities into the training process,                              τ         1 − µn           1−u
+our approach enables their joint optimization alongside the
+                                                                                                          x   −x
+semantic encoder and decoder. This joint optimization allows                   where tanh(x) = eex −e +e−x , τ , 2τ̃ , and the equality (a)
+the model to capture the varying importance of individual bits                 follows from 2 · sigmoid(x) − 1 = −tanh(−x/2). In con-
+with respect to task performance.                                              trast to the binary error en , its continuous counterpart ẽn is
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                         11279
+
+
+
+differentiable with respect to µn . The corresponding gradient
+is given by
+                                                  
+   ∂ẽn          2    1          µn               un
+        = −sech         log             + log
+   ∂µn                τ        1 − µn           1 − un
+                    1
+           ×                ,                             (18)
+             τ µn (1 − µn )
+                        2
+where sech(x) = ex +e     −x . With this continuous relaxation,
+
+substituting ẽn into en relaxes the input-output relationship of
+the BSC model in (12) as follows:
+                        (2bn − 1)ẽn + 1
+                 b̂n =                    ∈ [0, 1].           (19)
+                                2
+   In our training strategy, the relaxed BSC is treated as a layer
+within the DNN. This integration enables the computation of
+gradients for the semantic encoder, bit-flip probabilities, and
+semantic decoder, thereby allowing end-to-end learning for all
+trainable parameters. Specifically, let L be the loss function
+computed at the output of the semantic decoder, which will
+be detailed in Sec. III-C. Then, utilizing the chain rule, the
+gradient of the loss with respect to µn becomes                                Fig. 3. The cumulative distribution function of ẽn with various values of the
+                                                                               temperature parameter τ when µn = 0.2.
+                     ∂L    ∂L ∂ b̂n ∂ẽn                                                                                         (k)
+                         =      ·    ·    ,                           (20)     explicit relationship between each bit bi and the quantized
+                     ∂µn   ∂ b̂n ∂ẽn ∂µn                                      value qi is no longer available in closed form. In this case, we
+where the first component ∂∂L    can be obtained by performing                 can leverage a 2B -ary channel model, where the transition
+                             b̂n
+backpropagation at the semantic decoder. The second compo-                     probabilities between quantized symbols can be computed
+nent is obtained from the relaxed BSC, given by ∂∂ẽb̂nn = bn − 12 .           using the individual bit-flip probabilities. After formulating
+Following the similar procedure above, the gradient for the                    2B -ary channel model, the Gumbel-Softmax trick in [32] is
+semantic encoder is determined as                                              employed to enable gradient-based optimization of the bit-flip
+                         NB                                                    probabilities. This approach can be viewed as a straightforward
+                 ∂L      X   ∂L ∂ b̂n ∂bn                                      extension of the continuous relaxation technique for binary
+                       =           ·    ·       ,                     (21)
+                ∂θ enc   n=1 ∂ b̂n
+                                     ∂bn ∂θ enc                                error in the BSC model.
+                                                                                   Remark 1 (Impact of Temperature Parameter τ on ẽn ):
+where the second term is derived from the relaxed BSC, given
+                                                                               In our training strategy, the temperature parameter τ plays a
+by ∂∂bb̂nn = ẽn . The third term can be decomposed as follows:
+                                                                               crucial role in determining the behavior of the relaxed error
+                  ∂bi
+                      (k)
+                          ∂b   ∂qi
+                                  (k)
+                                     ∂vi                                       ẽn . To illustrate this, in Fig. 3, we compare the cumulative
+                         = i ·     ·      .                           (22)     distribution function (CDF) of ẽn with various values of the
+                  ∂θ enc   ∂qi ∂vi ∂θ enc
+                                                                               temperature parameter τ . Fig. 3 shows that as τ approaches 0,
+Here, the first component of (22) is not well defined because                  the CDF of ẽn becomes closer to the Bernoulli distribution
+ (k)
+bi is binary. To address this issue, we employ the straight-                   of en . This implies that, when using a sufficiently small
+through estimator (STE)–a widely used technique in quantized                   τ during training, the relaxed BSC in (19) becomes nearly
+neural networks–, which allows gradients to pass through                       equivalent to the original BSC in (12). However, training with
+discrete operations by treating them as continuous during the                  a very small τ can lead to numerical instability and slow
+                                           (k)
+backpropagation. Specifically, we treat bi as a continuous                     down the optimization process due to the steep gradients of
+variable and derive the gradient by differentiating the uni-                   the tanh function in (17). Therefore, selecting an appropriate
+                                                          (k)
+                                                       ∂b
+form quantization formula in Sec. II, resulting in ∂qi i ,                     value of τ is important to balance training stability and the
+   1
+        Additionally, the second component of (22) is non-                     consistency between training and communication stages. From
+∆2k−1
+differentiable due to the quantization process. To address this,               our experiments in Sec. V, we found that a fixed choice of
+                                                       ∂qi                     τ = 0.1throughout the training process is sufficient to provide
+we also apply the STE, resulting in the approximation ∂v i
+                                                            ≈ 1.
+For other trainable parameters, the gradients ∂µ ∂L
+                                                  0  and ∂θ∂L     ,            good performance. It should be noted that further performance
+                                                              dec
+                                                  n
+are readily computed by performing backpropagation with the                    improvements are also possible by adopting various scheduling
+chain rule.                                                                    strategies, such as gradually decreasing τ over epochs [33], at
+   Meanwhile, in practice, these gradients can be computed                     the cost of complex parameter tuning.
+using automatic differentiation techniques provided by modern
+deep learning frameworks, such as TensorFlow and Pytorch.                      C. Regularization for Optimizing {µn }∀n in End-to-End
+Therefore, our gradient computation is not overly complex,                     Learning
+enabling ease of implementation and efficient optimization.                       The design of the loss function L is crucial for jointly
+Additionally, when a non-uniform quantizer is employed, the                    training {µn }∀n along with the semantic encoder and decoder.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11280                                                                       IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+                                                                                when its value is small. A representative example of our loss
+                                                                                function is a combination of MSE and L2-based regularization,
+                                                                                formulated as
+                                                                                                                     NB         2
+                                                                                         1                2
+                                                                                                                λ X 1
+                                                                                   L=       Eu,û ku − ûk +                 − µn , (24)
+                                                                                        M                       N B n=1 2
+                                                                                where the second term, representing L2 regularization, penal-
+                                                                                izes deviations of {µn }∀n from their maximum value 0.5.
+                                                                                   In our loss function of (23), increasing λ causes the average
+                                                                                value of µ to converge toward higher values due to the
+                                                                                greater significance of the regularization term. This increase,
+                                                                                however, is attained at the cost of increased distortion, as the
+Fig. 4. Convergence behavior of the average value of bit-flip probabilities     training procedure places more emphasis on accommodating
+µ(k) for different regularization weight λk .                                   challenging communication environments rather than mini-
+                                                                                mizing distortion. Therefore, our training strategy involves a
+                                                                                trade-off between accommodating challenging communication
+                                                                                environments and achieving high task performance.
+                                                                                   Leveraging the trade-off above, our key idea for effec-
+                                                                                tively adapting to diverse communication environments is to
+                                                                                represent these environments using K distinct bit-flip proba-
+                                                                                bility sets. Let µ(k) be the kth bit-flip probability set, where
+                                                                                k ∈ {1, · · · , K}. Then, based on the loss function in (23),
+                                                                                we perform K training procedures, each with a different
+                                                                                regularization strength, λk , k ∈ {1, · · · , K}, such that
+                                                                                λ1 < · · · < λK . Then, we can obtain K different bit-
+                                                                                flip probability sets and corresponding encoder-decoder pairs.
+                                                                                Here, each bit-flip probability set characterizes a specific com-
+                                                                                munication environment. Specifically, a set with a low average
+                                                                                bit-flip probability, trained with a low value of λk , represents
+                                                                                favorable communication environments, such as those with
+                                                                                high total power or strong channel conditions. On the other
+                                                                                hand, a set with a high average bit-flip probability, trained
+                                                                                with a high value of λk , corresponds to more challenging
+                                                                                communication environments with poor channel conditions or
+Fig. 5. Trained bit-flip probabilities µ(k) for different weights λk .
+                                                                                low total power. Using these trained bit-flip probability sets,
+                                                                                the transmitter and receiver can dynamically select the most
+                                                                                suitable encoder-decoder pair for the given communication
+However, due to the large number of {µn }∀n , it is chal-                       environment. In Sec. IV, we will provide detailed instructions
+lenging to control each one individually and to construct                       on how to implement this dynamic selection process. Mean-
+an appropriate loss function. To address this, we propose                       while, recall that the bit-flip probability in (14) encapsulates
+a novel one-parameter regularization technique based on a                       the several factors in digital communication systems, includ-
+flip vanishing phenomenon. This phenomenon indicates that                       ing channel, power, and modulation levels. As a result, our
+end-to-end training with BSC modeling favors zero bit-flip                      approach eliminates the need to train a separate model for
+probabilities on average, particularly when the loss function is                every possible combination of these parameters, significantly
+designed to minimize the image reconstruction error only, such                  reducing the overall number of required models compared to
+as MSE. This is because lower average bit-flip probabilities                    traditional SC methods.
+naturally lead to fewer transmission errors, thereby reducing                      Remark 2: (Design of the Regularization Term R(·): The
+the reconstruction error.                                                       design of the regularization term R(·) plays a crucial role
+   Leveraging this insight, we introduce a regularization term                  in ensuring that the K bit-flip probability sets {µ(k) }K      k=1
+that penalizes training when the mean bit-flip probability is                   accommodate various communication environments. One intu-
+small, as follows:                                                              itive approach would be to set a target value for the kth
+                                                                                bit-flip probability set, denoted as µ̃(k) , and formulate      the
+                    L = Eu,û [d(u, û)] + λR(µ),                        (23)                                       PN B             (k) 2
+                                                                                regularization term as R(µ(k) ) = n=1 µ̃(k) −µn             , where
+where d(u, û) is a distortion measure between the original                     µ̃(k) . While this target-based regularization provides control-
+                                                                                                 (k)
+input image u and its reconstruction û, λ > 0 is a regular-                    lability over µn ’s convergence toward the target value, the
+ization weight that controls the strength of the regularization,                relationship between the task performance and the target value
+and R(µ) represents a regularization term that encourages the                   is unknown, making the target value a hyperparameter. For this
+parameter µn to converge to larger values by penalizing it                      reason, this regularization introduces two hyperparameters,
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                           11281
+
+
+
+
+Fig. 6. The proposed training-aware communication strategy in BlindSC with two adaptive control methods.
+
+
+
+                           TABLE I                                             flip probabilities. Similarly, in Fig. 5, we illustrate the trained
+    C OMPARISON OF THE PSNR S FOR TASK -BASED AND L2-BASED                     bit-flip probabilities for different regularization weights λk .
+    R EGULARIZATIONS ACROSS VARYING µ̃(1) AND λ1 VALUES AT                                                                                      (k)
+                                                                               Fig. 5 shows that as λk increases, the overall values of µn
+         SNRmax ∈ {10, 20} dB ON THE MNIST DATASET
+                                                                               shift toward higher values. However, even if λk increases,
+                                                                                                                 (k)
+                                                                               some bits still maintain low µn values. This confirms that
+                                                                               our training method selectively preserves reliability for task-
+                                                                                                                                    (k)
+                                                                               critical bits, rather than uniformly increasing µn across all
+                                                                               positions.
+
+                                                                                           IV. T RAINING -AWARE C OMMUNICATION
+                                                                                                   S TRATEGY OF B LIND SC
+                                                                                  In this section, we present a communication strategy tailored
+                                                                               to our blind training. The core idea is to align the actual BERs
+                                                                               with the pre-trained bit-flip probabilities to ensure reliable
+                                                                               task performance. Specifically, we focus on a communication
+µ(k) and λk . Compared to target-based regularization, the                     system that employs uncoded QAM, dynamically adjusting
+L2-based regularization in (24) simplifies the training process                power and modulation levels while adhering to total power
+by utilizing a single hyperparameter λk . To assess the task                   and transmission rate constraints. This system can be extended
+performance of both regularizations, we have conducted an                      to various digital communication systems.
+experiment on the MNIST dataset under varying µ̃(1) and λ1
+values with K = 1. Table I shows that after hyperparam-                        A. Overview
+eter tuning, both the L2-based and target-based regulariza-
+                                                                                 Suppose that the SC system has the total transmission power
+tions achieve comparable PSNR performance. However, the
+                                                                               constraint, Ptot , and the target transmission rate, Rtarget . Then,
+L2-based regularization achieves this performance using only
+                                                                               the transmitter and receiver select the most suitable encoder-
+one hyperparameter, while the target-based regularization
+                                                                               decoder pair from the K pre-trained pairs, while determining
+requires tuning two parameters. This result implies that
+                                                                               the transmission power and modulation level for each symbol
+optimizing a single hyperparameter, as in the L2-based reg-
+                                                                               based on the pre-trained K bit-flip probability sets and the
+ularization, appears to be sufficient to achieve high task
+                                                                               current channel-gain-to-noise-power ratio, γ.1 This channel-
+performance across various communication environments.
+                                                                               adaptive selection and optimization process is denoted as
+   Remark 3 (Impact of the Regularization Weight λk on
+µ(k) ): We analyze the convergence behavior of the average                         {k ? , {pt , mt }Tt=1 } = fadapt (Ptot , Rtarget , {µ(k) }∀k , γ),
+value of µ(k) in response to changes in the regularization                                                                                          (25)
+weight λk , using a numerical example. In this simulation,
+                                                                               where mt ∈ {2, 4, 6, · · ·} is the modulation level for the tth
+we consider an image reconstruction task using the MNIST
+                                                                               symbol, k ? is the index of the selected encoder-decoder pair,
+dataset. All values of µ(k) are initialized to 0.1, and the loss
+                                                                               and fadapt is the adaptation function, which will be detailed
+function in (24) is employed. Fig. 4 shows that as λk increases,
+                                                                               in Sec. IV-B and Sec. IV-C. Note that the function fadapt
+the average value of µ(k) converges to higher values. This
+indicates that more challenging communication environments                        1 The channel-gain-to-noise ratio, γ, can be readily estimated using standard
+can be effectively captured by increasing λk . Fig. 4 also shows               pilot-based channel estimation or feedback mechanisms widely employed in
+that when λk = 0, the average value of µ(k) converges to                       modern communication systems [27]. In particular, under the assumption of
+                                                                               sufficiently large channel coherence time, it is sufficient to estimate or give
+a very small value, requiring impractically high transmission                  feedback for a single channel realization. Therefore, the use of such channel
+power or communication resources to achieve such low bit-                      information at inference introduces only minimal overhead.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11282                                                                      IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+needs to satisfy the transmission rate in (5) and the total                    to the lowest level that satisfies the transmission rate constraint,
+power constraint in (6). Moreover, this function should satisfy                as follows:
+the BER matching condition that the BER, achieved through                           (k)
+                                                                                                     
+                                                                                                        NB
+                                                                                                             
+                                                                                                                     NB
+                                                                                                                                                  
+the transmission power pt and modulation level mt of the tth                     mt = min m :                   ≤          , m ∈ {2, 4, 6, · · ·}
+                                                                                                         m         Rtarget
+symbol carrying the nth bit, closely matches the nth element
+       ?
+of µ(k ) , as follows:                                                                   , mAPC ,                                                     (28)
+                   √
+                                                                                                          NB 
+                                      s               !                        for all t, k, where m represents the length of the symbol
+       (k? )         2mt − 1                3pt γ
+      µn ≈ √              √    erfc                                            sequence T when using 2m -QAM, and RN           B
+                                                                                                                                    indicates the
+                 2mt log2 2mt            2(2mt − 1)                                                                          target
+                                                                               maximum required length of the symbol sequence to achieve
+                     √                    s             !
+                       2mt − 2                  3pt γ                          the target transmission rate Rtarget . By setting the modulation
+              +√            √    erfc 3                                        level to the minimum value, we reduce the required trans-
+                   2mt log2 2mt             2(2mt − 1)
+                                                                               mission power by leveraging the fact that higher modulation
+            , BER(pt , mt , γ),                                       (26)     levels require greater transmission power to satisfy the BER
+                                                                               condition in (26). Additionally, this setting simplifies the
+where the approximation follows from (14). This condi-
+                                                                               problem P0 by ensuring that the constraint R ≥ Rtarget is
+tion helps minimize the discrepancy between the bit error
+                                                                               always satisfied. In this context, the APC method solves the
+rates observed during training and those encountered dur-
+                                                                               following optimization problem:
+ing communication, leading to improved reliability and task
+performance. The optimization problem solved by fadapt is                          (P1) (k ? , {pt }Tt=1 ) = argmin E[d(u, û)],                      (29)
+                                                                                                                         (k)
+summarized as follows:                                                                                            k,{pt }T
+                                                                                                                         t=1
+                                                                                                                                      (k)
+    (P0) (k ? , {pt ,mt }Tt=1 ) =      argmin E[d(u, û)],            (27)                                        s.t.          BER(pt , mAPC , γ)
+                                       (k)   (k)                                                                                      T
+                                  k,{pt ,mt }T
+                                             t=1
+                                                                                                                                         (k)
+                                                                                                                                      X
+                                (k)    (k)                                                                          − µ(k)       ≤ ,   pt ≤ Ptot .
+                 s.t. BER(pt , mt , γ) − µ(k)
+                                          n   ≤ ,                                                                     n
+                                                                                                                                      t=1
+                      T
+                         (k)                                                   To solve the problem P1, the APC method first sorts the bit-
+                      X
+                        pt ≤ Ptot , R ≥ Rtarget ,                                                     (k)
+                      t=1                                                      flip probabilities
+                                                                                           l      {µmn }∀n in ascending order and divides them
+       (k)    (k)                                                              into T = mNAPC   B
+                                                                                                       groups. Next, the method computes the
+where pt and mt represent the power and modulation level
+                                                                               average bit-flip probability for each group as follows:
+for the tth symbol in the kth bit-flip probability set, and   1.
+Note that d(u, û) represents the distortion measure between                                          (k)     1    X
+                                                                                                    µ̄t =               µ(k)
+                                                                                                                         n ,               (30)
+the input image u and its reconstruction û, used during                                                    mAPC
+                                                                                                                               n∈Kt
+training, and it decreases as k increases due to the trade-off
+discussed in Sec. III-C. Additionally, the proposed framework                  for t ∈ {1, · · · , T }, where Kt is the index set of the tth group.
+                                                                                                                                   (k)
+maintains high task performance as long as the actual BER                      The required transmission power to achieve µ̄t , denoted as
+                                                    (k)                         (k)
+is lower than the trained bit-flip probability µn . However,                   pt , is then determined by solving the equation below:
+achieving a lower BER generally requires higher transmit                                             (k)                  (k)
+                                                                                                   µ̄t     = BER(pt , mAPC , γ).                      (31)
+power, which may be inefficient under power constraints. For
+this reason, our framework is designed to align the actual BER                 To reduce computational complexity when solving (31), we
+                                 (k)
+closely with the target value µn .                                             reformulate the problem by introducing an auxiliary variable
+   Once the process above is completed, the transmitter                        xt = pt γ. Specifically, we first precompute and store the value
+encodes the image data using the selected k ? th encoder, and                  of xt that satisfies the equation. Then, given the channel-
+performs the quantization process to obtain the bit sequence b.                gain-to-noise-power ratio γ, the transmit power is directly
+Then, the transmitter transmits b using the specified modula-                  computed via pt = xt /γ, resulting in negligible computational
+tion levels and transmission powers. It should be noted that the                                                                             (k)
+                                                                               overhead. Meanwhile, it should be noted that by sorting µn
+process in (25) is also executed at the receiver. Consequently,                                                                          (k)
+                                                                               and averaging similar values, we can assume that µ̄t ≈
+with the knowledge of {pt , mt }Tt=1 , the receiver can perform                  (k)
+                                                                               µn , ∀n ∈ Kt ; thereby, the condition in (26) is satisfied by
+the detection to obtain the estimated bit sequence b̂.                         solving the equation of (31). After computing the power pt
+                                                                                                                                             (k)
+   In the remainder of this section, we first introduce the                    for each t and k, the required total power for the kth encoder-
+adaptive power control (APC) method (see Sec. IV-B) and                        decoder pair is obtained as Psum =
+                                                                                                                  (k)    PT      (k)
+                                                                                                                            t=1 pt . Then, to
+then explore a more advanced adaptive modulation and power                     achieve the highest performance while satisfying the power
+control (AMPC) method (see. Sec. IV-C). The overall proce-                     constraint, the index of the most suitable encoder-decoder pair
+dure of our communication strategy is illustrated in Fig. 6.                   is determined as
+                                                                                                                   (k)
+                                                                                                    k ? = min{k : Psum ≤ Ptot }.                      (32)
+B. APC Method
+                                                                                                                                    (k? )
+   The APC method in our communication strategy involves                       The corresponding transmission power is set to pt = pt .
+                                                                                                     ?
+fixing the modulation level and determining the transmission                     After determining k , the transmitted ?bits are sorted to
+                                                                                                                       (k )
+power for each symbol. Specifically, the modulation level is set               match the order of their corresponding µn values, and then
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                        11283
+
+
+
+modulation and power allocation are performed using mt and
+pt . On the receiver-side, the estimated bits are reordered to
+their original positions following the demodulation process.
+Note that these ordering procedures do not incur any addi-
+tional communication    overhead because the sorting operation
+       (k? )
+for µn       can be performed locally at the transmitter and
+receiver. Similarly, if a scrambling operation is applied to
+the bit sequence, the same permutation       can be applied to
+                              (k? )
+the bit-flip probability set µn     to preserve the one-to-one
+correspondence between each bit and its associated channel.
+This operation can also be performed at ?the receiver-side, as                 Fig. 7. Comparison of total power for various combinations of modulation
+                                        (k )                                   levels.
+the scrambling pattern is known and µn is shared.
+    A key feature of the APC method is its simplicity and
+efficiency in determining modulation levels and transmission
+powers without complex optimization processes. However,                        of modulation levels and powers, the domain space can
+by fixing the modulation level uniformly across all symbols,                   be significantly large. As a result, traditional optimization
+the method fails to take the performance gains that can be                     techniques, and even exhaustive search methods, are highly
+obtained through jointly optimizing the modulation level and                   impractical for finding the optimal solution. To address these
+transmission power. Consequently, the overall communication                    challenges, we propose the AMPC method that iteratively
+efficiency and performance remain constrained. This limitation                 optimizes the transmission power and modulation level for
+motivates us to develop a more advanced adaptation method,                     each symbol, effectively navigating the complex search space
+namely the AMPC method, described in the following subsec-                     to find near-optimal solutions.
+tion.                                                                             The fundamental idea of the AMPC method is to assign
+                                                                               a low modulation level to bits with low bit-flip probabilities,
+C. AMPC Method                                                                 and a high modulation level to bits with higher bit-flip proba-
+                                                                               bilities. The effectiveness of this idea can be verified through
+   A primary goal of the proposed AMPC method is to
+                                                                               a simple example in which two bits need to be transmitted
+minimize the total transmission power over the APC method,
+                                                                               with bit-flip probabilities µ1 = 10−1 and µ2 = 10−2 ,
+while strictly adhering to the transmission rate constraint and
+                                                                               respectively, and the channel-gain-to-noise-power ratio γ is set
+BER matching condition. To achieve this goal, our method
+                                                                               to be one. Then, we examine three combinations of modulation
+aims to find the optimal modulation level and corresponding
+                                                                               levels {m1 , m2 }: (i) {4, 4}, (ii) {6, 2}, and (iii) {2, 6}, each
+transmission power for each symbol. The corresponding opti-
+                                                                               achieving the same transmission rate. Fig. 7 demonstrates
+mization problem is expressed as
+                                                                               the effectiveness of our idea, where the second combination
+          (P2) (k ? , {pt , mt }Tt=1 )                                         achieves the lowest total transmission power. Furthermore,
+                                                  T                            based on this result, it can be naturally inferred that as the
+                                                     (k)
+                                                  X
+           =       argmin E[d(u, û)] + ν           pt ,              (33)     difference between µ1 and µ2 increases, the total power gap
+                   (k)    (k)
+               k,{pt ,mt }T
+                          t=1                     t=1                          between the first combination and the others also widens.
+                                (k)      (k)                                      The proposed AMPC method, motivated by the key obser-
+                 s.t. BER(pt , mt , γ) − µ(k)
+                                          n   ≤ ,
+                                                                               vation mentioned above, is summarized in Algorithm 1, where
+                         T
+                         X  (k)                                                the index k is omitted for the sake of simplicity. The major
+                           pt ≤ Ptot , R ≥ Rtarget ,
+                                                                               steps of the algorithm are elaborated below. In Step 1, the
+                         t=1
+                                                                               initial modulation level is set to the same as in the APC
+where ν > 0 is a small constant that ensures E[d(u, û)]                      method, ensuring the transmission rate constraint. In Step 3,
+  PT       (k)
+ν t=1 pt , ∀k, emphasizing the importance of minimizing                        the starting and ending indices for the group with the smallest
+distortion while still considering power consumption. To                       bit-flip probabilities are determined. Similarly, in Step 4, the
+explore this problem more clearly, let us consider the example                 indices for the group with the highest bit-flip probabilities are
+where the bit sequence length is 16 and the desired symbol                     determined. In the subsequent steps, the modulation levels of
+sequence length is 4, implying the Rtarget = 4. In this exam-                  both groups are adjusted to minimize the total transmission
+                                              (k)    (k)    (k)   (k)
+ple, the potential combinations of {m1 , m2 , m3 , m4 }                        power, as discussed in the earlier example. Specifically, in
+are {8, 4, 2, 2}, {6, 6, 2, 2}, {6, 4, 4, 2}, {4, 4, 4, 4}, along with         Step 7, the modulation levels corresponding to the low and
+all permutations of these elements. Then, in this example, the                 high bit-flip probabilities, denoted as m` and mh , are calcu-
+optimal combination can be determined by evaluating both the                   lated. In Step 8, the adjusted modulation levels are computed
+total transmission power and the corresponding distortion.                     by decreasing m` and increasing mh . In Steps 9–12, the
+   The main challenge in solving the optimization problem                      transmission power for each modulation level is determined
+P2 lies in its non-convexity, which arises from the discrete                   by solving the BER equation, as done in the APC method.
+nature of the modulation level mn and the non-convexity of                     In Steps 13–25, the algorithm compares the total power of
+the BER function with respect to two variables pn and mn .                     both groups to decide whether to adjust the modulation levels
+Furthermore, due to the vast number of possible combinations                   or keep them unchanged. If the decision is to maintain the
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11284                                                                      IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+Algorithm 1 Adaptive Modulation and Power Control                              particularly in scenarios with limited processing capability
+(AMPC)                                                                         or strict latency requirements. To address this issue, we can
+ 1: Set the initial value of mt , denoted as minit , from (28),                adopt a lookup table-based approach, where the SNR is
+    ∀t.                                                                        quantized into discrete levels and the corresponding opti-
+ 2: Sort µn in ascending order.                                                mal power and modulation configurations are precomputed
+ 3: `s = 1, `e = minit .                                                       offline. This eliminates the need for online optimization during
+ 4: hs = N B − minit + 1, and he = N B.                                        communication and enables efficient real-time operation with
+ 5: t = 1                                                                      negligible complexity. Further, in the APC and AMPC meth-
+ 6: while t ≤ b T2 c                                                           ods, we consider simplified yet representative assumptions,
+ 7:     m` = `e − `s + 1 and mh = he − hs + 1.                                 such as uncoded transmission and perfect SNR knowledge
+ 8:     m0` = m` − 2 and m0h = mh + 2.                                         at both the transmitter and receiver. These assumptions are
+                    Pn=`                    Pn=h
+ 9:     µ̄` = m1` n=`es µn and µ̄h = m1h n=hse µn .                            made to isolate and clearly highlight the impact of the
+                      n=` −2                   Pn=he
+        µ̄0` = m10 n=`es µn and µ̄0h = m10                                     proposed communication strategies, without the confounding
+                    P
+10:
+                  `                         h
+                                                  n=hs −2 µn .
+11:                               0       0
+        Compute powers p` , p` , ph , ph by solving µ̄` =                      effects of channel coding, SNR estimation errors, or hardware
+        BER(p` , m` , γ), µ̄0` = BER(p0` , m` , γ), µ̄h =                      impairments. Nevertheless, extending our framework to more
+        BER(ph , mh , γ), µ̄0h = BER(p0h , m0h , γ).                           practical scenarios, such as free-space optical communication
+12:     psum = p` + ph and p0sum = p0` + p0h .                                 systems subject to atmospheric turbulence in [34] and [35],
+13:     if (p0sum > psum ) or (m` = mmin ) or (mh = mmax )                     is an important direction for future work. In such settings,
+14:          mt = m` and mT −t+1 = mh .                                        accurately modeling and estimating the BER function becomes
+15:          pt = p` and pT −t+1 = ph .                                        a critical component.
+16:          `s = `e + 1 and he = hs − 1.                                         Remark 4 (Comparison with Conventional Modulation and
+17:          `e = `s + minit − 1 and hs = he − minit + 1.                      Power Control Method): In traditional digital communication
+18:          t = t + 1.                                                        systems, modulation and power control methods are widely
+19:          continue.                                                         adopted to maximize spectral efficiency or minimize BER
+20:     end                                                                    under varying channel conditions. One well-known method
+21:     if p0sum ≤ psum                                                        is the water-filling algorithm, which allocates more power to
+22:          mt = m` − 2 and mT −t+1 = mh + 2.                                 channels with higher SNR and less to those with lower SNR,
+23:          pt = p0` and pT −t+1 = p0h .                                      maximizing spectral efficiency. Unlike these conventional
+24:          `e = `e − 2 and hs = hs − 2.                                      methods, our framework differentiates itself by dynamically
+25:     end                                                                    assigning different modulation and power to individual data
+26: end                                                                        bits, even when the channel conditions remain the same for
+                                                                               all bits. This difference arises from the fact that conventional
+                                                                               methods typically treat all data bits equally, without accounting
+                                                                               for the varying levels of importance or sensitivity of each bit,
+current levels, the algorithm proceeds to the next groups. Here,               whereas our framework recognizes that certain bits may be
+the conditions for moving to the next groups are if adjusting                  more critical for performing the receiver’s task. The perfor-
+the modulation levels increases the total power or if the                      mance gain of our strategy will be numerically demonstrated
+modulation levels have reached their minimum or maximum                        in Sec. V.
+values, denoted as mmin and mmax .                                                Remark 4 (Integration with Channel Coding): In this work,
+   In the AMPC method, the procedure for determining the                       we focus on the uncoded transmission scenario to isolate and
+index of the most suitable encoder-decoder pair is the same                    highlight the effect of training bit-flip probabilities. Nonethe-
+as that in equation (32) of the APC method. Additionally, the                  less, incorporating channel coding represents a promising
+optimized modulation level and power can be shared without                     direction for further improving system performance. A key
+any communication overhead because the AMPC method can                         challenge in extending our framework to include channel cod-
+be locally performed at the transmitter and receiver based on                  ing lies in the fact that the pre-trained bit-flip probabilities are
+the pre-shared knowledge of {µ(k) }∀k . Meanwhile, the AMPC                    non-uniform across bit positions. In addition, the integration
+adjusts mt by ±2 because only even-valued mt are considered                    of channel coding may change the nature of bit errors, where
+for 2mt -QAM, though a step size of ±1 or another value is                     decoding failures tend to occur at the block level rather than
+also applicable with a modified modulation set.                                as independent bit flips. Moreover, capacity-approaching codes
+   The main advantage of the AMPC method is its ability                        often require long block lengths and iterative decoding, which
+to consistently achieve the same or lower total transmission                   increase system complexity and latency. To address these
+power compared to the APC method. This is because the                          issues, we can consider practical channel coding schemes such
+AMPC method starts with the same initial modulation level                      as repetition codes and short-block-length codes. These codes
+as the simple method, and then adjusts the modulation level                    inherently produce non-zero bit-flip probabilities, aligning well
+toward minimizing power consumption. This advantage will                       with our blind training. Further, for the repetition codes, each
+be further validated through numerical simulations in Sec. V.                  bit is decoded independently through majority voting. As a
+   In practice, the iterative optimization process involved in                 result, the block error rate (BLER) is directly determined by
+AMPC may result in substantial computational overhead,                         the BER, and the two metrics exhibit similar behavior. For
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                        11285
+
+
+
+
+Fig. 8. Comparison of the PSNRs for various semantic and traditional communication frameworks using MNIST, CIFAR-10, and STL-10 datasets.
+
+
+
+                            TABLE II                                           for MNIST, CIFAR-10, and STL-10 are modified from [8]
+T HE S EMANTIC E NCODER AND D ECODER A RCHITECTURES FOR MNIST,                 to improve task performance, while that for Tiny-ImageNet
+         CIFAR-10, STL-10, AND T INY-I MAGE N ET DATASETS                      follows [37]. In this table, C(c,k,s,p) represents a 2D convo-
+                                                                               lutional layer with c output channels, a k × k kernel, a stride
+                                                                               of s, and padding of p. Similarly, CT(c,k,s,p,po ) denotes a
+                                                                               transposed 2D convolutional layer with c output channels, a
+                                                                               k × k kernel, a stride of s, padding of p, and output padding
+                                                                               of po . Further, BN denotes a 2D batch normalization layer,
+                                                                               and RB(c) represents a residual block layer with c output
+                                                                               channels, where the details of these layers are provided in [37]
+                                                                               and its official GitHub repository. In the training process, the
+                                                                               number of epochs is set to 50, 100, 200, and 50 for the MNIST,
+                                                                               CIFAR-10, STL-10, and Tiny-ImageNet datasets, respectively.
+                                                                               For all datasets, the batch size is set to 16, and the Adam
+                                                                               optimizer in [38] is employed with an initial learning rate
+the short-block length codes, the mismatch between BLER                        of 10−4 to train the semantic encoder and decoder. Unless
+and BER can be mitigated by dividing the bit sequence into                     otherwise specified, the target transmission rate Rtarget and the
+multiple groups, with each group encoded by a different chan-                  total available transmission power Ptot are set to 4 and 100,
+nel coding scheme tailored to a distinct target BLER. We note                  respectively. The communication channel for all simulations
+that this consideration is closely related to the principles of                is modeled as a Rayleigh fading channel.
+unequal error protection, which have been extensively studied                     To evaluate the reconstruction quality, we mainly use two
+in the channel coding literature. A comprehensive exploration                  key metrics: PSNR and SSIM. Accordingly, the loss function
+of this extension is beyond the scope of the present work and                  is used as the MSE loss when evaluating with the PSNR, and
+is left for future research.                                                   SSIM loss when evaluating with the SSIM metric [13].
+                                                                                  In our simulations, we consider the following baselines for
+                                                                               performance comparison:
+          V. S IMULATION R ESULTS AND A NALYSIS                                   • BlindSC-P / BlindSC-MP: These are the proposed dig-
+   In this section, we demonstrate the superiority of BlindSC,                       ital SC frameworks, where BlindSC-P only incorporates
+using the MNIST [24], CIFAR-10 [25], STL-10 [26], and                                power control while BlindSC-MP employs both power
+Tiny-ImageNet [36] datasets. The MNIST dataset consists of                           control and adaptive modulation. Unless otherwise spec-
+70, 000 grayscale images of handwritten digits, each of size                         ified, in both methods, the number of encoder-decoder
+28 × 28 pixels, split into 60, 000 training samples and 10, 000                      pairs is set to K = 3. The L2-based regularization in (24)
+test samples. The CIFAR-10 dataset consists of 60, 000 color                         is employed with regularization weights (λ1 , λ2 , λ3 ) =
+images of size 32 × 32 × 3 pixels, split into 50, 000 training                       (10−6 , 10−3 , 10−2 ), which yields stable and good perfor-
+samples and 10, 000 test samples. The STL-10 dataset consists                        mance in our simulation setup. The bit-flip probabilities
+of 113, 000 color images of size 96 × 96 × 3 pixels, split                           are uniformly initialized within the range of 0.01 to 0.49
+into 105, 000 training samples (including both labeled and                           and optimized using the Adam optimizer in [38] with
+unlabeled data) and 8, 000 test samples. The Tiny-ImageNet                           an initial learning rate of 10−3 . In this framework, if
+dataset consists of 110, 000 color images of size 64 × 64 × 3                        the APC and AMPC methods fail to achieve the last
+pixels, split into 100, 000 training samples, 10, 000 validation                     Kth bit-flip probability set, mainly due to the low total
+samples, and 10, 000 test samples.                                                   power or poor channel conditions, the optimized powers
+   Table II summarizes the semantic encoder and decoder                              are adjusted by multiplying them with an appropriate
+architectures for each dataset, where the model architectures                        constant to satisfy the total power constraint.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11286                                                                       IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+  • NECST (Multi-bit): This framework extends the quan-
+    tization process of the digital SC framework presented in
+    [12] from one-bit to multi-bit. During training, the frame-
+    work employs multiple BSC in (12), with identical bit-flip
+    probabilities applied to all channels. Consequently, the
+    power and modulation levels are uniformly set across
+    all symbols under the constraints on total power and
+    transmission rate.
+  • DeepJSCC-Q: This is the digital SC framework in [13],
+    where the real-valued output of the encoder is mapped
+    to discrete symbols. In this framework, the soft-to-hard
+    quantizer described in [13] is employed. To match the                       Fig. 9. Comparison of total transmission power between BlindSC-P,
+    symbol sequence length with that of other baselines,                        BlindSC-MP, and other frameworks at various SNRmax levels using the
+    the output length of the encoder is adjusted by mod-                        CIFAR-10 dataset.
+    ifying the number of output channels in the last layer
+    to 32 for the MNIST dataset and 96 for the CIFAR-10
+    and STL-10 datasets, resulting in encoder outputs that                      conditions, resulting in significantly improved performance.
+    are considerably longer than those of the BlindSC and                       Further, the performance gap between BlindSC-P and
+    NECST frameworks.                                                           BlindSC-MP shows the effectiveness of the AMPC method.
+  • JPEG+LDPC: This framework utilizes a separate source-                       This performance gap arises from the fact that the AMPC
+    channel coding, employing the joint photographic experts                    method operates with lower power consumption compared
+    group (JPEG) for source coding and the 3/4-rate low-                        to the APC method, allowing it to effectively select the
+    density parity-check (LDPC) code for channel coding.                        best-performing encoder-decoder pair, thus leading to supe-
+    To ensure the transmission rate constraint, the modulation                  rior overall performance. Meanwhile, the comparison with
+    levels are adjusted between 2 and 10. Additionally, the                     JPEG+LDPC highlights the limitations of separate source and
+    JPEG quality settings are set to 80 for the MNIST dataset                   channel coding, as it shows much lower PSNR, especially at
+    and 100 for the CIFAR-10 and STL-10 datasets, ensuring                      low SNRs.
+    compliance with the transmission rate requirements.                            Fig. 9 compares the total transmission power of BlindSC-P
+   In the BlindSC-P, BlindSC-MP and NECST frameworks, the                       and BlindSC-MP with that of other existing frameworks across
+encoder output is processed by the ReLU6 activation function,                   varying SNRmax levels, using the CIFAR-10 dataset. The cor-
+followed by an 8-bit uniform quantizer that discretizes values                  responding PSNR performance is illustrated in Fig. 8(b). Note
+within the range of 0 to 6.                                                     that all baseline frameworks, except BlindSC-P and BlindSC-
+   Fig. 8 compares the PSNRs of various frameworks across                       MP, fully utilized the total available power Ptot . Nevertheless,
+a range of SNRmax levels in (8), using the MNIST,                               the results clearly show that BlindSC-P and BlindSC-MP not
+CIFAR-10, and STL-10 datasets. In this simulation, the max-                     only achieve higher PSNR across all SNRmax levels but also
+imum achievable SNR, denoted as SNRmax , varies with the                        significantly reduce total power consumption. Within BlindSC,
+expected channel-gain-to-noise-power ratio, E[γ], while main-                   both the APC and AMPC methods are analyzed. The results
+taining a fixed total available transmission power Ptot as 100.2                show that the AMPC method consistently outperforms the
+Fig. 8 shows that BlindSC-P and BlindSC-MP frameworks                           APC method in terms of both PSNR and total transmission
+consistently achieves the highest PSNR across all SNRmax                        power, particularly at lower SNRmax levels. This highlights
+levels. Notably, BlindSC-P and BlindSC-MP achieve these                         the superior efficiency of the AMPC method in low-SNR
+results using only K = 3 encoder-decoder pairs, while other                     communication environments, demonstrating that dynamically
+frameworks utilize 9 pairs trained for distinct SNRmax levels.                  optimizing both transmission power and modulation levels can
+The performance comparison clearly indicates that BlindSC-P                     provide better performance than adjusting transmission power
+and BlindSC-MP consistently outperform the NECST frame-                         alone.
+work, highlighting the superior effectiveness of the proposed                      Table III compares the training time, memory usage,
+error-adaptive blind training strategy. This is because, while                  and training considerations of the proposed BlindSC frame-
+the NECST framework applies a rigid constraint by enforcing                     work with NECST and DeepJSCC-Q, using the CIFAR-10
+a uniform bit-flip probability µn across all bits, BlindSC-P and                dataset. The corresponding PSNR performance is illustrated in
+BlindSC-MP relax this constraint by optimizing µn for                           Fig. 8(b). Table III shows that BlindSC significantly reduces
+each bit individually. This flexibility allows BlindSC-P                        training time and memory usage compared to NECST and
+and BlindSC-MP to better adapt to varying bit-reliability                       DeepJSCC-Q. This is because BlindSC trains only 3 encoder-
+                                                                                decoder pairs, and does not rely on any communication data
+  2 Note that SNR
+                    max depends on the product of Ptot and E[γ]. This
+                                                                                (e.g., channel conditions and SNR) during training, while the
+implies that fixing SNRmax and adjusting either Ptot or E[γ] leads to the       other frameworks train 9 encoder-decoder pairs and require a
+same outcome, as increasing one requires decreasing the other proportionally.   large amount of communication data.
+Therefore, even though we have chosen to fix Ptot and vary E[γ] in our
+experiments, the same simulation results can be obtained by fixing E[γ] and        Fig. 10 compares the SSIM values of the proposed
+varying Ptot instead.                                                           BlindSC-MP and NECST on the Tiny-ImageNet dataset across
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                        11287
+
+
+
+                                                                 TABLE III
+                   C OMPARISON OF T RAINING T IME , M EMORY U SAGE , AND T RAINING C ONSIDERATIONS FOR VARIOUS S EMANTIC
+                                        C OMMUNICATION F RAMEWORKS U SING THE CIFAR-10 DATASET
+
+
+
+
+Fig. 10. Comparison of the SSIMs for the proposed BlindSC-MP and NECST         Fig. 12. Trained bit-flip probabilities and the modulation levels determined
+frameworks across varying target transmission rates on the Tiny-ImageNet       by the APC and AMPC methods on the MNIST dataset.
+dataset.
+
+
+                                                                               bit-flip probabilities closely match the actual BER across all
+                                                                               bit indices. This result naturally follows from the fact that the
+                                                                               actual BER closely matches the BER function in (14).
+                                                                                  Fig. 12 presents the modulation levels determined by both
+                                                                               the APC and AMPC methods alongside the trained bit-flip
+                                                                               probabilities. The simulation was conducted using the MNIST
+                                                                               dataset with the trained Kth bit probability set, and the bit-flip
+                                                                               probabilities are sorted for better visualization. Fig. 12 shows
+                                                                               that the APC method applies a constant modulation level
+                                                                               regardless of bit-flip probability. In contrast, in the AMPC
+                                                                               method, as the bit-flip probability increases, the modulation
+Fig. 11. Comparison between trained bit-flip probability µn and the actual
+BER obtained using the proposed AMPC method on the MNIST dataset.              level correspondingly rises. This result aligns with the core
+                                                                               principle of the AMPC method, as described in IV-C, where
+                                                                               lower modulation levels are assigned to bits with lower bit-
+various target transmission rates Rtarget ∈ {4, 6}. In this com-               flip probabilities, and higher modulation levels are allocated to
+parison, NECST employs 16-QAM and 64-QAM to achieve                            bits with higher probabilities. Consequently, by harnessing the
+Rtarget values of 4 and 6, respectively. In this simulation,                   potential performance gains from optimizing the modulation
+since the loss function was changed to optimize SSIM,                          levels, the AMPC method reduces the total transmission power
+the regularization weights were adjusted to (λ1 , λ2 , λ3 ) =                  compared to the APC method, as shown in Figs. 8 and 9.
+(10−3 , 10−1 , 1). Fig. 10 demonstrates that the BlindSC-MP                       In Fig. 13, the PSNR of BlindSC-MP is compared for
+framework achieves the highest SSIM across varying SNRs                        different numbers of encoder-decoder pairs, denoted as K,
+and transmission rates. Notably, BlindSC-MP accomplishes                       across varying SNRmax levels, using the MNIST dataset. In
+this result with only 3 models, while NECST requires 18 mod-                   this simulation, the regularization weights are set as follows:
+els, each trained for specific combinations of SNRmax and R.                   λ1 = 10−6 for K = 1, (λ1 , λ2 ) = (10−6 , 10−3 ) for
+   Fig. 11 presents the alignment between the trained bit-flip                 K = 2, (λ1 , λ2 , λ3 ) = (10−6 , 10−3 , 10−2 ) for K = 3,
+probability µn and the actual BER obtained using the proposed                  and (λ1 , λ2 , λ3 , λ4 ) = (10−6 , 10−4 , 10−3 , 10−2 ) for K = 4.
+AMPC method. The simulation was conducted using the                            Fig. 13 shows that as K increases, the PSNR also improves
+MNIST dataset with the trained Kth bit probability set, where                  at all SNRmax levels. This improvement is attributed to the
+the bit-flip probabilities are sorted for better visualization. For            fact that increasing K enables the proposed framework to
+a fair comparison, the actual BER is measured when the total                   more densely represent diverse communication environments,
+power constraint is satisfied. Fig. 11 shows that the trained                  allowing for finer adaptation to varying channel conditions.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11288                                                                      IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+
+                                                                               Fig. 15. Comparison of the PSNRs for various semantic communication
+Fig. 13. Comparison of PSNR in BlindSC-MP for different numbers of             frameworks using the MNIST dataset under varying channel conditions.
+encoder-decoder pairs K across varying SNRmax levels on the MNIST
+dataset.
+
+                                                                               varying channel conditions. The time-varying channel is mod-
+                                                                               p as a first-order Gauss-Markov process: ht+1 = ζht +
+                                                                               eled
+                                                                                  1 − ζ 2 vt , t ∈ {1, · · · , T }, where h1 = h, vt is an indepen-
+                                                                               dent Rayleigh fading component, and ζ ∈ [0, 1] is a constant
+                                                                               controlling the temporal correlation of the channel. Under
+                                                                               this model, the received signal at time t can be represented
+                                                                                              √
+                                                                               as yt = h pt xt + nt + nVC,t , where nVC,t is the noise
+                                                                               caused by channel variation. We assume that only the initial
+                                                                               channel state h is known to both the transmitter and receiver,
+                                                                               while all subsequent realizations ht for t ≥ 2 are unknown.
+                                                                               In the simulation, we set ζ = 1 − 10−4.5 and R = 2.
+                                                                               Fig. 15 shows that the proposed BlindSC framework consis-
+                                                                               tently outperforms existing methods.
+Fig. 14. Maximum, mean, and minimum values of the trained bit-flip
+probabilities for each bit position in the uniform quantizer.
+                                                                                                          VI. C ONCLUSION
+                                                                                  In this paper, we have proposed a novel digital SC frame-
+Fig. 13 also illustrates that the performance difference between               work that effectively addresses the challenges of adapting to
+K = 3 and K = 4 is minimal. This suggests that                                 diverse communication environments. Unlike traditional SC
+BlindSC-MP can achieve high task performance without                           methods, our training strategy has eliminated the need for prior
+requiring a large number of encoder-decoder pairs, enabling                    knowledge of the communication environment by treating bit-
+more efficient deployment in practical SC systems.                             flip probabilities as trainable parameters. Additionally, our
+   In Fig. 14, we examine whether our framework tends                          framework has introduced a training-aware communication
+to assign lower bit-flip probabilities to the most significant                 strategy that dynamically selects the optimal encoder-decoder
+bit (MSB) of the uniform quantizer. Fig. 14 illustrates the                    pair based on current channel conditions, ensuring efficient
+maximum, mean, and minimum values of the trained bit-flip                      power usage while maintaining high performance. Simulation
+probabilities across different bit positions. The simulation is                results have demonstrated that our framework significantly
+conducted using the MNIST dataset with λ = 10−3 . Fig. 14                      outperforms existing methods, achieving superior task per-
+shows that the mean value of µn increases from the MSB                         formance, lower power consumption, and greater adaptability
+(denoted as bit 1) to the least significant bit (LSB) (denoted                 with fewer encoder-decoder models. An important direction
+as bit 8). This demonstrates that our training method naturally                for future research is to develop an analytical method for
+captures the relative importance of each bit position without                  determining the optimal number of models and λk values.
+explicit supervision. Fig. 14 also shows that the maximum                      Another promising research direction is to extend the cur-
+values of µn are approximately 0.5 for all bit positions. This                 rent framework to more realistic communication settings by
+indicates that the proposed blind training does not simply                     accounting for imperfect channel estimation, time-varying
+assign low µn values to MSBs, but instead selectively allocates                channels, and multi-user environments.
+low or high µn values based on the bit importance for the task
+performance. A similar trend is also found in the minimum                                                    R EFERENCES
+values of µn , where our training method does not simply                       [1]   X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,
+push all LSBs toward 0.5; instead, it selectively adjusts the                        open issues, and future research directions,” IEEE Wireless Commun.,
+bit-flip probabilities based on the bit importance for the task                      vol. 29, no. 1, pp. 210–219, Feb. 2022.
+                                                                               [2]   C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. V. Poor, “Less data,
+performance.                                                                         more knowledge: Building next-generation semantic communication
+   Fig. 15 compares the PSNRs of the various semantic                                networks,” IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp. 37–76, 1st
+communication frameworks using the MNIST dataset under                               Quart., 2025.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+OH et al.: BLIND TRAINING FOR CHANNEL-ADAPTIVE DIGITAL SEMANTIC COMMUNICATIONS                                                                           11289
+
+
+
+[3]  J. Park, J. Choi, S.-L. Kim, and M. Bennis, “Enabling the wireless           [27] A. Goldsmith, Wireless Communications. Cambridge, U.K.: Cambridge
+     metaverse via semantic multiverse communication,” in Proc. 20th Annu.             Univ. Press, 2005.
+     IEEE Int. Conf. Sens., Commun., Netw. (SECON), Madrid, Spain, Sep.           [28] Y. Oh, J. Lee, C. G. Brinton, and Y.-S. Jeon, “Communication-efficient
+     2023, pp. 85–90.                                                                  split learning via adaptive feature-wise compression,” IEEE Trans.
+[4] W. Yang et al., “Semantic communications for future internet: Funda-               Neural Netw. Learn. Syst., vol. 36, no. 6, pp. 10844–10858, Jun. 2025.
+     mentals, applications, and challenges,” IEEE Commun. Surveys Tuts.,          [29] R. M. Gray and D. L. Neuhoff, “Quantization,” IEEE Trans. Inf. Theory,
+     vol. 25, no. 1, pp. 213–250, 1st Quart., 2023.                                    vol. 44, no. 6, pp. 2325–2383, Oct. 1998.
+[5] H. Seo, J. Park, M. Bennis, and M. Debbah, “Semantics-native commu-           [30] S. Ma et al., “Semantic feature division multiple access for multi-user
+     nication via contextual reasoning,” IEEE Trans. Cognit. Commun. Netw.,            digital interference networks,” IEEE Trans. Wireless Commun., vol. 23,
+     vol. 9, no. 3, pp. 604–617, Jun. 2023.                                            no. 10, pp. 15230–15244, Oct. 2024.
+[6] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic                  [31] K. Cho and D. Yoon, “On the general BER expression of one- and two-
+     communications: Deep learning-based image semantic coding,” IEEE                  dimensional amplitude modulations,” IEEE Trans. Commun., vol. 50,
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, Jan. 2023.                      no. 7, pp. 1074–1080, Jul. 2002.
+[7] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Wireless semantic communi-        [32] C. J. Maddison, A. Mnih, and Y. W. Teh, “The concrete distribution:
+     cations for video conferencing,” in Proc. IEEE J. Sel. Areas Commun.,             A continuous relaxation of discrete random variables,” in Proc. 5th Int.
+     Jan. 2022, vol. 41, no. 1, pp. 230–244.                                           Conf. Learn. Represent. (ICLR), Toulon, France, Apr. 2017, pp. 1–20.
+[8] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint source-        [33] J. Yang et al., “Quantization networks,” in Proc. IEEE/CVF Conf.
+     channel coding for wireless image transmission,” IEEE Trans. Cognit.              Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 7308–7316.
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.                        [34] E. E. Elsayed et al., “Coding techniques for diversity enhancement of
+[9] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel                dense wavelength division multiplexing MIMO–FSO fault protection
+     coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,          protocols systems over atmospheric turbulence channels,” IET Opto-
+     no. 1, pp. 178–193, May 2020.                                                     electronics, vol. 18, nos. 1–2, pp. 11–31, Feb. 2024.
+[10] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,             [35] E. E. Elsayed, “Performance enhancement of atmospheric turbulence
+     “Predictive and adaptive deep coding for wireless image transmission              channels in DWDM-FSO PON communication systems using M-ary
+     in semantic communication,” IEEE Trans. Wireless Commun., vol. 22,                hybrid DPPM-M-PAPM modulation schemes under pointing errors, ASE
+     no. 8, pp. 5486–5501, Aug. 2023.                                                  noise and interchannel crosstalk,” J. Opt., vol. 2024, pp. 1–17, Jun.
+[11] M. Rao, N. Farsad, and A. Goldsmith, “Variable length joint source-               2024.
+     channel coding of text using deep neural networks,” in Proc. IEEE            [36] Y. Le and X. Yang, “Tiny imagenet visual recognition challenge,” CS
+     19th Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC),                 231N, vol. 7, no. 7, pp. 1–6, 2015.
+     Kalamata, Greece, Jun. 2018, pp. 1–5.                                        [37] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+[12] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural              digital semantic communications via variational autoencoder,” IEEE
+     joint source-channel coding,” in Proc. Int. Conf. Mach. Learn., vol. 97,          Trans. Commun., vol. 72, no. 9, pp. 5626–5640, Sep. 2024.
+     Jun. 2019, pp. 1182–1192.                                                    [38] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+[13] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-                in Proc. Int. Conf. Learn. Represent., San Diego, CA, USA, May 2015,
+     Q: Constellation constrained deep joint source-channel coding,” IEEE              pp. 1–13.
+     J. Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+[14] W. Li, H. Liang, C. Dong, X. Xu, P. Zhang, and K. Liu, “Non-orthogonal
+     multiple access enhanced multi-user semantic communication,” IEEE
+     Trans. Cognit. Commun. Netw., vol. 9, no. 6, pp. 1438–1453, Dec. 2023.
+[15] H. Xie and Z. Qin, “A lite distributed semantic communication system
+     for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+     pp. 142–153, Jan. 2021.
+[16] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+     bottleneck for task-oriented communication with digital modulation,”
+     IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+                                                                                                           Yongjeong Oh (Graduate Student Member, IEEE)
+[17] Y. Huh, H. Seo, and W. Choi, “Universal joint source-channel cod-
+                                                                                                           received the B.S. degree from the Department of
+     ing for modulation-agnostic semantic communication,” IEEE J. Sel.
+                                                                                                           Electronics Engineering, Pusan National University
+     Areas Commun., vol. 43, no. 7, pp. 2560–2574, Jul. 2025, doi: 10.1109/
+                                                                                                           (PNU), Busan, South Korea, in 2021, and the M.S.
+     JSAC.2025.3559138.
+                                                                                                           degree from the Department of Electrical Engineer-
+[18] T. Ren et al., “Separate source channel coding is still what you need:
+                                                                                                           ing, Pohang University of Science and Technology
+     An LLM-based rethinking,” 2025, arXiv:2501.04285.
+                                                                                                           (POSTECH), Pohang, South Korea, in 2023, where
+[19] L. Guo, W. Chen, Y. Sun, and B. Ai, “Digital-SC: Digital semantic
+                                                                                                           he is currently pursuing the Ph.D. degree. His main
+     communication with adaptive network split and learned non-linear
+                                                                                                           research interests include the areas of semantic
+     quantization,” IEEE Trans. Cogn. Commun. Netw., early access, Dec.
+                                                                                                           communications, distributed AI, and wireless com-
+     2, 2024, doi: 10.1109/TCCN.2024.3510586.
+                                                                                                           munications.
+[20] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep
+     joint source-channel coding,” IEEE Signal Process. Lett., vol. 29,
+     pp. 1442–1446, 2022.
+[21] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding
+     for channel-adaptive digital semantic communications,” IEEE Trans.
+     Cognit. Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.
+[22] L. Qiao, M. B. Mashhadi, Z. Gao, C. H. Foh, P. Xiao, and M. Bennis,
+     “Latency-aware generative semantic communications with pre-trained
+     diffusion models,” IEEE Wireless Commun. Lett., vol. 13, no. 10,
+     pp. 2652–2656, Oct. 2024.
+[23] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+     scheme for semantic communication systems,” IEEE Trans. Cognit.
+     Commun. Netw., vol. 10, no. 1, pp. 150–163, Feb. 2024.                                                Joohyuk Park (Student Member, IEEE) received
+[24] Y. Lecun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based                                       the B.S. degree from the Department of Electri-
+     learning applied to document recognition,” Proc. IEEE, vol. 86, no. 11,                               cal Engineering, Pohang University of Science and
+     pp. 2278–2324, Nov. 1998.                                                                             Technology (POSTECH), Pohang, South Korea, in
+[25] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from                               2023, where he is currently pursuing the Ph.D.
+     tiny images,” M.S. thesis, Dept. Comput. Sci., Univ. Toronto, Toronto,                                degree with the Department of Electrical Engineer-
+     ON, Canada, 2009.                                                                                     ing. His main research interests include the areas
+[26] A. Coates, A. Ng, and H. Lee, “An analysis of single-layer networks                                   of semantic communication, machine learning, and
+     in unsupervised feature learning,” in Proc. 14th Int. Conf. Artif. Intell.                            wireless communications.
+     Statist., 2011, pp. 215–223.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+11290                                                                        IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 11, NOVEMBER 2025
+
+
+
+                         Jinho Choi (Fellow, IEEE) was born in Seoul, South                               Yo-Seb Jeon (Member, IEEE) received the B.S.
+                         Korea. He received B.E. (magna cum laude) degree                                 (Hons.) and Ph.D. degrees from the Department
+                         in electronics engineering from Sogang University,                               of Electrical Engineering, Pohang University of
+                         Seoul, in 1989, and the M.S.E. and Ph.D. degrees in                              Science and Technology (POSTECH), Pohang,
+                         electrical engineering from Korea Advanced Institute                             South Korea, in 2012 and 2016, respectively.
+                         of Science and Technology (KAIST) in 1991 and                                    From September 2016 to August 2018, he was a
+                         1994, respectively. He is with the School of Elec-                               Post-Doctoral Research Associate with POSTECH.
+                         trical and Mechanical Engineering, The University                                From September 2018 to January 2020, he was
+                         of Adelaide, Australia, as a Professor. He authored                              a Post-Doctoral Research Fellow with the Depart-
+                         two books published by Cambridge University Press                                ment of Electrical Engineering, Princeton University.
+                         in 2006 and 2010 and one book by Wiley-IEEE in                                   Since 2020, he has been a Faculty Member at
+2022. His research interests include the Internet of Things (IoT), wireless      POSTECH, where he is currently an Associate Professor with the Depart-
+communications, and statistical signal processing. He received a number          ment of Electrical Engineering. His research interests include the areas of
+of best paper awards, including the 1999 Best Paper Award for Signal             wireless communications, distributed AI, and AI/ML for wireless commu-
+Processing from EURASIP. He has been on the list of World’s Top 2%               nications. He was a recipient of the TJ PARK Graduate Fellowship from
+Scientists by Stanford University since 2020. Currently, he is a Senior Editor   POSTECH (2012–2014). He was recognized as an Exemplary Reviewer for
+of IEEE WIRELESS COMMUNICATIONS LETTERS and an Associate Editor                  IEEE TRANSACTIONS ON COMMUNICATIONS in 2021 and 2022 and IEEE
+of IEEE TRANSACTIONS ON MOBILE COMPUTING. He has also served as a                WIRELESS COMMUNICATIONS LETTERS in 2024. Since 2024, he has been
+Division Editor for Journal of Communications and Networks (JCN) and an          an Associate Editor of IEEE WIRELESS COMMUNICATIONS LETTERS and
+Associate Editor or Editor for other journals, including IEEE TRANSACTIONS       an Editor of Journal of Communications and Networks.
+ON C OMMUNICATIONS , IEEE C OMMUNICATIONS L ETTERS, JCN, IEEE
+TRANSACTIONS ON VEHICULAR TECHNOLOGY, and ETRI journal.
+
+
+
+
+                          Jihong Park (Senior Member, IEEE) received the
+                          B.S. and Ph.D. degrees from Yonsei University,
+                          Seoul, South Korea, in 2009 and 2016, respectively.
+                          He was a Post-Doctoral Researcher with Aalborg
+                          University, Denmark, from 2016 to 2017, and the
+                          University of Oulu, Finland, from 2018 to 2019. He
+                          is an Associate Professor at Singapore University of
+                          Technology and Design (SUTD) and an Honorary
+                          Associate Professor at Deakin University. He serves
+                          as the Deputy Director for the Future Communica-
+                          tions Research and Development Programme (FCP)
+in Singapore. His current research focus includes AI-native semantic commu-
+nication and distributed machine learning for 6G. He is a Member of the IEEE
+Signal Processing Society Machine Learning for Signal Processing Technical
+Committee. He has received several prestigious awards, including the 2023
+IEEE Communication Society Heinrich Hertz Award and the 2022 FL-IJCAI
+Best Paper Award. He has served as Symposium Chair and the Workshop
+Chair at leading conferences, including 2023 IEEE GLOBECOM Symposium
+on Machine Learning for Communications and 2025 ICML Workshop on
+Machine Learning for Wireless Communication and Networks. He is currently
+an Editor of IEEE T RANSACTIONS ON C OMMUNICATIONS.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:51:22 UTC from IEEE Xplore. Restrictions apply.
+

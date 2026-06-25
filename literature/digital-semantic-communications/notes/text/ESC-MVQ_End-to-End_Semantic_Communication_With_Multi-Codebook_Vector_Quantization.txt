@@ -1,0 +1,1172 @@
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026                                                                                           3785
+
+
+
+
+  ESC-MVQ: End-to-End Semantic Communication
+     With Multi-Codebook Vector Quantization
+                    Junyong Shin , Yongjeong Oh , Graduate Student Member, IEEE, Jinsung Park,
+                       Joohyuk Park , Student Member, IEEE, and Yo-Seb Jeon , Member, IEEE
+
+
+
+   Abstract—This paper proposes a novel end-to-end digital                     design, particularly beneficial in extremely bandwidth-limited
+semantic communication framework based on multi-codebook                       and power-constrained environments where traditional meth-
+vector quantization (VQ), referred to as ESC-MVQ. Unlike                       ods struggle to maintain efficiency [2], [3], [4].
+prior approaches that rely on end-to-end training with a specific
+power or modulation scheme, often under a particular channel                      A major breakthrough in this field is the deep joint source-
+condition, ESC-MVQ models a channel transfer function as                       channel coding (DeepJSCC) [5], a deep learning-based joint
+parallel binary symmetric channels (BSCs) with trainable bit-flip              source-channel coding approach. Unlike traditional separate
+probabilities. Building on this model, ESC-MVQ jointly trains                  source-channel coding schemes, DeepJSCC employs deep
+multiple VQ codebooks and their associated bit-flip probabilities              neural networks to extract semantic features from the source
+with a single encoder-decoder pair. To maximize inference per-
+formance when deploying ESC-MVQ in digital communication                       at the transmitter, while reconstructing the source data from
+systems, we devise an optimal communication strategy that                      perturbed features at the receiver to perform semantic tasks.
+jointly optimizes codebook assignment, adaptive modulation, and                By learning this process in an end-to-end manner, it achieves
+power allocation. To this end, we develop an iterative algorithm               significant performance gains over the traditional separate
+that selects the most suitable VQ codebook for semantic features               coding schemes. Harnessing the power of deep learning, Deep-
+and flexibly allocates power and modulation schemes across
+the transmitted symbols. Simulation results demonstrate that                   JSCC has enabled highly efficient communication strategies,
+ESC-MVQ, using a single encoder-decoder pair, outperforms                      representing a key milestone in the advancement of semantic
+existing digital semantic communication methods in both perfor-                communication [5], [6], [7]. The semantic features extracted
+mance and memory efficiency, offering a scalable and adaptive                  by the deep neural network, however, are represented as a
+solution for realizing digital semantic communication in diverse               real-valued (e.g., 32-bit floating point) vector. Transmitting
+channel conditions.
+                                                                               such continuous-valued representations is either infeasible or
+  Index Terms—Digital semantic communication, joint source-                    highly inefficient in digital communication. Therefore, a direct
+channel coding, end-to-end training, multi-codebook vector                     implementation of the original DeepJSCC approach may not
+quantization, adaptive modulation and power allocation.
+                                                                               be compatible with modern digital communication systems.
+                       I. I NTRODUCTION                                           To realize semantic communications compatible with mod-
+                                                                               ern communication systems, digital semantic communication
+     EMANTIC communication is redefining the way infor-
+S    mation is transmitted by focusing on meaning rather than
+raw data accuracy. Unlike conventional systems that prioritize
+                                                                               has been actively explored in recent studies. In [8] and [9], the
+                                                                               semantic features were reformulated as complex numbers and
+                                                                               then directly mapped into digital symbols. In this approach,
+bit-level fidelity, semantic communication seeks to extract
+                                                                               a customized constellation was designed to suit the semantic
+and convey only the most relevant information, ensuring
+                                                                               features, enabling finite-rate transmission. Another approach
+that the received message aligns with its intended purpose.
+                                                                               for digital semantic communication is to employ a quantization
+This approach is closely related to Weaver’s three levels of
+                                                                               module that converts semantic features into finite-length bit
+communication [1], where the goal extends beyond technical
+                                                                               sequences. A commonly adopted method is scalar quantization
+correctness to achieving semantic understanding and effective
+                                                                               (SQ), which independently quantizes each feature entry and
+information exchange. By operating at the semantic level,
+                                                                               then applies digital modulation to the resulting bits. For exam-
+this paradigm offers a fundamental shift in communication
+                                                                               ple, in [10] and [11], a simple one-bit binarization was used
+   Received 16 April 2025; revised 29 June 2025; accepted 28 August            to transform each feature entry into a binary bit. In [12], [13],
+2025. Date of publication 10 September 2025; date of current ver-              and [14], a multi-bit predefined uniform SQ was employed for
+sion 22 December 2025. This work was supported in part by the
+National Research Foundation of Korea (NRF) under Grant RS-2024-
+                                                                               the same purpose. However, digital semantic communication
+00453301 and Grant RS-2025-24683888. The associate editor coordinat-           based on predefined SQ faces fundamental limitations. First,
+ing the review of this article and approving it for publication was            SQ is unable to exploit correlations among different feature
+B. Guler. (Corresponding author: Yo-Seb Jeon.)                                 entries, as it quantizes each entry independently. Moreover, the
+   The authors are with the Department of Electrical Engineering,
+Pohang University of Science and Technology (POSTECH), Pohang,                 use of a fixed, predefined quantizer hinders effective adaptation
+Gyeongsangbuk-do 37673, Republic of Korea (e-mail: sjyong@postech.             to the specific statistical distributions of the semantic features.
+ac.kr; yongjeongoh@postech.ac.kr; jinsung@postech.ac.kr; joohyuk.park@
+postech.ac.kr; yoseb.jeon@postech.ac.kr).
+                                                                               These limitations restrict the efficiency of finite-bit represen-
+   Digital Object Identifier 10.1109/TWC.2025.3605838                          tations, ultimately degrading the overall system performance.
+            1536-1276 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+                      similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3786                                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+   Recently, digital semantic communication based on vector                   performance of ESC-MVQ in practical digital communication
+quantization (VQ) has received increasing attention to estab-                 systems. To achieve this, we devise an optimal communication
+lish a learnable and efficient finite-bit representation of the               strategy that jointly assigns the most suitable VQ codebook to
+semantic features [16], [17], [18], [19], [20]. The common                    semantic features and flexibly allocates different power and
+idea behind these studies is to jointly train a learnable VQ                  modulation schemes across transmitted symbols. Simulation
+codebook along with the encoder and decoder neural network                    results demonstrate that the proposed ESC-MVQ framework
+to efficiently quantize its output features. This approach allows             outperforms existing digital semantic communication methods
+the quantizer to capture correlations among the feature entries               in terms of both performance and memory efficiency.
+and reflect their distribution, resulting in a more efficient                    The main contributions of this paper are summarized as
+finite-bit representation of the semantic feature with reduced                follows:
+quantization error [21], [22], [23], [24], [25]. However, all
+these methods heavily rely on an end-to-end training for a                       • For the training stage, we develop a novel end-to-
+specific communication environment (e.g., power/rate con-                          end training strategy for jointly training multiple VQ
+straints or channel conditions), making them vulnerable to                         codebooks with semantic encoder and decoder, enabling
+performance degradation when there is a mismatch between                           scalable and adaptive digital semantic communication. In
+training and deployment scenarios.                                                 this strategy, the transmission and reception process of
+   A straightforward approach to address the generalization                        binary outputs are modeled as parallel BSCs with train-
+issue is to utilize multiple models, each trained for a specific                   able bit-flip probabilities. Based on this model, we jointly
+communication environment. However, this approach is not                           optimize multiple VQ codebooks and their associated
+scalable to all possible scenarios, not only due to the vast                       bit-flip probabilities alongside a single semantic encoder-
+diversity of communication environments but also because                           decoder pair, leveraging a carefully designed loss function
+of the significant memory burden it imposes. To tackle this                        that includes a regularization term. This regularization
+problem, an adaptive modulation scheme for the VQ outputs                          term controls the range of bit-flip probabilities, which
+was introduced in [26], allowing the model to adjust its                           are optimized to reflect the expected bit-error rate (BER)
+performance by selecting an appropriate modulation scheme                          under various channel conditions.
+based on the channel conditions. However, this method applies                    • For the inference stage, we devise optimal communica-
+a fixed modulation order across all quantization outputs, which                    tion strategies for ESC-MVQ. Specifically, we formulate
+limits its flexibility in adapting to diverse and dynamic channel                  a joint codebook assignment, modulation, and power
+environments. This limitation can be addressed by adopting                         allocation problem under the constraint that the actual
+a flexible modulation scheme, as proposed in [27], or by                           BERs in a digital communication system match the bit-
+incorporating a flexible power and modulation strategy, as                         flip probabilities learned for the VQ codebooks. To solve
+explored in [14]. However, these studies are restricted to the                     this problem, we develop a joint codebook assignment,
+SQ framework and therefore suffer from non-learnable and                           adaptive modulation, and power allocation method. Addi-
+inefficient finite-bit representations. A flexible power and mod-                  tionally, we propose a low-complexity variant of this
+ulation scheme for VQ-based digital semantic communication                         method by fixing the modulation order.
+remains an open challenge. The key difficulty in this direction                  • Through simulations, we demonstrate that the pro-
+lies in the fact that the VQ codebook, trained under a specific                    posed ESC-MVQ framework outperforms existing digital
+power and modulation configuration, may not be compatible                          semantic communication methods in an image recon-
+with other power or modulation schemes. To the best of the                         struction task. Furthermore, the proposed framework
+authors’ knowledge, no existing studies have addressed how                         significantly improves memory efficiency by using a sin-
+to enable flexible power and modulation for VQ-based digital                       gle encoder-decoder pair, in contrast to prior methods that
+semantic communication.                                                            require multiple pairs. These results collectively confirm
+   To fill this research gap, this paper proposes an end-to-                       that ESC-MVQ is a promising solution for realizing
+end semantic communication framework with multi-codebook                           scalable and channel-adaptive digital semantic commu-
+vector quantization, referred to as ESC-MVQ. The framework                         nication compatible with modern wireless standards.
+is divided into two stages: a training stage and an inference                    This work builds upon our previous study [28], where we
+stage. In the training stage, ESC-MVQ models a channel                        introduced only the training strategy for jointly training multi-
+transfer function as parallel binary symmetric channels (BSCs)                ple VQ codebooks with semantic encoder and decoder. In the
+with trainable bit-flip probabilities, without assuming any                   current work, we newly propose communication strategies to
+fixed power, modulation scheme, or channel condition. Unlike                  optimize the trained performance of ESC-MVQ under varying
+prior approaches that rely on end-to-end training under a                     power constraints and channel conditions. Based on the trained
+specific power or modulation scheme, often tailored to a                      VQ codebooks and corresponding bit-flip probabilities, we
+particular channel condition, this design makes the trained                   jointly determine the codebook assignment for each sub-vector
+VQ codebooks independent of specific communication sce-                       and optimize power and modulation allocation to minimize
+narios. To further enhance flexibility in adapting to diverse                 the distortion function. Through this extension, our simulation
+channel conditions, we train multiple VQ codebooks and their                  results demonstrate the superiority of the proposed framework
+associated bit-flip probabilities alongside a single encoder-                 in enhancing the task performance and promising scalability
+decoder pair. In the inference stage, we aim to maximize the                  in digital semantic communication systems.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                         3787
+
+
+
+
+Fig. 1. An overall architecture of the proposed digital semantic communication framework.
+
+
+
+            II. S YSTEM M ODEL AND P RELIMINARY
+  In this section, we present a digital semantic communication
+system considered in the proposed framework.
+
+A. Digital Semantic Communication System
+   A digital semantic communication system considered in this
+work is illustrated in Fig. 1. To perform a specific semantic
+task with a given data sample x ∈ RM0 , the transmitter first
+employs a semantic encoder network fenc (·, θ) to extract a
+                          0
+semantic feature z ∈ RM , given by
+                                                 0
+                       z = fenc (x, θ) ∈ RM .                           (1)
+                                                                               Fig. 2. An illustration of the operation of the proposed VQ module with a
+Since the elements of z are continuous-valued, they are                        simplified model description. The transmitter applies product VQ and trans-
+                                                                               mits binary sequences over the wireless channel. The receiver reconstructs the
+quantized to enable finite-rate transmission via digital com-                  semantic feature from the received binary sequences.
+munication. A detailed description of the quantization process
+used in the proposed framework will be provided in the next
+subsection. After quantization, the bit sequence representing                  independent values when transmitting each semantic feature
+the quantized semantic feature is mapped to a symbol sequence                  from different input data samples. Additionally, we assume
+s = [s1 , . . . , sT ] of length T using digital modulation. The               that the channel coefficient is perfectly known at both the
+transmission rate, defined as the average number of bits carried               transmitter and receiver through perfect channel estimation
+per constellation symbol, is given by                                          and feedback. Under these assumptions, the transmitted bit
+                                 L                                             sequence is reconstructed at the receiver using a detection
+                               R=  ,                        (2)                process. After detection, the reconstructed bit sequence is
+                                 T
+                                                                               dequantized into ẑq , which serves as the input to the semantic
+where L denotes the bit sequence length. Let pt be the power
+                                                                               decoder fdec (·, φ). The receiver employs the semantic decoder
+allocated to the symbol st , where the total power constraint is
+                                                                               as
+given by
+                        XT                                                                             x̂ = fdec (ẑq , φ),                 (5)
+                             pt ≤ Ptot .                    (3)
+                                                                               in order to perform the semantic task using the decoder
+                            t=1
+                                                                               output x̂.
+Then, each symbol st is transmitted with power pt over a
+block-fading wireless channel, where the channel coefficients
+remain constant during the coherence time [29].                                B. Product VQ Structure
+  The received signal at time slot t is given by                                  In the digital communication system introduced above, it is
+                   √                                                           crucial to employ an effective quantization method to mitigate
+            yt = h pt st + nt , t ∈ {1, . . . , T },      (4)
+                                                                               the unwanted quantization errors between the original seman-
+where h ∈ C is the complex-valued channel coefficient, and                     tic feature z and its quantization z̄q , as these errors may lead to
+nt represents the additive white Gaussian noise (AWGN)                         a degradation in task performance at the receiver. A possible
+distributed as nt ∼ CN (0, σ 2 ). We assume that h takes                       solution is to employ a predefined codebook, such as the
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3788                                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+Grassmannian codebook used in [19]. However, this approach                    the above notations, the reconstructed sub-vector can also be
+cannot capture the specific distribution of the semantic feature              expressed as
+z and thus may fail to achieve optimal performance. Since the                                  ẑq,i = IB−1 (Ti (IB (zq,i ))).         (12)
+distribution of semantic features depends on the task as well
+as the encoder and decoder networks, it is more beneficial                    Then the reconstructed semantic feature is obtained as
+to adopt a quantization method that can be tailored to this                                                             T
+                                                                                            ẑq = ẑT               T
+                                                                                                                           ∈ RN D .
+                                                                                                  
+                                                                                                    q,1 , · · · , ẑq,N                              (13)
+distribution. Motivated by this, we adopt a learnable VQ
+codebook that is jointly trained with the semantic encoder                    The relationship between ẑq and z̄q is illustrated in Fig. 2.
+and decoder to maximize task performance. In particular, in                   Additionally, during model training, gradient correction is
+this work, we consider a learnable product VQ structure,                      applied to the decoder input as follows:
+which offers several advantages over standard SQ and VQ
+structures. First, compared to SQ, the use of a learnable VQ                                           ẑq ← z + sg(ẑq − z),                        (14)
+codebook provides a more flexible and efficient way to capture
+                                                                              where sg(·) denotes the ‘stop-gradient’ operator, which pre-
+the distribution of semantic features. Second, compared to
+                                                                              vents its argument from participating in backpropagation,
+conventional VQ, the product VQ structure reduces memory
+                                                                              treating it as a constant.
+requirements and computational complexity [30]. The product
+VQ structure considered in our work is illustrated in Fig. 2.
+   When employing the product VQ structure, the feature vec-                    III. E ND - TO -E ND T RAINING S TRATEGY FOR S EMANTIC
+tor z is divided into N sub-vectors, each of dimension D, and                       C OMMUNICATION W ITH M ULTI -C ODEBOOK VQ
+a D-dimensional codebook is used to quantize each sub-vector                     In this section, we present the training stage of the proposed
+independently. Consequently, the relationship M 0 = N × D                     ESC-MVQ. We first introduce the BSC modeling as a general-
+holds. Let B be a vector codebook using B bits, consisting                    ized methodology for incorporating communication errors into
+                                                 B
+of 2B codeword vectors, denoted as {ck }2k=1 , each with                      the VQ module in the digital semantic communication. Next,
+dimension D. For the i-th sub-vector zi of z, we define                       we present a training strategy that optimizes the bit-flip prob-
+                                                                              ability in the BSC model through end-to-end learning. Finally,
+               zi = [z(i−1)D+1 , · · · , ziD ] ∈ RD ,                  (6)
+                                                                              we propose a multi-codebook training strategy to enhance
+where zj refers to the j-th element of z. Each sub-vector zi                  adaptability across diverse communication environments.
+is quantized to zq,i by selecting the nearest codeword ck in B
+based on the Euclidean distance:                                              A. Channel Transfer Function Modeling
+                                                  2
+                   zq,i = argmin kzi − ck k .                          (7)       When training the VQ module, it is essential to characterize
+                             ck ∈B
+                                                                              the channel transfer function Ti (·) in (12), which determines
+By concatenating the quantized sub-vectors, the quantized                     the transformation from zq,i to ẑq,i . This function depends on
+semantic feature is obtained as                                               the digital communication scenario, incorporating the effects
+                                          T                                  of channel coefficients, noise power, power allocation, and
+              z̄q = zT                T
+                                             ∈ RN D .
+                    
+                       q,1 , · · · , zq,N              (8)                    modulation order, leading to diverse characteristics. A com-
+                                                                              mon approach to address this variability is to train separate
+   For digital communication, each quantized sub-vector zq,i
+                                                                              models tailored to specific scenarios and select the appropriate
+is converted into the B-bit binary sequence:
+                                                                              model based on given conditions. However, this approach is
+                    bi = IB (zq,i ) ∈ {0, 1}B ,                        (9)    impractical due to the excessive memory and computational
+                                                                              complexity required to accommodate all possible digital com-
+where IB (zq,i ) is a binary mapper that outputs the binary                   munication scenarios.
+representation of the index of the codeword vector zq,i .                        To overcome this limitation, we consider parallel BSCs,
+Consequently, the total length of the resulting bit sequence                  providing a simple yet effective way to model communication
+is calculated as L = N × B. After the digital communication                   errors in various digital communication scenarios. The BSC
+process, described in the previous subsection, the reconstructed              model has been utilized in training encoder and decoder
+bit sequence can be represented as                                            networks within joint source-channel coding frameworks (e.g.,
+                                                                              [10], [11]) and digital semantic communication frameworks
+                     b̂i = Ti (bi ) ∈ {0, 1}B ,                      (10)
+                                                                              (e.g., [14], [27]). In our work, we incorporate the BSC model
+where Ti (bi ) is the channel transfer function, which trans-                 into the joint training of the VQ module with the digital
+forms the transmitted bit sequence bi into the received binary                semantic communication as in [20].
+sequence b̂i at the receiver as a result of the digital communi-                 Under the BSC modeling strategy, the channel transfer
+cation process. Then the reconstructed sub-vector is generated                function Ti (·) is modeled as B parallel BSCs with a bit-flip
+as follows:                                                                   probability sub-vector µi , whose output follows the probability
+                        ẑq,i = IB−1 (b̂i ),                (11)              mass function given by
+                                                                                                      B
+where IB−1 (b̂i ) is an inverse binary mapper which outputs the
+                                                                                                   Y
+                                                                                   P Ti (bi ) = b̂i =   µi,j Hi,j (1 − µi,j )1−Hi,j ,                (15)
+codeword vector in B whose index corresponds to b̂i . Utilizing                                              j=1
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                       3789
+
+
+
+where µi,j is the j-th element of µi , and Hi,j denotes the                    sampling from a categorical distribution. Specifically, it rep-
+Hamming distance between [bi ]j and [b̂i ]j , returning 1 if                   resents the sampled outcome as a deterministic function of
+the bits differ and 0 otherwise. By concatenating the bit-flip                 µ̄, allowing backpropagation. Based on the Gumbel-Softmax
+probability sub-vectors, we define a bit-flip probability vector               trick, the reconstructed sub-vector ẑq,i is expressed as
+as                                                                                                                    B
+                                         T T                                                                         2
+                    µ̄ = µT
+                                          
+                            1 , · · · , µN   .              (16)                                                     X
+                                                                                                           ẑq,i =         ei,k ck ,                  (19)
+It is noteworthy that µi,j mimics the bit error probability                                                          k=1
+
+when transmitting the j-th bit of the index of the codeword                    where
+vector zq,i through digital communication. This will be further
+clarified in Sec. IV.                                                                          exp{(log p(ck |zq,i ) + gi,k )/τ }
+                                                                                      ei,k = P2B                                     ,                (20)
+   By incorporating the channel transfer function in (15) into                                u=1 exp{(log p(cu |zq,i ) + gi,u )/τ }
+(12), the transition probability from the quantized sub-vector
+zq,i to the reconstructed sub-vector ẑq,i is given by                         and gi,k is a random variable independently drawn from a
+                                                                             Gumbel(0, 1) distribution. The parameter τ regularizes the
+                          (a)
+          p(ẑq,i |zq,i ) = p(b̂i |bi ) = P Ti (bi ) = b̂i                     softness of the Softmax function in the Gumbel-Softmax trick.
+                                                                               As τ is annealed to zero during training, the trick gradually
+                            B
+                            Y                                                  approximates a hard selection of the VQ codeword vector.
+                        =         µi,j Hi,j (1 − µi,j )1−Hi,j ,       (17)
+                                                                               Notably, the conventional use of the Gumbel-Softmax trick
+                            j=1
+                                                                               for the VQ module has been limited to efficient codebook
+where (a) holds because both the binary mapper IB (·) and                      updates, as in [17]. In contrast, our work aims to leverage this
+the inverse binary mapper IB−1 (·) are deterministic one-to-one                trick for training the bit-flip probability vector µ̄ of the BSCs
+mapping functions. By modeling the channel transfer function                   alongside the VQ module.
+through the BSCs, communication errors can be effectively                         Based on the Gumbel-Softmax trick, the bit-flip probability
+captured during the training process of the VQ module.                         vector µ̄ can be jointly trained with the semantic encoder,
+                                                                               VQ codebook, and semantic decoder. However, as training
+                                                                               progresses, all elements of µ̄ continue to decrease because
+B. End-to-End Training for ESC-MVQ                                             minimizing the bit-flip probabilities consistently reduces the
+   Based on the channel transfer function modeling in                          loss function in (18). In particular, the optimal solution of
+Sec. III-A, we present an end-to-end training strategy for the                 µ̄ under the loss Lvq is zero, as this loss includes the
+ESC-MVQ, which allows the joint optimization of the seman-                     communication error term d1 (z, ẑq ). Consequently, this causes
+tic encoder θ, the VQ codebook B, and semantic decoder                         the BSC model to diverge from practical communication
+φ along with the bit-flip probability vector µ̄. By treating                   scenarios, where bit errors cannot be arbitrarily reduced due to
+µ̄ as a learnable parameter, our approach enables end-to-end                   channel fading and noise. To prevent the bit-flip probabilities
+optimization that captures the varying importance of individual                from becoming arbitrarily small, we modify our loss function
+bits, rather than relying on fixed or uniformly sampled bit-flip               by introducing a regularization term:
+probabilities. This formulation eliminates the need for manual
+tuning and allows the model to adaptively allocate power and                                          Lesc-vq = Lvq + λR(µ̄),                         (21)
+modulation based on semantic relevance. As a result, it leads to
+improved task performance compared to conventional uniform                     where R(µ̄) is a regularization function, defined as
+allocation strategies, as will be demonstrated in Sec. V. To this                                            1 XX
+end, we consider a joint loss function given by                                                  R(µ̄) =           µi,j logµi,j ,                     (22)
+                                                                                                            NB i j
+                   Lvq = d0 (x, x̂) + d1 (z, ẑq ),                   (18)
+                                                                               and λ is a hyperparameter that determines the relative impor-
+where d0 (x, x̂) is a task-dependent loss term (e.g., mean                     tance of R(µ̄). In [14], where the bit-flip probability µi,j is
+squared error; MSE) and d1 (z, ẑq ) is a communication loss                   learned within a fixed SQ framework, an MSE-based regular-
+term. The expression in (18) clearly demonstrates that our                     ization function R(µ̄) is employed to penalize deviations from
+loss function takes into account both the task performance,                    0.5. However, this approach tends to polarize the bit-flip proba-
+captured by d0 (x, x̂), and communication error, captured by                   bilities toward either 0 or 0.5, thereby limiting the capability to
+d1 (z, ẑq ). In particular, the second loss term considers not only           capture diverse BERs across different power levels. To address
+the quantization error introduced by the VQ codebook B but                     this issue, we select the regularization function defined in (22),
+also the communication error caused by the channel transfer                    whose minimum is achieved when µi,j approaches a specific
+function, which is absorbed into ẑq .                                         probability value, namely 1e ≈ 0.3679. Consequently, a smaller
+   Under our channel transfer function modeling, direct end-                   λ places more emphasis on minimizing Lvq , encouraging the
+to-end training is not feasible because the transition from zq,i               bit-flip probabilities to decrease, whereas a larger λ empha-
+to ẑq,i in (17) involves probabilistic sampling, which prevents               sizes the regularization term R(µ̄), driving the probabilities
+direct backpropagation. To address this challenge, we employ                   to increase. Thus, the bit-flip probabilities can be effectively
+the Gumbel-Softmax trick [31], which enables differentiable                    controlled by appropriately selecting the hyperparameter λ.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3790                                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+Algorithm 1 Training Strategy for ESC-MVQ                                     using B (v) is then determined as
+                                                                                                     (v)                                   2
+                                                                                                    zq,i = argmin kzi − ck k .                       (23)
+                                                                                                             ck ∈B(v)
+                                                                                                                                        (v)    (v)
+                                                                              Similarly, the transition probability p(ẑq,i |zq,i ) is expressed
+                                                                              as
+                                                                                                   B        H(v)           1−Hi,j(v)
+                                                                                     (v) (v)             (v)   i,j        (v)
+                                                                                                   Y
+                                                                                 p(ẑq,i |zq,i ) =     µi,j          1 − µi,j            ,  (24)
+                                                                                                      j=1
+
+                                                                                      (v)                           (v)      (v)
+                                                                              where µi,j is the j-th element of µi and Hi,j denotes the
+                                                                                                                                     (v)
+                                                                              Hamming distance between the j-th elements of IB(v) (zq,i )
+                                                                                           (v)
+                                                                              and IB(v) (ẑq,i ). Based on the Gumbel-Softmax trick, the
+                                                                                                         (v)
+                                                                              reconstructed sub-vector ẑq,i is expressed as
+                                                                                                                       B
+                                                                                                                   2
+                                                                                                          (v)         (v) (v)
+                                                                                                                   X
+                                                                                                        ẑq,i =      ei,k ck ,                       (25)
+                                                                                                                   k=1
+
+                                                                              where
+                                                                                                                    (v)        (v)       (v)
+                                                                                     (v)     exp{(log p(ck |zq,i ) + gi,k )/τ }
+                                                                                    ei,k = P2B              (v) (v)        (v)
+                                                                                                                                   ,                 (26)
+                                                                                            u=1 exp{(log p(cu |zq,i ) + gi,u )/τ }
+C. Multi-Codebook Training for ESC-MVQ                                               (v)
+                                                                              and gi,k ∼ Gumbel(0, 1).
+   The end-to-end training strategy in Sec. III-B enables the                    A straightforward approach to training V distinct VQ code-
+semantic encoder, VQ codebook, and decoder to be robust                       books is to use V separate encoder-decoder pairs, with each
+against the bit-flip probabilities of the parallel BSCs. However,             pair trained to support a specific VQ codebook. In this case,
+the bit-flip probabilities obtained from end-to-end training may              the end-to-end training can be applied independently to each
+not always be achievable in practical digital communication                   encoder-decoder pair. However, this approach is inefficient,
+scenarios. For instance, when the channel gain is low or the                  as it requires storing multiple models, leading to significant
+transmission power is highly constrained, it may be impossible                memory overhead. To address this challenge, we employ a
+to achieve actual bit-error probabilities in digital communica-               single encoder-decoder pair and develop a sequential multi-
+tion that are lower than the trained bit-flip probabilities. Thus,            codebook training strategy to train it.
+relying on a single set of bit-flip probabilities may limit the                  Our strategy consists of V sequential training steps where
+model’s ability to accommodate diverse digital communication                  the v-th step is designed to simultaneously train the first v VQ
+scenarios.                                                                    codebooks. More specifically, at the start of the v-th step, the
+   To enhance flexibility and adaptability in end-to-end train-               v-th codebook B (v) and the corresponding bit-flip probability
+ing, we propose a multi-codebook training strategy that jointly               vector µ̄(v) are initialized using the previously trained param-
+optimizes multiple VQ codebooks, each tailored to support                     eters B (v−1) and µ̄(v−1) , respectively. Then, we jointly train
+a distinct set of bit-flip probabilities. This approach enables               the v codebooks B (1) , ..., B (v) and bit-flip probability vectors
+the transmitter to dynamically select the most suitable VQ                                                                (v)
+                                                                              µ̄(1) , ..., µ̄(v) using the loss function Lesc-mvq defined as
+codebook based on the achievable bit-flip probabilities, thereby                                                               v
+improving adaptability across diverse communication scenar-                                                        1           X
+                                                                                              L(v)
+                                                                                               esc-mvq = Pv                k
+                                                                                                                                     η u L(u)
+                                                                                                                                          esc-vq ,   (27)
+ios. In our strategy, we train V distinct VQ codebooks along                                                      k=1 η     u=1
+with their associated bit-flip probability vectors under different                              (u)
+                                                                                               Lesc-vq = L(u)              (u)
+                                                                                                                                 R(M(u) ),
+                                                                                                          vq + λ                                     (28)
+regularization conditions. This is achieved by assigning V
+different values of the regularization parameter λ, denoted as                                    L(u)
+                                                                                                   vq = d0 (x, x̂
+                                                                                                                  (u)
+                                                                                                                      ) + d1 (z, ẑ(u)
+                                                                                                                                   q ),              (29)
+λ(1) < · · · < λ(V ) , to the loss function in (21). Additionally,                                          (u)
+                                                                              where x̂(u) = fdec (ẑq , φ) represents the decoder output
+we impose different constraints on the bit-flip probabilities by                      (u)
+                                                                              from ẑq , and η ≤ 1 is a hyperparameter that regulates the
+ensuring that the bit-flip probabilities for the v-th VQ code-                                                               (v)
+book remain above a certain minimum value, denoted as µmin ,
+                                                              (v)             contribution of each codebook’s loss in Lesc-mvq . Our multi-
+          (1)                (V )                                             codebook training strategy enables joint optimization of the
+where µmin < · · · < µmin . This minimum value, together
+                                                                              encoder and decoder while simultaneously training multiple
+with λ(v) , influences the distribution of bit-flip probabilities.
+                           (v)                   (v)                          VQ codebooks, each tailored to support a distinct set of bit-
+During training, any µi,j falling below µmin is clipped to
+  (v)
+                                                                              flip probabilities. The overall training procedure is summarized
+µmin , and this clipping operation does not affect the gradient               in Algorithm 1.
+                                (v) B
+computation. Let B (v) = {ck }2k=1 be the v-th VQ codebook,                      Numerical Example (Distribution of Bit-Flip Probabili-
+                    (v)
+and let µ̄(v) ∈ [µmin , 0.5]N B represent the bit-flip probability            ties): We present an example illustrating the distribution of
+vector associated with B (v) . The i-th quantized sub-vector                  bit-flip probabilities after training with our multi-codebook
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                        3791
+
+
+
+training strategy. Fig. 3 shows the cumulative distribu-
+                                  (v)
+tion function (CDF) of µi,j trained with our multi-
+codebook strategy using the CIFAR-100 dataset. The rel-
+                                                (1)       (5)
+evant parameters are set as V = 5, [µmin , . . . , µmin ] =
+                                            (v)     1 (v−1)
+[0.0005, 0.001, 0.0045, 0.02, 0.05], and λ = 8 ·2           , ∀v ∈
+{1, . . . , 5}. Fig. 3 illustrates that a VQ codebook trained
+                                        (v)
+with a larger value of λ(v) and µmin result in higher bit-
+flip probabilities, as expected. Additionally, Fig. 3 confirms
+that the bit-flip probabilities associated with different VQ
+codebooks follow distinct distributions. These results highlight
+that our multi-codebook training strategy effectively enhances
+the flexibility and adaptability of the trained semantic encoder
+                                                                                                                         (v)
+and decoder.                                                                  Fig. 3. The CDF of bit-flip probabilities µi,j trained with our multi-codebook
+                                                                              training strategy using the CIFAR-100 dataset.
+
+               IV. O PTIMAL C OMMUNICATION
+                 S TRATEGY FOR ESC-MVQ
+                                                                              we approximate the exact distortion using its empirical average
+   In our ESC-MVQ framework, the multi-codebook training                      over the entire training dataset:
+strategy offers V distinct VQ codebooks, each trained to sup-
+port a specific set of bit-flip probabilities. This design enables                                      1       X
+the transmitter, during the inference stage, to dynamically                           Di (vi ) ≈                       Di (vi ) z=fenc (x,θ) ,        (31)
+                                                                                                    |Dtrain |
+                                                                                                              x∈Dtrain
+assign the most suitable VQ codebook to each sub-vector,                                            |                  {z                  }
+considering both the quality of the codebook and the                                                                ,D̂i (vi )
+feasibility of achieving the corresponding bit-flip probabil-
+ities. To maximize inference performance when deploying                       where Dtrain denotes the training dataset. The approximated
+ESC-MVQ in practical digital semantic communication sys-                      values are stored as a precomputed V × N table at both
+tems, this section presents an optimal communication strategy                 transmitter and receiver. This table is then used to solve the
+that jointly optimizes codebook assignment, adaptive modula-                  optimization problem.
+tion, and power allocation.                                                      When employing our multi-codebook training strategy in
+                                                                              Sec. III-C, the vi -th VQ codebook is trained to support parallel
+                                                                                                                          (v )
+A. Problem Formulation                                                        BSCs with the bit-flip probability vector µi i for the i-th sub-
+                                                                              vector. Thus, the overall bit-flip probability vector associated
+   We formulate an optimization problem to jointly opti-                      with the codebook assignment vector v is given by
+mize VQ codebook, modulation order, and transmit power
+assignment for ESC-MVQ. Let vi be the index of the VQ                                                h                           iT
+                                                                                                        (v )               (v )
+codebook assigned to the i-th quantized sub-vector zq,i . The                                 µ̃(v) = (µ1 1 )T , · · · , (µN N )T .                   (32)
+codebook assignment for N sub-vectors is then represented
+by a vector v = [v1 , · · · , vN ] ∈ {1, . . . , V }N , which we              To maximize the performance of ESC-MVQ, we must ensure
+refer to as the codebook assignment vector. To formulate the                  that the actual BERs in a digital communication system
+objective function of the optimization problem, we quantify                   match the bit-flip probabilities in µ̃(v). For an uncoded QAM
+the distortion associated with the codebook assignment. To                    system, where the bit sequence representing the quantized
+this end, we define a distortion function of the i-th sub-vector              semantic feature z̄q is mapped to a symbol sequence s =
+using the vi -th VQ codebook as                                               [s1 , . . . , sT ], the BER for a symbol st modulated with 2mt -
+                                     (v )
+         Di (vi ) = Eẑ(vi ) |z [kẑq,ii − zi k2 ]                            QAM and transmit power pt is approximated as [32]:
+                        q,i   i
+
+                      2B                                                                               √             s              !
+                  (a) X           (v )   (v )    (v )
+                                                            2                                        2mt − 1              3pt γ
+                  =         p(ck i |zq,ii ) · ck i − zi         ,    (30)         (pt ; mt ) ≈ √         √    erfc
+                                                                                                  2mt log2 2mt         2(2mt − 1)
+                      k=1
+                                                                                                     √                  s             !
+where (a) is computed from the transition probability in (24).                                         2mt − 2                3pt γ
+                                                                                               +√           √    erfc 3
+This function measures the mean squared error between the                                           2mt log2 2mt          2(2mt − 1)
+i-th sub-vector zi and the corresponding received sub-vector
+  (v )                                                                                        , ˆ(pt ; mt ),                                         (33)
+ẑq,ii with the vi -th VQ codebook. Given the power constraint
+and channel coefficients, the values of vi are determined by                                    2
+solving an optimization problem that minimizes the distortion                 where γ , |h|σ 2 isR the channel-gain-to-noise-power ratio, and
+                                                                                                   x
+function in (30) at both the transmitter and receiver. However,               erfc(x) , 1− √2π 0 exp(−u2 ) du is the complementary error
+a key challenge in this setup is that the receiver cannot                     function. This expression suggests that the bit-flip probabilities
+directly access the true values of the sub-vectors zi required                associated with the symbol st can be aligned with the actual
+for computing the distortion in (30). To address this challenge,              BER in (33) by adjusting the transmit power pt and modulation
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3792                                                                                   IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+order mt according to the channel gain |h|2 . Based on this
+result, the BER-matching condition1 is given by
+                                    m̄(t−1)
+                                        X+mt
+                            1
+             ˆ(pt ; mt ) =                       sortu (µ̃(v)),        (34)
+                            mt
+                                   u=m̄(t−1) +1
+                     Pt−1
+where m̄(t−1) =         i=1 mi , with m̄
+                                         (0)
+                                              = 0 and sortu (a)
+denotes the u-th smallest element of a vector a. For example,
+if µ̃(v) = [0.1, 0.01, 0.02, 0.09], then sort2 (µ̃(v)) = 0.02,
+which is the second smallest value in µ̃(v). To clarify the
+sorting operation in (34), suppose m1 = 2. In this case,
+the bits with bit-flip probabilities 0.01 and 0.02 are grouped
+as a symbol, and power is then allocated to match BER of                         Fig. 4. An illustration of the JCAMP method.
+0.015, the average of the two bit-flip probabilities. The sorting
+operation ensures that bits with similar bit-flip probabilities are
+modulated using the same symbol, improving the consistency                       B. Joint Codebook Assignment, Adaptive Modulation, and
+of BER matching. Here, ˆ(pt ; mt ) represents the BER induced                   Power Allocation (JCAMP) Method
+by the actual communication channel while µ̃(v) represents                          To address the difficulties in solving the optimization prob-
+the trained bit-flip probabilities within a model. Eventually,                   lem (35), we present a joint codebook assignment, adaptive
+µ̃(v) is used to derive appropriate power and modulation                         modulation, and power allocation (JCAMP) method, which is
+settings through BER matching. Note that our ESC-MVQ                             illustrated in Fig. 4. A major challenge arises from the fact
+matches the bit-flip probabilities trained over parallel BSCs                    that mt bits are entangled in the BER-matching constraint in
+to the BERs of practical modulation schemes, eliminating                         (35b) as these bits are jointly modulated as a single symbol.
+the need for retraining or fine-tuning for specific modulation                   To circumvent this challenge, we temporarily assume that the
+types or orders. In other words, ESC-MVQ operates as a                           BER-matching constraint is given in a per-bit basis as follows:
+generalized semantic communication strategy that is not tied
+                                                                                                                                          (v )
+to any particular modulation scheme.                                                                        ˆ(p̂i,j m̂i,j ; m̂i,j ) = µi,ji ,           (36)
+   Based on the distortion function and BER-matching con-
+dition, the joint optimization problem for ESC-MVQ is                            where p̂i,j and m̂i,j is defined as a temporary power and tem-
+formulated as                                                                    porary modulation order, respectively. Then our optimization
+           N                                                                     problem (35) can be reformulated as
+          X
+   min       D̂i (vi ),                                      (35a)                            N
+  v,m,p                                                                                       X
+             i=1                                                                     min             D̂i (vi ),                                         (37a)
+                                  m̄(t−1)                                           v,M̂,P̂
+                             1        X+mt                                                     i=1
+       s.t. ˆ(pt ; mt ) =                       sortu (µ̃(v)), ∀t,    (35b)                                                  (v )
+                                                                                       s.t. ˆ(p̂i,j m̂i,j ; m̂i,j ) = µi,ji , ∀i, j,                   (37b)
+                             mt
+                                  u=m̄(t−1) +1                                                  B
+                                                                                              N X
+            T
+                                                                                              X
+            X                                                                                               p̂i,j ≤ Ptot , p̂i,j ≥ 0.                   (37c)
+                   pt ≤ Ptot , pt ≥ 0,                                 (35c)                   i=1 j=1
+             t=1
+                                                                                                        N     B
+                   T                                                                           1 XX
+            1X                                                                                            m̂i,j ≥ R, m̂i,j ∈ {2, 4, . . . , mmax },
+                  mt ≥ R, mt ∈ {2, 4, . . . , mmax },                  (35d)                  N B i=1 j=1
+            T t=1
+                                                                                                                                                        (37d)
+where p = [p1 , · · · , pT ]T is a power allocation vector, and
+m = [m1 , · · · , mT ]T is a modulation order vector. This prob-                 where M̂ and P̂ are the temporary modulation order and
+lem aims to minimize the overall distortion while optimizing                     power matrix, respectively, such that [M̂]i,j = m̂i,j and
+power allocation, modulation order, and codebook assignment,                     [P̂]i,j = p̂i,j . As the BER function ˆ(p̂i,j m̂i,j , m̂i,j ) is mono-
+subject to a total power constraint. Our optimization problem                    tonically decreasing with respect to p̂i,j , the temporary power
+is combinatorial and involves non-convex constraints, making                     can be efficiently determined by solving the equation (33) for
+it computationally challenging to solve, especially for a large                  p̂i,j using numerical methods such as bisection or Newton-
+number of sub-vectors and VQ codebooks. To address this                          Raphson algorithms [33]. We define the obtained solution as
+challenge, we develop two practical algorithms to efficiently                    the optimal temporary power denoted as
+solve the optimization problem in (35), which will be intro-                                                                    (v )
+duced in the following subsections.                                                                                     ˆ−1 (µi,ji ; m̂i,j )
+                                                                                                             p̂?i,j =                         .          (38)
+  1 It is also possible to adopt a more sophisticated BER-matching condition.
+                                                                                                                               m̂i,j
+For example, in 2mt -QAM, the mt bits grouped into a single symbol may           Then the problem simplifies to
+experience different BERs depending on their positions; thus, one could match
+each bit to its corresponding BER individually. Nevertheless, for simplicity,                 N
+                                                                                              X
+in this work, we assume that all bits within a symbol share the same average         min            D̂i (vi ),                                          (39a)
+BER.                                                                                 v,M̂     i=1
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                            3793
+
+
+           N X
+             B                                               (v )                                            N    B
+           X                                         ˆ−1 (µi,ji ; m̂i,j )                              1 XX
+   s.t.                 p̂?i,j ≤ Ptot ,   p̂?i,j =                         ,    (39b)                              m̂i,j ≥ R, m̂i,j ∈ {2, 4, . . . , mmax },
+                                                            m̂i,j                                      N B i=1 j=1
+           i=1 j=1
+                    N     B                                                                                                                               (42c)
+            1 XX
+                       m̂i,j ≥ R, m̂i,j ∈ {2, 4, . . . , mmax },                         This problem is still relevant to the original problem (39)
+           N B i=1 j=1
+                                                                                         because reducing the total transmit power contributes to offer
+                                                                                (39c)    a room to reduce the overall distortion when solving the first
+To solve the optimization problem (39), we employ an alter-                              sub-problem (P1). To solve the second sub-problem, we also
+nating optimization approach which alternatively optimizes the                           employ a greedy-type swapping algorithm. In this algorithm,
+temporary modulation order matrix M̂ and codebook assign-                                we minimize the total transmission power by making adjust-
+ment vector v. To this end, we decompose the optimization                                ments on temporary modulation orders while maintaining the
+problem into two sub-problems, where the first sub-problem                               constraint in (42c). Basically, the algorithm is performed for
+optimizes the codebook assignment vector v for a fixed                                   the modulation order m ∈ {4, . . . , mmax − 2}. In each iter-
+                                                                                                                         (m) (m)
+M̂, while the second sub-problem optimizes the temporary                                 ation, we identify index sets I1 , I2 and examine whether
+modulation order matrix M̂ for a fixed v.                                                the total power can be reduced by adjusting m̂i1 ,j1 ← m + 2,
+   Our first sub-problem aims to minimize the overall distor-                            ∀(i1 , j1 ) ∈ I1 and m̂i2 ,j2 ← m − 2, ∀(i2 , j2 ) ∈ I2 . This
+tion by optimizing the codebook assignment vector v for a                                adjustment leads to the increase in p̂?i1 ,j1 and the decrease in
+fixed M̂ as follows:                                                                     p̂?i2 ,j2 . To maximize the power reduction, while minimizing
+                                                                                                                                          (m)       (m)
+                    N
+                    X                                                                    the power increment, we identify index sets I1 and I2 as
+   (P1) min             D̂i (vi ),                                              (40a)    follows:
+            v
+                    i=1                                                                     (m)
+                     N X B                                   −1     (v )                   I1     = {(i, j) | m̂i,j = m, p+               +
+                                                                                                                          i,j ≤ sortm+2 (P )},             (43)
+                    X                                       ˆ    (µi,ji ; m̂i,j )
+             s.t.            p̂?i,j ≤ Ptot ,     p̂?i,j =                            .      (m)
+                                                                                           I2     = {(i, j) | m̂i,j = m, p−                     −
+                                                                                                                          i,j ≥ sortN B−(m−2) (P )},
+                                                                    m̂i,j
+                    i=1 j=1                                                                                                                       (44)
+                                                                                (40b)
+                                                                                                         −
+                                                                                         where p+
+                                                                                                i,j and pi,j are defined as
+To solve this problem in an efficient manner, we devise a
+                                                                                                               (v )                       (v )
+greedy allocation algorithm, inspired
+                                 PN by [34], that gradually                                     p+     ˆ−1 (µi,ji ; m̂i,j + 2) − ˆ−1 (µi,ji ; m̂i,j ),
+                                                                                                 i,j =                                                    (45)
+minimizes the overall distortion i=1 D̂i (vi ), while consider-                                              (v )                    (v )
+                                                                                                p−     ˆ−1 (µi,ji ; m̂i,j ) − ˆ−1 (µi,ji ; m̂i,j − 2),
+                                                                                                 i,j =                                                    (46)
+ing the power consumption to satisfy the constraint in (40b).
+In the proposed greedy algorithm, we initialize the codebook                 and P+ and P− are the power increment matrix and power
+assignment vector by choosing the highest codebook index                     decrement matrix, respectively, such that [P+ ]i,j = p+     i,j and
+(i.e., vi = V, ∀i). This ensures that every sub-vector initially             [P− ]i,j = p−     i,j . If the total amount of the power incre-
+uses the lowest power. During iterations, we gradually reduce                              (m)
+                                                                             ment in I1 is smaller than the total amount of the power
+certain vi values step-by-step to meet the power constraint.                                    (m)
+                                                                             reduction in I2 , the adjustment on the modulation orders
+In particular, at each iteration, we select the index i∗ that                                            (m)                            (m)
+                                                                             m̂i1 ,j1 , ∀(i1 , j1 ) ∈ I1 and m̂i2 ,j2 , ∀(i2 , j2 ) ∈ I2 are
+maximizes the distortion reduction relative to power increase:
+                                                                             made. This ensures that the rate constraint is maintained
+ ∗
+i =                                                                          while minimizing the total transmit power. This adjustment is
+                                                                             performed iteratively until the amount of the power increment
+                                   D̂i (vi ) − D̂i (vi − 1)
+argmax P            n                                             o        . becomes larger than the amount of the power reduction.
+              B                (v −1)                     (v )
+  i:vi >1
+              j=1    ˆ−1 (µi,ji ; m̂i,j ) − ˆ−1 (µi,ji ; m̂i,j ) /m̂i,j       In the proposed JCAMP method, the codebook assignment
+                                                                      (41)   vector    and temporary modulation order matrix are initialized
+                                                                             as vi = V and m̂i,j = NTB , ∀i, j. Then, the codebook assign-
+This criterion ensures that we prioritize changes that maxi- ment vector v is updated by solving the sub-problem (P1)
+mize distortion reduction while minimizing additional power while keeping M̂ is fixed. Afterward, the modulation order
+consumption.                                                                 matrix M̂ is updated by solving the sub-problem (P2) while
+    Our second sub-problem primarily aims to minimize the keeping v fixed. These steps are repeated until the temporary
+overall distortion by optimizing the temporary modulation power constraint PN PB ˆ−1 (µ(vi ) ; m̂ )/m̂ ≤ P is
+                                                                                                       i=1    j=1    i,j       i,j  i,j     tot
+order matrix M̂ for a fixed v. When fixing the                 PNcodebook satisfied.
+assignment vector, the original objective function i=1 D̂i (vi )                Once v and M̂ are determined, a post-processing step is
+in (39) becomesPa constant.               Therefore, we choose the total required to determine the actual power allocation {p } and
+                          N        B                                                                                                    t t
+transmit power i=1 j=1 p̂?i,j as the objective function of modulation orders {m } for the T transmitted symbols. First
+                               P
+                                                                                                         t t
+our second sub-problem as follows:                                           of all, the bit sequence is sorted in ascending order of the
+                                                                                                           (v )
+               XXN    B                                                      bit-flip probabilities {µi,ji }i,j determined from v. The index
+                            ?
+(P2) min                  p̂i,j ,                                    (42a) (iu , ju ) is then defined as the index associated with the u-th
+          v                                                                                                          (v )
+               i=1 j=1                                                       lowest bit-flip probability among {µi,ji }i,j . After sorting, bits
+                                  (v )                                                                                    (v )
+                        ˆ−1 (µi,ji ; m̂i,j )                                with the same m̂i,j values and similar µi,ji values are grouped
+         s.t. p̂?i,j =                         ,                     (42b) into {s } . For each symbol s , let A be the set of ungrouped
+                                  m̂i,j                                                t t                        t
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3794                                                                                   IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+bit indices {(iu , ju )}u . The modulation order mt for st is then                 Algorithm 2 Proposed JCAMP Method
+selected as mt = m̂iu∗ ,ju∗ , where u∗ is the smallest index in
+A. Next, we identify the candidate set of bit indices with the
+same modulation order:
+                   Jt = {u ∈ A | m̂iu ,ju = mt },                         (47)
+and define Kt as the mt smallest indices in Jt . This index
+set Kt is used for symbol mapping at the transmitter and
+for symbol de-mapping at the receiver2,3 . Finally, the power
+allocated to st is computed as pt = ˆ−1 (µ̄t ; mt ), where µ̄t is
+the average bit-flip probability for the bits in It , computed as
+                           1 X           (v )
+                     µ̄t =             µi,ji .               (48)
+                           mt
+                                     (i,j)∈Kt
+
+This process is repeated until all the NB bits are assigned
+appropriate modulation orders and power levels. If the total
+power constraint is not satisfied due to discrepancies between
+temporary and actual power, the power allocation is further
+adjusted as
+                                        T
+                                             !
+                           1           X
+              pt ← pt +         Ptot −     pt .            (49)
+                           T           t=1
+
+The overall procedure of the proposed JCAMP method, includ-
+ing the post-processing step, is summarized in Algorithm 2.
+The overall flow of the problem formulations for the proposed
+JCAMP method is illustrated in Fig. 5.
+   In practice, the iterative optimization process in the JCAMP
+method can incur significant computational cost, especially in
+environments constrained by processing power or low-latency
+demands. To mitigate this challenge, a lookup table-based
+strategy can be employed, where the instantaneous SNR is
+discretized into fixed intervals and the corresponding optimal
+power and modulation allocations are pre-calculated offline.
+This approach removes the need for real-time optimization
+during communication, allowing for efficient execution with
+negligible complexity.
+
+C. Joint Codebook Assignment and Power Allocation
+(JCAP) Method
+   The proposed JCAMP method in Sec. IV-B jointly opti-
+mizes codebook assignment, modulation order, and power
+allocation. However, adjusting the modulation order across
+                                                                                   in (35d) is satisfied. Then, the original problem (35) simplifies
+the bit sequence may increase both implementation and com-
+                                                                                   to
+putation complexities. To reduce these complexities, we also
+present a joint codebook assignment and power allocation                                       N
+                                                                                               X
+(JCAP) method that solve sthe optimization problem in (35)                              min           D̂i (vi ),                                       (50a)
+                                                                                        v,p
+under fixed modulation. In this method, we consider a fixed                                     i=1
+                                                                                                                      tR
+modulation order mt = R = NTB , implying that the constraint                                                 1        X
+                                                                                       s.t. ˆ(pt , R) =                        sortu (µ̃(v)), ∀t,     (50b)
+                                                                                                             R
+  2 During this process, no exchange of bit grouping information between the                                       u=(t−1)R+1
+transmitter and receiver is necessary, as both ends operate the same algorithm          T
+                                                                                        X
+under shared communication constraints, yielding identical grouping results.                  pt ≤ Ptot , pt ≥ 0.                                      (50c)
+   3 Moreover, since both ends are aware of the bit grouping results, it is also
+                                                                                        t=1
+feasible to implement an additional symbol permutation algorithm to minimize
+the hardware burden, which is caused by frequent modulation order and power        This problem aims at jointly optimizing the codebook assign-
+switching. The transmitter can permute the symbols so that those with similar
+modulation orders and power levels are adjacent, and the receiver can perform      ment vector v and power allocation vector p to minimize the
+the corresponding de-permutation after detecting the symbols.                      overall distortion.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                        3795
+
+
+
+   Solving (50) is still challenging due to the entanglement                    bit-flip probability µ̄t defined in (48), we compute pt =
+between v and p. To circumvent this challenge, we temporar-                     ˆ−1 (µ̄t ; mt ). To resolve the discrepancy between the temporar-
+ily assume that the BER-matching constraint is given in a                       PTcomputed power under the constraint and the actual total
+                                                                                ily
+per-bit basis as follows:                                                          t=1 pt , the power adjustment in (49) is applied. The overall
+                                                  (v )                          procedure of the proposed JCAP method is summarized in
+                          ˆ(p̂i,j R; R) = µi,ji ,                     (51)
+                                                                                Algorithm 3. As mentioned in the previous subsection, the
+where p̂i,j is referred to as a temporary power. As discussed in                proposed JCAP method, like the JCAMP method, can also
+Sec. IV-B, the temporary power can be efficiently determined                    adopt a lookup table-based approach to alleviate the associated
+by solving the equation (51) for p̂i,j using numerical meth-                    computational burden.
+ods. Then the corresponding solution is obtained as p̂?i,j =
+       (v )                                                                                 V. S IMULATION R ESULTS AND A NALYSIS
+ˆ−1 (µi,ji ; R)/R. Based on the temporary power allocation,
+our problem (50) reduces to a codebook assignment problem:                         In this section, we demonstrate the superiority of the pro-
+            N                                                                   posed ESC-MVQ framework with simulation results. In our
+            X
+   min          D̂i (vi ),                                            (52a)     simulations, we focus on image reconstruction tasks where
+     v
+            i=1                                                                 the task-dependent loss is set as d0 (x, x̂) = kx − x̂k2 . For
+             N X B                                                              the communication loss, we adopt the loss structure in [21]
+            X                                     1 −1 (vi )                                                          2                 2
+     s.t.            p̂?i,j ≤ Ptot ,   p̂?i,j =     ˆ (µi,j ; R).    (52b)     given by d1 (z, ẑq ) = ksg(z) − ẑq k +β kz − sg(ẑq )k , where
+            i=1 j=1
+                                                  R                             β = 0.25 is a hyperparameter. The communication loss aims
+To solve the above problem in an efficient manner, we devise                    to minimize the difference between the semantic feature z and
+a greedy allocation algorithm, as done in Sec. IV-B. In this                    its quantization ẑq . For the performance measure, we adopt
+algorithm, we initialize the codebook assignment vector by                      the peak signal-to-noise ratio (PSNR) defined as
+choosing the highest codebook index (i.e., vi = V, ∀i). Then,                                                       MAX2
+                                                                                                                          
+during iterations, we gradually reduce certain vi values step-                               PSNR = 10 log10                 (dB),          (54)
+                                                                                                                     MSE2
+by-step to meet the power constraint. In particular, at each
+iteration, we select the index i∗ that maximizes the distortion                 where MAX denotes the maximum possible pixel value of
+reduction relative to power increase:                                           the image (e.g., 255 for 8-bit image), and MSE represents
+                                                                                the mean-squared-error between the input and reconstructed
+                                 D̂i (vi ) − D̂i (vi − 1)                       images. The normalized signal-to-noise ratio (SNR) for trans-
+   i∗ = argmax P             n                                   o.
+            i:vi >1    B              (v −1)              (v )
+                              ˆ−1 (µi,ji ; R) − ˆ−1 (µi,ji ; R)               mitting the entire bit sequence is defined as
+                       j=1                                                                                               
+                                                                  (53)                                          Ptot E[γ]
+                                                                                             SNR = 10 log10                 (dB).        (55)
+                                                                                                                   NB
+Algorithm 3 Proposed JCAP Method
+                                                                                   We consider the CIFAR-10, CIFAR-100, and STL-10
+                                                                                datasets. For each training step, the batch size and number
+                                                                                of epochs are set as 64 and 128, respectively. Also, the Adam
+                                                                                optimizer is employed with a learning rate of 10−3 to train the
+                                                                                semantic encoder-decoder. For the encoder-decoder networks,
+                                                                                the network structure in [21] is adopted. The compression ratio
+                                                                                is defined as
+                                                                                                             (transmission bits)
+                                                                                                        ρ=                       ,             (56)
+                                                                                                              C ×H ×W ×8
+                                                                                where C, H, and W denote the channel, height, and
+                                                                                width of the input image, respectively. In our simulations,
+                                                                                the CIFAR-10 and CIFAR-100 datasets have dimensions
+                                                                                (C, H, W ) = (3, 32, 32), while the STL-10 dataset has dimen-
+                                                                                sions (3, 96, 96). In our simulations, ρ = 3/64 was used,
+                                                                                which corresponds to a transmission overhead of 1152 bits
+                                                                                for the CIFAR-10 and CIFAR-100 datasets, and 10368 bits for
+   Once the codebook assignment vector v is determined                          the STL-10 dataset. Additionally, the rate constraint R is set
+using the greedy algorithm, the actual power allocation pt                      as 4. For performance comparison, we consider the following
+is obtained by the same post-processing as in the previous                      communication frameworks:
+subsection with a fixed modulation order. The bit sequence is                      • ESC-MVQ (JCAMP, JCAP): This is the proposed ESC-
+                                                               (v )
+sorted in ascending order of the bit-flip probabilities {µi,ji }i,j                   MVQ framework combined with the JCAMP method in
+determined from v. The index (iu , ju ) is then defined as                            Sec. IV-B or the JCAP method in Sec. IV-C. For the
+the index associated with the u-th lowest bit-flip probabil-                          multi-codebook training strategy in Sec. III-C, the num-
+               (v )
+ity among {µi,ji }i,j . Following the sorted order, we define                         ber of codebooks is set as V = 5 unless specified other-
+Kt = {(i(t−1)R+1 , j(t−1)R+1 ), . . . , (itR , jtR )} as the set of bit               wise. Other parameters are set as D = 4, B = 9, η = 0.8,
+                                                                                        (1)            (5)
+indices grouped into symbol st . Afterwards, for the average                          [µmin , . . . , µmin ] = [0.0005, 0.001, 0.0045, 0.02, 0.05],
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3796                                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+    and λ(v) = 18 × 2v−1 , ∀v ∈ {1, . . . , 5}. The param-
+    eter τ in (25) is initially set as 0.5 and then annealed
+    as τ × e−0.003 for every 100 training iterations. The
+    maximum modulation level is set to mmax = 6. The bit-
+    flip probabilities are optimized using the Adam optimizer
+    with a learning rate of 10−2 . This framework utilizes only
+    a single encoder-decoder pair for all simulations. When
+    the channel gain |h|2 is extremely low, assigning the V -th
+    codebook to all sub-vectors may still exceed the power
+    constraint. In such cases, JCAMP and JCAP normalize
+    the total power by scaling it down to satisfy the constraint.
+  • BlindSC: This is the conventional digital semantic
+    communication framework developed in [14]. In this
+    framework, the encoder-decoder pairs are trained for
+    the parallel BSCs, where the bit-flip probabilities of
+    the BSCs are jointly optimized. Unlike ESC-MVQ, this
+    framework employs a predefined uniform SQ module. In
+    our simulations, the number of quantization bits is set as
+    3, which maximizes performance while maintaining the
+    same compression ratio as in ESC-MVQ. This frame-
+    work employs the MSE between µ̄ and 0.5 for R(µ̄).
+    The bit-flip probabilities are optimized using the Adam
+    optimizer with a learning rate of 10−2 . To meet different                Fig. 5. An illustration of the overall flow of the problem formulations for the
+    power constraints under various channel conditions, this                  proposed JCAMP method.
+    framework requires K different encoder-decoder pairs.
+  • BSC+VQ: This is a simple variation of the pro-
+                                                                                                         TABLE I
+    posed ESC-MVQ framework. In this framework, the
+                                                                              A C OMPARISON OF THE N UMBER OF PARAMETERS U SED BY THE P RO -
+    encoder-decoder pairs are trained for the parallel BSCs                              POSED S CHEME AND THE BASELINE M ETHODS
+    with a fixed (and non-trainable) bit-flip probability
+    µi,j = µconst ∈ {0.001, 0.0045, 0.02, 0.05, 0.1}, ∀i, j. To
+    meet different power constraints under various channel
+    conditions, this framework requires K different encoder-
+    decoder pairs.
+  • BSC+SQ: This is the conventional digital semantic
+    communication framework developed in [11]. In this
+    framework, the encoder-decoder pairs are trained for the
+    parallel BSCs with a fixed (and non-trainable) bit-flip
+    probability. Unlike ESC-MVQ, this framework employs
+    a predefined uniform SQ module. In our simulations, the                         joint photographic experts group (JPEG) for source cod-
+    number of quantization bits is set as 3, which maximizes                        ing and the 3/4-rate low-density parity-check (LDPC)
+    performance while maintaining the same compression                              code for channel coding. To ensure a fair performance
+    ratio as in ESC-MVQ. To meet every power constraints,                           comparison with existing frameworks, the bit and symbol
+    this framework requires K different encoder-decoder                             lengths are set to be 8 times longer for the CIFAR-10 and
+    pairs seperately trained for each power constraint.                             CIFAR-100 datasets, and 1.5 times longer for the STL-10
+  • sDAC: This is a digital semantic communication frame-                           dataset, relative to other methods. To accommodate this
+    work proposed in [20]. The framework implements a                               extended symbol length, the modulation order for each
+    digital analog converter tailored for semantic commu-                           image is adaptively adjusted within the range of 2 to 6.
+    nication. It employs a learnable VQ module to convert                        First, we evaluate the superiority of the proposed ESC-MVQ
+    semantic features into bit sequences and models the                       framework compared to existing communication frameworks.
+    communication error using the BSC model. To enhance                       To this end, in Fig. 6, we compare the PSNR performance of
+    robustness across diverse channel conditions, the bit-                    various communication frameworks across different SNRs in
+    flip probability of the BSC model is randomly sampled                     a Rayleigh fading channel. To cover the entire SNR range,
+    from U[0, 0.1] at each training iteration. Reflecting this                BSC+VQ and BlindSC employ K = 3 separately trained
+    sampling strategy, the entire model is trained using a                    encoder-decoder pairs, while BSC+SQ requires K = 21 pairs,
+    separate average semantic error (ASE) metric defined in                   one for each point in the figure. In contrast, the proposed
+    [20].                                                                     ESC-MVQ and sDAC utilize only a single encoder-decoder
+  • JPEG+LDPC: This is a traditional separate source-                         pair. To highlight the memory efficiency of ESC-MVQ, Table I
+    channel coding framework. This framework employs the                      presents the number of parameters required by each scheme.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                         3797
+
+
+
+
+Fig. 6. PSNR performances of various communication frameworks across different SNRs in a Rayleigh fading channel.
+
+
+
+
+Fig. 7. Comparison of image reconstruction results across various commu-
+nication frameworks on the STL-10 dataset under a Rayleigh fading channel
+with SNR = 10 dB.
+                                                                               Fig. 8. PSNR performances of various training strategies across five different
+                                                                               SNR levels in an AWGN channel using the STL-10 dataset.
+As shown in this table, the proposed ESC-MVQ requires the
+fewest parameters, owing to the use of a single shared encoder-
+decoder pair.                                                                  dataset. ESC-SVQ represents the single-codebook variant of
+   As shown in Fig. 6, ESC-MVQ, when integrated with the                       the proposed strategy. To isolate and evaluate the impact of
+proposed JCAMP or JCAP method, significantly outperforms                       the training strategy, all considered strategies employ a fixed
+the baseline methods. These results not only validates that                    16-QAM modulation scheme during inference, with appropri-
+the proposed multi-codebook training strategy enables a single                 ate power allocation to satisfy the BER-matching condition.
+model to effectively operate over a wide SNR range, but also                   It should be noted that, although all considered strate-
+demonstrates that the JCAMP and JCAP methods successfully                      gies employ parallel BSCs during end-to-end training, only
+optimize the communication strategy in accordance with the                     ESC-MVQ leverages a single encoder-decoder pair. Unlike
+trained encoder, VQ codebooks, and decoder. the JCAMP                          ESC-MVQ, other strategies rely on five separate encoder-
+method achieves a notable performance gain, particularly in                    decoder pairs, each specifically trained for a different SNR
+the low-SNR regime, by jointly adapting the modulation                         level.
+order alongside codebook assignment and power allocation.                         Fig. 8 clearly shows that ESC-MVQ significantly out-
+JPEG+LDPC exhibits inferior performance, while requiring                       performs other strategies. In particular, ESC-MVQ achieves
+a longer transmission delay compared to digital semantic                       comparable performance to its single-codebook counterpart in
+communication frameworks. This highlights the significant                      the high-SNR regime, while even surpassing it in the low-
+advantage of joint source-channel coding in the digital seman-                 SNR regime. Considering that ESC-SVQ requires training
+tic communication. Fig. 7 visualizes the image reconstruction                  five distinct encoder-decoder pairs, these results highlight
+performance of various comparison methods. It clearly shows                    the efficiency and superiority of our multi-codebook training
+that the proposed ESC-MVQ achieves significantly superior                      strategy with V = 5. Moreover, the performance gap between
+reconstruction performance compared to other communication                     ESC-MVQ and BSC+VQ illustrates the benefits of learning
+techniques.                                                                    the bit-flip probability in an end-to-end fashion, rather than
+   Now, we demonstrate the superiority of the proposed                         relying on predefined values. This result emphasizes the
+multi-codebook training strategy compared to other training                    importance of our strategy for jointly optimizing the bit-
+strategies. To this end, in Fig. 8, we compare the PSNR                        flip probability during training. Finally, the observed gap
+performance of various training strategies across five dif-                    between ESC-MVQ and BlindSC highlights the advantage of
+ferent SNR levels in an AWGN channel using the STL-10                          incorporating a learnable VQ module for feature quantization,
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3798                                                                                 IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+
+                                (v )
+Fig. 9. Comparison of average µi,ji values and actual measured BERs for        Fig. 11. PSNR performances of the JCAMP and JCAP methods with and
+the JCAMP and JCAP methods across various SNRs in a Rayleigh fading            without a lookup table for the CIFAR-100 dataset.
+channel with the CIFAR-100 dataset.
+
+
+
+
+                                                                               Fig. 12. Mean of the assigned codebook index for each sub-vector across
+Fig. 10. Performance gain of the proposed communication strategy over the      different SNRs using the JCAMP method over a Rayleigh fading channel with
+naive usage of a trained ESC-MVQ model in a Rayleigh fading channel using      the CIFAR-100 dataset.
+the CIFAR-100 dataset.
+
+                                                                               and allocates modulation and power accordingly, this method
+which enhances both memory efficiency and reconstruction                       corresponds to simply selecting a pre-trained model based
+quality.                                                                       on the channel condition–the approach used in BlindSC [14].
+   To validate the effectiveness of the proposed BER-matching                  Fig. 10 shows that our proposed JCAMP and JCAP methods
+                                                     (v )                      outperform the Codebook Selection baseline. It demonstrates
+condition, we compare the average values of µi,ji with the
+actual measured BERs under the same experimental setup as                      the efficacy of the proposed communication methods in
+in Fig. 6. Fig. 9 presents the results for the JCAMP and                       Sec. IV.
+JCAP methods and corresponds to the experimental setup used                       Fig. 11 demonstrates the validity of the lookup table-based
+in Fig. 6. Fig. 9 shows that the actual BERs closely align                     JCAMP and JCAP methods, discussed in Secs. IV-B and IV-C,
+with the average bit-flip probabilities learned during training,               respectively. To construct the lookup table, we  first quantize
+demonstrating consistency between the training and inference                   the instantaneous SNR, defined as 10 log10 PNtotBγ (dB),
+environments. These results confirm that the proposed BER-                     into discrete levels. For each level, we precompute the optimal
+matching condition is effectively established and maintained                   power and modulation settings offline. All the quantized
+in practice.                                                                   instantaneous SNR levels and their corresponding configu-
+   To demonstrate the validity of the optimal communication                    rations are stored in the lookup table. Then, during actual
+strategy in Sec. IV, we present the performance gain of                        communication, both the transmitter and receiver quantize
+the proposed communication strategy over the naive usage                       the observed SNR value and directly retrieve the appropriate
+of a trained ESC-MVQ model in a Rayleigh fading chan-                          configurations from the lookup table. In Fig. 11, we present
+nel using the CIFAR-100 dataset. The baseline method in                        the PSNR performances of the JCAMP and JCAP methods
+Fig. 10, referred to as Codebook Selection, assumes a fixed                    using the lookup table across a range of SNR values. The
+modulation order mt = R, and selects one of the codebook                       simulation is conducted using the CIFAR-100 dataset and a
+v ∈ {1, . . . , V } for all sub-vectors based on the channel con-              uniform quantizer that clips the instantaneous SNR values
+dition and power constraint. Power is then allocated according                 to the range [0.77, 11.01] and quantizes them using 8 bits.
+to the resulting bit-flip probabilities. Unlike our proposed                   This SNR range is determined based on the case where all
+strategy, which assigns different codebooks to each sub-vector                 sub-vectors are assigned to the V -th codebook and the first
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: ESC-MVQ: END-TO-END SEMANTIC COMMUNICATION WITH MULTI-CODEBOOK VECTOR QUANTIZATION                                                          3799
+
+
+
+codebook, respectively. Fig. 11 shows that the PSNR of the                       [9]  T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-
+lookup table-based proposed methods become nearly identical                           Q: Constellation constrained deep joint source-channel coding,” IEEE
+                                                                                      J. Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+to the unquantized case.                                                         [10] M. Rao, N. Farsad, and A. Goldsmith, “Variable length joint source-
+   Fig. 12 shows the mean of the assigned codebook index                              channel coding of text using deep neural networks,” in Proc. IEEE 19th
+for each sub-vector across different SNRs using the JCAMP                             Int. Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Jun.
+                                                                                      2018, pp. 1–5.
+method over a Rayleigh fading channel with the CIFAR-100                         [11] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+dataset. Fig. 12 shows that, as the SNR increases, the mean                           joint source-channel coding,” in Proc. Int. Conf. Mach. Learn., Jun.
+of the assigned codebook index for each sub-vector grad-                              2019, pp. 1182–1192.
+                                                                                 [12] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+ually decreases. This trend occurs because lower-indexed                              scheme for semantic communication systems,” IEEE Trans. Cognit.
+                                              (v)
+codebooks correspond to smaller λ(v) and µmin values in                               Commun. Netw., vol. 10, no. 1, pp. 150–163, Feb. 2024.
+the proposed multi-codebook training strategy; therefore,                        [13] L. Teng, W. An, C. Dong, and X. Xu, “SDMCM—A semantic digital
+                                                                                      modulation constellation mapping scheme for semantic communication,”
+these codebooks are associated with lower bit-flip prob-                              IEEE Internet Things J., vol. 12, no. 12, pp. 20885–20901, Jun. 2025.
+abilities and offer better task performance. These results                       [14] Y. Oh, J. Park, J. Choi, J. Park, and Y.-S. Jeon, “Blind training
+confirm that the proposed JCAMP method effectively assigns                            for channel-adaptive digital semantic communications,” IEEE Trans.
+                                                                                      Commun., 2025, doi: 10.1109/TCOMM.2025.3585587.
+appropriate codebooks to sub-vectors based on the channel                        [15] A. Gersho and R. M. Gray, Vector Quantization and Signal Compression.
+conditions.                                                                           Norwell, MA, USA: Kluwer Academic, 1991, Ch. 10.
+                                                                                 [16] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector quan-
+                                                                                      tized semantic communication system,” IEEE Wireless Commun. Lett.,
+                           VI. C ONCLUSION                                            vol. 12, no. 6, pp. 982–986, Jun. 2023.
+                                                                                 [17] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+   In this paper, we proposed ESC-MVQ, a novel digital                                bottleneck for task-oriented communication with digital modulation,”
+semantic communication framework that provides a scalable                             IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+                                                                                 [18] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+and adaptive solution for diverse communication environ-                              communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+ments. We developed an end-to-end training strategy that                              Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+jointly trains multiple VQ codebooks alongside a single                          [19] Z. Lin, L. Yang, Y. Gong, and K. Huang, “Semantic-topology
+                                                                                      preserving quantization of word embeddings for human-to-
+semantic encoder-decoder pair. By modeling the transmission                           machine communications,” IEEE Trans. Commun., vol. 73, no. 4,
+and reception of VQ outputs using parallel BSCs with trainable                        pp. 2401–2415, Apr. 2025.
+bit-flip probabilities, our strategy enables the trained VQ code-                [20] Z. Bao et al., “sDAC—Semantic digital analog converter for seman-
+                                                                                      tic communications,” IEEE Trans. Commun., 2025, doi: 10.1109/
+books to be independent of specific communication scenarios.                          TCOMM.2025.3566976.
+To maximize inference performance, we devised an opti-                           [21] A. van den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+mal communication strategy that jointly optimizes codebook                            representation learning,” in Proc. Adv. Neural Inf. Process. Syst., Dec.
+                                                                                      2017, pp. 6306–6315.
+assignment, modulation, and power allocation. Simulation                         [22] J. Shin, Y. Kang, and Y.-S. Jeon, “Vector quantization for deep-
+results demonstrated that ESC-MVQ significantly outperforms                           learning-based CSI feedback in massive MIMO systems,” IEEE Wireless
+existing methods, achieving superior PSNR while using only                            Commun. Lett., vol. 13, no. 9, pp. 2382–2386, Sep. 2024.
+                                                                                 [23] J. Shin and Y.-S. Jeon, “Error-robust deep learning-based CSI feedback
+a single encoder-decoder pair, unlike other approaches that                           in massive MIMO systems: A multi-rate vector quantization approach,”
+require multiple pairs.                                                               in Proc. 15th Int. Conf. Inf. Commun. Technol. Converg. (ICTC), Oct.
+                                                                                      2024, pp. 1434–1436.
+                                                                                 [24] J. Shin, J. Park, and Y.-S. Jeon, “Entropy-constrained VQ-VAE for deep-
+                              R EFERENCES                                             learning-based CSI feedback,” IEEE Trans. Veh. Technol., vol. 74, no. 6,
+                                                                                      pp. 9870–9875, Jun. 2025.
+[1]   W. Weaver, “Recent contributions to the mathematical theory                [25] J. Shin, E. Jeon, I. Kim, and Y.-S. Jeon, “Deep learning-based csi
+      of communication,” ETC: Rev. Gen. Semantics, vol. 10, no. 4,                    feedback for Wi-Fi systems with temporal correlation,” IEEE Trans.
+      pp. 261–281, 1953.                                                              Commun., 2025, doi: 10.1109/TCOMM.2025.3600202.
+[2]   X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,        [26] Y. Huh, H. Seo, and W. Choi, “Universal joint source-channel coding
+      open issues, and future research directions,” IEEE Wireless Commun.,            for modulation-agnostic semantic communication,” IEEE J. Sel. Areas
+      vol. 29, no. 1, pp. 210–219, Feb. 2022.                                         Commun., vol. 43, no. 7, pp. 2560–2574, Jul. 2025.
+[3]   W. Yang et al., “Semantic communications for future internet: Funda-       [27] J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding
+      mentals, applications, and challenges,” IEEE Commun. Surveys Tuts.,             for channel-adaptive digital semantic communications,” IEEE Trans.
+      vol. 25, no. 1, pp. 213–250, 1st Quart., 2023.                                  Cognit. Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.
+[4]   C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. V. Poor, “Less data,       [28] J. Shin, Y. Oh, J. Park, J. Park, and Y.-S. Jeon, “End-to-end semantic
+      more knowledge: Building next-generation semantic communication                 communication via multi-codebook vector quantization,” in Proc. IEEE
+      networks,” IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp. 37–76, Feb.          Global Commun. Conf. Workshops (GC Workshops), Dec. 2025.
+      2025.                                                                      [29] A. Goldsmith, “Capacity of wireless channels,” in Wireless Communi-
+[5]   E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint                  cation. Cambridge, U.K.: Cambridge Univ. Press, 2005.
+      source-channel coding for wireless image transmission,” IEEE               [30] M. Sabin and R. Gray, “Product code vector quantizers for waveform
+      Trans. Cognit. Commun. Netw., vol. 5, no. 3, pp. 567–579,                       and voice coding,” IEEE Trans. Acoust., Speech, Signal Process.,
+      Sep. 2019.                                                                      vol. ASSP-32, no. 3, pp. 474–488, Jun. 1984.
+[6]   D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel        [31] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with
+      coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,        gumbel-softmax,” 2016, arXiv:1611.01144.
+      no. 1, pp. 178–193, May 2020.                                              [32] K. Cho and D. Yoon, “On the general BER expression of one- and two-
+[7]   W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,                dimensional amplitude modulations,” IEEE Trans. Commun., vol. 50,
+      “Predictive and adaptive deep coding for wireless image transmission            no. 7, pp. 1074–1080, Jul. 2002.
+      in semantic communication,” IEEE Trans. Wireless Commun., vol. 22,         [33] E. Süli and D. F. Mayers, “Solution of equations by iteration,” in An
+      no. 8, pp. 5486–5501, Aug. 2023.                                                Introduction to Numerical Analysis. Cambridge, U.K.: Cambridge Univ.
+[8]   M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep               Press, 2003.
+      joint source-channel coding,” IEEE Signal Process. Lett., vol. 29,         [34] B. Fox, “Discrete optimization via marginal analysis,” Manage. Sci.,
+      pp. 1442–1446, 2022.                                                            vol. 13, no. 3, pp. 210–216, Nov. 1966.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+3800                                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+
+
+                      Junyong Shin received the B.S. degree from the                                   Joohyuk Park (Student Member, IEEE) received
+                      Department of Electrical Engineering, Pohang Uni-                                the B.S. degree from the Department of Electri-
+                      versity of Science and Technology (POSTECH),                                     cal Engineering, Pohang University of Science and
+                      Pohang, South Korea, in 2023, where he is currently                              Technology (POSTECH), Pohang, South Korea, in
+                      pursuing the Ph.D. degree. His main research inter-                              2023, where he is currently pursuing the Ph.D.
+                      ests include the areas of semantic communication,                                degree. His main research interests include seman-
+                      CSI feedback, machine learning, and wireless com-                                tic communication, machine learning, and wireless
+                      munications.                                                                     communications.
+
+
+
+
+                      Yongjeong Oh (Graduate Student Member, IEEE)
+                      received the B.S. degree from the Department of
+                      Electronics Engineering, Pusan National University
+                      (PNU), Busan, South Korea, in 2021, and the M.S.
+                      degree from the Department of Electrical Engineer-
+                      ing, Pohang University of Science and Technology                                  Yo-Seb Jeon (Member, IEEE) received the B.S.
+                      (POSTECH), Pohang, South Korea, in 2023, where                                    (Hons.) and Ph.D. degrees from the Department of
+                      he is currently pursuing the Ph.D. degree. His main                               Electrical Engineering, Pohang University of Sci-
+                      research interests include semantic communication,                                ence and Technology (POSTECH), Pohang, South
+                      distributed AI, and wireless communications.                                      Korea, in 2012 and 2016, respectively. From
+                                                                                                        September 2016 to August 2018, he was a Post-
+                                                                                                        Doctoral Research Associate with POSTECH. From
+                                                                                                        September 2018 to January 2020, he was a Post-
+                                                                                                        Doctoral Research Fellow with the Department
+                                                                                                        of Electrical Engineering, Princeton University.
+                      Jinsung Park received the B.S. degree from the                                    Since 2020, he has been a Faculty Member with
+                      Department of Electrical Engineering, Ajou Univer-      POSTECH, where he is currently an Associate Professor with the Department
+                      sity, Suwon, South Korea, in 2021. He is currently      of Electrical Engineering. His research interests include wireless communi-
+                      pursuing the Ph.D. degree with the Department           cations, distributed AI, and AI/ML for wireless communications. He was a
+                      of Electrical Engineering, POSTECH. His main            recipient of the TJ PARK Graduate Fellowship from POSTECH from 2012
+                      research interests include semantic communication,      to 2014. Since 2024, he has been an Associate Editor of IEEE W IRELESS
+                      MIMO systems, machine learning, and wireless            C OMMUNICATIONS L ETTERS and an Editor of Journal of Communications
+                      communications.                                         and Networks. He was recognized as an Exemplary Reviewer of IEEE
+                                                                              T RANSACTIONS ON C OMMUNICATIONS in 2021 and 2022 and IEEE W IRE -
+                                                                              LESS C OMMUNICATIONS L ETTERS in 2024.
+
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:59 UTC from IEEE Xplore. Restrictions apply.
+

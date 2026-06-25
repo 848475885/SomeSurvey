@@ -1,0 +1,1062 @@
+                                                                                                                                                                                     1
+
+
+
+
+                                                        Integrating Pre-Trained Language Model with Physical Layer
+                                                                              Communications
+                                                                            Ju-Hyung Lee Dong-Ho Lee Joohan Lee Jay Pujara
+
+
+
+                                            Abstract—The burgeoning field of on-device AI communica-             challenge. Maintaining backward compatibility is a crucial
+                                         tion, where devices exchange information directly through embed-        requirement in wireless communication systems, allowing
+                                         ded foundation models, such as language models (LMs), requires          devices designed for older networks (e.g., 4G and 5G) to
+                                         robust, efficient, and generalizable communication frameworks.
+                                                                                                                 operate seamlessly with newer technologies (e.g., 6G). This
+arXiv:2402.11656v2 [cs.IT] 28 Jun 2024
+
+
+
+
+                                         However, integrating these frameworks with existing wireless
+                                         systems and effectively managing noise and bit errors pose              interoperability ensures a smooth transition between networks,
+                                         significant challenges. In this work, we introduce a practical on-      such as handover and roaming, enhancing user experience.
+                                         device AI communication framework, integrated with physical             For on-device AI communication, ensuring backward com-
+                                         layer (PHY) communication functions, demonstrated through               patibility is still essential, enabling existing communication
+                                         its performance on a link-level simulator. Our framework in-
+                                         corporates end-to-end training with channel noise to enhance            infrastructure to support this new paradigm without requiring
+                                         resilience, incorporates vector quantized variational autoencoders      major modifications. Thus, it is required to integrate the on-
+                                         (VQ-VAE) for efficient and robust communication, and utilizes           device AI model application into wireless communication
+                                         pre-trained encoder-decoder transformers for improved general-          systems, ensuring they adhere to existing legacy protocols for
+                                         ization capabilities. Simulations, across various communication         seamless interoperability [6].
+                                         scenarios, reveal that our framework achieves a 50% reduction in
+                                         transmission size while demonstrating substantial generalization           Furthermore, effective on-device AI communication de-
+                                         ability and noise robustness under standardized 3GPP channel            mands several key qualities: (1) Robustness: The system must
+                                         models.                                                                 be resilient to communication errors (e.g., bit error) and noise
+                                            Index Terms—Physical layer communications, language model,           (e.g., channel fading) inherent in dynamic wireless environ-
+                                         VQ-VAE, natural language processing (NLP), link-level simula-           ments; (2) Efficiency: The system must efficiently compress
+                                         tion.                                                                   and transmit data while maintaining accuracy and fidelity; and
+                                                                                                                 (3) Generalization Capability: The system should be able to
+                                                                I. I NTRODUCTION                                 handle diverse inputs and adapt to various communication sce-
+                                                                                                                 narios. Meeting these requirements presents another challenge,
+                                            The increasing capabilities of mobile devices and the                requiring novel approaches in system design and optimization.
+                                         advancements in large language model (LLM), particularly
+                                         foundation models, have paved the way for a new era of on- A. Related Works
+                                         device artificial intelligence (AI).1 This paradigm shift allows
+                                                                                                                       Semantic communication.             Semantic communication,
+                                         devices to possess their own AI capabilities, enabling tasks
+                                                                                                                       which focuses on effectively transmitting semantic
+                                         such as real-time translation, personalized recommendations,
+                                                                                                                       (meaningful) information rather than merely receiving
+                                         and even autonomous driving, all while ensuring privacy and
+                                                                                                                       individual symbols or bits [7], is the most relevant research
+                                         efficiency [1]–[4].
+                                                                                                                       direction for distributed AI-to-AI communications. In order
+                                            On-device AI communication enables devices equipped
+                                                                                                                       to accomplish this, semantic communication systems leverage
+                                         with advanced foundation models like LMs to directly ex-
+                                                                                                                       neural network (NN) at both the TX and RX to extract and
+                                         change information, forming a network of distributed intel-
+                                                                                                                       decode the semantic information. Semantic communication
+                                         ligence. This distributed AI-to-AI communication requires
+                                                                                                                       research can be classified based on the types of data
+                                         efficient and accurate transmission of information between de-
+                                                                                                                       they utilize, including image [8]–[10], video [11]–[13],
+                                         vices. The “encoded representation” generated by the AI/LLM
+                                                                                                                       and speech/text data [14]–[16]. These works pioneered
+                                         at the TX side (called AI-Src-Enc) needs to be reliably trans-
+                                                                                                                       the inclusion of AI in source coding within transceivers,
+                                         mitted and accurately interpreted as ”decoding input” by the
+                                                                                                                       optimizing joint source-and-channel coding (JSCC) under
+                                         AI/LLM at the RX side (called AI-Src-Dec) [5].
+                                                                                                                       specific noisy channels and data distributions.
+                                            However, seamlessly integrating this novel technology with
+                                                                                                                          However, such semantic communication framework poses
+                                         existing communication infrastructure presents a significant
+                                                                                                                       significant challenges for practical application in on-device
+                                                J.-H. Lee and J. Lee are with Ming Hsieh Department of Electrical and AI communication. Firstly, it demands major modifications
+                                         Computer Engineering, University of Southern California, Los Angeles, USA to existing legacy communication protocols (e.g., 5G-NR
+                                         (Emails: {juhyung.lee, joohanl}@usc.edu).                                     protocol), distinguishing it from practical distributed AI-to-AI
+                                                D.-H. Lee and J. Pujara are with Information Science Institute, Uni-
+                                         versity of Southern California, Marina Del Rey, USA (Emails: {dongho.lee, communication systems. JSCC necessitates that both channel
+                                         jpujara}@usc.edu).                                                            coding and communication modules be modified and trainable,
+                                              1 Throughout this paper, we will use the term “on-device AI” and “on-
+                                                                                                                       requiring major modifications in existing legacy communica-
+                                         device AI/language model (LM)” interchangeably to refer to a foundation
+                                         model or a language model deployed at both transmitter (TX) side and receiver tion protocols that are impractical in conventional wireless
+                                         (RX) side in a distributed manner.                                            communication systems.
+                                                                                                                                  2
+
+
+
+   Secondly, much of the existing research assumes ideal chan-       key questions:
+nel conditions (e.g., additive white Gaussian noise (AWGN))          Q1: How can we integrate a pre-trained language model in
+and bases analysis on information theory and symbol-level                practical physical layer (PHY) communication systems
+transmission. This overlooks the complexities of non-ideal               and evaluate its reliability in realistic network scenario?
+(realistic) channel conditions and the necessity for link (or        Q2: How can we efficiently compress the output of the AI-
+system)-level analysis and practical bit-level transmission.             Src-Enc and accurately decode the noisy input of the RX
+   Advancing the pioneering efforts in semantic communica-               AI-Src-Dec?
+tion towards practical application in on-device AI communi-          Q3: How can we leverage the knowledge gained from a large
+cation necessitates two critical components: (1) Reliable com-           dataset to build a general-purpose encoder/decoder for
+munication systems need to seamlessly operate with existing              system-wide application?
+infrastructure. This typically involves interacting with various       Our main contributions, which address these challenges, are
+physical-layer communication function modules like mappers,          summarized as follows:
+forward error correction (FEC), and orthogonal frequency-
+                                                                       • We integrate a language model with the link-level simula-
+division multiplexing (OFDM), each serving a distinct purpose.
+                                                                         tor, NVIDIA Sionna [23], incorporating 5G-NR PHY
+Therefore, it becomes necessary to integrate AI-Src-Enc and
+                                                                         communication functions (e.g., Polar channel coding and
+AI-Src-Dec within the transceiver system, with the operational
+                                                                         QAM mapper). We evaluate its performance on a channel
+parameters of modules compatible with, or analogous to, those
+                                                                         that contains not only noise but also delay dispersion
+in 5G-NR physical-layer modules. (2) Efficient communication
+                                                                         (e.g., 3GPP CDL-family channel), seeing the efficacy of
+systems should be able to compress the output of AI-Src-Enc
+                                                                         on-device AI communication. Furthermore, we propose
+and accurately decode the input of AI-Src-Dec. Developing
+                                                                         a noise-tuning method to optimize its reliability. This
+an effective compression approach is crucial for reducing
+                                                                         addresses Q1.
+the size of semantic messages while retaining their essential
+                                                                       • Converting on-device AI information (e.g., output of AI-
+information.
+                                                                         Src-Enc and input of AI-Src-Dec) into bit-level informa-
+   Fig. 1 shows the difference between semantic communica-
+                                                                         tion often increases data load. Additionally, even minor
+tion and on-device AI communication systems.
+Pre-Trained Language Model.             Recent studies on text           bit errors, induced by channel noise, can greatly hinder
+                                                                         communication. Addressing this, we propose a novel ap-
+semantic communication exploit transformer architectures [17]
+                                                                         proach that leverages vector quantization techniques [24]
+to extract semantics at the TX and recover the original infor-
+mation at the RX [18], [19]. However, such frameworks may                for efficient compression and decoding of on-device AI
+                                                                         information. This approach transforms high-dimensional
+have the following challenges: (i) training an end-to-end (E2E)
+                                                                         vectors into discrete data via a codebook, significantly
+semantic communication pipeline requires a huge computa-
+tional effort due to the many randomly initialized parameters            reducing transmission overhead even while mitigating
+                                                                         the impact of bit errors (i.e., robustness against channel
+of semantic encoder/decoder to be trained on; (ii) difficulty in
+handling out-of-vocabulary (OOV) since they only use a set               noise). This addresses Q2.
+                                                                       • We incorporate encoder-decoder transformers into E2E
+of whitespace-separated tokens in the training data. General-
+                                                                         on-device AI communication systems, initializing them
+purpose communication systems should be able to effectively
+handle any data, including out-of-domain (OOD) data that lies            with pre-trained weights. This approach reduces the re-
+                                                                         liance on channel-specific and data distribution-specific
+outside the training data used to develop the framework. This
+                                                                         optimization, thus enhancing the system’s generalizabil-
+necessitates using pre-trained language models with superior
+generalizability, allowing them to perform well even when                ity; This addresses Q3. In particular, we employ a
+                                                                         pre-trained encoder-decoder transformer (BART [25]) to
+encountering unforeseen data variations.
+   Pre-trained language models, which have been extensively              initialize the parameters of AI-Src-Enc/Dec so that the
+trained on vast web datasets, are revolutionizing the field of           pipeline itself requires little or no computational effort
+natural language processing (NLP) [20], [21]. These models,              and use a pre-trained tokenizer to effectively handle OOV
+often referred to as “foundation models”, possess the ability            so that our pipeline can be generalized to any other text.
+                                                                       • We release source code for the experiments to promote
+to effectively generalize even to data where they have not
+specifically been trained for [2]. Their capabilities are a result       reproducible ML research in wireless communication.2
+of leveraging transfer learning and scaling techniques. Transfer
+learning involves utilizing knowledge acquired from one task         C. Paper Organization and Notation
+and applying it to another [22]. In the context of deep learning,      This paper is organized as follows: Sec.II provides the
+pre-training is the prevailing approach to transfer learning,        background information on two key concepts: on-device AI
+where a model is initially trained on a surrogate task and           communication and vector quantised variational auto encoder
+subsequently fine-tuned to adapt to the downstream task of           (VQ-VAE) After presenting a detailed system model for the
+interest.                                                            on-device AI communication systems in Sec.III, Sec. IV
+                                                                     provides comparison results and ablation studies to assess
+B. Contributions                                                     the contribution of each of our proposed approaches, with
+  To design and evaluate a practical and widely applicable
+on-device AI communication framework, we focus on three                 2 https://github.com/abman23/on-device-ai-comm
+                                                                                                                                  3
+
+
+
+
+                                                (a) Semantic communication system.
+
+
+
+
+                                            (b) On-device AI/LM communication system.
+             Fig. 1: Overview of semantic communication systems and on-device AI/LM communication system.
+
+
+a specific emphasis on the accuracy and efficiency of text is used to deduce the token index, which is then converted back
+transmission. Then, we also present an in-depth analysis of to the corresponding token using the tokenizer.
+our proposed noise-tuning methods, followed by concluding              The transmittable representation itself is a high-dimensional
+remarks in Sec. VI.                                                 vector made up of floating point numbers. For its transmission
+Notation. Random variables are denoted by capital italic via the physical layer, this vector needs to be converted into
+font, e.g., X, Y , with realizations x, y, respectively. I(X; Y ), a form of bit-level information, suitable for digital transmis-
+p(y|x) and p(x, y) represent the mutual information, condi- sion. However, these floating-point numbers are particularly
+tional probability, and joint probability distribution of the two susceptible to bit-flips, which can occur due to noise within
+random variables X and Y . Multivariate random variables are the physical layer as mentioned in Q2. For instance, a 32-bit
+represented with capital bold font, e.g., Y = [Y0 , Y1 ]T . Vectors floating-point number representing 1.0 could change to infinity
+are represented using a lowercase bold font, e.g., y. We use with just one bit-flip (bit error) in the second position, leading
+RD×1 to represent the D-dimensional space of real-valued to a significant decline in transmission accuracy [26].
+vectors. We also use k · k to denote the L2 -norm, which is
+an Euclidean norm.
+                                                                    B. Vector Quantized Variational Autoencoders (VQ-VAE)
+                       II. BACKGROUND
+                                                                       VQ-VAE are a version of variational autoencoders [27],
+A. On-device AI (Distributed AI-to-AI) Communication                distinguished by their use of vector quantization techniques
+   On-device AI (distributed AI-to-AI) communication refers to effectively encode information into discrete latent represen-
+to a paradigm where AI models, e.g., LM, are embedded tations [24]. At the core, an autoencoder is a neural network
+locally within devices and communicate with each other that identifies latent spaces, which are complex and non-linear
+over a network. This decentralized approach allows devices functions derived from the data. This neural network architec-
+to exchange complex, context-rich information, leveraging ture is divided into encoder and decoder. The encoder’s role
+the capabilities of AI models to facilitate personalized and is to process and transform the input data into a latent vector
+intelligent interactions without relying on centralized servers. representation. Following this, the decoder is tasked with the
+   In the process of AI-to-AI communication using via LM, the accurate reconstruction of the original data, using only the
+TX side initially encodes the input sequence. This encoded latent vector representation provided by the encoder. Unlike
+data is then sent across through the physical layer to the traditional approaches where this latent representation is con-
+RX side, where it is decoded back into its original form. To tinuous [27], the VQ-VAE creates discrete latent representation
+enable this, several key components are required. Both AI- by incorporating a discrete codebook. This codebook, forming
+Src-Enc at the TX and AI-Src-Dec at the RX must employ an array of vector entries each assigned a specific index, is
+a shared tokenizer and embedder. These tools play a pivotal utilized to discretize the latent space within the autoencoder.
+role in accurately encoding and decoding the data. Initially, By implementing this strategy, the VQ-VAE facilitates the
+the tokenizer divides the input sequence into discrete tokens. learning of a discrete latent space that effectively captures key
+Subsequently, each token is transformed into an embedding features of the data. The resultant latent representation in this
+representation through the embedder. This series of mapped model is a sequence of integer indices corresponding to the
+embeddings is then input into the encoder to generate a codebook entries, which not only allows for more efficient
+transmittable representation. At the RX end, to reconstruct the data compression but also maintains a level of reconstruction
+original sequence from this representation, the same embedder quality that is comparable to traditional methods.
+                                                                                                                                                            4
+
+
+
+       III. O N - DEVICE AI C OMMUNICATION S YSTEMS                             realistic scenarios.3 Our rationale for this system is to preserve
+                                                                                the meaning and context of the data, even in the presence of
+A. Problem Description
+                                                                                realistic channel noise and bit errors.
+  Consider a sentence s that maps to a symbol stream x
+using the AI-Src-Enc SE (·), vector quantization QE (·; Z), and                 B. System Model
+channel encoder CE (·) as follows:
+                                                                     AI-Source-Encoder and AI-Source-Decoder. Both the AI-
+                    x = CE (QE (SE (s) ; Z)) ,                   (1) Src-Enc SE (·) and AI-Src-Dec SD (·) are constructed from
+                                                                     a series of 6 transformer layers [17]. Each of these layers
+where Z is the shared codebook. The symbol stream x passes integrates a self-attention mechanism, positional encoding, and
+through a physical channel h with noise n ∼ CN (0, σn2 ), a densely connected layer, fortified by residual connections.
+resulting in the received signal y:                                  Notably, while they share a similar foundational architecture,
+                                                                     the specific manner in which the self-attention operates di-
+                           y = hx + n.                           (2) verges between the encoder and decoder components. This
+                                                                     distinction in the self-attention mechanism ensures specialized
+At the receiver (RX) end, the received signal y is processed processing tailored to the unique demands of both encoding
+by the channel decoder CD (·), vector dequantizer QD (·; Z), and decoding tasks. The encoder employs a fully-visible self-
+and AI-Src-Dec SD (·) to estimate the original sentence ŝ:          attention strategy, granting the model the capability to focus
+                   ŝ = SD (QD (CD (y) ; Z)) .                   (3) on any token of the input while the decoder leverages an
+                                                                     auto-regressive self-attention mechanism, limiting the model’s
+   The architecture of the communication system is illustrated attention solely to previous outputs, which is more appropriate
+in Fig. 2, where the transmitter (TX) consists of the AI-Src- for the streaming paradigm in which the decoder operates.
+Enc SE (·), vector quantizer QE (·; Z), and channel encoder These architectures can be pre-trained on a large scale corpus
+CE (·), and the receiver (RX) includes the channel decoder by corrupting documents and computing the cross entropy loss
+CD (·), vector dequantizer QD (·; Z), and AI-Src-Dec SD (·). between the decoder’s output and the original document to
+Both TX and RX share the same codebook Z.                            learn the model generalizable knowledge [25].
+   At the TX end, the sentence s is encoded into a vector                Here, we employ such pre-trained checkpoints
+representation r by SE (·), mapped to discrete indices t via         (BART-base              [25]) and use the encoder and decoder
+QE (·; Z), and encoded into the symbol stream x by CE (·).           weights        to   initialize       the weights of SE (·) and SD (·)
+This process adds redundancy to ensure reliable detection and        respectively.        For    a    more          detailed understanding of the
+correction of bit errors.                                            en/decoder’s         operation,         both      SE (·) and SD (·) share the
+   Conversely, at the RX end, the channel decoder CD (·)             pre-trained       embedding           E     and     the pre-trained tokenizer T .
+decodes the received signal y, the vector dequantizer QD (·; Z)      Once       the   sentence       s     is    given       to SE (·), T tokenizes s
+recovers the discrete indices t̂ into vector representation r̂, and  into    tokens     s t   =   [s t 1 , s  t2 , ...s tn  ]  and maps each token to
+the AI-Src-Dec SD (·) decodes this to recover the estimated          embedding         se   =  [s e1 , s  e 2 , ...s en  ]  by    E. Then, SE (·) encodes
+                                                                                                                                                n×dr
+sentence ŝ.                                                         s e  into    hidden      states     r    =     [r 1 , r 2 , ...rn] ∈ R           through
+On-device AI/LM = (New) Lossy Source Coding. While                   multiple      transformer      layers,        and     passes     it to  channel  encoder
+conventional (lossy) source coding focuses on compressing CE (·). In this context, n denotes the total number of tokens,
+the source input by ensuring statistical similarity between the while dr specifies the dimension of the feature representation
+original and reconstructed signals (s and ŝ), AI-Src-Enc takes of each token.
+a different approach. The system aims to minimize lexical                After transmission is complete and the hidden states r̂ are
+errors (i.e., lexical similarity) and semantic errors (i.e., seman-  retrieved      from the channel decoder CD (·) and provided to
+tic similarity) while also reducing the number of bits/symbols       S D (·),    the   semantic decoder SD (r̂) establishes the condi-
+retrieved from AI-Src-Enc, thereby achieving compression. In         tional    distribution      pθSD (ŝi | ŝ0:i−1 , r̂) and auto-regressively
+particular, it prioritizes compressing the embedding size (i.e.,     samples      words     from    this distribution for each index.
+the dimensionality of r) while maintaining, or even enhancing,       Vector      Quantization        (VQ-VAE).                    Our framework employs
+both lexical and semantic similarities between the original and      vector    quantization      to   transform          continuous        feature representa-
+reconstructed data.                                                  tions    into   discrete   indices,       enabling        efficient    data transmission.
+                                                                     The core of this process is a discrete codebook
+   While leveraging advanced traditional PHY communica-
+tion system’s techniques (e.g., multiple-input multiple-output                                  Z = {z k }K        k=1 ∈ R
+                                                                                                                                 K×dz
+                                                                                                                                         ,                 (4)
+(MIMO), OFDM, channel coding, etc.) which prioritize achiev-
+ing low bit error rate (BER) (or symbol error rate (SER)), on-            3 In this study, our primary focus is on PHY layer functions, and we do not
+
+device AI/LM communication system focuses more on preserv-           address   MAC (or higher) layer functions, like automatic repeat request (ARQ)
+                                                                     and hybrid automatic repeat request (HARQ), which aim to ensure error-free
+ing the meaning between the original and reconstructed data to transmission. It is important to note that in certain network scenarios—where
+ensure successful distributed AI-to-AI (inter-AI) transmission. simpler transmission is required, where transmitted data are latency-sensitive
+To this end, we design and evaluate our E2E on-device AI and cannot afford the delay caused by HARQ, or in broadcast situations
+                                                                     where HARQ is not applicable, such as in Sidelink for device-to-device
+communication system within the context of bit-level PHY (D2D), URLLC, or LEO satellite networks—the retransmission process may
+communication transmission to see its E2E performance in be bypassed.
+                                                                                                                                                                                                                        5
+
+
+
+                                                                                                                                   
+
+
+
+
+                                              
+
+
+
+
+                                                                                                                                                                   &' 
+                                                                                                                                                  (%
+                             
+
+
+
+
+                                                            )*
+
+
+
+
+                                                                                                                 )*
+
+
+
+
+                                                                                                                                !   
+                                        !   
+
+
+
+
+                                                                                                                                 #" $
+                                                                                                                                  
+                                          
+
+
+
+
+                                                                                                                                                                                 " %
+
+
+
+
+                                                                                                                                                                                              
+                    
+
+
+                           
+
+
+
+
+                                                                                                                                                                                  
+                 
+
+
+
+
+                                                                                                                                                                                           
+                                                                                                                                      
+                                                                                                                                  "
+                                             
+
+
+
+
+                                                                                                                                                                                         
+                
+
+
+
+                              
+
+
+
+                                           
+                                                                                    +,-
+
+
+                                                                                                                                  
+
+                                                                      
+                                                                                                                                                                                              
+                       "                          #                                                                #                   "                
+                                                                                                                                                                                   
+                                                                                                                                                                 
+                                                                                                       
+                                                                                                                                                                                                   ! " #
+                                                                                                                                                                                                     
+
+                                                                                                                                                 
+                                                                                                                                              
+                                                                                            
+                                                                                         
+
+Fig. 2: Framework overview of on-device AI/LM PHY communication systems integrated with pre-trained language model.
+This framework incorporates a link-level simulator to realistically emulate bit-level transmission within PHY communication
+systems. At the transmission (TX) end, the symbol stream s undergoes AI-Src-Enc SE (·), vector quantization QE (·; Z), and
+channel encoder CE (·) to produce x. Conversely, at the receiver (RX) end, the received signal y is channel-decoded, vector-
+dequantized, and semantically decoded to recover the symbol ŝ. We evaluate the system in three different criteria: lexical
+similarity, semantic similarity, and compression rate.
+
+
+                                                       where (dr /dz ) is the length of the encoded sequence. In the
+                                                                                given example, (dr /dz ) equals 3.
+                                                                  Conversely, at the RX end, the dequantizer QD (·; Z) con-
+                                                                                             verts the received discrete indices t̂i back into continuous
+                                                                                             vectors r̂i by directly referencing Z, reconstructing the feature
+                                                                
+                                                                                             representation r̂i from t̂i .
+                                                                                   Channel En/Decoder.           The channel encoder CE (·) and
+                                                                         decoder CD (·) incorporate various PHY communication func-
+                                                                                            tions, such as Polar code, QAM mapper, OFDM, MIMO,
+                                                                                            selected for their alignment with 5G-NR standards. This ap-
+                                                  
+                                                                                    proach ensures that our framework mirrors real-world commu-
+                                      !     "
+                                                                                             nication scenarios while acknowledging its partial compliance
+               ! " # $                                                             with 5G-NR protocols.
+                                                                                            Firstly, the input bit for CE (·) is grouped with other bits
+                                                                                             to form a codeword. Polar codes, a form of linear block error
+Fig. 3: Architecture of AI-Source-Encoder (AI-Src-Enc) and correction codes, are considered one of the channel coding
+Quantizer                                                                                    schemes in 5G-NR, where low complexity error correction
+                                                                                             is available [28]. It adds redundancy to the codeword with
+                                                                                             a certain coderate ρ. This helps detect and correct bit errors
+where K denotes the codebook size and dz the dimension of introduced during transmission. The codeword is then further
+each code vector.                                                                            processed and segmented for transmission.
+   At the TX end, the continuous feature vector r ∈ Rn×dr ,                                     Each segmented codeword is mapped to a specific point on
+generated by the AI-Src-Enc SE (·), is quantized into discrete a constellation diagram, such as our considered QAM. Higher
+indices t ∈ Rn×1 using Z. This quantization aims for dz < dr QAM schemes offer more bits per symbol (better efficiency)
+to ensure transmission efficiency. Specifically, each feature vec- but are more susceptible to noise. The chosen QAM symbol
+tor ri ∈ r is divided into segments rij , each with dimension is then represented by a combination of amplitude and phase
+dz . For instance, a feature vector ri with dimension 768 and a variations in a carrier signal. The number of bits per symbol
+codebook dimension of 256 can be segmented into three parts used is denoted by m and the mapper takes as input a message
+([ri1 , ri2 , ri3 ]), each of dimension 256. The quantizer QE (·; Z) u ∈ {0, . . . , 2m − 1}
+maps each segment rij to the closest codebook entry z k ∈ Z,                                    The modulated symbols are divided into subcarriers across
+forming the discrete representation ti ∈ t:                                                  a wide spectrum. This distributes the signal energy, making
+                                                                                           it more resilient to frequency-selective fading channels. Each
+                                                                   2                         user (or subframe) can be modulated independently, enabling
+   ti = QE (ri ; Z) = argmin rij − z k                                   ∈ R(dr /dz )×1 ,
+                                      z k ∈Z                                                 adaptive bit rate and channel equalization by using the received
+                                                                                         (5) modulation and coding scheme (MCS) index. The MCS index
+                                                                                                                                              6
+
+
+
+is dynamically selected and can be adjusted on a per-subframe        In this training (fine-tuning) process, the trainable parameters
+basis, based on the latest channel quality information (CQI).        include AI-Src-Enc SE (·), AI-Src-Dec SD (·), the embedding
+   Data is transmitted simultaneously leveraging multiple an-        E, quantizer QE (·; Z), dequantizer QD (·; Z), and the code-
+tennas, i.e., MIMO, to exploit spatial diversity or multiplexing.    book Z.4
+This creates multiple independent channels, increasing relia-
+bility, data rate, or both. The processed signal is transmitted      D. Optimization Techniques
+over the air. At the receiver, the signal is received by multiple
+                                                                   Our system employs three key optimization techniques to
+antennas. The received signal is then demodulated (QAM de-
+                                                                enhance performance:
+coding) and demultiplexed (OFDM decoding). Channel coding
+                                                                Noise-Tuning. We optimize robustness against communi-
+algorithms (Polar decoding) are applied to correct any errors
+                                                                cation noise by adaptively tuning AI-Src-Enc and AI-Src-
+introduced during transmission. Finally, the decoded bits are
+                                                                Dec to bit (or symbol) errors or channel noise. During fine-
+reassembled into the original data.
+                                                                tuning, we expose them to simulated channel impairments
+Channel. In the on-device AI communication, the wireless
+                                                                (e.g., under the 3GPP CDL-A channel) alongside the channel
+propagation channel, henceforth simply referred to as channel,
+                                                                encoder/decoder. This simple fine-tuning, without modifying
+introduces various types of noise and impairments, which
+                                                                any PHY module, significantly improves reliability across
+can significantly affect the transmitted signal. These impacts
+                                                                diverse channel/communication conditions.
+include, but are not limited to, path loss, fading, Doppler shift,
+                                                                Codebook. To achieve efficient data compression, we uti-
+and AWGN.
+                                                                lize a VQ-VAE. It learns a codebook of discrete vectors
+   3GPP has defined standardized models that are used for       capturing the essence of the AI-Src-Enc’s continuous repre-
+the simulation and testing of various wireless system con-
+                                                                sentations. These codebook vectors, significantly smaller than
+cepts. These channel models describe time variation, delay      the originals, are transmitted, reducing bandwidth demands.
+dispersion, angular dispersion (at both link ends) and ampli-   Interestingly, it also mitigates the impact of bit errors during
+tude characteristics. We particularly leverage the standardized transmission as its representation learns the bit (or symbol)
+3GPP clustered delay line (CDL)-family channel models, such     error pattern - potentially due to it learning the bit (or symbol)
+as CDL-A, CDL-B, and CDL-C [29]. It is worth noting that        error pattern during pre-training. Upon reception, the VQ-VAE
+while these CDL models are useful for testing, particularly     decodes these indices back into high-dimensional vectors. This
+for link-level simulation, they often diverge significantly fromdecoding utilizes the shared latent space (i.e., Z) learned
+real-world channels.
+                                                                during pre-training, ensuring effective recovery of the semantic
+                                                                content within the compressed representation. This method
+C. Train Objectives                                             balances accuracy, compression, and inference complexity
+                                                                through the adjustable compression rate (and embedding size).
+  Our framework is jointly trained using two loss functions:
+                                                                Pre-Training. To reduce the need for extensive application-
+LCE and LVQVAE . The LCE minimizes the discrepancy
+                                                                specific training data, we leverage pre-trained models like
+between input sentence s at the TX end and its predicted
+                                                                BART-base. This pre-training equips the system with a broad
+sentence ŝ at the RX end, employing the cross entropy loss:
+                                                                base of generalizable knowledge, enhancing generalization
+                                                                performance.
+                         X
+         LCE (ŝ, s) = −        p (sti ) log (p (ŝti )) +
+                            i=1                             (6)
+                       (1 − p (sti )) log (1 − p (ŝti )) ,                            IV. E XPERIMENTS
+where p (sti ) is the true distribution in which the correct token   A. Dataset
+at the i-th index has a probability of 1, and all other tokens       Train Dataset. Theoretically, for training purposes, any text
+have a probability of 0. On the other hand, p (ŝti ) denotes the    can be utilized. We can set both the input s and the output ŝ
+predicted probability distribution over all the possible tokens      to be identical for each sentence. This approach aims to train
+for the i-th index. LVQVAE aims to jointly train codebook            the framework to ensure the faithful transmission of sentences
+Z and the framework in end-to-end to bring the selected              without any modifications, aligning with the primary objective
+codebook vector (t) as close as possible to the encoder output       of the system. However, following the precedent set by earlier
+(r) as follows:                                                      studies in text semantic communication [18], [19], we utilize
+                                                                     the European Parliament dataset [30] (called EuroParl) which
+    LVQVAE (r, t; Z) = ksg[r] − tk22 + β ksg[t] − rk22 .      (7)
+                                                                     is extracted from the proceedings of the European Parliament.
+where sg[·] represents the stop-gradient operation, ensuring no      Test Dataset. For the evaluation, it is important to evaluate
+gradient is passed through and treating it as a constant that        the generalization efficacy of framework on out-of-distribution
+doesn’t update. It is applied to r to update only the codebook       data, particularly on sentences or even tokens not encoun-
+in the first term, while it is applied to t to update only the       tered during training. To evaluate the generalizability, we
+encoder output, thereby bringing these two closer together. Our      randomly sample 1K sentences from the image-caption dataset
+framework is trained by combining the two aforementioned                  4 Wireless PHY components, including code rate ρ, were not directly
+loss functions as follows:                                           incorporated in the NN training. We acknowledge the potential for adaptive
+                                                                     adjustment of specific standardized functions to improve robustness, which
+              L = LCE (ŝ, s) + LVQVAE (r, t; Z),             (8)    will be explored in future research.
+                                                                                                                                                      7
+
+
+
+Flickr [31]. The token distribution in this dataset differs             by the Bit Error Rate (BER), or by assessing the fidelity of
+from our training data, a result of reporting bias. This bias           conveying symbols, which are collections of bits, denoted by
+emerges because people tend to report what interests them               the Symbol Error Rate (SER).
+(e.g., parliamentary discussions) rather than typical and general          In contrast, on-device AI communication prioritizes the
+facts (e.g., describing an image).                                      transmission of meaningful content6, focusing on the efficient
+                                                                        utilization of bandwidth for more effective data transfer. To
+B. Implementation Details                                               accurately evaluate the performance of on-device AI com-
+                                                                        munication systems, we utilize three specific metrics: lex-
+TABLE I: Type (or parameter) for channel en/decoder.                    ical similarity (e.g., BLEU [36]), semantic similarity (e.g.,
+                                                                        SBERT [37]) between s and ŝ, and the compression rate of
+ Type (or Parameter)                      Value                         ρ.
+ Channel En/Decoder                                                     BLEU.       The BLEU score [36], initially developed for
+ Channel coding                           Polar code                    evaluating machine translation, quantifies the correspondence
+ Coderate (ρ)                             0.5                           between the n-grams of a generated sentence ŝ and those
+ # of coded bits                          960                           in a reference sentence s [18], [19]. Here, n-grams mean a
+ # of information bits                    480
+ Mapper                                   QAM                           collection of n successive words in a sentence. BLEU score
+ # of bits per symbol (m)                 4                             involves two key factors: (1) n-gram-based precision of the
+ # of OFDM symbols                        14                            generated sentence ŝ and the reference sentence s as follow:
+ # of TX×RX antennas                      2×2 (1×1)a                                        P
+ Direction                                Downlink                                             n-gram∈ŝ Countclip (n-gram)
+ Carrier frequency                        2.6 [GHz]                                   pn = P                                .      (9)
+ Subcarrier spacing                       15 [kHz]                                              n-gram∈ŝ Count(n-gram)
+ FFT size (# of subcarrier)               72
+ Channel (train)                          CDL-A, Rayleigh               Here, Countclip (n-gram) represents the number of n-grams
+ Channel (test)                           CDL-{A∼D}, Rayleigh           from the generated sentence ŝ that are found in a reference
+ AI-Source-En/Decoder                                                   sentence s while Count(n-gram) represents the total number
+ Pre-trained LM (T , E, SE (·), SD (·))   BART-base                     of n-grams in the generated sentence ŝ.
+ embedding dimension (dr )                768                              However, simply counting identical n-grams can lead to an
+ Codebook                                                               overestimation. Consider the case where the reference sentence
+ Dimension of each code (dz )             2                             is “I am a boy” and the generated sentence is “a a a a”. In
+ Codebook size (K)                        1024                          this scenario, the unigram precision p1 would erroneously be
+                                                                        computed as 1, as each occurrence of the unigram “a” is found
+    a Other than the results in Sec. V-B, which uses a 1x1 TX/RX        in the reference sentence.
+configuration for a fair comparison, a MIMO (2x2) configuration is         To address this issue, Count clip(n-gram) is employed
+considered for the rest of the simulations.
+                                                                        to cap the count at the highest frequency observed in the
+   Our entire framework is built using the Keras frame-                 reference sentence s, thereby preventing overcounting. In the
+work [32]. For modeling various channel structures, we uti-             given example, Count clip(“a”) is adjusted to 1 instead of 4,
+lize the Sionna library [33]. We employ the Huggingface                 reflecting the maximum occurrence of the unigram “a” in the
+library [34] to load the pre-trained weights of the BART-base           reference sentence s; (2) A brevity penalty is used to mitigate
+model, which serves as the foundation for initializing the              the influence of sentence length, preventing the overfitting to
+embedding E, tokenizer T , AI-Src-Enc SE (·) and the AI-Src-            the sentence length. This penalty comes into play when the
+Dec SD (·), respectively. T , pre-trained embedding E. In the           length of generated sentence ŝ is shorter than the sentence
+fine-tuning phase, the Adam optimizer [35] is employed, with            length of the reference sentence s as follow:
+                                                                                             (
+the sequence length capped at 64 tokens, and the training has                                  1,              if |ŝ| > |s|
+been done for 3 epochs, using training loss in (8)5 . We conduct                       BP =                                        (10)
+                                                                                               e(1−|s|/|ŝ|) . if |ŝ| ≤ |s|
+a grid search to find the best learning rate from the set [3e-4,
+1e-4, 5e-5, 2e-5, 1e-5] and the batch size from [2, 4, 8], using   The BLEU score for n-grams, represented as BLEU-n,
+the development dataset to determine the optimal parameters. is calculated as the product of this brevity penalty and the
+All of our experiments are run on an RTX 2080-Ti using 32-bit exponential of the precision score for n-grams exp (log pn ).
+floating-point precision.                                        The overall BELU score is the brevity penalty multiplied by
+   Detailed system parameters are summarized in Table I.         the exponential of the weighted sum of the log precision scores
+                                                                                                                                
+                                                                                                              PN
+                                                                 for different n-grams, represented as exp           w
+                                                                                                                 n=1 n   log p n ,
+C. Evaluation                                                    where wn denotes the weight of the n-gram. Here, BLEU-
+   In traditional communication systems, the performance of n refers to the BLEU score considering only n-grams, and
+information transmission is evaluated by measuring the accu- the general BLEU score is a weighted average of BLEU-1,
+racy of transmitting individual bits (0s and 1s), as reflected BLEU-2, BLEU-3, and BLEU-4. Higher-order n-grams (i.e.,
+
+    5 The pre-trained model may or may not use the same training loss      6 This objective aligns with those of other research in the field of semantic
+function during its pre-training phase.                                 communication.
+                                                                                                                                                     8
+
+
+
+                                                                                            EuroParl (In-dist.)            Flickr (Out-dist.)
+  Framework           PHY Comm.            Transmission   Pre-Training   Noise-Tuning
+                                                                                        BLEU-3   BLEU-4      SBERT    BLEU-3    BLEU-4      SBERT
+  DeepSC [14]         ✗ (symbol-level)          ✗              ✗              ✗         0.6329    0.5802     0.7669   0.1878     0.1111     0.3737
+  Seq2Seq-SC [26]     ✓ (bit-level)           Tanh             ✓              ✗         0.6428    0.5732     0.8142   0.5522     0.4795     0.7910
+  Ours (1 × 1)        ✓ (bit-level)          VQ-VAE            ✓              ✓         0.9959    0.9946     0.9959   0.9714     0.9682     0.9998
+
+TABLE II: Performance comparison study. Each baseline is trained with EuroParl training set and evaluated using both
+the EuroParl and Flickr test sets (Channel = Rayleigh, EbN0 = 7 [dB]). The EuroParl test set assesses the in-distribution
+performance, whereas the Flickr test set evaluates the out-of-distribution performance.
+
+
+longer n-grams) are indicative of the fluency and grammatical (Ecompress ) as a metric that examines the balance between the
+accuracy of the generated sentence ŝ.                          compression rate and semantic similarity:
+SBERT.        Despite a low lexical overlap between the sen-                                   match(ŝ, s; ρ)
+tences s and ŝ, their semantic content may be closely aligned.                Ecompress ,                       ,      (13)
+                                                                                           log2 (compress(r, t))
+For example, the words “child” and “children” bear a close
+semantic relationship, yet a BLEU score based on lexical where match(·, ·; ρ) assesses the SBERT for a given ρ com-
+matching would not recognize this and would rate the similar- press rate. A large value of Ecompress indicates high compres-
+ity as zero. To compute such semantic similarity, sentences can sion efficiency, meaning that the model effectively balances
+be represented into vector embeddings through an embedding compression and semantic fidelity. Conversely, a small value
+model denoted as M . The degree of semantic similarity can signifies lower compression efficiency.
+then be quantified by computing the cosine similarity between
+these vector representations as follow:                                          V. E XPERIMENTAL R ESULTS
+                                       M (s) · M (ŝ)T                       A. Setup/Baseline
+                 match(ŝ, s) =                        .             (11)
+                                      kM (s)k kM (ŝ)k                We primarily evaluate our proposed on-device AI/LLM
+                                                                   communication frameworks (“Ours”) from four distinct view-
+   Existing research in semantic communication often employs points:
+BERT [38] as the embedding model M to encode sentences. PHY Communication. PHY communication conduct bit-
+To derive sentence embedding, they typically use methods level transmission by leveraging specific PHY functions, e.g.,
+like average pooling or extract the embedding from the first Polar coding, QAM mapper, OFDM. On the other hand, exist-
+token (i.e., CLS pooling). These embeddings are then used to ing semantic communication works, exemplified by systems
+calculate cosine similarity [18], [19]. Nonetheless, such pre- like DeepSC [18]), conduct symbol-level transmission, not
+trained models, when not fine-tuned for the specific task of considering the practical PHY communication functions.
+semantic textual similarity, may not effectively capture the Pre-Training Utilization. (1) w/o pre-training uti-
+true semantic nuances of sentences. This is attributed to the lizes a transformer architecture for the AI-Src-Enc and AI-
+anisotropic nature of the embedding space, which can lead Src-Dec, starting with random initialization; while (2) w/
+to embeddings that do not properly represent the semantic pre-training begins with pre-trained model weights to
+variance across sentences [39]. Here, we use SBERT [37], initialize the AI-Src-Enc and AI-Src-Dec.
+which is fine-tuned on semantic textual similarity tasks, to Noise-Tuning Utilization. (1) w/o noise-tuning fine-
+encode the sentence embedding.                                     tunes the framework in the absence of any simulated channel
+Compression Efficiency. General (lossy) source coding in noise; while (2) w/ noise-tuning incorporates simulated
+conventional systems emphasizes compact representation of channel noise, inducing bit errors, into the fine-tuning process.
+information to enhance transmission/spectral efficiency, often In particular, the systems is noise-tuned (fine-tuned) under the
+at the expense of minor data loss. This contrasts with on- CDL family of channel models and bit-level PHY communi-
+device AI communication, where the exchange of efficient cation setup (see details in Table I) and energy per-bit to noise
+representations prioritizes semantic fidelity over mere data ratio (EbN0) = 5 ∼ 15 [dB].
+volume reduction. The aim here is to transmit the essence Codebook Utilization. In PHY communication, it is neces-
+and context of messages with minimal semantic distortion.          sary to transform the vector output of the AI-Src-Enc into a
+   The compression rate in on-device AI communication, discrete bit-level representation. One straightforward method
+therefore, assesses how effectively AI-Src-Enc output is com- is to directly map each floating-point number in the vector to
+pressed. It is quantified by the ratio of the sizes of AI-Src-Enc its bit-level equivalent (e.g., 768-dimensional vector results in
+output (r) and channel encoder input (t), described as:            768×32 bits). However, this method is highly susceptible to
+                                       size(t)                     channel noise, where even a single bit error can significantly
+                   compress(r, t) =            ,              (12) distort the vector representation (e.g., floating-point arithmetic
+                                       size(r)
+                                                                   error). To mitigate this issue, we explore and compare various
+where size(x) denotes the size of vector x.                        techniques that are more robust to noise. (1) Direct encodes
+   To evaluate how compression impacts the conveyance the floating-point numbers of r straight into bits for transmis-
+of a message’s meaning, we define compression efficiency sion; (2) Tanh also transforms the floating-point numbers of r
+                                                                                                                                                                           9
+
+
+
+                                 Transmit s               A man pushes a bicycle along the beach as the sun sets behind him.
+                                 Baseline                 Receive ŝ
+                                 DeepSC [14]              a man between a pity along the bureau as the danish sets behind him.
+                                 Seq2Seq-SC [26]          A man pushes a bicycle along the beach as sun sets behind him.
+                                 Ours (1 × 1)             A man pushes a bicycle along the beach as the sun sets behind him.
+
+                  TABLE III: Received output examples of baselines and ours (Channel = Rayleigh, EbN0 = 7 [dB]).
+
+            Test (Dataset) = EuroParl                   Test (Dataset) = EuroParl                    Test (Dataset) = FlicKr                    Test (Dataset) = FlicKr
+    1                                          1                                          1                                          1
+
+
+
+
+  0.5                                         0.5                                        0.5                                        0.5
+
+
+
+
+    0                                          0                                          0                                          0
+        0              5                10          0              5                10         0               5               10         0               5               10
+
+
+        (a) BLEU-4 (EuroParl)                       (b) SBERT (EuroParl)                           (c) BLEU-4 (Flickr)                        (d) SBERT (Flickr)
+             Fig. 4: Performance comparison with existing frameworks under different EbN0 [dB] (Channel = Rayleigh)
+
+
+into bits for sending but applies a hyperbolic tangent activation esting point in Fig. 4 is the gradual increase in DeepSC’s trend
+function to adjust for the cases when bit errors from channel compared to the sharp rise in Seq2Seq-SC and our framework.
+noise push the received representation r̂ beyond certain range This primarily stems from whether the transmission takes place
+(e.g., [−1, 1]). By doing so, it realigns the out-of-bound values through bit-level transmission via practical PHY communica-
+back into the [−1, 1] range, and has been used in Seq2Seq- tion. Transmitting through the PHY process information in bit-
+SC [26]; (3) VQ-VAE employs vector quantization along with level, which requires converting the floating-point vector into
+a codebook Z to encode vector representation r into a set of bits, where bit errors caused by noise can lead to substantial
+discrete codebook indices t for transmission.                     changes in the information (called floating-point arithmetic
+                                                                  error). Therefore, in conditions of substantial noise, such as
+B. Comparative Study                                              when EbN0 < 5 [dB], transmitting vector representations
+                                                                  through the PHY becomes challenging. Conversely, DeepSC
+   We begin by evaluating the overall efficacy of our proposed transmits representations based on symbol-level, where noise
+framework against earlier works in semantic communication. is directly added into the continuous vector representation,
+Each baseline is trained using the EuroParl training set and
+                                                                  while not considering the practical issues in bit-level operation.
+evaluated on both the EuroParl and Flickr test sets. There This results in such a gradual increase in its performance trend
+is a significant overlap in vocabulary between the EuroParl as it does not experience any floating-point error.
+training and test sets, while the overlap is minimal between
+the EuroParl training set and the Flickr test set. This setup
+allows for an assessment of the framework’s generalizability. C. Ablation Study
+For a fair comparison, all baseline models, including the
+baseline DeepSC which focuses on symbol-level transmission,          In this part of the discussion, we explore the impact of
+are evaluated under identical conditions of 1 × 1 SISO and each component within our optimized E2E on-device AI
+Rayleigh channel throughout the comparative study.                communication framework and examine their respective roles.
+   Table II illustrates the performance comparison under a Table IV shows how performance varies with and without the
+Rayleigh Channel with EbN0 = 7 [dB]. Meanwhile, Table III use of pre-training and noise-tuning. Additionally,
+offers qualitative examples demonstrating the transmission Table VI shows the performance differences when using dif-
+accuracy of each methodology, and Fig. 4 highlights the ferent transmission approaches including Naive, Tanh and
+robustness of each approach.                                      VQ-VAE, showing the impact of the use of Codebook.
+   Tables II and III demonstrate that our framework signifi-         1) Impact of Pre-Training: As shown in Table IV, w/o
+cantly outperforms both DeepSC and Seq2Seq-SC. A key ob- pre-training leads to a considerable performance drop.
+servation from Table II is the substantial decline in DeepSC’s After increasing the number of training epochs, the frame-
+performance on the Flickr dataset, whereas the performance work shows improvement on in-distribution data that shares
+reduction for Seq2Seq-SC on Flickr is less severe in com- a substantial vocabulary and distribution overlap with the
+parison. This difference can be mainly due to the use of training data. However, its performance on other datasets with
+pre-training which exhibits generalization capability for minimal overlap with the training data remains close to zero.
+OOV - that will be elaborated on a later section.                 This indicates that pre-training plays a crucial role in
+   Fig. 4 also demonstrates the robustness of our framework the framework’s ability to generalize - which allows this
+compared to Seq2Seq-SC across various EbN0 [dB]. An inter- framework to be usable across a wide range of applications.
+                                                                                                                                                                                           10
+
+
+
+                                                                                                                           EuroParl (In-dist.)                  Flickr (Out-dist.)
+    Combination                                       Codebook       Pre-Training         Noise-Tuning
+                                                                                                                   BLEU-3       BLEU-4      SBERT          BLEU-3        BLEU-4   SBERT
+    Ours                                               VQ-VAE               ✓                       ✓              0.9918        0.9888     0.9944         0.9296        0.9178   0.9959
+    w/o pre-training (3 epochs)                        VQ-VAE                ✗                      ✓              0.0690        0.0393     0.3571         0.0002        0.0000   0.0080
+    w/o pre-training (10 epochs)                       VQ-VAE                ✗                      ✓              0.6136        0.5376     0.7277         0.0573        0.0246   0.0933
+    w/o noise-tuning                                   VQ-VAE               ✓                       ✗              0.9515        0.9325     0.9804         0.9147        0.8907   0.9787
+
+TABLE IV: Performance variance w/ and w/o pre-training and noise-tuning (Channel = CDL-A, EbN0 = 4 [dB]).
+
+                       Test (Channel) = CDL-A                     Test (Channel) = CDL-B                           Test (Channel) = CDL-C                    Test (Channel) = CDL-D
+            1                                            1                                                1                                          1
+
+        0.8                                             0.8                                              0.8                                     0.8
+
+        0.6                                             0.6                                              0.6                                     0.6
+
+        0.4                                             0.4                                              0.4                                     0.4
+
+        0.2                                             0.2                                              0.2                                     0.2
+
+            0                                            0                                                0                                          0
+                0          2          4           6           0       2            4            6              0       2           4         6        -3            -1        1       3
+
+
+
+                (a) BLEU-4 (In-dist.)                     (b) BLEU-4 (Out-dist.)                           (c) BLEU-4 (Out-dist.)                    (d) BLEU-4 (Out-dist.)
+                       Test (Channel) = CDL-A                     Test (Channel) = CDL-B                           Test (Channel) = CDL-C                    Test (Channel) = CDL-D
+            1                                            1                                                1                                          1
+
+        0.8                                             0.8                                              0.8                                     0.8
+
+        0.6                                             0.6                                              0.6                                     0.6
+
+        0.4                                             0.4                                              0.4                                     0.4
+
+        0.2                                             0.2                                              0.2                                     0.2
+
+            0                                            0                                                0                                          0
+                0          2          4           6           0       2            4            6              0       2           4         6        -3            -1        1       3
+
+
+
+                    (e) SBERT (In-dist.)                      (f) SBERT (Out-dist.)                            (g) SBERT (Out-dist.)                     (h) SBERT (Out-dist.)
+Fig. 5: Impact of noise-tuning (w/o Noise-Tuning vs. w/ Noise-Tuning). The CDL-A channel assesses the in-distribution
+performance, whereas the CDL-B, -C, and -D evaluate the out-of-distribution performance.
+
+
+ EbNo [dB]
+                      Noise-Tuning      Test
+                                                          BER             BLEU         SBERT            of 5 ∼ 15 [dB]) in four different communication conditions
+                        (CDL-A)       (Channel)
+                                                                                                        by testing those in CDL-A, B, C, and D channels. The
+                           ✗              CDL-A                           0.5801       0.8477
+                           ✓              CDL-A
+                                                      2.124 × 10−1
+                                                                          0.7278       0.9147           performance difference showcases the impact of incorporating
+   2 [dB]                  ✗              CDL-B                           0.4588       0.7734           realistic communication errors into the fine-tuning process,
+                                                      2.332 × 10−1
+                           ✓              CDL-B                           0.6125       0.8500           indicating that AI-Src-Enc and AI-Src-Dec can learn and
+                           ✗              CDL-C
+                                                      2.419 × 10−1
+                                                                          0.4072       0.7359           partially mitigate bit error patterns induced by noisy channel
+                           ✓              CDL-C                           0.5394       0.7988
+                                                                                                        encountered during link-level PHY communication.7 However,
+                           ✗              CDL-A                           0.7931       0.9481
+                           ✓              CDL-A
+                                                      1.641 × 10−1
+                                                                          0.8893       0.9872
+                                                                                                        how the AI-Src-Enc and AI-Src-Dec learn and overcome
+   3 [dB]                  ✗              CDL-B                           0.7312       0.9224
+                                                                                                        communication errors is still an open question that we defer to
+                                                      1.844 × 10−1                                      our future work. Overall, the AI-Src-Enc/AI-Src-Dec archives
+                           ✓              CDL-B                           0.8441       0.9691
+                           ✗              CDL-C
+                                                      1.934 × 10−1
+                                                                          0.6858       0.9023           EbN0 gain up to ∼ 1 [dB] by utilizing the noise-tuning.
+                           ✓              CDL-C                           0.8260       0.9619              An important challenge for on-device AI communication
+TABLE V: Impact of noise-tuning (w/o Noise-Tuning vs. w/                                                is their robustness to test-time distributional shifts that nat-
+Noise-Tuning).                                                                                          urally occur when the test environment no longer matches
+                                                                                                        the conditions in a training environment. This is present
+                                                                                                        in wireless communication systems, where the propagation
+  2) Impact of Noise-Tuning: As shown in Table IV, w/o                                                  conditions may change whenever the user is moving. Thus, an
+noise-tuning leads relatively small performance drop.                                                   important question is whether the on-device AI communication
+However, it provides an intriguing insight that LM and                                                  can retain its performance, both from the same communication
+VQ-VAE (i.e., AI-Scr-Enc and AI-Src-Dec) are somewhat able                                              condition in training (in-distribution) and other communication
+to learn how to handle bit (or symbol) errors during their                                              conditions (out-of-distribution). To this end, we also test its
+communication with another end.
+  To assess the impact of noise-tuning in more detail, we                                                    7We conjecture that the AI-Src-Enc and AI-Src-Dec (e.g., LM and
+
+present Table V and Fig. 5. These results compare the per-                                              VQ-VAE) learn bit error pattern of a pre-determined constellation in map-
+                                                                                                        per/demapper. When symbol error occurs, neighbor symbols likely are
+formance of AI-Src-Enc and AI-Src-Dec trained with and                                                  detected, not far-distant symbols. During noise-tuning, such intelligent
+without noise-tuning (specifically, the CDL-A channel at EbN0                                           en/decoder adaptively modifies its E and Z to be more robust to bit errors.
+                                                                                                                                               11
+
+
+
+                                                                                      EuroParl (In-dist.)            Flickr (Out-dist.)
+         Case                             Codebook     Pre-train   Noise-tuning
+                                                                                  BLEU-3   BLEU-4      SBERT    BLEU-3    BLEU-4      SBERT
+         Naive Transmission               ✗ (Naive)       ✓             ✓         0.0000    0.0000     0.0000   0.0000     0.0000     0.0000
+         Tanh Transmission (Seq2Seq-SC)   ✗ (Tanh)        ✓             ✓         0.3660    0.2759     0.6691   0.1636     0.0983     0.5094
+         VQ-VAE Transmission (Ours)       ✓ (VQ-VAE)      ✓             ✓         0.9918    0.9888     0.9944   0.9296     0.9178     0.9959
+
+       TABLE VI: Performance variance with different transmission approaches (Channel = CDL-A, EbN0 = 4 [dB]).
+
+
+performance in CDL-B, -C, and -D channels, whose condition can adversely affect the fidelity of the reconstructed repre-
+is not seen in training, in Table V and Figs. 5.8 CDL-B sentation. On the other hand, increasing K provides a more
+and CDL-C results indicate that noise-tuning enhances the fine-grained resolution and greater accuracy. However, this
+robustness even in channels not seen in training, while the comes with increased computational cost due to the cost of
+CDL-D (Figs. 5d and 5h) case highlights that there is still training and inference overhead, and it may even hinder the
+room for improvement for the noise-tuning to be more channel- convergence of training.
+agnostic.                                                                       Additionally, Fig. 7 the relationship between compression
+   3) Impact of Codebook: Table VI shows that the VQ-VAE efficiency (Ecompress ) and code vector dimension, identifying a
+transmission significantly outperforms other methods (e.g., Pareto optimal point between the two. Therefore, finding the
+Seq2Seq-SC), achieving near-flawless results under the CDL- right balance and designing an appropriate code vector dimen-
+A channel at an EbN0 = 4 [dB]. This demonstrates the effec- sion and codebook size is crucial for achieving a desirable
+tiveness of using a discrete codebook for vector representation balance between accuracy and efficiency. Thus, optimizing
+quantization in enhancing both accuracy and transmission the compression rate (e.g., dz and K) for AI-Src-Enc/Dec is
+robustness.                                                                   crucial for striking an optimal balance between accuracy and
+   Figs. 6a and 6b further illustrate the impact of the codebook computational efficiency.
+(VQ-VAE) over different EbN0 [dB]. In the scenario where a
+codebook is not used, the shape for transmitting information                                        VI. C ONCLUSIONS
+is an n × dr , where each element is a floating point vector.                   In this study, we integrated the BART pre-trained LM with
+Thus, the total size of the transmitted information x becomes the NVIDIA SIONNA link-level simulator to simulate on-
+n × dr × 32 bits, considering that each floating-point vector is device AI communication within a 5G-NR framework. The
+32 bits. Conversely, when a codebook is used when dz = 2, performance of on-device communication was assessed in bit-
+the size of transmission is reduced to n × (dr /2). In this case, level transmission across various PHY communication setups,
+each point in the transmission is an integer index. The total including 3GPP CDL-family channels, MIMO, OFDM, and
+size of the transmitted information x becomes n×(dr /2)×32, Polar code.
+with the 32 bits now representing the size of each integer. It                  Our analysis yielded several key insights from three opti-
+is worth noting that using integer datatype is notably robust mization techniques: (1) Integration of pre-trained language
+against rounding errors and precision loss; additionally, it models significantly enhances the generalization capabilities
+allows for using smaller data types, such as 16-bit integers. of the on-device AI communication system; (2) Noise-tuning
+Remarkably, even with a 50% compression of the output of results in an approximate EbN0 gain of around 1 [dB],
+AI-Src-Enc, with-codebook consistently outperforms without- effectively improving performance in both familiar (CDL-
+codebook, achieving EbN0 gains up to ∼ 6 [dB]. This suggests A channel) and new (CDL-B∼D channels) communication
+the potential of the encoded message from the AI-Src-Enc to conditions; (3) Codebook utilization leads to an EbN0 gain of
+be effectively compressed without losing its accuracy.                        up to approximately 6 [dB], accompanied by a 50% reduction
+Tradeoff: Compression (dz and K) vs. Accuracy. The in AI-Src-Enc output size. Even with a compression rate of
+dimension of each code vector (dz ) and codebook size 8 (utilizing only 12.5% of the compressed information), the
+(K) in AI-Src-Enc/Dec impact the performance of the on- system maintains reasonable performance levels.
+device AI communication systems. Figs. 6c and 6d show                           The implementation strategy involves two stages:
+how dz affects performance, examining increments through                         • Training Stage (Offline): The AI-Src-En/Dec embedding,
+{2, 4, 8, 16, 32, 64}. Increasing dz enhances compression but                      along with the codebook, are trained by minimizing the
+may reduce transmission accuracy, as compressing a data                            loss function described in Sec. III-C. This computation-
+vector of size dz into a single index increases vulnerability                      ally intensive stage occurs offline, leveraging powerful
+to transmission errors—a single index error can impact the                         resources. The training (fine-tuning) process can be op-
+entire dz .                                                                        timized using efficient fine-tuning approaches, such as
+   Fig. 6e shows the relationship between K and the per-                           QLoRA [40].
+formance. Smaller K reduces computational demands, yet it                        • Inference Stage (On-Device): The on-device system em-
+might cause an information loss during quantization, which                         ploys the pre-trained AI-Src-Enc/Dec and codebooks, re-
+                                                                                   quiring only inference-level computations. The inference
+    8 CDL-A channels encompass both line-of-sight (LoS) and non-LOS
+                                                                                   process can be optimized using on-device ML optimiza-
+(NLoS) conditions, offering a more diverse representation of wireless channel
+propagation. In contrast, CDL-B and CDL-C channels are predominantly               tion techniques, such as pruning, 8-bit quantization, or
+NLoS. CDL-D channels, on the other hand, are characterized by LoS.                 knowledge distillation.
+                                                                                                                                                                        12
+
+
+
+   1                                         1                                      1                                 1
+                                                                                                                                                      0.8
+  0.8                                       0.8                                    0.8
+                                                                                                                                                      0.6
+  0.6                                       0.6                                    0.6
+                                                                                                                     0.5
+  0.4                                       0.4                                    0.4                                                                0.4
+
+  0.2                                       0.2                                    0.2
+                                                                                                                                                      0.2
+
+   0                                         0                                      0                                 0
+        0     5     10            15              0             5        10   15         2   4   8    16   32   64         2   4   8   16   32   64         102   103
+
+
+
+(a) w/ vs. w/o VQ-VAE (b) w/ vs. w/o VQ-VAE (c) Code vector dimension (d) Code vector dimension (e) Codebook size vs. Ac-
+(BLEU)                (SBERT)               vs. Accuracy (BLEU)       vs. Accuracy (SBERT)      curacy (BLEU)
+Fig. 6: Impact of codebook. Figs. 6a and 6b compares w/o Codebook and w/ Codebook. Figs. 6c-6e show the tradeoff between
+compression and accuracy.
+
+
+                         3
+                                                                                                     his invaluable feedback and multifaceted support throughout
+                                                                                                     this work. We also thank Thomas Choi for his insightful
+                         2
+                                                                                                     discussions during the initial stages of our research.
+
+                         1
+
+
+
+                         0
+                             10        20             30   40       50   60
+
+
+
+        Fig. 7: Compression efficiency over compression rate
+
+Limitations.      While our proposed framework showcases
+the performance of on-device AI communication under a
+bit-level transmission with a link-level PHY communication
+setup, there are notable limitations that should be addressed to
+achieve full compliance with 5G-NR communication systems.
+Specifically, beyond the PHY, the medium access control
+(MAC) or network layers typically employs automatic repeat
+request (ARQ) or hybrid ARQ (HARQ) protocols for packet
+error correction. The absence of consideration for these higher-
+layer protocols in our study limits the assessment of the prac-
+tical performance of our framework. Incorporating ARQ or
+HARQ mechanisms into our simulation setup would provide
+a more comprehensive evaluation of the on-device AI com-
+munication framework’s efficacy in real-world communication
+scenarios.
+Open Questions. Experimental results in Sec. IV-C high-
+light that on-device AI can improve communication perfor-
+mance through its predictive and contextual learning abilities.
+While integrating channel encoding/decoding with AI-Src-
+Enc/Dec, such as through JSCC or AI-native PHY/MAC,
+could unlock the full potential, this faces challenges like
+compatibility with 4G-LTE and 5G-NR, regulatory issues, and
+cost implications.
+   Therefore, employing AI as a complementary tool while
+keeping or carefully optimizing existing PHY or higher-layer
+functions presents a more feasible approach. Future research
+could focus on: (1) finding the best noise-tuning conditions
+without altering PHY functions; (2) exploring how language
+models can effectively counteract noisy conditions; (3) improv-
+ing specific PHY functions to boost AI communication; (4)
+determining if AI/LM can also learn packet error patterns to
+ease the HARQ (or ARQ) process.
+   Acknowledgements: This research was partly funded by
+the National Science Foundation (NSF).
+We express our deep gratitude to Prof. Andreas F. Molisch for
+                                                                                                                                                             13
+
+
+
+                              R EFERENCES                                        [25] M. Lewis, Y. Liu, N. Goyal, M. Ghazvininejad, A. Mohamed, O. Levy,
+                                                                                      V. Stoyanov, and L. Zettlemoyer, “BART: Denoising sequence-to-
+ [1] S. Dhar, J. Guo, J. J. Liu, S. Tripathi, U. Kurup, and M. Shah, “A               sequence pre-training for natural language generation, translation, and
+     survey of on-device machine learning: An algorithms and learning theory          comprehension,” in Proc. the Association for Computational Linguistics,
+     perspective,” ACM Trans. Internet Things, vol. 2, no. 3, Jul. 2021.              Online, Jul. 2020, pp. 7871–7880.
+ [2] R. Bommasani, D. A. Hudson, E. Adeli, R. Altman, S. Arora, S. von           [26] J.-H. Lee, D.-H. Lee, E. Sheen, T. Choi, and J. Pujara, “Seq2seq-sc:
+     Arx, M. S. Bernstein, J. Bohg, A. Bosselut, E. Brunskill et al., “On             End-to-end semantic communication systems with pre-trained language
+     the opportunities and risks of foundation models,” arXiv preprint                model,” Asilomar Conference on Signals, Systems, and Computers, 2023.
+     arXiv:2108.07258, 2022.                                                     [27] D. P. Kingma and M. Welling, “Auto-encoding variational bayes,” arXiv
+ [3] S. Geng, S. Liu, and et al., “Recommendation as language processing              preprint arXiv:1312.6114, 2013.
+     (RLP): A unified pretrain, personalized prompt & predict paradigm (P5),”    [28] 3GPP TS 38.212 v17.3.0, “NR; multiplexing and channel coding,” Sep.
+     in Proc. ACM Conf. on Recommender Systems, New York, NY, USA,                    2022.
+     2022, p. 299–315.                                                           [29] 3GPP, “Study on channel model for frequencies from 0.5 to 100 GHz,”
+ [4] C. Cui, Y. Ma, and et al., “A survey on multimodal large language mod-           Tech. Rep. 38.901 (V17.0.0), Mar. 2022.
+     els for autonomous driving,” arXiv preprint arXiv:2311.12320, 2023.         [30] P. Koehn, “Europarl: A parallel corpus for statistical machine transla-
+ [5] G. Delétang, A. Ruoss, P.-A. Duquenne, E. Catt, T. Genewein, C. Mat-            tion,” in Proc. Machine Translation Summit X: Papers, Phuket, Thailand,
+     tern, J. Grau-Moya, L. K. Wenliang, M. Aitchison, L. Orseau, M. Hutter,          Sep. 2005, pp. 79–86.
+     and J. Veness, “Language modeling is compression,” arXiv preprint           [31] P. Young, A. Lai, M. Hodosh, and J. Hockenmaier, “From image descrip-
+     arXiv:2309.10668, 2023.                                                          tions to visual denotations: New similarity metrics for semantic inference
+ [6] X. Lin, “An overview of 5G advanced evolution in 3GPP release 18,”               over event descriptions,” Trans. of the Association for Computational
+     IEEE Commun. Standards Mag., vol. 6, no. 3, pp. 77–83, 2022.                     Linguistics, vol. 2, pp. 67–78, 2014.
+ [7] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Y. Li, “Semantic communications:     [32] F. Chollet et al., “Keras,” https://keras.io, 2015.
+     Principles and challenges,” arXiv preprint arXiv:2201.01389, 2021.          [33] J. Hoydis, S. Cammerer, F. Ait Aoudia, A. Vem, N. Binder, G. Marcus,
+ [8] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-              and A. Keller, “Sionna: An open-source library for next-generation
+     channel coding for wireless image transmission,” IEEE Trans. on                  physical layer research,” arXiv:2203.11854 [cs.IT], Mar. 2022.
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,        [34] T. Wolf, L. Debut, V. Sanh, J. Chaumond, C. Delangue, A. Moi, P. Cistac,
+     2019.                                                                            T. Rault, R. Louf, M. Funtowicz et al., “Transformers: State-of-the-art
+ [9] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication             natural language processing,” in Proc. Empirical Methods in Natural
+     for edge inference: An information bottleneck approach,” IEEE J. Sel.            Language Processing, 2020, pp. 38–45.
+     Areas Commun., vol. 40, no. 1, pp. 197–211, 2021.                           [35] D. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+[10] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic                     in International Conference on Learning Representations (ICLR), San
+     communications: Deep learning-based image semantic coding,” IEEE                 Diega, CA, USA, 2015.
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, 2022.                     [36] K. Papineni, S. Roukos, T. Ward, and W.-J. Zhu, “BLEU: a method
+                                                                                      for automatic evaluation of machine translation,” in Proc. the Annual
+[11] T.-Y. Tung and D. Gündüz, “DeepWiVe: Deep-learning-aided wireless
+                                                                                      Meeting of the Association for Computational Linguistics, Philadelphia,
+     video transmission,” IEEE J. Sel. Areas Commun., vol. 40, no. 9, pp.
+                                                                                      Pennsylvania, USA, 2002, pp. 311–318.
+     2570–2583, 2022.
+                                                                                 [37] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings
+[12] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and
+                                                                                      using Siamese BERT-networks,” in Proc. Empirical Methods in Natural
+     P. Zhang, “Wireless deep video semantic transmission,” IEEE J. Sel.
+                                                                                      Language Processing, Hong Kong, China, Nov. 2019, pp. 3982–3992.
+     Areas Commun., vol. 41, no. 1, pp. 214–229, 2022.
+                                                                                 [38] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training
+[13] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Wireless semantic communi-           of deep bidirectional transformers for language understanding,” in Proc.
+     cations for video conferencing,” IEEE J. Sel. Areas Commun., vol. 41,            Association for Computational Linguistics, Minneapolis, Minnesota,
+     no. 1, pp. 230–244, 2022.                                                        2019, pp. 4171–4186.
+[14] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled           [39] B. Li, H. Zhou, J. He, M. Wang, Y. Yang, and L. Li, “On the sentence
+     semantic communication systems,” IEEE Trans. on Signal Processing,               embeddings from pre-trained language models,” in Proc. the 2020 Conf.
+     vol. 69, pp. 2663–2675, 2021.                                                    on Empirical Methods in Natural Language Processing, Online, Nov.
+[15] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-preserved                2020, pp. 9119–9130.
+     communication system for highly efficient speech transmission,” IEEE        [40] T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer, “Qlora: Effi-
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 245–259, 2022.                        cient finetuning of quantized LLMs,” arXiv preprint arXiv:2305.14314,
+[16] Z. Weng, Z. Qin, X. Tao, C. Pan, G. Liu, and G. Y. Li, “Deep                     2023.
+     learning enabled semantic communications with speech recognition and
+     synthesis,” IEEE Trans. on Wireless Communications, 2023.
+[17] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
+     Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” Advances in
+     neural information processing systems (NIPS), vol. 30, 2017.
+[18] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+     semantic communication systems,” IEEE Trans. on Signal Process.,
+     vol. 69, pp. 2663–2675, 2021.
+[19] H. Hu, X. Zhu, F. Zhou, W. Wu, R. Q. Hu, and H. Zhu, “One-to-many
+     semantic communication systems: Design, implementation, performance
+     evaluation,” IEEE Commun. Lett., 2022.
+[20] T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal,
+     A. Neelakantan, P. Shyam, G. Sastry, A. Askell et al., “Language mod-
+     els are few-shot learners,” Advances in neural information processing
+     systems (NIPS), vol. 33, pp. 1877–1901, 2020.
+[21] A. Srivastava, A. Rastogi, A. Rao, A. A. M. Shoeb, A. Abid, A. Fisch,
+     A. R. Brown, A. Santoro, A. Gupta, A. Garriga-Alonso et al., “Beyond
+     the imitation game: Quantifying and extrapolating the capabilities of
+     language models,” arXiv preprint arXiv:2206.04615, 2022.
+[22] S. Thrun, “Lifelong learning algorithms,” in Learning to learn. Springer,
+     1998, pp. 181–209.
+[23] J. Hoydis, S. Cammerer, F. A. Aoudia, A. Vem, N. Binder, G. Marcus,
+     and A. Keller, “Sionna: An open-source library for next-generation
+     physical layer research,” arXiv preprint arXiv:2203.11854, 2022.
+[24] A. Van Den Oord, O. Vinyals et al., “Neural discrete representation
+     learning,” Advances in neural information processing systems (NIPS),
+     vol. 30, 2017.
+

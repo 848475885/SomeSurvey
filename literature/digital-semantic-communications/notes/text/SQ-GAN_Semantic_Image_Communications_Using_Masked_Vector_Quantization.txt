@@ -1,0 +1,974 @@
+IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026                                                                            3363
+
+
+
+
+  SQ-GAN: Semantic Image Communications Using
+          Masked Vector Quantization
+            Francesco Pezone, Sergio Barbarossa , Life Fellow, IEEE, and Giuseppe Caire , Fellow, IEEE
+
+
+
+   Abstract— This work introduces Semantically Masked Vec-                      communications. The use of generative AI for next generation
+tor Quantized Generative Adversarial Network (SQ-GAN),                          networks has been recently proposed in [7], [8], and [9].
+a novel approach integrating semantically driven image coding                   A key innovation in this domain is the integration of deep
+and vector quantization to optimize image compression for
+semantic/task-oriented communications. The method only acts                     generative models that can synthesize, with proper condition-
+on source coding and is fully compliant with legacy systems. The                ing, high-fidelity multimedia contents. This capability changes
+semantics is extracted from the image computing its semantic                    the communication paradigm: instead of transmitting full-
+segmentation map using off-the-shelf software. A new specifically               resolution data, the transmitter encodes and sends only the
+developed semantic-conditioned adaptive mask module (SAMM)                      most relevant features, which are used at the receiver side
+selectively encodes semantically relevant features of the image.
+The relevance of the different semantic classes is task-specific,               to trigger the generative model to reproduce a representation
+and it is incorporated in the training phase by introducing                     semantically equivalent to the transmitted one [10]. The rel-
+appropriate weights in the loss function. SQ-GAN outperforms                    evance of the features is dictated by the application running
+state-of-the-art image compression schemes such as JPEG2000,                    on top of the exchange of information. This communication
+BPG, and deep-learning based methods across multiple metrics,                   modality enables a drastic reduction in transmission rates,
+including perceptual quality and semantic segmentation accuracy
+on the reconstructed image, at extremely low compression rates.                 because it takes advantage of application-specific knowledge
+The code is available at https://github.com/frapez1/SQ-GAN                      incorporated in the generative models.
+                                                                                   To illustrate this concept, consider a vehicular commu-
+  Index Terms— Semantic communication, VQ-GAN, data aug-
+mentation, semantic-aware discriminator.                                        nication scenario, where one or more autonomous vehicles
+                                                                                transmit visual information from their onboard cameras to a
+                     I. I NTRODUCTION                                           roadside unit (RSU) responsible for taking real-time context-
+
+T    HE recent surge of intelligent and interconnected
+     devices is leading the transition to new communication
+paradigms. The upcoming sixth generation (6G) of wireless
+                                                                                aware safety decisions, possibly integrating data from multiple
+                                                                                vehicles or RSU sensors. Rather than transmitting full video
+                                                                                streams, each transmitter extracts key semantic attributes,
+networks is poised to redefine the communication paradigm                       such as the presence, shape, and locations of pedestrians,
+by integrating advanced Artificial Intelligence (AI) and net-                   vehicles, traffic signs, and road boundaries, and transmits
+working [1]. One of the most promising advancements in this                     only compressed feature representations, achieving data rates
+context is semantic communication, which shifts the focus                       substantially lower than those needed for conventional image
+from universal coding to task-oriented coding, exploiting suit-                 or video encoding. At the receiver side, a generative model
+able knowledge representation systems, typically relying on                     reconstructs an application-specific representation, with an
+deep neural networks [2], [3], [4], [5], and [6]. Recent break-                 accuracy sufficient only to enable the RSU to take rapid
+throughs in deep learning, generative AI, and self-supervised                   decisions within strict latency constraints.
+learning have further strengthened the potential of semantic                       In recent years, deep learning has played a pivotal role in
+                                                                                both improving image compression and advancing semantic
+  Received 11 February 2025; revised 3 July 2025 and 27 August 2025;
+accepted 2 October 2025. Date of publication 13 October 2025; date of
+                                                                                communication systems [3], [11], [12]. The development of
+current version 31 December 2025. This work was supported by the Gottfried      end-to-end learning frameworks enables the joint optimization
+Wilhelm Leibniz-Preis 2021 of the German Science Foundation (DFG), Joint        of the encoding and decoding processes, allowing the overall
+Project 6G-RIC (Project IDs 16KISK030), the Italian National Recovery and
+Resilience Plan (NRRP) of NextGenerationEU, partnership on “Telecommuni-
+                                                                                encoding system to learn a joint source/channel coding (JSCC)
+cations of the Future” (PE00000001-program RESTART), Huawei Technology          technique [13] or to learn efficient representations of seman-
+France SASU, under agreement N.TC20220919044, and the SNS-JU-2022               tic content directly from data [3], [14]. Lately, generative
+project ADROIT6G under agreement n. 101095363. The associate editor
+coordinating the review of this article and approving it for publication was    models, such as Variational-Autoencoders (VAE), Generative
+L. Zhou. (Corresponding author: Sergio Barbarossa.)                             Adversarial Networks (GANs), and Denoising Diffusion Prob-
+  Francesco Pezone is with National Inter-University Consortium                 abilistic Models (DDPM) [15], have been instrumental in
+for Telecommunications (CNIT), 43124 Parma, Italy (e-mail:
+francesco.pezone.ds@gmail.com).                                                 improving the quality and efficiency of data representation and
+  Sergio Barbarossa is with the Sapienza University of Rome, 00185 Rome,        transmission [7], [10], [16], [17].
+Italy (e-mail: sergio.barbarossa@uniroma1.it).                                     A key step in the integration of generative models within a
+  Giuseppe Caire is with the Technical University of Berlin, 10587 Berlin,
+Germany (e-mail: caire@tu-berlin.de).                                           digital communication scheme, possibly compliant with legacy
+  Digital Object Identifier 10.1109/TCCN.2025.3620819                           systems, is to merge generative models and vector quantization
+               2332-7731 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                     and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3364                                                          IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+to learn discrete latent representations that are both compact                driving scenarios, the relevant object classes include pedestri-
+and semantically rich [18], [19]. Models like the Vector                      ans, cars, traffic lights, and similar entities.
+Quantized VAE (VQ-VAE), the Vector Quantized GAN (VQ-                            ii) The assumption that the SSM s is extracted from the
+GAN) and the Masked VQ-VAE (MQ-VAE) [20] have already                         raw image x in real-time at the encoder is fully realistic.
+demonstrated remarkable capabilities in image synthesis and                   For example, in the autonomous driving scenario, there are
+compression tasks.                                                            algorithms able to extract the SSM in real time, see, e.g. [22].
+   Given this context, in this paper we propose the Seman-                    In particular, Tesla has already deployed the technology to
+tic Masked VQ-GAN (SQ-GAN) model, a novel approach                            analyze raw images and perform semantic segmentation and
+that merges the strengths of generative models, vector                        object detection in their per-camera networks in real time,
+quantization, and semantic segmentation for efficient and                     as reported in [23].
+semantic-preserving image transmission. We choose the GAN                        iii) Our scheme treats only source coding (i.e., image
+paradigm because it provides a good tradeoff between sim-                     compression/reconstruction), unlike several works on semantic
+plicity and accuracy. In the proposed scheme, semantic infor-                 communications that have considered a JSCC setting. This
+mation is extracted from the image x to be transmitted                        makes our approach completely compatible with any under-
+by computing its Semantic Segmentation Map (SSM) s,                           lying legacy network protocol, where source coding/decoding
+using some suitable state-of-the-art (SOTA) algorithm (in our                 takes place at the application layer and the source-coded bits
+implementation we used INTERN-2.5 [21]). Then, SQ-GAN                         are transmitted to the destination via some standard protocol
+applies a semantically-guided vector quantization strategy to                 stack (e.g., a 3GPP wireless network).
+encode both x and s. In particular, SQ-GAN learns a vector                       This work is organized as follows. Section II introduces
+quantization codebook from the data and applies a newly                       the scope and general overview of the proposed architec-
+designed and trained adaptive selective masking to dynami-                    ture. Section III introduces in more detail the different parts
+cally adjust the compression rate, ensuring that semantically                 of the proposed SQ-GAN model. Section IV discusses the
+important features are retained. This is obtained by a specif-                training method with data augmentation for the enhance-
+ically designed semantic-conditioned variant of the masked                    ment of semantically relevant classes and the semantic-aware
+vector quantization introduced in [20] to prioritize semanti-                 discriminator employed to optimize the SQ-GAN. Finally,
+cally significant information, thus reducing redundancy while                 Section V presents numerical experiments demonstrating the
+preserving the relevant semantic content. The new adaptive                    effectiveness of SQ-GAN compared to state-of-the-art (SOTA)
+masking mechanism is trained to select the elements in the                    image compression techniques such as (JPEG2000), Better
+latent space tensor that are most significant for the preservation            Portable Graphics (BPG) and the GAN based High-Fidelity
+of the image’s semantic content. Only these selected elements                 Generative Image Compression (HiFiC) [11] and Fidelity-
+are then quantized, using vector quantization with the learned                Controllable extreme image Compression (FCC) [12].
+codebook. Finally, the decoder part of the scheme is formed by
+some learned blocks, trained to reconstruct the original image                 II. P ROBLEM S TATEMENT AND G ENERAL A RCHITECTURE
+by minimizing an error function that includes the SSM. The                       The objective of this work is to develop an image encoder
+key innovations in the proposed SQ-GAN scheme are: (i) a                      that efficiently compresses an image x, while preserving its
+novel GAN-based model that integrates semantic conditioning                   semantic content as much as possible, even at extremely
+and compression directly into its architecture, (ii) the Semantic             high compression rates. In this work, the semantic content
+conditioned Adaptive Mask Module (SAMM) that selects                          is identified with the SSM s, extracted in real-time from x
+and encodes the most semantically relevant features of the                    using a SOTA Semantic Segmentation Model (SSModel) [21]
+input data based on the SSM, (iii) a specifically designed                    with pre-defined semantic classes that depend on the task at
+data augmentation technique in the training phase to enhance                  hand, as explained in Section I.
+the semantically relevant classes, and (iv) the inclusion (in                    As schematically shown in Fig. 1, our encoding scheme
+training) of a semantic-aware discriminator to force the model                extracts s from x and then jointly encodes x and s. At the
+to give more importance to the semantically relevant regions                  decoder, x and s are reconstructed as x̂ and ŝ, respectively.
+over the non-relevant ones.                                                   In some sense, this approach is akin layered source coding,
+   Before proceeding, some important remarks regarding our                    where s can be seen as the “fundamental layer” and x is
+method are in order:                                                          the refinement. The goal is to achieve good reconstruction
+i) Since we focus on task-oriented semantic communication,                    performance (with respect to distortion metrics to be defined
+we assume that the semantic classes used by the state-of-the-                 later) at a low overall coding rate, in terms of Bits Per Pixel
+art semantic segmentation algorithm are predefined according                  (BPP). The key result of our work is to show that, even though
+to the task requirements. Furthermore, the relevance of each                  we transmit two images, namely x and x instead of just x,
+class is quantified by weights wi ∈ [0, 1] assigned to each i-th              we achieve a significantly better trade-off between the overall
+class. These weights are incorporated into the loss functions                 coding rate and various metric for semantic distortion with
+used to train the proposed SQ-GAN. The combination of this                    respect to SOTA schemes (including data-driven approaches).
+task-oriented weighted loss function and the aforementioned                      By jointly encoding and decoding x and s, and incorpo-
+task-specific data augmentation during training results in an                 rating the reconstruction of ŝ in the decoder, it is possible to
+SQ-GAN model optimized for the target application. For                        directly optimize the preservation of semantic information and
+instance, in our numerical examples focused on autonomous                     assign different importance to different semantic classes during
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                   3365
+
+
+
+
+Fig. 1.   Schematic representation of the overall coding/decoding scheme.
+
+
+
+the training process and use ŝ to condition the reconstruction                      Vector quantization (VQ) is applied separately to each
+of x̂. Intuitively, this conditioning “pushes” the decoder to                    selected vector, where the quantization codebook is formed by
+align x̂ with the semantic structure of the original image x.                    J learnable C-dimensional vectors (quantization codewords)
+   The detailed architecture of the proposed SQ-GAN scheme                       denoted by exj and esj , j ∈ {1, . . . , J}, respectively. Therefore,
+is shown in Fig. 2, where the original image x and the                           each quantized latent vector is identified by a binary index
+corresponding original SSM s are both represented by 3-                          of log2 J bits. In this work we chose J = 1024 and the
+dimensional tensors. The image x is a tensor of size 3×H×W ,                     (ℓ2 ) distance as the quantization metric (more in Section III-
+where 3 refers to the RGB channels, H is the height and W                        D). The quantized latent tensors are denoted by zxq and
+is the width of the frame (in pixels). In this work, we have                     zsq , respectively. The list of quantization indices exj and esj ,
+used images of size H = 256 and W = 512. The SSM s                               including the positions of the discarded non-relevant indices,
+is a tensor of size nc × H × W , where nc is the number of                       are binary encoded and form the binary encoded stream to be
+semantic classes, H is the height and W is the width of the                      transmitted.
+frame. Each nc -dimensional vector in pixel position (h, w)                          At the receiver side, the binary stream is decoded and
+represents the 1-hot encoding of the corresponding semantic                      formatted into the latent space tensors zxq and zsq . Following
+class of that pixel. This representation is quite standard and                   a similar procedure as in [20], the latent tensors contain
+has proven to be convenient in a large number of works on                        the quantized vectors in the positions where these vectors
+semantic-conditioned image generation.                                           were selected and effectively quantized, and a “placeholder”
+   The compression and reconstruction of the image x and of                      codeword Mx or Ms in the masked-out positions. These
+its SSM s is accomplished by two parallel (and mutually inter-                   placeholder codewords are not necessarily all-zero vectors,
+acting) pipelines. We use apex/subscripts x and s to indicate                    and can be learned in the training phase in order to facilitate
+blocks of the specific pipeline. Looking at the transmitter side,                reconstruction. These latent space tensors are then processed
+the bottom pipeline (in beige) reports the encoder of the SSM,                   by the Adaptive De-Mask Module (ADM) module to produce
+whereas the top pipeline (in green) reports the image encoding                   the reconstructed latent space tensors ẑx and ẑs , respectively.
+process, which is conditioned to the SSM. The semantic                               Finally, the latent tensor ẑs is processed by the decoder
+encoder Es takes as input the original SSM s and outputs                         Ds to produce the reconstructed ŝ and the latent tensor ẑx is
+the latent tensor zs = Es (s) of shape C × H16 × W16 where                       processed by the decoder Dx to produce the reconstructed x̂
+                     H
+C = 256, H16 = 16        and W16 = W 16 . In parallel, the image                 with conditioning provided by ŝ.
+encoding pipeline first extracts the latent representations of x                     The details of the blocks appearing in Fig. 2 and the overall
+and s, using two pre-trained DNNs, namely the InputNetx for                      training method will be illustrated in the next section. In
+x and the proposed Semantic Positional Embedding (SemPE)                         particular, it is important to clarify that the training of the
+for s. These latent representations are added together as                        proposed SQ-GAN is performed via an adversarial approach
+h(x, s) = InputNetx (x)+SemPE(s) and sent to the encoder                         based on two discriminators. However, in Fig. 2 only the
+that produces the latent tensor zx = Ex (h(x, s)), having                        structure of the generator is represented. In fact, the generator
+the same shape as zs . Both tensors zx and zs are com-                           is eventually the trained model deployed and used at the run-
+posed of K = H16 × W16 latent vectors zxk and zsk in C                           time, while the discriminators play a role only in the training
+dimensions.                                                                      phase.
+   The tensors zx and zs are then sent to the correspond-
+ing Semantic conditioned Adaptive Mask Module (SAMM)                                     III. M ASKED S EMANTIC VQ-GAN (SQ-GAN)
+blocks, which select the most semantically relevant latent vec-                    This section describes in detail the individual blocks of the
+tors. The SAMM blocks play a key role in reducing the trans-                     proposed SQ-GAN architecture.
+mission rate, while preserving the most relevant information.
+The number of selected latent vectors depends on a masking
+fraction variable mx , or ms , that can be set as a parameter.                   A. Semantic Encoder
+Hence, only Nx = ⌊mx K⌋ and Ns = ⌊ms K⌋ selected latent                             The encoder Es maps the nc × H × W SSM s to a
+vectors from zx and zs are quantized, respectively.                              latent tensor zs = Es (s) with shape C × H16 × W16 , where
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3366                                                           IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+Fig. 2. Encoder and decoder detailed structure of the proposed SQ-GAN scheme. The “channel” here may represent transmission or storage, depending on
+the application.
+
+
+
+C = 256 is the hyperparameter representing the number of                       divides the image into 16×16 patches and assigns a specific PE
+channels and H16 and W16 are the height and width. Es                          vector to each patch to allow the transformer to correctly inter-
+is formed by a repeated sequence of two Residual Blocks                        pret the relative positions of the patches in the frame. In our
+(ResBlocks) [24] and one down-scaling layer, which will                        case, PE as proposed in [25] is not needed since, unlike trans-
+be referred to as (ResBlock-Down). The average pooling                         former architectures, the spatial correlations are preserved in
+down-scaling layer halves the height H and width W of                          convolution-based architectures. However, the idea of assign-
+the SSM. By applying 4 cascaded stages of ResBlock-Down,                       ing different weights to different semantic regions of the image
+the final latent tensor has shape H16 × W16 . We decided to                    is used to improve the overall performance. Hence, we propose
+use 4 ResBlock-Downs stages based on an extensive ablation                     a variation of PE, referred to as SemPE, whose goal is to
+study (not reported here because of space limitation), where                   provide the encoder Ex with a suitable transformation of s
+this choice emerged as the best balance between compression                    that can be used to influence the feature extraction process.
+and reconstruction accuracy. The output of the last ResBlock-                  SemPE processes s using a two layer Convolutional Neural
+Down is processed by the final multi-head self-attention layer                 Network (CNN) designed to take into account the semantic
+of the encoder as in [20].                                                     classes of adjacent pixels. In parallel, the image x is processed
+                                                                               by a one-layer CNN called InputNetx . The outputs of both
+                                                                               SemPE and CNN are tensors of shape 128 × H × W . Then,
+B. Image Encoder                                                               as in the classical PE, the input of the encoder is formed by
+   The image encoder Ex maps the image x to the latent repre-                  the elementwise sum h(x, s) = InputNetx (x) + SemPE(s).
+sentation zx of shape C × H16 × W16 , using the conditioning                   This is then processed by the encoder Ex to produce the latent
+provided by s. Ex has the same structure as Es . The main                      tensor zx = Ex (h(x, s)) of shape C × H16 × W16 .
+difference lies in the conditioning process. In fact, not all
+the parts of the image x have the same semantic meaning
+and relevance: for example, in assisted driving applications,                  C. Semantically Conditioned Adaptive Mask Module
+pedestrians are more important than the sky.                                      The latent tensors zx and zs can be interpreted as collections
+   To help the encoder Ex assign different importance to                       of K = H16 W16 vectors of dimension C. The next step is
+different parts, the image x is modified before encoding. The                  to select the most relevant Nx = ⌊mx K⌋ vectors in zx and
+proposed method draws inspiration from the version of the                      Ns = ⌊ms K⌋ vectors in zs , where the relevance masking
+Positional Embedding (PE) introduced by Dosovitskiy et al.                     fraction mx ∈ (0, 1] and ms ∈ (0, 1] are design parameters.
+for transformer networks in vision tasks [25]. That scheme                     This selection is performed by the SAMM blocks, which we
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                  3367
+
+
+
+illustrate next. We only refer to the latent tensor zx , as its               unknown and depend on the specific image x to be encoded.
+application to the s pipeline is similar.                                     However, using the fact that entropy is maximized by the
+    SAMM is a variation of the Adaptive Mask Module (AMM)                     uniform probability distribution, we obtain an upper bound to
+introduced in [20]. The key idea consists of assigning to                     the length of the entropy-coded binary sequence by assuming
+each of the K latent vectors a relevance score and then                       βj = mJx . Therefore, the entropy coding rate for the index
+select the Nx vectors with the highest score. In the proposed                 sequence is upper-bounded by:
+SAMM, the relevance score is conditioned on the SSM s
+                                                                                                  Rx = h2 (mx ) + mx log2 (J),
+and the masking fraction mx can be adjusted dynamically.
+This allows the network to use the same weights to compress                   where h2 (p) = −(1 − p) log2 (1 − p)−p log2 (p) is the binary
+images at different levels of compression. The architecture                   entropy function. Since the index sequence length is K, the
+of the conventional AMM and the new SAMM is shown in                          number of bits necessary to represent such a sequence is
+Fig. 3. While the classic AMM, on the left, is more suitable                  therefore upper-bounded by Bx = Rx K. Notice that this is
+for general purpose applications, the SAMM on the right                       indeed a brute-force bound, and in fact any suitable more
+is designed to take into account the semantic class of the                    refined compression scheme (e.g., using arithmetic coding
+different regions of the image. The new SAMM enforces this                    coupled with Krichevsky-Trofimov probability sequential esti-
+conditioning thanks to the Spatially-Adaptive Normalization                   mation [27]) would achieve a lower rate.
+(SPADE) normalization layer [26]. The key advantage of this                      However, in this work this value is further approximated.
+semantic conditioning is its ability to identify and prioritize               To maintain a linear relationship between the number of
+the accurate representation of the regions of the image corre-                bits and the number of relevant latent vectors, the condition
+sponding to the important semantic classes without requiring                  h2 (p) ≤ 1 is used. By substituting h2 (p) = 1, the final number
+additional trainable parameters. Without the masking driven                   of bits is expressed as follows:
+by the SSM, the encoding model would have required many
+more parameters to learn the features of relevant objects and                                       Bx = K(1 + mx log2 (J)).
+correctly use this information as input of the AMM.                           As will be pointed out in Section V, even under this coarse
+    SAMM takes as input the latent tensor zx and the SSM s                    upper bound, SQ-GAN consistently outperforms competing
+and outputs a relevance score αkx ∈ [0, 1] for each latent vector             SOTA image compression algorithms. By considering the
+zxk . The final step involves the multiplication of the selected              same approach for the Ns relevant vectors in zs , J = 1024,
+latent vectors by their respective relevance scores. This is done             and normalizing by the total number of pixels HW , we can
+to allow backpropagation to flow through SAMM and train its                   express the overall coding rate in BPP as a function of mx
+parameters, as discussed in [20].                                             and ms as1 :
+                                                                                               Bx + Bs       1
+D. Quantization and Compression                                                         BPP =           =       [10(mx + ms ) + 2],      (2)
+                                                                                                 HW         256
+   After selecting the Nx latent vectors having the highest
+                                                                              where K/(HW ) = H16 W16 /(HW ) = 1/256. Notice that
+score, the selected vectors are vector-quantized, while the not
+                                                                              this formulation of the BPP considers the contribution of both
+relevant K − Nx latent vectors are just dropped. The vector
+                                                                              the image and its SSM. Therefore, the BPP given above is
+quantization process follows the same steps as the classic MQ-
+                                                                              fully consistent with the definition of source coding rate in
+VAE [20]. A learnable codebook Cx = {exj : j = 0, . . . , J −1}
+                                                                              image coding (coded bits per image pixel).
+is used, where in this application we found convenient to use
+J = 1024 codewords of dimension C = 256. For each selected
+                                ′
+score-scaled relevant vector zkx = αkx zxk , the codeword at                  E. Tensor Reconstruction and Adaptive De-Masking Module
+minimum distance is found, i.e., the codeword index j is                         At the receiver, the codebooks Cx and Cs are stored in
+selected such that                                                            the decoder. The bit stream is decoded and the array of
+                                       ′                                      quantization indices is retrieved. Then, a tensor of shape
+                   j = argmin ∥zkx − exi ∥2 ,                          (1)
+                         i∈{1,...,J}                                          C ×H16 ×W16 is obtained by placing quantization codewords
+                                                                              exj in correspondence of indices j ∈ {0, . . . , J − 1} and a
+The sequence of quantization indices is then binary encoded
+                                                                              placeholder codeword denoted as Mx in correspondence of all
+using entropy coding. Every latent vector selected for quan-
+                                                                              indices equal to −1 (i.e., in the position of the discarded latent
+tization is located in some position in a H16 × W16 shaped
+                                                                              space vectors). A similar operation is done for the s pipeline,
+array. Therefore, the quantized array is formed by Nx posi-
+                                                                              where the placeholder is denoted by Ms . The placeholders are
+tions containing quantization indices (i.e., integers from 0 to
+                                                                              also learned in the training phase.
+J − 1 selected as in (1)) and K − Nx “empty” positions
+                                                                                 The resulting tensor is processed by the Adaptive
+corresponding to the discarded vectors. We assign to all
+                                                                              De-Masking Module (ADM). This step is similar to what was
+discarded positions an additional special index (conventionally
+                                                                              introduced in MQ-VAE [20] and makes use of a direction-
+denoted as −1), so that we can interpret the quantized array as
+                                                                              constrained self-attention mechanism to gradually let the
+a discrete information source over an alphabet of size J + 1 =
+                                                                              information flow from the relevant exj to the non-relevant
+1025. The index −1 appears with probability 1 − mx , while
+the other indices from 0 to J − 1 appear with probabilities βj                  1 In our results, when referring to BPP, it is generally intended this total
+           PJ−1
+such that j=0 βj = mx . In general, these probabilities are                   BPP, unless otherwise specified.
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3368                                                           IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+Fig. 3. Architectural diagram of the AMM as in [20] (left), and the proposed SAMM employing the SPADE layer to introduce the SSM conditioning (right).
+
+
+
+placeholder Mx . This can be interpreted as a sort of non-                     of the semantic part is coupled with the corresponding dis-
+                                                                                                           s
+linear “interpolation” of the latent space tensor in the discarded             criminator, denoted as Ddisc   , while the image generator Gx is
+positions. The output ẑx of the ADM is then used as the input                 paired to the corresponding discriminator Ddisc  x
+                                                                                                                                   . The discrim-
+of the decoder Dx . Similarly, the output ẑs of the ADM in the                inator is a neural network that receives either an image or the
+s pipeline forms the input of the decoder Ds . At this point,                  SSM as input and assesses its authenticity by distinguishing
+the flows for the two pipelines for x and for s diverge again,                 between real and generated samples. It is used exclusively
+as described in the next two subsections.                                      during training to guide the generator, providing feedback
+                                                                               on how realistic its outputs are. This feedback enables the
+                                                                               generator to progressively improve the quality and realism of
+F. Semantic Decoder
+                                                                               the data it produces. The training scheme for Gs is shown
+   The structure of the decoder Ds is similar to a mirrored                    in Fig. 4, while that for Gx is shown in Fig. 5. At runtime
+version of the encoder Es . The first input layer is composed                  (i.e., when the trained model is applied to a generic image for
+of the multi-head self-attention layer, after which the series                 compression and reconstruction), the discriminators play no
+of ResBlock-Ups is placed. Every ResBlock-Up is composed                       role.
+of two consecutive ResBlocks and one up-scaling layer. The                        The two pipelines are intended to reconstruct objects in dis-
+up-scaling is performed by copying the value of one element                    tinct domains – the image domain and the SSM domain – each
+in the corresponding up-scaled 2×2 patch. The goal is to grad-                 requiring different loss functions. After intensive numerical
+ually transform the latent tensor ẑs from a shape of C ×H16 ×                 experimentation, we realized that training the entire network as
+W16 back to the original shape of nc ×H ×W , the same as the                   a monolithic entity (i.e., of both pipelines coupled together as
+SSM s. This decoding and up-scaling process is completed by                    in Fig. 2) is not efficient. Additionally, it is useful to consider
+using four consecutive ResBlock-Ups. The final reconstructed                   the masking fractions ms and mx as variable rather than fixed
+SSM ŝ is obtained by the standard practice of applying the                    as in [20]. This allows SQ-GAN to compress images and SSMs
+argmax operator to assign each pixel to a specific semantic                    at various compression levels, but also increases the training
+class [28]. The reconstructed SSM ŝ can now be used to con-                   complexity. Hence, to effectively train SQ-GAN, we devised
+dition the reconstruction x̂ of the image x, as described next.                a multi-step approach consisting of three stages: (i) train Gs
+                                                                               using the original s, (ii) train Gx with the original x and s
+G. Image Decoder                                                               and (iii) fine-tune the entire network, denoted by G, using the
+                                                                               original x, original s, and the reconstructed ŝ by freezing Gs ’s
+   The reconstruction of x is obtained by applying the decoder
+                                                                               parameters and only fine-tuning Gx ’s parameters. Initially
+Dx to ẑ x and to the reconstructed SSM ŝ. This decoder has
+                                                                               training Gs ensures that the SSM is accurately reconstructed
+a structure similar to the mirrored version of the encoder Ex ,
+                                                                               independently of the rest. At the same time, training Gx
+with some key conceptual differences. The input multi-head
+                                                                               with the original x and s allows learning the conditional
+self-attention layer has the same structure as the one used
+                                                                               dependencies required for image reconstruction based on a
+in the semantic decoder. The sequence of four consecutive
+                                                                               reliable SSM. However, since the decoder part in Gx is later
+ResBlock-Up is modified to incorporate the conditioning via
+                                                                               required to be conditioned by the reconstructed ŝ rather than
+the SSM. The modifications focus on the normalization layers
+                                                                               the original s, the fine-tuning step is crucial to adapt Gx to
+within the ResBlocks, replacing every normalization layer with
+                                                                               mitigate the imperfections of ŝ that are not present in s.
+the SPADE layer. This new layer is responsible for enforcing
+                                                                                  In addition to the multi-step training approach, another
+the structure of the SSM during the decoding phase [26].
+                                                                               crucial challenge is the identification and preservation of
+                                                                               semantically relevant information. To address this problem, the
+                 IV. T RAINING AND I NFERENCE                                  training process has been further improved by proposing and
+   So far we have provided a structural and functional descrip-                incorporating a data augmentation step, adding semantically
+tion of the blocks that compose the encoder and the decoder,                   relevant classes, and a semantic-aware discriminator network.
+as shown in Fig. 2. In this section, we illustrate the training                The idea is to emphasize the importance of semantically
+phase of all these blocks, considering both image and SSM                      relevant classes. For example, in our numerical experiment
+pipelines. We recall that the GANs rely on the interplay                       we focused on dashboard camera views for assisted driving
+between a generator and a discriminator. The generator Gs                      applications, where the semantic classes of interest are (for
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                   3369
+
+
+
+
+Fig. 4.   Schematic representation of the semantic generator network Gs training pipeline.
+
+
+
+
+Fig. 5.   Schematic representation of the image generator network Gx training pipeline.
+
+
+
+example) “traffic signs”, “traffic lights”, and “pedestrians”.                   By increasing the presence of these objects, the model will be
+These objects typically occupy a small portion of the frame                      more exposed to them during training.
+and are not always present in every frame. In contrast, non-                        The process begins by collecting all “traffic signs” and
+relevant classes such as “sky”, “vegetation”, and “street”,                      “traffic lights” from the images and SSMs in the current mini-
+appear much more frequently and occupy a large portion of the                    batch. For each image in the mini-batch, a random number
+images. Therefore, Data augmentation is used to ensure that                      n between 0 and 25 is selected, representing the number of
+frequent but task-irrelevant semantic classes do not dominate                    objects to add. Then, n objects are randomly selected from
+the training process.                                                            the collected set and carefully inserted into the image and its
+   This section is organized as follows. Section IV-A will                       SSM. The placement is carried out in such a way as to avoid
+present the data augmentation process as well as the proposed                    overlapping with existing instances of the same class or other
+method for enhancing semantically relevant classes. Sec-                         semantically relevant classes. An example of an augmented
+tion IV-B will focus on the training of Gs , while Section IV-C                  pair (x, s) is represented in Fig. 6 with the original pair on
+will focus on the training of Gx with the introduction of the                    the left and the data augmented version on the right. Other
+proposed semantic-aware discriminator. Finally, Section IV-D                     classic data augmentation techniques like cropping, rotation
+will focus on the final fine-tuning process. The dataset used for                and color correction are also applied. However, it is interesting
+training is the Cityscapes dataset [29] composed of 2975 pairs                   to notice the increase in “traffic signs” (yellow), and “traffic
+of images and associated SSMs.                                                   lights” (orange) in the augmented x and s.
+
+                                                                                 B. Training Gs
+A. Data Augmentation
+                                                                                   The training of the sub-network Gs is implemented as
+   This section introduces a novel data augmentation technique                   depicted in Fig. 4, based on an adversarial approach VQ-GANs
+aimed at addressing the issue of underrepresented but semanti-                   applied to the training set with data augmentation. The input
+cally important classes in datasets. This new data augmentation                  and output tensors s and ŝ of Gs have a shape nc × H × W .
+technique is fundamentally different from previously proposed                    We considered the following loss function:
+methods (e.g., [30], [31]). These approaches often focus on
+swapping existing objects – for example, replacing a “turn left”                   LsSQ-GAN = LWCE
+                                                                                                              s                    s
+sign with a “stop” sign – or employ complex Neural Network                                       + λGAN [log Ddisc (s) + log (1 − Ddisc (Gs (s)))]
+                                                                                                               ′                           ′
+(NN) architectures to introduce new objects into images.                                         + λvq ∥sg[z s ] − zsq ∥22 + λcommit ∥z s − sg[zsq ]∥22
+These approaches can lead to increased computational costs or
+                                                                                              := LWCE + λGAN LGAN + λvq Lvq + λcommit Lcommit
+fail to adequately address the under-representation of critical
+                                                                                                                                            (3)
+classes. In contrast, the proposed technique is straightforward,
+efficient, and fast.                                                             where the λ’s are hyperparameters that control the strength of
+   For the sake of illustration, let us focus on data augmen-                    each term. The last three terms in (3) are the same as in [19]
+tation to address the under-representation of “traffic signs”                    for the conventional VQ-GAN. More specifically, LGAN is the
+and “traffic lights”. The process is based on the use of                         term responsible for adversarial training. This term encourages
+mini-batches of pairs (x, s). For each image in a mini-batch,                    the generator to produce outputs that are indistinguishable
+the SSM is used to identify all instances of “traffic signs” and                 from real semantic maps by penalizing the generator if the
+“traffic lights” present in that image. Then, each image and its                 discriminator can differentiate between the real and generated
+                                                                                                                                   s
+corresponding SSM is augmented by adding more instances                          images. The structure of the discriminator Ddisc      is that of
+of these critical classes. This is achieved by copying “traffic                  a neural network as described in [32]. This is composed
+signs” and “traffic lights” from other images within the same                    of a convolutional layer, batch normalization layer and a
+mini-batch and pasting them into the current image and SSM.                      leaky ReLU [33] repeated 3 times and followed by the last
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3370                                                            IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+
+Fig. 6. Effect of combined data augmentation techniques, including rotation, cropping and the proposed semantic relevant classes enhancement. On the left,
+the original image and SSM and on the right the resulting augmented version.
+
+
+
+convolutional layer that maps the output to a single number.                    of the model used in our numerical examples, these weights
+This value is the output of the discriminator used to classify                  are set as follows:
+the SSM as real or fake. As a result, LGAN improves the overall                   • w=1            for the relevant classes “traffic signs”
+quality of the generated semantic reconstructions by guiding                                       and “traffic lights”.
+the model toward realistic results. The Lvq term is responsible                   • w = 0.85 for the classes “people” and “rider”.
+for training the codebook used in the quantization process.                       • w = 0.20 for the non-relevant classes “sky”
+It utilizes the sg[·], which is the stop-gradient operator. This                                   and “vegetation”.
+operator prevents the gradients from being backpropagated to                      • w = 0.50 for all the other classes.
+                                                                                   After defining the loss function, the subnetwork Gs and the
+the encoder during training. By blocking the backpropagation,                                               s
+                                                                                associate discriminator Ddisc  , can be trained. During training,
+the encoder’s parameters are not updated, and the codebook is
+                                                                                the masking fraction ms is randomly varied, selected from a
+encouraged to adjust its codewords to better match the output
+                                                                                set of values ranging from 5% to 100% with an expected value
+of the encoder. The Lcommit term ensures that the encoder does
+                                                                                of 35%. This approach allows the model to learn to compress
+not overfit to only a small subset of the codebook entries.
+                                                                                the SSM at various levels of compression and increase the
+This is obtained by penalizing the difference between the
+                                                                                robustness of the model with respect to different conditions of
+encoder’s output z′ and the quantized codebook entry sg[zq ],
+                                                                                the channel. If the task will require it, it is in fact possible to
+thus promoting the encoder to use a more diverse set of
+                                                                                dynamically adapt the masking fraction without having to train
+codebook entries. As a result, the generalization and stability
+                                                                                another model from scratch, like other approaches like [11],
+of the training process are improved while ensuring that the
+                                                                                [12], and [20] do. The subnetwork Gs , and the associated
+codebook entries are not updated during the training of the                                      s
+                                                                                discriminator Ddisc , are trained using the Adam optimizer [34]
+encoder.
+                                                                                with a learning rate of 10−4 and a batch size of 8. The training
+   The first term of the loss function in Eq. (3) is a novelty
+                                                                                is conducted for 200 epochs with early stopping to prevent
+introduced in this work and consists of the weighted cross-
+                                                                                overfitting.
+entropy LWCE defined as:
+                        X                                          
+   LWCE (s, ŝ) = −             ws(h,w) s(h,w) log s(h,w) · ŝ(h,w) ,           C. Training Gx
+                        (h,w)
+                                                                                   The training of the subnetwork Gx follows a similar
+                                                                                approach. As said before, at this stage Gx is trained using
+where s(h,w) and ŝ(h, w) denote the one-hot encoded vectors                    the original image x and the original SSM s, as illustrated in
+at pixel location (h, w) in s and ŝ, respectively, and ws(h,w) ≥               Fig. 5. Again, an adversarial approach typical of VQ-GANs
+0 is the weight associated with the semantic class in that pixel.               is employed for training, with the loss function defined as:
+This choice is motivated by the nature of the SSM, which
+is a pixel-wise classification map where each pixel belongs                        LxSQ-GAN
+to a specific semantic class. The weights are assigned to                           = LW l2 + Lperc
+emphasize the importance of semantically relevant classes over                                      x                     x
+nonrelevant ones, encouraging the model to focus more on                              + λGAN [log Ddisc (x|s) + log (1 − Ddisc (Gx (x)|s))]
+                                                                                                    ′                            ′
+reconstructing the critical classes. Specifically, in the training                    + λvq ∥sg[z x ] − zxq ∥22 + λcommit ∥z x − sg[zxq ]∥22
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                3371
+
+
+
+  := LW l2 + Lperc + λGAN LGAN + λvq Lvq + λcommit Lcommit                       Another important novel aspect of the proposed approach
+                                                         (4)                  is the adversarial loss LGAN involving a new semantic-aware
+                                                                                                                            x
+where the last two terms and the λ’s are defined as in (3),                   discriminator network. The discriminator Ddisc   plays a crucial
+while the first three terms are defined as follows. The weighted              role in adversarial training by determining whether an image
+ℓ2 loss LW l2 , defined as:                                                   reconstructed by Gx is real or fake. However, a potential
+                                                                              drawback is that the discriminator might focus on non-relevant
+                      1 X
+    LWl2 (x, x̂) =             ws(h,w) ∥x(h,w) − x̂(h,w) ∥2 , (5)             parts of the image to produce its classification score. For
+                    HW                                                        instance, it might prioritize vegetation details, and classify
+                           (h,w)
+                                                                              images as real only if the leaves on the trees have a certain
+is designed to adjust the importance of different semantic
+                                                                              level of detail. This will force the generator Gx to reconstruct
+classes in the image. In (5), x(h,w) and x̂(h,w) are the pixel
+                                                                              images with better vegetation details to fool the discriminator.
+values at location (h, w) of the tensors x and x̂, respectively,
+                                                                              Unfortunately, this is not optimal for the structure of the SQ-
+and ws(h,w) is the weight associated with the semantic class
+                                                                              GAN. Giving more importance to the vegetation will decrease
+at that pixel, as given by the SSM s. Specifically, while
+                                                                              the importance of other classes, thus causing the SAMM
+training the model used in our numerical examples, we used
+                                                                              module to select the wrong latent vectors as relevant.
+the following weights:
+  • w=1            for the relevant classes “traffic signs”                      In recent years, several works have proposed ways to modify
+                   and “traffic lights”.                                      the discriminator by introducing various conditioning. For
+  • w = 0.55 for the classes “people” and “rider”.                            example, [36] conditioned the discriminator on the SSM to
+  • w=0            for the non-relevant classes “sky”                         improve Semantic Segmentation (SSeg) retention, while [37]
+                   and “vegetation”.                                          enforced the discriminator to focus on high frequency com-
+  • w = 0.15 for all other classes.                                           ponents. However, these methods do not adequately address
+   Of particular interest is the zero weight assigned to the                  the issue at hand. To achieve the desired performance, it is
+classes “sky” and “vegetation”. This allows the network to                    essential to adjust the discriminator to minimize its focus
+neglect the pixel-by-pixel reconstruction of these classes.                   on non-relevant regions. To this end, we make the following
+In fact, the real colors of the sky and trees for the task at                 observations about the discriminator’s behavior:
+hand are semantically irrelevant.                                                • For a (generic) trained discriminator Ddisc and two
+   The perceptual loss Lperc is instead the part that ensures                      images x and y, Ddisc (x) is likely similar to Ddisc (y)
+that the reconstructed image maintains visual similarity to the                    if both images originate from the same data distribution,
+original, preventing unrealistic alterations such as an unnatural                  i.e., px = py . However, Ddisc (x) = Ddisc (y) is not guar-
+sky color. To quantify this loss, we used Learned Perceptual                       anteed unless the images are identical or indistinguishable
+Image Patch Similarity (LPIPS) [35], which evaluates the                           by the discriminator.
+difference between two images in a latent space representation.                  • If py differs from px , Ddisc (y) will likely differ from
+The underlying idea is that if two images convey similar                           Ddisc (x). The output difference is primarily influenced
+semantic content, for example, if they both contain relevant                       by the aspects of py that deviate from px .
+objects such as pedestrians, cars, or traffic lights, each with                  • The greater the difference between px and py , the higher
+the correct shape and positioned appropriately relative to one                     the uncertainty in predicting Ddisc (y) based on Ddisc (x).
+another, the semantic distortion should be low, regardless of
+any differences at the pixel level. LPIPS, instead of computing               Based on these insights, we propose to reduce the discrimi-
+pixel-wise differences between x and x̂, compares the latent                  nator’s focus on non-relevant semantic classes. Our approach
+features extracted from the images by employing a deep neural                 consists of artificially modifying the reconstructed image x̂
+network (DNN) pre-trained for object recognition. The DNN                     before it is evaluated by the discriminator and in (4) has been
+is somehow substituting a human to quantify the perceptual                    represented as conditioning the input of the discriminator as
+                                                                                 x
+difference between two images. Formally, LPIPS is defined                     Ddisc  (·|s). This modification aims to minimize the differences
+as:                                                                           in non-relevant regions between x and x̂, bringing the data
+              X 1          X                              2                   distribution of these regions of x̂ closer to the real distribution
+      Lperc =                    ∥wl ⊙ (ϕl (x) − ϕl (x̂))∥2                   of x. For example, if the generator reconstructs a tree with dark
+                   Hl Wl
+              l∈L           (hj ,wj )
+                                                                              green leaves when in reality they are light green, the color in
+where ϕl (·) denotes the activation from the l-th layer of                    x̂ will be artificially shifted toward light green.
+a pre-trained network ϕ, L is the set of layers used for                         This artificial editing is performed by considering the
+feature extraction, Hl and Wl are the height and width of                     residual between the real and reconstructed images, defined
+the feature map at layer l, and wl are learned weights that                   as r = x − x̂. By using the SSM to mask the pixel-wise
+adjust the contribution of each layer. The operator ⊙ denotes                 difference between the two images, and adding back a fraction
+element-wise multiplication between the weight wl and all                     of the residual to x̂ it is possible to obtain the new image
+the elements of the difference (ϕl (x) − ϕl (x̂)) in any location             x̂rel = x̂ + wrel ⊙ r. In this context wrel represents the
+coordinate (hj , wj ). By comparing the feature representations               re-scaling relevance tensor that is obtained as a function of
+at multiple layers, LPIPSs captures perceptual differences at                 the SSM s and has the same shape as for the images, namely
+different scales and abstraction levels. Lower LPIPS values                   shape 3 × H × W . The element (i, h, w) of the tensor wrel is
+indicate better reconstruction quality.                                       obtained from s by assigning the following values based on
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3372                                                           IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+the class of the pixel (h, w). In particular, in the training for              methods designed for JSCC, since we consider only source
+our numerical examples, we used:                                               coding.
+  • w = 0.90 for the class “sky”.                                                 We also computed the SSM s̃ of the reconstructed image
+  • w = 0.80 for the class “vegetation”.                                       x̂ and compared it with the SSM s of the original image,
+  • w = 0.40 for the class “street”.                                           to quantitatively assess the capability of the coding method to
+  • w=0            for the other classes.                                      preserve some semantics aspects of the image to be transmit-
+   For example, this means that 80% of the difference between                  ted, such as identification of objects like “pedestrians”, “traffic
+the shades of green leaves is removed before presenting the                    signs”, etc., the estimation of their shape and of their relative
+image to the discriminator. The modified vegetation in x̂rel                   positioning.
+will appear much closer to the real light green in x, thus
+reducing the discriminator’s focus on this non-relevant region.
+It is important to acknowledge that this approach negatively                   A. SAMM Function
+impacts the generator’s ability to accurately reproduce these                     SQ-GAN adopts various techniques to force the model to
+specific non-relevant classes. Nevertheless, the perceptual loss               correctly reconstruct the relevant regions of the image. The
+still considers the entire image, guiding the generator to                     weighted loss function based on the semantic classes, the
+reconstruct the “sky,” “vegetation,” and “streets” to maintain                                                     x
+                                                                               semantic-aware discriminator Ddisc      , and the data augmenta-
+overall realism.                                                               tion step described in IV-A, have been designed with this
+   The sub-network Gx is trained for different masking frac-                   idea in mind. Their scope is to guide SAMM to identify
+tions mx , similarly to Gs , to increase the robustness of the                 and select the relevant latent vectors zxk and zsk . Since the
+model with respect to different conditions of the channel.                     selection is performed on the latent tensor, to understand the
+These values are selected from a finite set ranging from 5% to                 effect of SAMM, we project back from the latent tensor to
+                                                             x
+100% with an expected value of 35%. The structure of Ddisc                     the image (pixel) domain [20]. Fig. 7 shows such a projection
+                  s
+is the same as Ddisc and the training is performed using the                   for a specific example.2 The left column displays the original
+Adam optimizer with a learning rate of 10−4 with batch size                    x and s, whereas the right column indicates the regions
+of 8. The model is trained for 200 epochs with early stopping.                 associated with the latent vectors deemed most relevant by
+                                                                               SAMM. In this example, the masking fractions are chosen as
+D. Fine-Tuning G                                                               mx = ms = 0.20.
+                                                                                  It is immediately evident that Gx and Gs consider different
+   The final step involves fine-tuning the entire network G by                 regions as relevant. The SAMM in Gs focuses on regions with
+freezing the parameters of Gs and updating only those of Gx .                  the most change in semantic classes. Streets, buildings, and
+This fine-tuning addresses the scenario where the original SSM                 the sky require very few associated latent vectors for their
+s is unavailable at the receiver, that is, when the SQ-GAN                     representation. In contrast, the regions of the SSM containing
+is used for Semantic Communication (SC). Notice that the                       semantically relevant classes are strongly prioritized.
+fine-tuning step is essential since the quality of ŝ is influenced               Similarly, the SAMM in Gx shows a strong preference
+by the masking fraction ms , and this dependency is missed in                  for relevant classes like cars and people. However, it also
+the separate training steps described above. The loss function                 focuses on areas previously ignored, such as the street and
+                                           x
+and the semantic-aware discriminator Ddisc       remain identical              the buildings. Indeed, thanks to the conditioning on the SSM,
+to those used in the training of Gx . Fine-tuning is conducted                 the sub-network Gx is aware of the location and shape of
+over 100 epochs with early stopping to prevent overfitting.                    each relevant object, allowing it to focus on other aspects such
+During each iteration, both masking fractions mx and ms                        as colors and textures. As a result, elements like the streets
+are randomly selected from the same distribution. The Adam                     and the sky still require some latent vectors to accurately
+optimizer is employed with a learning rate of 10−4 and a batch                 reconstruct their colors. However, most of the latent vectors
+size of 8.                                                                     are selected from the truly relevant regions.
+                                                                                  In both cases, SAMM tends to prefer regions that contain
+                             V. R ESULTS                                       more semantically relevant objects. This is a direct effect of
+   This section focuses on the performance of the proposed                     the various techniques adopted to train the model as described
+SQ-GAN evaluated using 500 images (and corresponding                           in Section IV.
+SSMs) from the validation set of the Cityscapes dataset [29].                     Next, we examine the effect of different masking fractions
+In Section V-A, we illustrate the function and role of the                     on the quality of the reconstructed image and SSM. In fact
+SAMM in selecting features of x and s that are semantically                    increasing mx and ms is expected to increase the overall
+relevant. Furthermore, we also show the effect of masking                      quality of x̂ and ŝ respectively, while decreasing is expected to
+fractions on the final reconstruction. In Section V-B the perfor-              do the opposite. Fig. 8 shows visually how masking fractions
+mance of the proposed SQ-GAN is compared with SOTA com-                        influence the reconstructed outputs.
+pression algorithms like BPG, JPEG2000 and deep-learning                          The column on the left shows the original x and s. The other
+based alternatives such as HiFiC [11] and FCC [12]. For                        columns show on top the reconstructed x̂ and the generated
+the selection of the deep learning-based comparison methods,                     2 The projection shown in figure 7 was implemented by leveraging the
+we considered only those providing the open source code                        convolutional structure of the two encoders that allows to trace back the spatial
+and the model weights. Furthermore, we have not considered                     correlation between the latent tensor and the original frame.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                 3373
+
+
+
+
+Fig. 7. Visual representation of the latent tensor selection of the SAMM projected in the image and SSM domain. In both cases the masking has been fixed
+to mx = ms = 0.20 and the regions considered semantically relevant are shown on the right.
+
+
+
+
+Fig. 8. Visual comparison between the same image and SSM at different masking reactions mx and ms . The original image and SSM are shown on the
+left. The upper row shows the reconstructed x̂ and the generated SSM using the SOTA SSModel INTERN-2.5 [21]. The bottom row shows the reconstructed
+SSM ŝ. All pairs (x̂, ŝ) are obtained at 0.05BPP.
+
+
+
+SSM obtained from x̂ via the INTERN-2.5 SSModel [21].                            To assess the quality of the reconstructed SSM, we use the
+The bottom row shows the reconstructed ŝ. These examples                      mean Intersection over Union (mIoU) parameter, defined as:
+are obtained by fixing the compression level to a total amount                                                        n
+of 0.05 BPP and by letting the masking fractions mx and ms                                                       1 X  c
+                                                                                                                        |si ∩ s′i |
+                                                                                                      mIoU =                        ,
+to vary, while keeping their sum constant. In this example,                                                      nc i=1 |si ∪ s′i |
+mx + ms = 1.1.
+   The quality of x̂ is significantly affected by the fidelity of ŝ,          where nc represents the number of semantic classes, and si and
+which depends heavily on ms , more than mx . A reduction in                    s′i are pixel sets of class i in s and the predicted s′ , respectively.
+object detail within ŝ directly limits the ability of x̂ to retain            This parameter measures how well two segmentation maps
+such details. This is evident by comparing the bottom row ŝ                   overlap with each other. A value close to 1 indicates a high
+with the generated SSM in the upper row: any detail absent                     semantic content retention in x̂.
+in ŝ is also absent in the SSM.                                                   The impact of ms on the mIoU is illustrated in Fig. 9.
+Conversely, the influence of mx on the overall quality                         It is useful to notice that, for ms ≥ 0.55, the value of
+exhibits the expected behavior: increasing mx enhances image                   mIoU remains almost constant. This means that, above that
+fidelity, particularly for non-relevant details. Relevant fea-                 value, additional latent vectors do not add relevant semantic
+tures are prioritized and reconstructed effectively even at                    features. For very low values of ms the performance is poor,
+low values of mx , whereas finer details, such as build-                       but, as soon as ms ≥ 0.20, the model is able to reconstruct
+ing windows, are better preserved when mx = 0.95. This                         ŝ with an acceptable level of semantic retention. To give a
+demonstrates the model’s capability to prioritize semantically                 term of comparison, the value of ms = 0.20 corresponds to
+relevant features before refining non-relevant aspects of the                  a compression of BP Ps = 0.011 BPP. This means that at
+image.                                                                         this low value of BPP the model is already able to preserve
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3374                                                            IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+                                                                                B. Visual Results and Comparisons With SOTA Image
+                                                                                Compression
+                                                                                   In this section, the results of the proposed SQ-GAN are
+                                                                                compared with the SOTA conventional algorithms BPG and
+                                                                                JPEG2000, and with deep-learning-based compression algo-
+                                                                                rithms HiFiC [11] and FCC [12]. A visual comparison between
+                                                                                BPG and SQ-GAN is shown in Fig. 11.
+                                                                                   The top row represents the reconstructed image x̂ obtained
+                                                                                with the proposed SQ-GAN and the associated SSM generated
+                                                                                via the INTERN-2.5 SSModel. The bottom row shows the
+                                                                                reconstructed image obtained by using the BPG algorithm and
+Fig. 9. SSM retention evaluated as the mIoU between the true s and the          the associated generated SSM.
+reconstructed ŝ as a function of the masking fraction ms . As the masking
+fraction ms increases the network Gs is able to better reconstruct the SSM.
+                                                                                   We notice that SQ-GAN can reach lower values of BPP.
+However, the increase of performance reaches a plateau from ms ≥ 0.2            In particular, in this case BPG cannot compress images at
+(BP Ps = 0.011BPP).                                                             BPP lower than 0.038. Furthermore, while BPG uses precious
+                                                                                resources to reconstruct semantically irrelevant details such
+                                                                                as the windows of the buildings, SQ-GAN focuses on the
+                                                                                relevant parts. This is further evidenced by the amount of
+                                                                                semantic retention of the generated SSM. For example,
+                                                                                the cyclist on the bike is still visible and can be correctly
+                                                                                identified by SSModel, at all levels of BPP in Fig. 11.
+                                                                                In contrast, the cyclist completely disappears in the generated
+                                                                                SSM from the BPG reconstructed image at all levels of BPP
+                                                                                in Fig. 11.
+                                                                                As a comparison term, to obtain a level of semantic retention
+                                                                                similar to the one obtained by SQ-GAN at 0.038 BPP, BPG
+                                                                                requires a rate of 0.280 BPP.
+
+                                                                                   As a further parameter used to quantify the (semantic)
+                                                                                distortion between the original and reconstructed images,
+                                                                                we used the Fréchet Inception Distance (FID), evaluated over
+Fig. 10. LPIPS evaluated between x and x̂ as the masking fractions ms and
+mx vary. By properly selecting the masking fractions it is possible to reduce   a batch of images [38]. The value of FID is defined as [38]:
+the redundancy, while preserving a task-specific feature, represented by the                                        2
+LPIPS value.                                                                       FID = µϕ (X) − µϕ (X̂)
+                                                                                                         2
+                                                                                                                              1/2 
+                                                                                        + Tr Σϕ (x) + Σϕ (X̂) − 2 Σϕ (X)Σϕ (X̂)
+                                                                                                                                                       (6)
+valuable details in the SSM. Increasing ms beyond the value
+of 0.55 (equivalent to BP Ps = 0.025 BPP) does not provide                      where X and X̂ are the sets of real and reconstructed images,
+further improvement. We interpret this saturation as follows:                   respectively; µϕ (X) and Σϕ (X) are the mean and covariance
+beyond this value, all semantically relevant latent vectors                     of the features extracted from the real images X using a pre-
+have been selected and quantized. Adding other vectors will                     trained Inception-v3 model ϕ [39]; µϕ (X̂) and Σϕ (X̂) are
+only increase the amount of redundant information, without                      the corresponding statistics from the reconstructed images X̂.
+improving the reconstructed SSM. This behavior is quite                         Rather than directly comparing images pixel by pixel, the
+different from what was observed and discussed previously                       FID compares the distributions of the latent representations
+about mx , where even for values close to 1, the improvements                   of the original and reconstructed images obtained using a
+were still visible on the final output.                                         convolutional neural network (Inception v3) trained for image
+   It is also interesting to see how both mx and ms affect x̂.                  recognition. From its definition, FID is a parameter that is
+For this purpose, in Fig. 10 we report the value of LPIPS                       robust against translation, rotation, or change of scale of
+to measure the distance between x and x̂ and show the                           relevant objects. A low value of FID indicates that a DNN
+importance of semantic masking. As expected, the perfor-                        operating over the two batches of original and reconstructed
+mance along the ms axis has a strong influence on the output                    images extract representations that are statistically equivalent.
+only for values of ms ≤ 0.55. Instead, the influence of                            To assess the performance of SQ-GAN, we compare it with
+mx is observed along the whole range from 0 to 1. This is                       established SOTA image encoders, including JPEG2000, BPG,
+consistent with the visual results shown in Fig. 8 and show                     FCC, and HiFiC, using four metrics: FID, LPIPS, Peak Signal-
+how, by properly selecting the masking coefficients mx and                      to-Noise Ratio (PSNR), and mIoU. The first three metrics are
+ms , we can strongly reduce the redundancy, while preserving                    computed between the original image x and its reconstruc-
+a task-specific feature, represented by the LPIPS value.                        tion x̂, while the mean Intersection over Union (mIoU) is
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                    3375
+
+
+
+
+Fig. 11. Visual comparison at different compression rates between the proposed SQ-GAN (TOP) and the classical BPG (BOTTOM). The SSMs shown are
+generated from x̂ via the SOTA SSModel INTERN-2.5 [21]. The proposed model is able to reconstruct images with higher semantic retention and lower
+values of BPP compared with BPG. The BPG algorithm is not able to compress images at lower values than 0.038 BPP, thus the comparison is limited to
+0.038 and 0.078 BPP.
+
+
+
+
+Fig. 12.    Performance comparison between BPG, JPEG2000 and SQ-GAN in terms of semantic metrics and the classic pixel-by-pixel PSNR.
+
+
+
+evaluated between the original semantic segmentation map s                        structures, as demonstrated by favorable FID, LPIPS, and
+and the SSM s̃, generated from x̂ using the SOTA INTERN-                          mIoU scores. It is also interesting to observe what happens at
+2.5 SSModel. The quantitative results are shown in Fig. 12,                       BPP = 0.038. BPG reconstructs images with a PSNR of 26,
+which plots each metric as a function of BPP, as defined in (2).                  outperforming SQ-GAN in terms of pixel fidelity. However,
+   We begin by examining how SQ-GAN compares to                                   as shown in Fig. 11, BPG fails to preserve important semantic
+approaches that are able to compress the image at comparable                      content. In fact, only the first two cars in the scene are detected
+values of BPP, namely JPEG2000, BPG, and FCC. As evident                          while the distant pedestrian and the traffic signs are lost.
+from Fig. 12, SQ-GAN significantly outperforms these meth-                        In contrast, SQ-GAN maintains better object-level consistency.
+ods on semantic-aware metrics such as FID, LPIPS, and mIoU,                          The comparison with the FCC model further highlights the
+which better reflect perceptual and task-related image quality.                   efficiency of SQ-GAN in semantic preservation. For exam-
+SQ-GAN is outperformed by BPG and FCC on PSNR, a pixel-                           ple, FCC achieves an FID=93 at a BPP of 0.061, whereas
+level distortion measure, which favors pixel-by-pixel recovery                    SQ-GAN attains the same FID at a BPP of 0.017, indicating a
+rather than semantic relevance.                                                   bitrate reduction factor of approximately 3.6 times to achieve
+   It is important to note that SQ-GAN is capable of operating                    comparable reconstructed image quality. Similar trends are
+effectively even at very low bitrates. For instance, even at                      observed in LPIPS and mIoU, reinforcing the semantic coding
+approximately 0.01 BPP, it preserves meaningful semantic                          advantage of our model.
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+3376                                                           IEEE TRANSACTIONS ON COGNITIVE COMMUNICATIONS AND NETWORKING, VOL. 12, 2026
+
+
+
+   Finally, we considered the HiFiC model, a High-Fidelity                      [3] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+Generative Image Compression method often adopted as a                              semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+                                                                                    pp. 2663–2675, 2021.
+benchmark. We chose not to include HiFiC in Fig. 12, as its                     [4] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+operational BPP range begins at 0.142, which is substantially                       task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+higher than the range analyzed for the other models in the                          no. 1, pp. 5–41, Jan. 2023.
+                                                                                [5] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+figure (from 0.015 to 0.08 BPP). Working at BPP = 0.142,                            semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+HiFiC yields superior performance in terms of PSNR = 28.34,                         pp. 2584–2597, Sep. 2022.
+FID = 35.47, and LPIPS = 0.223, as expected, because of the                     [6] W. Yang et al., “Semantic communications for future Internet: Funda-
+much higher BPP. Nevertheless, it is impressive to notice that,                     mentals, applications, and challenges,” IEEE Commun. Surveys Tuts.,
+                                                                                    vol. 25, no. 1, pp. 213–250, 1st Quart., 2022.
+in terms of mIoU, HiFiC reaches only a value of 0.565, i.e.,                    [7] S. Barbarossa, D. Comminiello, E. Grassucci, F. Pezone, S. Sardellitti,
+the same value attained by SQ-GAN at BPP = 0.018, which                             and P. Di Lorenzo, “Semantic communications based on adaptive
+corresponds to a rate reduction factor of about 7.8 times. This                     generative models and information bottleneck,” IEEE Commun. Mag.,
+                                                                                    vol. 61, no. 11, pp. 36–41, Nov. 2023.
+underlines the remarkable semantic compression capability of                    [8] Z. Tao, W. Xu, Y. Huang, X. Wang, and X. You, “Wireless network
+SQ-GAN, even when compared with high-performing learned                             digital twin for 6G: Generative AI as a key enabler,” IEEE Wireless
+codecs at significantly higher bitrates.                                            Commun., vol. 31, no. 4, pp. 24–31, Aug. 2024.
+                                                                                [9] N. Van Huynh et al., “Generative AI for physical layer communica-
+                                                                                    tions: A survey,” IEEE Trans. Cognit. Commun. Netw., vol. 10, no. 3,
+                         VI. C ONCLUSION                                            pp. 706–728, Jun. 2024.
+   This work presents SQ-GAN, a new approach for simulta-                      [10] S. Tang, Q. Yang, D. Gündüz, and Z. Zhang, “Evolving semantic
+                                                                                    communication with generative modelling,” in Proc. IEEE 35th Int.
+neous encoding of images and their semantic maps, aimed at                          Symp. Pers., Indoor Mobile Radio Commun. (PIMRC), Sep. 2024,
+preserving the image semantic content, even at very low cod-                        pp. 1–6.
+ing rates. The comparison of SQ-GAN with SOTA encoders                         [11] F. Mentzer, G. Toderici, M. Tschannen, and E. Agustsson, “High-fidelity
+has been carried out using a set of perceptual performance                          generative image compression,” in Proc. Adv. Neural Inf. Process. Syst.,
+                                                                                    2020, pp. 1–8.
+indicators, like FID, LPIPS, and mIoU, that somehow mea-                       [12] S. Iwai, T. Miyazaki, Y. Sugaya, and S. Omachi, “Fidelity-controllable
+sure the semantic distortion between the original image (or                         extreme image compression with generative adversarial networks,” in
+semantic map) and the reconstructed image (or semantic map).                        Proc. 25th Int. Conf. Pattern Recognit. (ICPR), Milan, Italy, Jan. 2021,
+                                                                                    pp. 8235–8242.
+Using these performance indicators, extensive evaluations                      [13] J. Xu, T.-Y. Tung, B. Ai, W. Chen, Y. Sun, and D. Gündüz, “Deep joint
+on the Cityscapes dataset show that SQ-GAN significantly                            source-channel coding for semantic communications,” IEEE Commun.
+outperforms JPEG2000, BPG, FCC and HiFiC, in terms of                               Mag., vol. 61, no. 11, pp. 42–48, Nov. 2023.
+rate-(semantic) distortion trade-off. At the same time, SQ-                    [14] Z. Weng and Z. Qin, “Semantic communication systems for speech
+                                                                                    transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+GAN is clearly outperformed by BPG and FCC in terms of                              pp. 2434–2444, Aug. 2021.
+conventional pixel-level indicators, such as the PSNR. In                      [15] I. J. Goodfellow et al., “Generative adversarial nets,” in Proc. 27th Int.
+summary, SQ-GAN significantly outperforms state-of-the-art                          Conf. Neural Inf. Process. Syst. (NIPS), 2014, pp. 2672–2680.
+                                                                               [16] S. Liu, Z. Peng, Q. Yu, and L. Duan, “A novel image semantic
+image encoders in semantic-aware image compression tasks,                           communication method via dynamic decision generation network and
+whose primary goal is not perfect pixel-level reconstruction,                       generative adversarial network,” Sci. Rep., vol. 14, no. 1, p. 19636,
+but rather the preservation of semantic contents that are more                      Aug. 2024.
+important for high-level vision tasks.                                         [17] F. Pezone, O. Musa, G. Caire, and S. Barbarossa, “Semantic-preserving
+                                                                                    image coding based on conditional diffusion models,” in Proc. IEEE
+   We tested our method on the autonomous driving use case,                         Int. Conf. Acoust., Speech Signal Process. (ICASSP), Apr. 2024,
+but our approach can be applied to many other scenarios,                            pp. 13501–13505.
+like medical imaging, remote sensing, space exploration, etc.,                 [18] A. Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete represen-
+                                                                                    tation learning,” in Proc. Int. Conf. Neural Inf. Process. Syst. (NIPS),
+whenever there is a need to strongly compress the images,                           Dec. 2017, pp. 6309–6318.
+while retaining as much as possible their semantic content.                    [19] P. Esser, R. Rombach, and B. Ommer, “Taming transformers for high-
+Nevertheless, also the autonomous driving use case offers                           resolution image synthesis,” in Proc. IEEE/CVF Conf. Comput. Vis.
+                                                                                    Pattern Recognit. (CVPR), Jun. 2021, pp. 12873–12883. [Online]. Avail-
+useful motivations for using our coding scheme, like reducing                       able: http://dblp.uni-trier.de/db/conf/cvpr/cvpr2021.html#EsserRO21
+the traffic load necessary to send images to a remote server for               [20] M. Huang, Z. Mao, Q. Wang, and Y. Zhang, “Not all image regions
+training autonomous driving models; or strongly compressing                         matter: Masked vector quantization for autoregressive image generation,”
+images for liability assessment in case of accidents, while                         in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+                                                                                    Jun. 2023, pp. 2002–2011.
+preserving critical semantic details (e.g., traffic lights, road               [21] W. Wang et al., “InternImage: Exploring large-scale vision foundation
+signs, pedestrians). Further investigations are in progress to                      models with deformable convolutions,” 2022, arXiv:2211.05778.
+simplify the coding strategy, optimize the shapes of the image                 [22] M. A. M. Elhassan et al., “Real-time semantic segmentation for
+                                                                                    autonomous driving: A review of CNNs, transformers, and beyond,”
+and semantic map tensors and generalize the approach to video                       J. King Saud Univ.-Comput. Inf. Sci., vol. 36, no. 10, Dec. 2024,
+coding.                                                                             Art. no. 102226.
+                                                                               [23] Tesla, Inc. (2025). AI & Robotics. [Online]. Available:
+                                                                                    https://www.tesla.com/AI
+                             R EFERENCES
+                                                                               [24] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+ [1] H. Yang, A. Alphones, Z. Xiong, D. Niyato, J. Zhao, and K. Wu,                 image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+     “Artificial-intelligence-enabled intelligent 6G networks,” IEEE Netw.,         (CVPR), Jun. 2016, pp. 770–778.
+     vol. 34, no. 6, pp. 272–280, Nov. 2020.                                   [25] A. Dosovitskiy et al., “An image is worth 16×16 words: Trans-
+ [2] E. Calvanese Strinati and S. Barbarossa, “6G networks: Beyond Shannon          formers for image recognition at scale,” in Proc. Int. Conf. Learn.
+     towards semantic and goal-oriented communications,” Comput. Netw.,             Represent., 2020, pp. 1–7. [Online]. Available: https://openreview.net/
+     vol. 190, pp. 1–17, May 2021.                                                  forum?id=YicbFdNTTy
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+PEZONE et al.: SQ-GAN: SEMANTIC IMAGE COMMUNICATIONS USING MASKED VECTOR QUANTIZATION                                                                      3377
+
+
+
+[26] T. Park, M.-Y. Liu, T.-C. Wang, and J.-Y. Zhu, “Semantic image syn-                                   Sergio Barbarossa (Life Fellow, IEEE) is cur-
+     thesis with spatially-adaptive normalization,” in Proc. IEEE/CVF Conf.                                rently a Full Professor with the Sapienza Univer-
+     Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 2332–2341.                                      sity of Rome and a Senior Research Fellow of
+[27] R. Krichevsky and V. Trofimov, “The performance of universal encod-                                   the Sapienza School for Advanced Studies (SSAS).
+     ing,” IEEE Trans. Inf. Theory, vol. IT-27, no. 2, pp. 199–207, Mar. 1981.                             He has been the Scientific Coordinator of several
+[28] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional net-                                   European projects. He is coordinating the National
+     works for biomedical image segmentation,” in Proc. 18th Int. Conf.                                    Project called “Network Intelligence” and a national
+     Med. Image Comput. Comput.-Assist. Intervent., 2015, pp. 234–241, doi:                                initiative named “Make Artificial Intelligence Dis-
+     10.1007/978-3-319-24574-4_28.                                                                         tributed and Networked.” His current research inter-
+[29] M. Cordts et al., “The cityscapes dataset for semantic urban scene                                    ests include semantic and goal-oriented communica-
+     understanding,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.                                    tions, topological signal processing and learning, 6G
+     (CVPR), Jun. 2016, pp. 3213–3223.                                            networks, and distributed edge machine learning. He is a EURASIP Fellow.
+[30] A. S. Konushin, B. V. Faizov, and V. I. Shakhuro, “Road images aug-          He received the Technical Achievements Award from European Association
+     mentation with synthetic traffic signs using neural networks,” Comput.       for Signal Processing (EURASIP) Society in 2010 and the IEEE Signal
+     Opt., vol. 45, no. 5, pp. 736–748, Oct. 2021.                                Processing Society Best Paper Awards in 2000, 2014, and 2020. He was
+[31] L. Jöckel, M. Kläs, and S. Martínez-Fernández, “Safe traffic sign recog-     an IEEE Distinguished Lecturer from 2013 to 2014.
+     nition through data augmentation for autonomous vehicles software,”
+     in Proc. IEEE 19th Int. Conf. Softw. Quality, Rel. Secur. Companion
+     (QRS-C), Jul. 2019, pp. 540–541.
+[32] P. Isola, J.-Y. Zhu, T. Zhou, and A. A. Efros, “Image-to-image translation
+     with conditional adversarial networks,” in Proc. IEEE Conf. Comput. Vis.
+     Pattern Recognit. (CVPR), Jul. 2017, pp. 5967–5976.
+[33] B. Xu, N. Wang, T. Chen, and M. Li, “Empirical evaluation of rectified
+     activations in convolutional network,” 2015, arXiv:1505.00853.
+[34] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+     in Proc. Int. Conf. Learn. Represent. (ICLR), 2014, pp. 1–6.                                          Giuseppe Caire (Fellow, IEEE) was born in Turin
+[35] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The unrea-                               in 1965. He received the B.Sc. degree in electrical
+     sonable effectiveness of deep features as a perceptual metric,” in                                    engineering from the Politecnico di Torino in 1990,
+     Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,                                       the M.Sc. degree in electrical engineering from
+     pp. 586–595.                                                                                          Princeton University in 1992, and the Ph.D. degree
+[36] A. Oluwasanmi, M. U. Aftab, A. Shokanbi, J. Jackson, B. Kumeda,                                       from the Politecnico di Torino in 1994.
+     and Z. Qin, “Attentively conditioned generative adversarial network for                                 He was a Post-Doctoral Research Fellow with
+     semantic segmentation,” IEEE Access, vol. 8, pp. 31733–31741, 2020.                                   European Space Agency (ESTEC), Noordwijk,
+[37] Y. Chen, G. Li, C. Jin, S. Liu, and T. Li, “SSD-GAN: Measuring                                        The Netherlands, from 1994 to 1995; an Assis-
+     the realness in the spatial and spectral domains,” in Proc. AAAI,                                     tant Professor of telecommunications with the
+     vol. 35, 2021, pp. 1105–1112.                                                                         Politecnico di Torino; an Associate Professor at the
+[38] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter,       University of Parma, Italy; a Professor with the Department of Mobile
+     “GANs trained by a two time-scale update rule converge to a local Nash       Communications, Eurecom Institute, Sophia-Antipolis, France; and a Pro-
+     equilibrium,” in Proc. Adv. Neural Inf. Process. Syst., 2017, pp. 1–11.      fessor of electrical engineering with the Viterbi School of Engineering,
+[39] C. Szegedy, V. Vanhoucke, S. Ioffe, J. Shlens, and Z. Wojna, “Rethinking     University of Southern California, Los Angeles. He is currently an Alexander
+     the inception architecture for computer vision,” in Proc. IEEE Conf.         von Humboldt Professor with the Faculty of Electrical Engineering and
+     Comput. Vis. Pattern Recognit., Oct. 2015, pp. 2818–2826.                    Computer Science, Technical University of Berlin, Germany. His research
+                                                                                  interests include communications theory, information theory, and channel
+                                                                                  and source coding, with a particular focus on wireless communications.
+                                                                                  He received the Jack Neubauer Best System Paper Award from the IEEE
+                                                                                  Vehicular Technology Society in 2003, the IEEE Communications Society and
+                                                                                  Information Theory Society Joint Paper Award in 2004, 2011, and 2025, the
+                         Francesco Pezone received the B.Sc. degree in
+                                                                                  Okawa Research Award in 2006, the Alexander von Humboldt Professorship
+                         physics from the University of Rome Tor Vergata,
+                                                                                  in 2014, the Vodafone Innovation Prize in 2015, an ERC Advanced Grant
+                         the M.Sc. degree in data science from the Sapienza
+                                                                                  in 2018, the Leonard G. Abraham Prize for best IEEE JSAC paper in 2019,
+                         University of Rome, and the dual Ph.D. degree in
+                                                                                  the IEEE Communications Society Edwin Howard Armstrong Achievement
+                         data science and engineering from the Sapienza Uni-
+                                                                                  Award in 2020, the 2021 Leibniz Prize of the German National Science
+                         versity of Rome and Technische Universität Berlin.
+                                                                                  Foundation (DFG), and the CTTC Technical Achievement Award of the IEEE
+                         He is an AI Researcher, specializing in generative
+                                                                                  Communications Society in 2023. He has served on the Board of Governors
+                         AI, computer vision, and optimization theory, with
+                                                                                  of the IEEE Information Theory Society from 2004 to 2007, and as an Officer
+                         a focus on efficient data compression and semantic
+                                                                                  from 2008 to 2013. He was the President of the IEEE Information Theory
+                         communication.
+                                                                                  Society in 2011.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:11:49 UTC from IEEE Xplore. Restrictions apply.
+

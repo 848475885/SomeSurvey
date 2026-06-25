@@ -1,0 +1,1215 @@
+                                                                                                                                                                                           1
+
+
+
+
+                                                         Channel-Aware Vector Quantization for Robust Semantic
+                                                                               Communication on Discrete Channels
+                                           Zian Meng∗ , Qiang Li∗ , Member, IEEE, Wenqian Tang∗ , Mingdie Yan∗ , and Xiaohu Ge∗ , Senior Member, IEEE
+                                                              ∗ Huazhong University of Science and Technology, 430074 P. R. China
+
+
+
+
+                                              Abstract—Deep learning-based semantic communication has                      data [4], [5] by focusing on the extraction and transmission of
+                                           largely relied on analog or semi-digital transmission, which limits             meaningful information rather than raw bits, thereby fostering
+                                           compatibility with modern digital communication infrastruc-                     more efficient and intelligent communication [6].
+                                           tures. Recent studies have employed vector quantization (VQ)
+arXiv:2510.18604v1 [eess.SP] 21 Oct 2025
+
+
+
+
+                                           to enable discrete semantic transmission, yet existing methods                     An imperative avenue in semantic communication research
+                                           neglect channel state information during codebook optimiza-
+                                           tion, leading to suboptimal robustness. To bridge this gap, we                  involves designing semantic coding schemes [7]. Due to the
+                                           propose a channel-aware vector quantization (CAVQ) algorithm                    challenges in applying strict algorithmic strategies to semantic
+                                           within a joint source-channel coding (JSCC) framework, termed                   extraction and processing, there has been a growing reliance
+                                           VQJSCC, established on a discrete memoryless channel. In                        on data-driven deep learning (DL) techniques for the ad-
+                                           this framework, semantic features are discretized and directly                  vancement of semantic codecs [4], [8]–[10]. DL’s nonlinear
+                                           mapped to modulation constellation symbols, while CAVQ inte-
+                                           grates channel transition probabilities into the quantization pro-              capacities enable the processing of semantic features from data
+                                           cess, aligning easily confused symbols with semantically similar                [11]. Essentially, semantics-driven codecs can be categorized
+                                           codewords. A multi-codebook alignment mechanism is further                      as representation learning, as they focus on embedding mean-
+                                           introduced to handle mismatches between codebook order and                      ingful features into low-dimensional forms while using joint
+                                           modulation order by decomposing the transmission stream into                    source-channel coding (JSCC) to balance compactness and
+                                           multiple independently optimized subchannels. Experimental
+                                           results demonstrate that VQJSCC effectively mitigates the dig-                  redundancy for error resilience [12]–[14]. By autonomously
+                                           ital cliff effect, achieves superior reconstruction quality across              identifying the optimal redundancy level necessary to mitigate
+                                           various modulation schemes, and outperforms state-of-the-art                    channel degradation, these methodologies advance into com-
+                                           digital semantic communication baselines in both robustness and                 prehensive end-to-end solutions that jointly tackle the chal-
+                                           efficiency.                                                                     lenges in semantic extraction, representation, and transmission.
+                                              Index Terms—Semantic communication, digital joint source-
+                                           channel coding, deep learning, channel-aware vector quantiza-                      Despite significant advancements in DL-based JSCC ap-
+                                           tion.                                                                           proaches, these methods predominantly assume continuous
+                                                                                                                           channel inputs with arbitrary precision [14]–[16]. However,
+                                                                                                                           the fundamental requirements for transparent bit transmissions
+                                                                     I. I NTRODUCTION
+                                                                                                                           persist, with digital infrastructures remaining ubiquitously de-
+                                           A. Background and Significance                                                  ployed in foreseeable technological evolution cycles [17]. This
+                                                                                                                           leads to a critical conflict between analog JSCC assumptions
+                                           T     HE evolution from 5G to 6G requires a paradigm shift
+                                                 beyond Shannon’s communication framework, as the
+                                           conventional focus on bits leads to spectral inefficiency and
+                                                                                                                           and practical digital transmission mechanisms. In this context,
+                                                                                                                           ensuring seamless compatibility between semantic commu-
+                                           complex system architectures [1]. Conventional communi-                         nication paradigms and existing digital channel constraints
+                                           cation systems generally use separate source and channel                        emerges as an unavoidable challenge. Recent studies have
+                                           coding (SSCC), following Shannon’s separation theorem [2],                      attempted to address this problem, yet many approaches fall
+                                           which suggests it is optimal only if the block length is                        short of strictly modeling fully discrete channels. For instance,
+                                           infinite. In real-world applications with finite block length,                  some systems map semantic features to discrete constellations
+                                           SSCC’s effectiveness diminishes when channel errors exceed                      at the transmitter but still process noisy continuous constella-
+                                           the correction capacity of the channel coding. As intelli-                      tion points at the receiver. In parallel, methods based on vec-
+                                           gent applications continue to expand, including the industrial                  tor quantized variational autoencoder (VQ-VAE) enable fully
+                                           Internet, vehicular communications, and augmented reality,                      discrete semantic representations but lack the capability for
+                                           SSCC becomes increasingly inadequate [3]. Unlike syntax-                        channel-aware end-to-end optimization, leading to degraded
+                                           focused systems that strictly separate source and channel                       performance compared with analog baselines [12], [18]–[20].
+                                           coding, semantic communication utilizes shared knowledge                        Motivated by this gap, this paper aims to resolve two pivotal
+                                           bases and end-to-end semantic coding to minimize redundant                      questions:
+
+                                             Zian Meng, Qiang Li (Corresponding author), Wenqian Tang, Mingdie Yan,
+                                           and Xiaohu Ge are with Huazhong University of Science and Technology,             1) How to design robust semantic communication architec-
+                                           430074 P. R. China (emails: zian@hust.edu.cn, wqtang@hust.edu.cn, yan-               tures under discrete channel models?
+                                           mingdie@hust.edu.cn, qli patrick@hust.edu.cn, xhge@mail.hust.edu.cn).
+                                             This work is partially supported by the Natural Science Foundation of China     2) How to perform end-to-end optimization of digital se-
+                                           (NSFC) under grant U24A20212.                                                        mantic coding and modulation?
+                                                                                                                                   2
+
+
+
+B. Related Works                                                   standard digital decoders.
+                                                                      Inspired by the VQ-VAE model [34], many emerging meth-
+   1) DL-Enabled JSCC: JSCC merges source and channel              ods leverage vector quantization with codebook-based frame-
+coding into a coherent process, achieving end-to-end optimal-      works to implement fully digital semantic communication
+ity in communication systems. Initial JSCC methods [21]–[24]       structures [20], [35]–[37]. In this approach, high-dimensional
+focused on specific source and channel distributions but faced     semantic data are encoded into continuous latent forms, then
+implementation challenges due to high complexity. Recent           mapped onto discrete codebook entries based on the nearest
+advances in DL have revitalized JSCC through data-driven           distance criteria. This indexing aligns perfectly with digital
+approaches, notably for wireless text transmission [8] and         communication pipelines by linking semantic symbols to mod-
+image transmission [9]. DL-based JSCC exhibits two core            ulation alphabets. However, the typical VQ-VAE framework
+attributes: source compression and end-to-end optimization.        does not consider channel states in its training objectives,
+Source compression leverages deep neural networks (DNNs)           which limits its adaptability to different channel conditions.
+to distill high-dimensional source data into lower-dimensional,    Moreover, it links codebook size directly to modulation orders,
+critical features, thus facilitating the efficient use of band-    restricting the flexibility in choosing modulation schemes
+width for transmission. Meanwhile, end-to-end optimization         while maintaining a constant quantization level.
+is achieved through gradient descent across simulated commu-
+nication channels, which enables the automatic balancing of
+semantic fidelity with resilience to channel disruptions. These    C. Contributions
+attributes collectively warrant the classification as JSCC.           The main contributions of this paper are summarized as
+   Based on the two attributes mentioned above, the design of      follows:
+DL-based JSCC frameworks revolves around two fundamen-                • We propose VQJSCC, a robust digital semantic com-
+tal aspects. The first aspect involves the DNN architecture,            munication architecture that enables discrete signal pro-
+which demands customization to suit specific modalities and             cessing at both the encoder and decoder. A DL-based
+tasks. For instance, transformers are commonly utilized for             image transmission system is established on a discrete
+transmitting text, whereas convolutional neural networks are            memoryless channel (DMC), building upon the VQ-VAE
+used for image transmission. Additionally, various studies              backbone. Compared to existing analog and semi-digital
+integrate rate adaptation techniques, such as dynamic masking           JSCC schemes, VQJSCC provides channel-aware discrete
+[10], parameter lookup tables [13], or importance awareness             semantic coding and accommodates arbitrary modulation
+mechanism [25], to flexibly adjust the coding rate in response          schemes, addressing Question 1.
+to channel conditions. The second aspect concerns the design          • To overcome the limitation of VQ methods that ignore
+of the simulated channel for training purposes. In most cases,          channel state information (CSI), we propose an algorithm
+the channel is modeled by either adding Gaussian noise                  of channel-aware vector quantization (CAVQ).In view of
+to the features extracted by the DNN to simulate additive               the fact that the transmission error determines the upper
+white Gaussian noise (AWGN) channels or by multiplying                  bound of the reconstruction loss, CAVQ designs a loss
+features with complex Gaussian random variables, followed               function that explicitly incorporates the channel transi-
+by the addition of AWGN noise, to simulate Rayleigh fading              tion probability and aggregates the codewords with high
+channels [8], [9], [26]–[28]. However, these schemes require            error probabilities in the semantic space to minimize the
+full-resolution constellation transmission, creating a mismatch         transmission error, thereby achieving channel-aware joint
+with existing digital communication infrastructures and hinder-         optimization on discrete channel models. This addressed
+ing practical implementation [18], [28]–[30]. This challenge            Question 2.
+motivates the development of JSCC methods accommodating               • When the codebook and modulation orders are mis-
+discrete representations for digital communications.                    matched, CAVQ fails to align the codebook with the
+   2) Digital Semantic Coding and Modulation: To convert                channel, hindering systematic analysis. To address this,
+raw semantic data into compact discrete representations, scalar         we propose a multi-codebook algorithm that divides
+quantization techniques, which include uniform [13], [18]               the codebook index sequence into several independent
+and non-uniform types [31], directly discretize continuous              discrete memoryless subchannels, each with its codebook
+semantic features. Despite their computational efficiency, these        that is individually optimized by CAVQ. This removes the
+techniques are inherently limited by the loss of information            necessity for a direct match between codebook size and
+due to quantization noise, leading to degraded performance              modulation order, thus increasing the flexibility of digital
+compared to analog semantic communication systems. Alter-               semantic communication systems.
+natively, stochastic coding frameworks [12], [32], [33] use           • Experimental results demonstrate that the proposed
+variational inference to construct latent distributions, pro-           VQJSCC mitigates the cliff effect that is common in
+ducing discrete symbols via stochastic sampling based on                digital communication, surpassing state-of-the-art joint
+encoder-generated categorical distributions. Although capa-             coding modulation methods in terms of peak-signal-to-
+ble of reaching information-theoretic bounds under specific             noise ratio (PSNR) and computational efficiency. Our
+channel conditions, these semi-digital methods still require            approach produces codebook distributions with a distinct
+continuous constellation inputs during decoding, which does             pattern where modulation symbols that are easy to con-
+not fully align with the discrete-alphabet requirements of              fuse are assigned with semantically similar codewords.
+                                                                                                                                                                                 3
+
+
+
+                                                                                                            M
+
+                                                                                                       Shared
+                                                                                              0    Codebook         0
+                                                                                              1                     1
+                                                                                Vector        2    Discrete         2
+                       x          Encoder                                                                                     Decoder                                   x̂
+                                                                              Quantization    3    Channel          5
+                                      f                                                                                            g
+                                                                                              4                     4
+                                                                          Z                   5 Zq          Zq      5
+
+
+
+
+                                           000001010011100101
+
+
+
+
+                                                                                                                                          000001010101100101
+                              0                                      0                                                         0                                    0
+                              1                                                                                                                                     1
+                                                                     5                                                         5
+                              2                                                                                                                                     2
+                                                                     3                          Wireless                       5
+                              3                                                                                                                                     5
+                                                                                                Channel
+                              4                                      9                                                         9                                    4
+                              5                                                                                                                                     5
+                                  y                                      c
+
+
+
+
+                                                                                                                              …
+                                                                    …
+
+                           Codebook      Bit                    Constellation      Digital Modulation and Demodulation         ĉ                                  ŷ
+                            Indices    Stream                      Indices                      P (c | c)
+                              Codebook to Constellation                                                                   Constellation to Codebook
+
+
+
+Fig. 1. The proposed VQJSCC framework. The encoder fϕ maps image x to Z; vector quantization with a shared codebook M yields Zq and indices y. The
+indices are bit-serialized and mapped to constellation indices c (M = 2mc ), transmitted over the wireless channel and demodulated to ĉ, then pass through
+a discrete memoryless channel P (ĉ | c). The decoder gθ reconstructs x̂ from ŷ.
+
+
+
+      Additionally, our method results in a more uniform code-                                  vectors, where ϕ denotes the trainable encoder parameters.
+      book activation frequency, which ensures all codewords                                    Here, N corresponds to the number of transmission symbols,
+      effectively contribute to information representation, thus                                and d represents the semantic embedding dimension per sym-
+      achieving greater source entropy than vanilla VQ-VAE-                                     bol. This process maps raw data into a compact semantic space
+      based methodologies.                                                                      zi ∈ Rd .
+   The remainder of this paper is organized as follows. Sec-                                       To enable digital transmission, the system employs a train-
+tion II introduces the digital semantic transmission system                                     able codebook M = [m1 , m2 , . . . , mK ] ∈ RK×d for vector
+and problem formulation. Section III presents the VQJSCC                                        quantization. Each zi is replaced by its nearest codeword myi
+framework and its associated training process, with a focus on                                  via Euclidean distance search:
+the CAVQ and multi-codebook strategies. Section IV contains                                                        yi = arg         min                        ∥zi − mj ∥2 .   (1)
+the analysis of experimental results, while Section V presents                                                                j∈{1,...,K}
+
+the conclusions.                                                                                This yields quantized features Zq = [my1 , . . . , myN ] and a
+   Notations: Scalars are denoted by lowercase and upper-                                       discrete index sequence y = [y1 , . . . , yN ] ∈ {1, . . . , K}N .
+case letters (e.g., y, K). Vectors are represented by boldface                                  The codebook size K dictates both quantization granularity
+lowercase letters (e.g., x). Fundamental sets include R (real                                   and transmission rate, since each index requires ⌈log2 K⌉ bits.
+numbers), C (complex numbers), and Z (integers), while cus-                                     As the system follows the joint source-channel coding (JSCC)
+tomized sets are denoted by calligraphic letters (e.g., X ). The                                paradigm, the indices bypass channel coding and are directly
+ℓ2 -norm of a vector x is expressed as ∥x∥2 . The expectation of                                passed to the modulation stage.
+an expression with respect to the random variable x is denoted                                     The digital modulation module maps y into constellation
+by Ex [·]. The probability of a random event is represented by                                  symbols. When the codebook size K matches the modulation
+P (·). The Kronecker product of matrices A and B is denoted                                     order M , the mapping is straightforward: each codebook
+by A ⊗ B.                                                                                       index can be directly associated with a unique constellation
+                                                                                                point. However, in general K ̸= M , a direct one-to-one
+     II. S YSTEM M ODEL AND P ROBLEM F ORMULATION                                               mapping is infeasible. To ensure efficient use of the dis-
+                                                                                                crete representation, the index sequence y is first converted
+   Fig. 1 illustrates the proposed end-to-end digital semantic
+                                                                                                into a bitstream b = [b0 , . . . , bN mb ] ∈ {0, 1}N mb , where
+communication framework. The architecture is built upon
+                                                                                                mb = ⌈log2 K⌉. This bitstream is then partitioned into L
+the VQ-VAE backbone and consists of three main modules:
+                                                                                                groups, each corresponding to a modulation symbol, yielding a
+semantic encoding/decoding, vector quantization, and digital
+                                                                                                constellation index sequence c = [c1 , . . . , cL ] ∈ {1, . . . , M }L ,
+modulation.
+                                                                                                where M = 2mc is the modulation order with mc bits per
+   Let the input be a semantic source x ∈ X , where we focus                                    symbol:
+on image transmission. The encoder fϕ : X → RN ×d extracts                                                                           
+semantic features from the input image and outputs a matrix                                                                    N mb
+                                                                                                                        L=              .                           (2)
+Z = [z1 , z2 , . . . , zN ] containing N continuous d-dimensional                                                               mc
+                                                                                                                                          4
+
+
+
+Each index ci is then mapped to a constellation point sci ∈                achieve this alignment implicitly through end-to-end training,
+S ⊂ C, and the transmitted baseband signal is expressed as                 digital systems require explicit mechanisms because vector
+s = [sc1 , . . . , scL ] ∈ CL .                                            quantization introduces discrete symbols that are directly vul-
+  The wireless channel introduces fading and additive noise,               nerable to channel impairments. This mismatch is referred to
+such that the received signal is modeled as                                as the latent-channel distribution matching problem.
+                                                                              To illustrate, consider conventional digital modulation such
+                           r = hs + n,                               (3)
+                                                                           as Quadrature Phase Shift Keying (QPSK). Noise in the
+                                                                     2
+where h ∈ C is the complex channel gain and n ∼ CN (0, σ I)                channel makes neighboring constellation points more prone to
+is AWGN. With perfect channel state information (CSI) at the               confusion than distant ones. Gray coding is often applied so
+receiver, channel equalization can be applied to remove the                that adjacent points differ by only one bit, thereby reducing
+effect of h, yielding an equivalent AWGN channel model.                    the bit error rate by aligning the modulation structure with
+   Demodulation is performed using a detection function D :                channel error patterns. This principle highlights the importance
+CL → {1, . . . , M }L that maps received symbols to estimated              of adapting discrete representations to channel statistics.
+constellation indices:                                                        In digital semantic communication, a similar challenge
+                   ĉ = D(r) = [ĉ1 , . . . , ĉL ].                 (4)   arises. Channel noise may corrupt the transmitted codebook
+                                                                           indices y into erroneous ŷ, causing discrepancies between
+A nearest-neighbor rule is applied, assigning each received                the reconstructed features Ẑq and the intended features Zq .
+point to the closest constellation symbol in S.                            These symbol errors propagate through the decoder, resulting
+   To abstract modulation and demodulation into a tractable                in semantic distortion in the output x̂. To address this, it is
+digital model, the channel is represented as a DMC. For each               essential to characterize how such errors influence the end-to-
+transmitted symbol cl , the channel is fully characterized by              end reconstruction performance. For this purpose, we define
+transition probabilities:                                                  the transmission error as
+                                                                                                          h           i
+       hij = P (ĉl = j | cl = i),        ∀i, j ∈ {1, . . . , M }.   (5)                       Lt = Ex,ŷ ∥Z − Ẑq ∥22 .                (8)
+These form the transition matrix H = [hij ] ∈ [0, 1]M ×M .
+                                                                           The following theorem establishes that Lt provides an upper
+Owing to the memoryless property, different symbols are
+                                                                           bound on the end-to-end reconstruction loss.
+independent:
+                                  L
+                                  Y                                        Theorem 1. The reconstruction loss is bounded as
+                     P (ĉ|c) =         P (ĉl |cl ).                (6)
+                                                                              Ex,x̂ ∥x − x̂∥22 ≤ 2Ex ∥x − gθ (Z)∥22 + 2C02 Lt ,
+                                                                                                                 
+                                                                                                                                        (9)
+                                  l=1
+
+   Finally, the estimated bitstream b̂ is reconstructed from ĉ,           where C0 is the Lipschitz constant of the decoder gθ .
+and mapped back to ŷ ∈ {1, . . . , K}N . The shared codebook                 The proof is provided in Appendix A. Intuitively, the
+provides the quantized features Ẑq = [mŷ1 , . . . , mŷN ], which        first term represents the intrinsic reconstruction error of the
+are decoded by gθ : RN ×d → X to yield the final reconstruc-               semantic encoder-decoder pair without channel noise, which
+tion x̂.                                                                   becomes negligible after training. Thus, system performance
+   This digital semantic communication system is trained end-              is dominated by the transmission error Lt , making its mini-
+to-end as an image reconstruction task. The overall learning               mization the primary design goal.
+objective is to minimize the expected mean squared error                      By expanding Lt , we obtain the following tractable formu-
+(MSE) between the original image x and the reconstructed                   lation.
+image x̂:
+                                                                           Proposition 1. The transmission error can be expressed as
+                     min Ex ∥x − x̂∥22 .
+                                         
+                                                                (7)
+                     ϕ,θ,M                                                             "N K                                   #
+                                                                                         XX
+                                                                                                                            2
+While the vanilla VQ-VAE framework employs the straight-                      Lt = Ex           P (ŷn = k | yn ) ∥zn − mk ∥2 ,   (10)
+through estimator (STE) to enable gradient propagation across                             n=1 k=1
+the discrete quantization stage, it remains insufficient for dig-          where N is the sequence length of discrete symbols y, K is
+ital semantic communication. In particular, it fails to capture            the codebook size with mk as the k-th codeword, and P (ŷn =
+and mitigate the impact of channel-induced symbol errors in                k | yn ) denotes the transition probability between indices.
+the discrete latent space. Addressing this challenge requires
+channel-aware optimization, which is the focus of the next                    The proof is given in Appendix B. Proposition 1 shows that
+section.                                                                   transmission error minimization can be directly integrated into
+                                                                           gradient-based optimization. For the i-th codeword mi ∈ M,
+    III. C HANNEL -AWARE V ECTOR Q UANTIZATION FOR                         the gradient update with respect to Lt is
+                        D IGITAL JSCC                                                          "N                               #
+                                                                                                X
+A. Channel-Aware Codebook Optimization                                         ∇mi Lt = 2Ex         P (ŷn = i | yn ) (mi − zn ) .    (11)
+   A key challenge in digital semantic communication is to                                      n=1
+
+align the latent semantic space with the statistical characteris-          Geometrically, this update pulls mi closer to features zn
+tics of the physical channel. While analog JSCC frameworks                 that are frequently confused with index i during transmission,
+                                                                                                                                                                                                                                              5
+
+
+
+                                  c1    c2        c3    c4    c5        c6    c7    c8     c9                               ĉ1    ĉ2         ĉ3     ĉ4    ĉ5         ĉ6     ĉ7    ĉ8      ĉ9
+                                                                                                         Digital Channel
+                                                                                                     …
+
+                                                                                                          Subchannel 1
+          z1 z 5 z 9 …    M (1)                                                                      …                                                                                                       M (1)
+                                                                                                                                                                                                                       ŷ1 m ŷ5 m ŷ9 …
+                                                                                                                                                                                                                     m (1)  (1)   (1)
+
+
+                                  y1                    y5                    y9                                            ŷ1                        ŷ5                        ŷ9
+          z 2 z 6 z10 …   M (2)                                                                      … Subchannel 2                                                                                          M (2) m (2) m (2) m (2)
+                                                                                                                                                                                                                     ŷ2   ŷ6   ŷ10 …
+
+                                       y2                    y6                    y10                                            ŷ2                        ŷ6                        ŷ10                                                ˆ
+                                                                                                                                                                                                                                            Z
+Z                                                                                                                                                                                                                                             q
+
+          z 3 z 7 z11 …   M (3)                                                                                                                                                                              M (3)
+                                                                                                     … Subchannel 3                                                                                                      ŷ7 m ŷ11 …
+                                                                                                                                                                                                                     m m (3)
+                                                                                                                                                                                                                       (3)    (3)
+                                                                                                                                                                                                                       ŷ3
+
+                                             y3                    y7                    y11                                             ŷ3                        ŷ7                        ŷ11
+          z 4 z 8 z12 …   M (4)                                                                                                                                                                              M (4) m (4) m (4) m (4)
+                                                                                                     … Subchannel 4                                                                                                  ŷ4   ŷ8   ŷ12 …
+
+                                                   y4                    y8                    y12                                               ŷ4                        ŷ8                       ŷ12
+
+Fig. 2. Subsequence decomposition and multi-codebook mapping address mismatched codebook and modulation orders. The index stream is divided based on
+the repeating bit-alignment period into separate subsequences. Each subsequence extracts a consistent bit slice pattern from sequential constellation symbols,
+creating an i.i.d. discrete memoryless subchannel via the digital channel.
+
+
+
+thereby enforcing semantic similarity among error-prone code-                                                         a) Step 1: Constructing subsequences.: We first define
+words. This alignment improves robustness against channel-                                                       the grouping period as
+induced symbol errors.
+   Remark 1: The transmission error Lt generalizes the code-                                                                                                   T = lcm(mb , mc ),                                                          (14)
+book loss used in the vanilla VQ-VAE. In the absence of
+channel errors, where the transition probability is:                                                             the least common multiple of the codebook and modulation
+                                 (                                                                               orders. Intuitively, T is the smallest number of bits after
+                                   1, if k = yn ,                                                                which the alignment pattern between codebook indices and
+             P (ŷn = k | yn ) =                         (12)                                                    modulation symbols repeats.
+                                   0, otherwise,
+                                                                                                                    The original index sequence y = (y1 , . . . , yN ) is divided
+Lt reduces to the vanilla VQ-VAE codebook loss:                                                                  into frames of length T /mb indices. Since each frame contains
+           "N                  #                                                                                 exactly T bits, the bit alignment across frames is identical. We
+             X                                                                                                   then extract Ns = T /mb subsequences by collecting the i-th
+                             2
+                 ∥zn − myn ∥2 = Ex ∥Z − Zq ∥22 = Lc .
+                                               
+  Lt = Ex
+                                                                                                                 index of every frame:
+                 n=1
+                                                                                                      (13)                                 N m /T −1
+                                                                                                                           y(i) = yi+kT /mb k=0b      ,                                                 i = 1, . . . , Ns .                (15)
+This demonstrates that the vanilla VQ-VAE codebook loss is
+a special case of the proposed transmission error, applicable                                                       Each subsequence y(i) satisfies two key properties:
+only when the channel is error-free. In contrast, our proposed
+                                                                                                                    • Independence: Different frames are statistically indepen-
+method accounts for channel-induced errors, offering greater
+                                                                                                                      dent because the underlying physical channel is a DMC.
+generality and enabling channel-aware codebook optimization.
+                                                                                                                    • Identical distribution: Codebook indices occupying the
+This approach effectively mitigates the impact of channel
+                                                                                                                      same temporal slot in different frames share the same bit
+noise, enhancing the performance and reliability of digital
+                                                                                                                      composition pattern, due to the periodicity introduced by
+semantic communication systems.
+                                                                                                                      T.
+                                                                                                                 Together, these properties imply that each subsequence y(i)
+B. Multi-Codebook and Sub-Channel                                                                                can be regarded as an independent discrete memoryless sub-
+                                                                                                                 channel.
+   When the codebook order mb (with codebook size K =
+2mb ) does not match the modulation order mc , the binary                                                              b) Step 2: Transition matrices of subchannels.: Within
+representation of codebook indices must be reorganized to                                                        a subsequence, each element y (i) may draw its bits from
+fit into modulation symbols. For instance, if each codebook                                                      multiple modulation symbols. Let τi denote the number of
+                                                                                                                                                                           (i)
+index is represented by 6 bits (mb = 6), but the modulation                                                      distinct bit-segments that contribute to y (i) , and let bt be
+uses 4 bits per symbol (mc = 4), some indices will be                                                            the t-th such segment. For example, if mb = 3 and mc = 4,
+split across symbols. This reorganization creates statistical                                                    one subsequence element may gather all 3 bits from a single
+dependencies between adjacent codebook indices, breaking the                                                     modulation symbol (τi = 1), while another may gather its bits
+memoryless property that underpins our analysis. As a result,                                                    from two different symbols (τi = 2).
+the transmission error cannot be computed directly.                                                                 For each bit-segment, we define a marginal transition matrix
+                                                                                                                   (i)
+   As shown in Fig. 2, to restore tractability, we introduce                                                     Gt , whose (p, q) entry represents the probability that an input
+a sequence decomposition method that divides the original                                                        segment with value p − 1 is received as q − 1. To compute
+sequence into multiple independent subsequences. Each sub-                                                       this, we introduce the masked constellation set
+sequence can then be modeled as a discrete memoryless                                                                    (i)                             (i)         (i)
+                                                                                                                     C(bt ) = c ∈ {1, . . . , 2mc } maskt (c) = bt , (16)
+                                                                                                                                
+subchannel with its own transition probability matrix.
+                                                                                                                                      6
+
+
+
+which contains all modulation indices consistent with the                Algorithm 1: Computing Independent Subchannel
+         (i)
+segment bt . Using this, the marginal matrix entries are                 Transition Probability Matrices
+                                                                          Input: Codebook order mb , modulation order mc ,
+                        P       P
+                                      P (ĉ|c)P (c)
+            (i)
+                                (i)
+                          ĉ∈C(b̂t ) c∈C(bt )
+                                              (i)                                 modulation symbol transition probabilities
+          Gt (p, q) =                   P                   .   (17)              P (ĉ | c), and modulation symbol distribution
+                                                    P (c)
+                                             (i)
+                                      c∈C(bt )                                    P (c).
+                                                                          Output: Independent subchannel transition probability
+Here, P (ĉ|c) is the physical channel’s symbol transition prob-                    matrices {H(i) }N        s
+                                                                                                           i=1 .
+ability, and P (c) is the distribution of transmitted constellation     1 Compute the grouping period: T ← lcm(mb , mc );
+indices.                                                                2 Determine the number of subsequences: Ns ← T /mb ;
+   Because the τi segments of y (i) originate from distinct             3 for i ∈ {1, 2, . . . , Ns } do
+modulation symbols, their errors are independent. Therefore,            4     Identify τi bit-segments of constellation indices
+the composite subchannel transition matrix is the Kronecker                    forming the i-th subsequence;
+product of its marginal matrices:                                       5     for t ∈ {1, 2, . . . , τi } do
+                                      τi
+                                      O       (i)
+                                                                        6         Construct the marginal transition probability
+                         H(i) =             Gt .                (18)                              (i)
+                                                                                   matrix Gt ;
+                                      t=1                                                                        (i)
+                                                                        7         for p, q ∈ {1, . . . , 2len(bt ) } do
+     c) Worked Example.: Consider mb = 3 and mc = 4.                                                    (i)
+Each codebook index has 3 bits, while each modulation                   8              Compute Gt (p, q) using (17);
+symbol carries 4 bits.                                                  9         end
+                                                                       10     end
+   • For the first subsequence, y1 uses bits b1 b2 b3 from c1 .
+                                                                       11     Form the composite subchannel matrix:
+     Since all bits come from a single modulation symbol,                                 N τi        (i)
+     τ1 = 1 and H(1) = G1 .
+                            (1)                                                H(i) ← t=1           Gt ;
+                                                                       12 end
+   • For the second subsequence, y2 uses b4 (the last bit of c1 )
+                                                                                      (i) Ns
+     together with b5 b6 (the first two bits of c2 ). In this case,    13 return {H }i=1         ;
+                                                       (2)     (2)
+     τ2 = 2, so the transition matrix is H(2) = G1 ⊗ G2 .
+   By repeating this procedure for all subsequences, the orig-
+inal physical channel is decomposed into a set of inde-                l discrete indices, and the total number of indices per image
+pendent subchannels {H(i) }N    s
+                              i=1 . These subchannels can then
+                                                                       becomes N · l. With a codebook order of mb , corresponding
+be individually optimized using separate codebooks, greatly            to mb bits per index, the overall transmitted bit length equals
+enhancing flexibility when mb and mc are mismatched.                   N · l · mb .
+                                                                          This hierarchical decomposition provides an effective mech-
+C. Model Architecture and Training Method                              anism to scale the coding rate: increasing l produces longer
+                                                                       index sequences, enabling richer semantic representations; de-
+   Leveraging CAVQ and the multi-codebook scheme, we
+                                                                       creasing l reduces the number of transmitted indices, allowing
+design a robust image transmission model that can jointly
+                                                                       operation under tighter channel capacity constraints. Thus, the
+optimize coding according to channel conditions. The train-
+                                                                       same image can be encoded at different semantic rates, making
+able parameters include the encoder fϕ and decoder gθ with
+                                                                       the system adaptive to diverse channel conditions.
+parameters ϕ and θ, as well as multiple codebooks. The model
+                                                                          The feature matrix Z is further divided into Ns subse-
+architecture and training algorithm are described as follows.
+                                                                       quences {Z(i) }Ni=1 , each with Nc = N/Ns feature vectors:
+                                                                                         s
+
+   An important objective in our design is to make the coding
+                                                                                                           (i)         (i)
+rate controllable. In conventional VQ-VAE, each latent feature                                Z(i) = [z1 , . . . , zNc ],          (20)
+vector is quantized into a single codeword, leading to a
+fixed number of transmitted indices regardless of channel              where zero-padding is applied if N is not divisible by Ns .
+conditions. This rigidity is suboptimal in digital semantic            Each subsequence is quantized by a dedicated codebook
+                                                                                    (i)       (i)
+communication, where the available channel capacity may                M(i) = [m1 , . . . , mK ] ∈ RK×d , where K = 2mb is
+vary. To provide flexibility, we introduce a hierarchical feature      determined by the codebook order mb . Vector quantization
+decomposition mechanism.                                               is performed via nearest-neighbor search:
+   Specifically, given an input image x ∈ RH×W ×C , the                                 (i)                      (i)         (i)
+                                                                                       yj = arg min ∥zj − mk ∥2 ,                  (21)
+encoder fϕ produces a latent semantic feature matrix                                                   k
+
+                  Z = [z1 , . . . , zN ] ∈ RN ×(d·l) ,          (19)   yielding index sequences y(i) ∈ {1, . . . , K}Nc and quantized
+                                                                       vectors
+where N is the number of feature vectors, d is the base
+                                                                                                        (i)             (i)
+dimension (equal to the codeword dimension), and l is the                                Z(i)
+                                                                                          q = [m (i) , . . . , m (i) ].            (22)
+                                                                                                        y1              yNc
+index depth. When l = 1, each feature vector zi is directly
+quantized into a single index. When l > 1, zi ∈ Rd·l is                  The indices are serialized into a bitstream b ∈ {0, 1}N mb ,
+partitioned into l sub-vectors of dimension d, all quantized by        then grouped according to the modulation order mc to form
+the same codebook. As a result, each spatial position yields           the sequence of modulation indices c = [c1 , . . . , cL ], where
+                                                                                                                                  7
+
+
+
+L = N mb /mc . Each ci is mapped to a constellation point            Algorithm 2: Training VQJSCC Model
+for transmission. At the receiver, the demodulated sequence ĉ        Input: Dataset D, codebook order mb , modulation
+is modeled as passing through a DMC with transition matrix                    order mc , channel transition matrix H
+            mc   mc
+H ∈ R2 ×2 . Following Algorithm 1, Ns subsequences                    Output: Optimized encoder parameters ϕ∗ , decoder
+        N
+{ŷ(i) }i=1
+          s
+              are reconstructed, and each is mapped back to                      parameters θ∗ , and codebooks {M(i) }∗
+quantized features via its codebook:                                1 for epoch = 1 to MaxEpochs do
+                                 (i)         (i)                    2     Sample a training image: x ∼ D;
+                   Ẑ(i)
+                     q = [m (i) , . . . , m (i) ].          (23)    3     Encode semantic features: Z ← fϕ (x);
+                                 ŷ1         ŷNc
+                                                                    4     Partition into subsequences:
+All subsequences are concatenated to form Ẑq ∈ RN ×d , which              {Z(i) }N i=1 ← Split(Z, Ns );
+                                                                                      s
+
+is decoded by gθ to reconstruct the image x̂.                       5     Construct subchannel matrices:
+   The loss function replaces the vanilla VQ-VAE codebook                  {H(i) }N  i=1 ← Algorithm 1(H, mb , mc );
+                                                                                       s
+
+loss with the analytical channel-aware transmission error:          6     for i = 1 to Ns do
+                 Nc
+              Ns X       K                                          7         Quantize features via codebook M(i) to obtain
+                     (i)    (i)       (i)    (i)
+                                                                                index sequence y(i) ;
+              X          X
+     Lca =          pk     h (i) ∥sg[zk ] − mj ∥22 ,        (24)
+                                  yk j
+              i=1 k=1    j=1                                        8         Count codeword activations:
+                                                                                  (i)    P         (i)
+        (i)               (i)
+                                                                                nk ← j I(yj = k) for k = 1, . . . , K;
+where h (i)     is the (yk , j) element of subchannel matrix        9         Pass through subchannel:
+        yk j
+H(i) ,
+       (i)
+      pk is
+                                                      (i)
+               the occurrence probability of yk , and sg[·]                     ŷ(i) ∼ P (·|y(i) , H(i) );
+                                                                                                                 (i)
+denotes the stop-gradient operator. The straight-through es-       10         Retrieve quantized features: Ẑq ← M(i) [ŷ(i) ];
+timator (STE) [38] is applied to enable gradient propagation       11     end
+through quantization.                                              12     Concatenate subsequences:
+                                                                                                 (i)
+   To mitigate codebook collapse, we incorporate Clustering                Ẑq ← Concat({Ẑq }N        i=1 );
+                                                                                                         s
+
+VQ-VAE (CVQ) [39], which uses an exponential moving aver-          13     Decode reconstruction: x̂ ← gθ (Ẑq );
+age (EMA) of codeword activations to re-anchor underutilized       14     Compute reconstruction loss: Lr ← ∥x − x̂∥22 ;
+codewords. For the k-th codeword in codebook M(i) , the            15     Compute commitment loss:
+usage counter is updated as                                                           P      (i)
+                                                                           Lm ← i,j ∥zj − sg[m (i) ]∥22 ;
+                                                                                                             (i)
+                                                                                                     yj
+                                  (i)
+                 (i)     (i)     nk,t                              16    Compute channel-aware loss:
+                Nk,t = γNk,t−1 +      (1 − γ),              (25)                       (i)       (i)    (i)
+                                                                          Lca ← i,j,k h (i) ∥sg[zj ] − mk ∥22 ;
+                                                                               P
+                                 Nc                                                        yj k
+       (i)                                            (i)
+where nk,t counts the number of features assigned to mk .          17    Update encoder: ϕ ← ϕ − η∇ϕ (Lr + βLm );
+The anchor update is                                               18    Update decoder: θ ← θ − η∇θ Lr ;
+                                                                   19    for i = 1 to Ns do
+                (i)
+                          
+                                   (i)      10   
+                                                                   20        for k = 1 to K do
+               αk,t = exp       − Nk,t K       −ϵ ,         (26)
+                                           1−γ                     21            Update codeword usage:
+               (i)         (i)   (i)      (i) (i)                                                                (i)
+                                                                                     (i)       (i)           n
+              mk,t = (1 − αk,t )mk,t−1 + αk,t ẑk,t ,       (27)              Nk ← γNk + (1 − γ) Nkc ;
+         (i)                                (i)
+                                                              22             Compute smoothing factor:
+where ẑk,t is the nearest feature to mk . This prevents                        (i)
+                                                                              αk ← exp − Nk K 1−γ
+                                                                                                   (i)     10
+                                                                                                              −ϵ ;
+                                                                                                                  
+codeword deactivation by shifting unused codewords toward
+                                                              23             Find nearest feature:
+dense feature regions. The complete training procedure is                                                           (i)
+summarized in Algorithm 2.                                                    znearest ← arg minz∈Z(i) ∥z − mk ∥2 ;
+                                                              24             Update codeword via CVQ:
+                                                                                 (i)           (i)     (i)    (i)
+                                                                              mk ← (1 − αk )mk + αk znearest ;
+               IV. E XPERIMENTAL R ESULTS                     25        end
+A. Experimental Settings                                      26        Gradient update of codebook:
+                                                                          M(i) ← M(i) − η∇M(i) Lca ;
+   1) Dataset: The CIFAR-10 dataset [40], comprising 60,000
+                                                              27     end
+32x32 color images across 10 categories, is used for training
+                                                              28 end
+and testing. The dataset is split into 50,000 training images             ∗ ∗         (i) ∗
+                                                              29 return ϕ , θ , {M }
+and 10,000 test images.
+   2) Parameter Settings: Training is conducted over 200
+epochs with a batch size of 128. The initial learning rate
+is set to 10−3 , with a decay mechanism triggered if no          3) Metric and Benchmark Methods: To ensure fairness in
+improvement in validation performance is observed for 20 comparing analog and digital communication paradigms, a
+consecutive epochs. The signal-to-noise ratio (SNR) is dynam- unified criterion is adopted: evaluating image reconstruction
+ically sampled from the range [0, 18] dB for each training quality at the same symbol rate. For digital communication,
+batch to simulate varying channel conditions.                  the symbol rate refers to the transmission rate of constellation
+                                                                                                                                                                                                                                                                                                              8
+
+
+
+               4 $ 0  & R Q V W H O O D W L R Q         & $ 9 4      4 $ 0  mb = 4                         9 4      4 $ 0  mb = 4                                                           & $ 9 4      4 $ 0  mb = 6
+                                                                                                             
+                                                                                                                                                                                               & R G H E R R N                           & R G H E R R N  
+                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                            
+                                                                                                         
+                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                      
+                                                                                                                                                                                                                                          
+               4 $ 0  & R Q V W H O O D W L R Q         & $ 9 4      4 $ 0  mb = 6                         9 4      4 $ 0  mb = 6                                                                                       
+                                                                                                         
+                                                                                                         
+                                                                                                                                                                                                              & $ 9 4      4 $ 0  mb = 8
+                                                                                                      
+                                                                                                                                                                        & R G H E R R N                        & R G H E R R N                                       & R G H E R R N  
+                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                      
+           4 $ 0  & R Q V W H O O D W L R Q          & $ 9 4       4 $ 0  mb = 8                     9 4       4 $ 0  mb = 8                                                                                                           
+                                                                                                                                                                                                               
+                                                                                                         
+                                                                                                                                                                                                        & $ 9 4      4 $ 0  mb = 4
+                                                                                                                                                                    & R G H E R R N                        & R G H E R R N                                       & R G H E R R N  
+                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                       
+                                                                                                    
+                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                             
+Fig. 3. Heatmaps of pairwise distance matrices for modulation constel-                                                                                                                                                                                       
+lations (left), codebooks learned by the proposed CAVQ (middle), and                                                                                                                                                                                         
+codebooks from vanilla VQ-VAE (right) under 16-QAM, 64-QAM, and 256-
+QAM. Warmer colors indicate larger distances. CAVQ produces structured,                                                                                                                                      & $ 9 4       4 $ 0  mb = 4
+constellation-like patterns aligned with modulation geometry, while vanilla                                                                                                                       & R G H E R R N                           & R G H E R R N  
+VQ-VAE exhibits irregular distributions without channel awareness.                                                                                                                                                                                      
+                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            
+points, where each symbol corresponds to a constellation point                                                                                                                                                                              
+index. For analog communication, the symbol rate refers to                                                                                                                                                                                
+                                                                                                                                                                                                                                          
+the transmission rate of individual floating-point numbers in                                                                                                                                                                             
+the feature vector. This comparison method is widely used in
+                                                                                                                                                           Fig. 4. Heatmaps of codeword distance matrices under mismatched codebook
+semantic communication research and is scientifically justified                                                                                            and modulation orders, generated by the multi-codebook algorithm with
+and reproducible [9], [10], [18].                                                                                                                          subsequent alignment via CAVQ. Each sub-codebook maintains structured
+   • Analog: Gaussian-distributed noise is added directly to
+                                                                                                                                                           patterns reflecting the estimated sub-channel transition probabilities.
+     the continuous features output by the encoder, corre-
+     sponding to an analog AWGN channel.
+   • Vanilla VQ-VAE with clustering: The baseline VQ-                                                                                                         The comparison shows that vanilla VQ-VAE produces ir-
+     VAE algorithm without channel awareness. The clustering                                                                                               regular and unstructured patterns, reflecting its inability to
+     mechanism [39] is also used to ensure fair comparison.                                                                                                capture channel characteristics, whereas our CAVQ method
+   • JCM: A state-of-the-art semi-digital JSCC joint coding-                                                                                               yields constellation-like codebook structures that align closely
+     modulation (JCM) architecture proposed in [32].                                                                                                       with the modulation space. This alignment not only ensures
+   • Turbo-BPG: The conventional SSCC communication                                                                                                        that channel-induced errors between adjacent codewords cause
+     using BPG as source coding and Turbo as channel coding.                                                                                               only limited semantic distortion, but also effectively imple-
+                                                                                                                                                           ments a form of soft quantization: instead of enforcing hard
+                                                                                                                                                           decision boundaries as in vanilla VQ-VAE, CAVQ leverages
+B. Analysis of Codebook Space                                                                                                                              semantic proximity in the latent space and realizes quanti-
+   In Fig. 3, we compare distance heatmaps of modulation                                                                                                   zation through statistical expectation, thereby bridging con-
+constellations and learned codebooks to illustrate the align-                                                                                              tinuous and discrete representations and offering new design
+ment achieved by our approach. For each modulation scheme,                                                                                                 principles for future digital semantic communication systems.
+we first compute the pairwise Euclidean distances between                                                                                                     Fig. 4 further illustrates the adaptability of our method
+constellation points to obtain a reference heatmap. Similarly,                                                                                             when the codebook order does not match the modulation
+for a codebook with K d-dimensional vectors, we calculate                                                                                                  order. For example, with a codebook order of mb = 4 (16
+the pairwise distances between codewords to form a matrix                                                                                                  codewords) under 64-QAM modulation, three independent
+D ∈ RK×K , where dij = ∥mi − mj ∥2 . After min-max                                                                                                         sub-codebooks still preserve ordered structures. A similar
+normalization, both constellation and codebook matrices are                                                                                                consistency is observed even with 256-QAM, where two
+visualized as pseudo-color heatmaps, with warmer colors                                                                                                    sub-codebooks maintain well-organized patterns. These re-
+representing larger distances.                                                                                                                             sults highlight the robustness and generalizability of CAVQ
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           9
+
+
+
+       & $ 9 4  mb = 4   ( Q W U R S \                                                                                                                                                                                                 9 4  mb = 4   ( Q W U R S \                                                                                                                                                                          activation across all codewords, ensuring that the entire code-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                          book contributes to representation.
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            These observations are quantitatively supported by the
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          entropy values reported above each subfigure. Our method
+
+
+
+
+                                                                                                                                                                                                               3 U R E D E L O L W \
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                  3 U R E D E L O L W \
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  consistently achieves higher entropy (e.g., 7.71/8.00 at mb =
+                                                                                                                                                                          
+                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      8) than vanilla VQ-VAE (6.32/8.00), confirming its ability
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  to sustain richer semantic expressiveness while mitigating
+                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      collapse. The combination of balanced utilization and elevated
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          entropy highlights the importance of channel-aware design in
+       & $ 9 4  mb = 6   ( Q W U R S \                                                                                                                                                                                                 9 4  mb = 6   ( Q W U R S \           
+                                                                                                                                                                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          preserving both capacity and robustness in digital semantic
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          communication.
+                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                               3 U R E D E L O L W \
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                  3 U R E D E L O L W \
+                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          C. PSNR Performance Comparison Across Benchmarks
+                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Figs. 6 and 7 jointly evaluate the impact of the code-
+                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      book order mb and the modulation order mc on end-to-end
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                          semantic transmission performance under an index depth of
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          l = 3. These two parameters play complementary roles: mb
+       & $ 9 4  mb = 8   ( Q W U R S \                                                                                                                                                                                                 9 4  mb = 8   ( Q W U R S \           
+                                                                                                                                                                                                                                                                                                                                                                                                                              governs the granularity of semantic quantization, determining
+                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                                                                                                               
+      
+      
+                    
+                    
+                                  
+                                  
+                                                
+                                                
+                                                       
+                                                       
+                                                                     
+                                                                     
+                                                                                   
+                                                                                   
+                                                                                                 
+                                                                                                 
+                                                                                                        
+                                                                                                        
+                                                                                                                      
+                                                                                                                      
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                                  
+                                                                                                                                                  
+                                                                                                                                                         
+                                                                                                                                                         
+                                                                                                                                                                       
+                                                                                                                                                                       
+                                                                                                                                                                                     
+                                                                                                                                                                                     
+                                                                                                                                                                                                   
+                                                                                                                                                                                                   
+                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          how finely each feature is discretized, while mc controls the
+                                                                                                                                                                                                                                                                                                                                                                                                                                           
+      
+      
+                    
+                    
+                                  
+                                  
+                                                
+                                                
+                                                       
+                                                       
+                                                                     
+                                                                     
+                                                                                   
+                                                                                   
+                                                                                                 
+                                                                                                 
+                                                                                                        
+                                                                                                        
+                                                                                                                      
+                                                                                                                      
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                                  
+                                                                                                                                                  
+                                                                                                                                                         
+                                                                                                                                                         
+                                                                                                                                                                       
+                                                                                                                                                                       
+                                                                                                                                                                                     
+                                                                                                                                                                                     
+                                                                                                                                                                                                   
+                                                                                                                                                                                                   
+                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                       
+                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          modulation efficiency at the physical layer. Their interaction
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                  directly shapes the tradeoff between semantic expressiveness
+                                                                                                                                                                                                               3 U R E D E L O L W \
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                  3 U R E D E L O L W \
+
+
+                                                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                      
+                                                                   
+                                                                   
+                                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      and channel robustness.
+                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                     Fig. 6 compares four representative schemes—vanilla VQ-
+                                                                                                                                                                                                                                                      
+                                                                   
+                                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      VAE (VQ), JCM, Turbo-BPG, and our proposed channel-
+                                                                                                                                                                                                                                                      
+                                                                   
+                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          aware VQ-VAE (CAVQ)—across different modulation orders.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          CAVQ consistently achieves the highest PSNR, and its ad-
+Fig. 5. Codeword activation heatmaps under different codebook orders                                                                                                                                                                                                                                                                                                                                                                                                      vantage becomes increasingly prominent as the modulation
+(mb = 4, 6, 8) corresponding to 16-QAM, 64-QAM, and 256-QAM. Each                                                                                                                                                                                                                                                                                                                                                                                                         order rises. This improvement originates from its ability to
+cell denotes the empirical usage frequency of a codeword, with darker colors
+indicating higher activation probability. Codeword positions are arranged                                                                                                                                                                                                                                                                                                                                                                                                 explicitly align the learned codebook distribution with the
+according to the square QAM constellation.                                                                                                                                                                                                                                                                                                                                                                                                                                channel transition statistics, reducing the vulnerability of high-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          order constellations to symbol errors. In contrast, the vanilla
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          VQ-VAE, which is unaware of channel effects, suffers sub-
+in establishing channel-aligned codebook distributions across                                                                                                                                                                                                                                                                                                                                                                                                             stantial degradation at higher modulation orders. JCM achieves
+diverse configurations.                                                                                                                                                                                                                                                                                                                                                                                                                                                   moderate robustness due to its joint source-channel training but
+   Beyond the geometric alignment revealed by distance                                                                                                                                                                                                                                                                                                                                                                                                                    remains limited by its semi-digital nature, while Turbo-BPG
+heatmaps, another critical perspective is the statistical dis-                                                                                                                                                                                                                                                                                                                                                                                                            performs well at high SNR but exhibits a sharp cliff effect at
+tribution of codewords. Fig. 5 presents codeword activation                                                                                                                                                                                                                                                                                                                                                                                                               low SNR due to its block-coding dependency.
+heatmaps under different codebook orders, corresponding to                                                                                                                                                                                                                                                                                                                                                                                                                   It is also noteworthy that both CAVQ and JCM outperform
+16-QAM, 64-QAM, and 256-QAM. Each grid cell denotes                                                                                                                                                                                                                                                                                                                                                                                                                       the simple analog baseline. The reason lies in the evaluation
+the empirical activation frequency of a codeword over the                                                                                                                                                                                                                                                                                                                                                                                                                 setting: all methods share the same symbol rate, thus constrain-
+test set, with darker colors indicating higher probabilities.                                                                                                                                                                                                                                                                                                                                                                                                             ing the analog model to use the same latent dimensionality
+The spatial arrangement of the cells mirrors the square QAM                                                                                                                                                                                                                                                                                                                                                                                                               (l = 3). This shallow latent space limits its ability to encode
+constellation, so the heatmaps can be directly interpreted as                                                                                                                                                                                                                                                                                                                                                                                                             diverse semantic features. Conversely, quantized models ben-
+constellation-like activation maps. To ensure comparability, the                                                                                                                                                                                                                                                                                                                                                                                                          efit from structured codebook discretization, which enhances
+colormaps are normalized row-wise, such that identical color                                                                                                                                                                                                                                                                                                                                                                                                              representational diversity while maintaining robustness against
+depths correspond to the same activation probability across                                                                                                                                                                                                                                                                                                                                                                                                               channel impairments. Consequently, even though the analog
+different methods, and the total frequency within each heatmap                                                                                                                                                                                                                                                                                                                                                                                                            scheme avoids quantization noise, it falls behind in overall
+sums to one.                                                                                                                                                                                                                                                                                                                                                                                                                                                              reconstruction fidelity.
+   A clear contrast emerges between the two approaches.                                                                                                                                                                                                                                                                                                                                                                                                                      Fig. 7 further analyzes the interplay between mb and mc
+Vanilla VQ-VAE (right column) exhibits severe codebook                                                                                                                                                                                                                                                                                                                                                                                                                    by fixing the overall transmission bit rate. For mb = 4, lower-
+collapse: a few codewords dominate the representation space                                                                                                                                                                                                                                                                                                                                                                                                               order modulation (16-QAM) yields the best performance, since
+while most others are scarcely or never utilized. This imbal-                                                                                                                                                                                                                                                                                                                                                                                                             higher-order constellations suffer from excessive symbol errors
+ance arises because constellation-edge points have inherently                                                                                                                                                                                                                                                                                                                                                                                                             despite better bandwidth efficiency. When mb = 6, 16-QAM
+lower error probabilities, making them more favorable for                                                                                                                                                                                                                                                                                                                                                                                                                 and 64-QAM achieve comparable results, while 256-QAM
+information encoding. However, such biased activation reduces                                                                                                                                                                                                                                                                                                                                                                                                             remains suboptimal, though all cases outperform the mb = 4
+effective entropy and weakens robustness. By contrast, our                                                                                                                                                                                                                                                                                                                                                                                                                baseline due to finer quantization. For mb = 8, 256-QAM
+channel-aware method (left column) yields nearly uniform                                                                                                                                                                                                                                                                                                                                                                                                                  overtakes other schemes in medium-to-high SNR regimes,
+                                                                                                                                                                                                                                                                                               10
+
+
+
+
+                         
+                                                                  4 $ 0                                             
+                                                                                                                                                                      4 $ 0                                            
+                                                                                                                                                                                                                                                                   4 $ 0
+
+                                                                                                                                                                                                                  
+
+                                                                                                                                                                                                                  
+
+                                                                                                                                                                                                                  
+ 3 6 1 5   G % 
+
+
+
+
+                                                                                                                                                                                                                  
+
+                                                                                                                                                                                                                  
+                                                                                       $ Q D O R J                                                                                         $ Q D O R J                                       $ Q D O R J
+                                                                                   - & 0  mb = 4                                                                                 - & 0  mb = 6                               - & 0  mb = 8
+                                                                                       9 4  mb = 4                                                                                       9 4  mb = 6                                     9 4  mb = 8
+                                                                                   & $ 9 4  mb = 4                                                                               & $ 9 4  mb = 6                             & $ 9 4  mb = 8
+                                                                                       7 X U E R  % 3 *                                                                                   7 X U E R  % 3 *                                 7 X U E R  % 3 *
+                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                    
+                                                               6 1 5   G %                                                                                      6 1 5   G %                                                                               6 1 5   G % 
+
+Fig. 6. Comparison of PSNR performance of different quantizers at various modulation orders (l = 3 index depth).
+
+
+                                                              mb = 4                                                                                              mb = 6                                                                                       mb = 8
+                                                                                                                                                                                                                    
+                                                                                               4 $ 0                                        4 $ 0                                                                                    4 $ 0
+                                                                                               4 $ 0                                        4 $ 0                                                                                    4 $ 0
+                                                                                                4 $ 0                                       4 $ 0                                                                                   4 $ 0
+                                                                                                                                                                                                                    
+
+
+                                                                                                                                                                                                                    
+ 3 6 1 5   G % 
+
+
+
+
+                                                                                                                                                                                                                    
+
+
+                                                                                                                                                                                                                    
+
+
+                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                    
+                                                              6 1 5   G %                                                                                      6 1 5   G %                                                                               6 1 5   G % 
+
+Fig. 7. Comparison of PSNR performance under different modulation orders mc and codebook orders mb (l = 3 index depth).
+
+
+
+                                                                                                                                                                       indicating that the system benefits most when the codebook
+                                                                                                                                                                     and modulation orders are well aligned. In contrast, combina-
+                                        mb = 8  c = 1
+                                        mb = 8  c = 2
+                                                                                                                                                                       tions such as (mb = 8, 64-QAM), (mb = 6, 256-QAM), or
+                                      mb = 4  c = 3                                                                                                                (mb = 4, 64-QAM) show weaker performance. This degra-
+                                        mb = 6  c = 3                                                                                                                dation arises because these configurations require splitting
+                                        mb = 8  c = 3
+                                                                                                                                                                     the index stream into multiple subsequences (as described in
+                                                                                                                                                                       Algorithm 1). Each subsequence is trained with a separate
+   3 6 1 5   G % 
+
+
+
+
+                                                                                                                                                                     codebook prior estimated online via EMA, and the inherent
+                                                                                                                                                                       stochastic bias in this estimation introduces distributional
+                                                                                                                                                                     mismatch between the codebook and the channel transition
+                                                                                                                                                                       probabilities.
+                         
+                                                                                                                                                                          Fig. 8 complements this analysis by exploring how the
+                                                                                                                                                                       codebook order mb and index length l jointly influence
+                         
+                                                                                                                                                             discrete semantic representation capacity under 256-QAM.
+                                                                                6 1 5   G %                                                                         Increasing either parameter consistently improves PSNR, as
+                                                                                                                                                                       both enlarge the information space available per semantic
+Fig. 8. PSNR performance under different codebook orders mb and index
+lengths c with 256-QAM modulation. Both higher mb and longer c improve                                                                                                 feature. In essence, the overall representational capacity scales
+performance, but mismatched configurations cause deviations from ideal                                                                                                 approximately with the product of mb and l, which together
+scaling.                                                                                                                                                               define the effective bit budget per feature. Configurations with
+                                                                                                                                                                       similar total bit budgets, such as (mb = 8, c = 2) and
+                                                                                                                                   11
+
+
+
+(mb = 6, c = 3), achieve nearly identical PSNR, indicating           Inequality (a) applies the triangle inequality to the vector
+that system expressiveness depends primarily on the total          sum. The doubling of coefficients in (b) arises from bounding
+encoded information rather than on how it is distributed           the cross-term via 2ab ≤ a2 + b2 . Final bound (c) utilizes the
+between quantization depth and sequence length. However,           Lipschitz continuity assumption
+when the modulation and codebook orders are mismatched, as                                                      
+in the aforementioned multi-subsequence cases, performance                       gθ (Z) − gθ (Ẑq ) ≤ C0 Z − Ẑq .            (29)
+deviates from this ideal scaling. The EMA-based prior estima-
+                                                                   This assumption is realistically applicable because typical
+tion in the multi-codebook variant alleviates this misalignment
+                                                                   neural network elements such as fully connected layers, convo-
+to some extent but cannot fully eliminate the induced noise and
+                                                                   lutional layers, and activation functions like ReLU or Sigmoid
+bias, leading to suboptimal channel-codebook matching.
+                                                                   are demonstrably Lipschitz continuous. Thus, compositional
+   Two primary insights emerge from these results. Firstly, the
+                                                                   architectures maintain Lipschitz continuity, ensuring that C0
+roles of mb and l in semantic representation are fundamentally
+                                                                   is finite for the decoder.
+alike, as they both regulate the total information capacity
+                                                                      Finally, Theorem 1 is proved by applying the expectation
+per feature. Secondly, stable training and robust performance
+                                                                          Ex,x̂ ∥x − x̂∥22 ≤ 2Ex ∥x − gθ (Z)∥22
+                                                                                                                
+are achieved when the codebook order and modulation order
+are aligned (mb ≈ mc ), which ensures a natural match                                                     h            i
+between the learned codebook and the constellation structure.                                 + 2C02 Ex,ŷ ∥Z − Ẑq ∥22 .     (30)
+Consequently, in adaptive-rate digital semantic communication
+systems, rate control can be efficiently achieved by varying the                          A PPENDIX B
+index length l while keeping mb fixed, simplifying both model                       P ROOF OF P ROPOSITION 1
+design and optimization.
+                                                                                 h             i
+                      V. C ONCLUSION                                   Lt = Ex,ŷ ∥Z − Ẑq ∥22
+                                                                          (a)
+                                                                                    h             i
+   This paper presented VQJSCC, a fully digital joint                     = Ex Eŷ|x ∥Z − Ẑq ∥22
+source–channel coding framework built upon the VQ-VAE                     (b)
+                                                                                           h             i
+architecture for discrete semantic communication. The pro-                = Ex Ey|x Eŷ|x,y ∥Z − Ẑq ∥22
+posed CAVQ incorporates channel transition statistics into the            (c)
+                                                                                    h             i
+quantization process, while a multi-codebook mechanism en-                = Ex Eŷ|y ∥Z − Ẑq ∥22
+ables channel-aware learning under mismatched codebook and                      "N                           #
+                                                                          (d)     X                      2
+                                                                                                            
+modulation orders. Experimental results show that VQJSCC                  = Ex       Eŷ|y ∥zn − mŷn ∥2
+consistently outperforms existing analog, semi-digital, and                        n=1
+                                                                                  "N                             #
+conventional JSCC methods across different SNRs and mod-                   (e)     X
+                                                                                                              2
+                                                                                                               
+ulation schemes, effectively mitigating the digital cliff effect           = Ex          Eŷn |yn ∥zn − mŷn ∥2
+while preserving high reconstruction fidelity and efficiency.                      n=1
+                                                                                  "N K                                       #
+Further analysis reveals that system performance is primarily              (f )    XX
+determined by the total information budget and achieves                    = Ex              P (ŷn = k | yn )∥zn − mk ∥22       (31)
+                                                                                   n=1 k=1
+optimal robustness when the codebook and modulation orders
+are aligned, suggesting that rate adaptation can be efficiently       The above equalities (a)-(f) are elaborated as follows:
+realized by adjusting code length while maintaining code-          (a) Applies the law of total expectation to expand the joint
+book–modulation consistency.                                            expectation into nested conditional expectations over x
+                                                                        and ŷ.
+                        A PPENDIX A                                (b) Expands the expectation using the Markov chain x →
+                    P ROOF OF T HEOREM 1                                y → ŷ, where y denotes the codebook indices induced
+                                                                        by x.
+   To establish the error bound, we develop the squared norm
+                                                                   (c) Invokes the Markov property: (i) y becomes deterministic
+through chained inequalities:
+                                                                        given x, eliminating Ey|x ; (ii) Conditional independence
+                                                                        ŷ ⊥ x|y reduces Eŷ|x,y to Eŷ|y .
+    ∥x − x̂∥22 = ∥(x − gθ (Z)) + (gθ (Z) − gθ (Ẑq ))∥22           (d) Decomposes the Frobenius norm into a summation over
+               (a)                                      2             individual elements, then applies the linearity of expecta-
+               ≤ ∥x − gθ (Z)∥2 + ∥gθ (Z) − gθ (Ẑq )∥2                  tion to interchange summation and expectation operators.
+                                                                   (e) Utilizes the memoryless channel condition: Each ŷn
+              = ∥x − gθ (Z)∥22 + ∥gθ (Z) − gθ (Ẑq )∥22                 depends only on yn , enabling per-element expectation
+                 + 2∥x − gθ (Z)∥2 · ∥gθ (Z) − gθ (Ẑq )∥2               decomposition.
+              (b)                                                   (f) Explicitly expands the inner expectation as a weighted
+              ≤ 2∥x − gθ (Z)∥22 + 2∥gθ (Z) − gθ (Ẑq )∥22               sum over all possible quantization indices k, where
+              (c)                                                       weights correspond to codebook transition probabilities
+              ≤ 2∥x − gθ (Z)∥22 + 2C02 ∥Z − Ẑq ∥22         (28)        P (ŷn = k|yn ).
+                                                                                                                                                           12
+
+
+
+                              R EFERENCES                                        [24] M. Fresia, F. Peréz-Cruz, H. V. Poor, and S. Verdú, “Joint source and
+                                                                                      channel coding,” IEEE Signal Processing Magazine, vol. 27, no. 6,
+ [1] K. Niu, J. Dai, S. Yao, S. Wang, Z. Si, X. Qin, and P. Zhang, “A paradigm        pp. 104–113, 2010.
+     shift toward semantic communications,” IEEE Communications Maga-            [25] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. S. Quek, “Ofdm-based
+     zine, vol. 60, no. 11, pp. 113–119, 2022.                                        digital semantic communication with importance awareness,” IEEE
+ [2] C. E. Shannon, “A mathematical theory of communication,” The Bell                Transactions on Communications, vol. 72, no. 10, pp. 6301–6315, 2024.
+     system technical journal, vol. 27, no. 3, pp. 379–423, 1948.                [26] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning based se-
+ [3] Y. Xiao, G. Shi, Y. Li, W. Saad, and H. V. Poor, “Toward self-learning           mantic communications: An initial investigation,” in 2020 IEEE Global
+     edge intelligence in 6g,” IEEE Communications Magazine, vol. 58,                 Communications Conference (GLOBECOM), pp. 1–6, IEEE, 2020.
+     no. 12, pp. 34–40, 2020.                                                    [27] Z. Weng, Z. Qin, and G. Y. Li, “Semantic communications for speech
+ [4] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled                signals,” in 2021 IEEE International Conference on Communications
+     semantic communication systems,” IEEE Transactions on Signal Pro-                (ICC), pp. 1–6, IEEE, 2021.
+     cessing, vol. 69, pp. 2663–2675, Apr 2021.                                  [28] J. e. a. Dai, “Nonlinear transform source-channel coding for semantic
+ [5] T. M. Getu, G. Kaddoum, and M. Bennis, “Tutorial-cum-survey on                   communications,” IEEE Journal on Selected Areas in Communications,
+     semantic and goal-oriented communication: Research landscape, chal-              vol. 40, pp. 2300–2316, Aug 2022.
+     lenges, and future directions,” arXiv preprint arXiv:2308.01913, 2023.      [29] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep
+ [6] W. Yang, H. Du, Z. Q. Liew, W. Y. B. Lim, Z. Xiong, D. Niyato, X. Chi,           joint source-channel coding,” IEEE Signal Processing Letters, vol. 29,
+     X. Shen, and C. Miao, “Semantic communications for future internet:              pp. 1442–1446, 2022.
+     Fundamentals, applications, and challenges,” IEEE Communications            [30] Y. M. Saidutta, A. Abdi, and F. Fekri, “Joint source-channel coding
+     Surveys & Tutorials, vol. 25, no. 1, pp. 213–250, 2022.                          over additive noise analog channels using mixture of variational autoen-
+ [7] K. Lu, Q. Zhou, R. Li, Z. Zhao, X. Chen, J. Wu, and H. Zhang,                    coders,” IEEE Journal on Selected Areas in Communications, vol. 39,
+     “Rethinking modern communication from semantic coding to seman-                  no. 7, pp. 2000–2013, 2021.
+     tic communication,” IEEE Wireless Communications, vol. 30, no. 1,           [31] L. Guo, W. Chen, Y. Sun, and B. Ai, “Digital-sc: Digital semantic
+     pp. 158–164, 2023.                                                               communication with adaptive network split and learned non-linear
+ [8] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-            quantization,” IEEE Transactions on Cognitive Communications and
+     channel coding of text,” in 2018 IEEE International Conference on                Networking, pp. 1–1, 2024.
+     Acoustics, Speech and Signal Processing (ICASSP), pp. 2326–2330,            [32] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+     IEEE, 2018.                                                                      digital semantic communications via variational autoencoder,” IEEE
+ [9] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-              Transactions on Communications, vol. 72, pp. 5626–5640, Sept. 2024.
+     channel coding for wireless image transmission,” IEEE Transactions on       [33] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Learning based joint coding-
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,             modulation for digital semantic communication systems,” in 2022 14th
+     2019.                                                                            International Conference on Wireless Communications and Signal Pro-
+[10] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,                 cessing (WCSP), pp. 1–6, IEEE, 2022.
+     “Predictive and adaptive deep coding for wireless image transmission in     [34] A. v. d. Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+     semantic communication,” IEEE Transactions on Wireless Communica-                representation learning,” in Advances in Neural Information Processing
+     tions, vol. 22, no. 8, pp. 5486–5501, 2023.                                      Systems, vol. 30, Curran Associates, Inc.
+[11] Y. LeCun, Y. Bengio, and G. Hinton, “Deep learning,” Nature, vol. 521,      [35] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector quantized se-
+     no. 7553, pp. 436–444, 2015.                                                     mantic communication system,” IEEE Wireless Communications Letters,
+[12] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “Deepjscc-               vol. 12, pp. 982–986, June 2023.
+     q: Constellation constrained deep joint source-channel coding,” IEEE        [36] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust
+     Journal on Selected Areas in Information Theory, vol. 3, pp. 720–731,            Information Bottleneck for Task-Oriented Communication With Digital
+     Apr 2022.                                                                        Modulation,” IEEE Journal on Selected Areas in Communications,
+[13] J. Huang, K. Yuan, C. Huang, and K. Huang, “D²-jscc: Digital deep joint          vol. 41, pp. 2577–2591, Aug. 2023.
+     source-channel coding for semantic communications,” IEEE Journal on         [37] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust
+     Selected Areas in Communications, vol. 43, no. 4, pp. 1246–1261, 2025.           semantic communications with masked vq-vae enabled codebook,” IEEE
+[14] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural             Transactions on Wireless Communications, vol. 22, no. 12, pp. 8707–
+     joint source-channel coding,” in International Conference on Machine             8722, 2023.
+     Learning, pp. 1182–1192, PMLR, 2019.                                        [38] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating
+[15] Z. Weng, Z. Qin, J. Lindberg, and H.-N. Lee, “Semantic communication             gradients through stochastic neurons for conditional computation,” arXiv
+     systems for speech transmission,” IEEE Journal on Selected Areas in              preprint arXiv:1308.3432, 2013.
+     Communications, vol. 39, no. 8, pp. 2434–2444, 2021.                        [39] C. Zheng and A. Vedaldi, “Online clustered codebook,” in Proceed-
+[16] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint source-           ings of the IEEE/CVF International Conference on Computer Vision,
+     channel coding for wireless image transmission,” IEEE Transactions on            pp. 22798–22807, 2023.
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,        [40] A. Krizhevsky, G. Hinton, et al., “Learning multiple layers of features
+     2019.                                                                            from tiny images,” 2009.
+[17] N. G. Evgenidis, N. A. Mitsiou, S. A. Tegos, P. D. Diamantoulakis,
+     P. Sarigiannidis, I. Krikidis, and G. K. Karagiannidis, “Hybrid semantic-
+     shannon communications,” IEEE Transactions on Wireless Communica-
+     tions, vol. 23, no. 9, pp. 10926–10940, 2024.
+[18] H. Xie and Z. Qin, “A lite distributed semantic communication system
+     for internet of things,” IEEE Journal on Selected Areas in Communica-
+     tions, vol. 39, no. 1, pp. 142–153, 2020.
+[19] Y. He, G. Yu, and Y. Cai, “Rate-adaptive coding mechanism for
+     semantic communications with multi-modal data,” IEEE Transactions
+     on Communications, vol. 72, no. 3, pp. 1385–1400, 2023.
+[20] M. Nemati, J. Park, and J. Choi, “VQ-VAE Empowered Wireless
+     Communication for Joint Source-Channel Coding and Beyond,” in 2023
+     IEEE Global Communications Conference (GLOBECOM), pp. 3155–
+     3160, Dec. 2023.
+[21] N. Farvardin, “A study of vector quantization for noisy channels,” IEEE
+     Transactions on Information Theory, vol. 36, pp. 799–809, Jul 1990.
+[22] A. Nosratinia, J. Lu, and B. Aazhang, “Source-channel rate allocation
+     for progressive transmission of images,” IEEE Transactions on Commu-
+     nications, vol. 51, pp. 186–196, Feb 2003.
+[23] R. Hamzaoui, V. Stankovic, and Z. Xiong, “Optimized error protection of
+     scalable image bit streams,” IEEE Signal Processing Magazine, vol. 22,
+     pp. 91–107, Nov 2005.
+

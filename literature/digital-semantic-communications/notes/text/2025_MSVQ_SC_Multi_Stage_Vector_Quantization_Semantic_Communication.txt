@@ -1,0 +1,979 @@
+                                                                                                                                                                                        1
+
+
+
+
+                                                          Rate-Adaptive Semantic Communication via
+                                                               Multi-Stage Vector Quantization
+                                                                    Jinsung Park, Junyong Shin, Yongjeong Oh, Jihun Park, and Yo-Seb Jeon
+
+
+
+                                             Abstract—This paper proposes a novel framework for rate-                  potential of analog SC for end-to-end semantic transmission.
+                                          adaptive semantic communication based on multi-stage vec-                    However, these early methods focus on supporting a ﬁxed
+                                          tor quantization (VQ), termed MSVQ-SC. Unlike conventional                   communication rate, which limits ﬂexibility and adaptability
+                                          single-stage VQ approaches, which require exponentially larger
+                                          codebooks to achieve higher ﬁdelity, the proposed framework                  when communication environments change.
+                                          decomposes the quantization process into multiple stages and                    In practice, wireless channels are highly dynamic: signal
+arXiv:2510.02646v1 [eess.SP] 3 Oct 2025
+
+
+
+
+                                          dynamically activates both stages and individual VQ modules.                 quality can ﬂuctuate due to fading, interference, or user mo-
+                                          This design enables ﬁne-grained rate adaptation under varying                bility, and the available bandwidth is frequently constrained
+                                          bit constraints while mitigating computational complexity and                by competing services and varying network conditions. Under
+                                          the codebook collapse problem. To optimize performance, we
+                                          formulate a module selection problem that minimizes task loss                such variability, relying on a ﬁxed rate setting can lead either
+                                          subject to a rate constraint and solve it using an incremental               to inefﬁcient resource utilization, when the rate is higher than
+                                          allocation algorithm. Furthermore, we extend the framework                   necessary, or to noticeable degradation in reconstruction quality,
+                                          by incorporating entropy coding to exploit non-uniform code-                 when the rate is insufﬁcient. This challenge highlights the
+                                          word distributions, further reducing communication overhead.                 importance of adaptively adjusting the transmission rate to
+                                          Simulation results on the CIFAR-10 dataset demonstrate that
+                                          the proposed framework outperforms existing digital semantic                 match both the current channel environment and the speciﬁc
+                                          communication methods, achieving superior semantic ﬁdelity with              task requirements.
+                                          lower complexity while providing ﬂexible and ﬁne-grained rate
+                                          control.                                                                     A. Rate-Adaptive Semantic Communication
+                                            Index Terms—Semantic communication, Multi-stage vector                        To address this issue, rate-adaptive SC has been investigated,
+                                          quantization, Rate adaptation, Rate control, Entropy coding.
+                                                                                                                       with the goal of dynamically adjusting transmission rates (or
+                                                                                                                       related parameters) according to channel conditions and task
+                                                                   I. I NTRODUCTION                                    requirements. For example, the authors in [7], [8] developed
+                                             Semantic communication (SC) has recently emerged as a                     rate-adaptive SC frameworks that control the dimension of the
+                                          paradigm that transmits the semantic meaning of information                  semantic feature. In these approaches, the transmission rate
+                                          rather than its raw data representation. Unlike conventional                 is determined prior to feature extraction based on channel
+                                          systems that treat all bits uniformly, SC prioritizes task-relevant          state information (CSI), enabling the encoder–decoder pair to
+                                          information, thereby reducing redundancy and enabling ef-                    accommodate multiple rates and thus adapt ﬂexibly to varying
+                                          ﬁcient utilization of communication resources [1]–[4]. Such                  channel conditions. Although these methods support dynamic
+                                          efﬁciency is particularly advantageous in data-intensive sce-                rate control, they require separate encoder–decoder pairs for
+                                          narios, including autonomous driving, industrial IoT, and real-              each supported rate, with each pair trained independently. As
+                                          time multimedia services. By emphasizing semantic relevance                  a result, achieving ﬁner rate granularity necessitates additional
+                                          over bit-level ﬁdelity, SC introduces a fundamentally new                    branches, which in turn increases model complexity and mem-
+                                          design principle that directly aligns communication with task                ory overhead.
+                                          performance.                                                                    Another representative approach for rate-adaptive SC is to
+                                             Early research on SC has primarily focused on analog                      employ masking [9]–[12]. In this approach, masking is per-
+                                          implementations. In this paradigm, semantic features are di-                 formed by a neural network that leverages statistical CSI to
+                                          rectly mapped into continuous analog symbols and transmitted                 select which semantic features are transmitted. In [9]–[11],
+                                          without conventional channel coding or digital modulation. For               network modules employing the Gumbel–Softmax technique
+                                          example, a Transformer-based SC method was developed in                      were developed to dynamically regulate the transmission rate
+                                          [5] for text transmission, while a CNN-based joint source-                   in response to channel variations. Although these studies pro-
+                                          channel coding (JSCC) scheme was introduced in [6] for                       vide rate-adaptive mechanisms, their training procedures are
+                                          image transmission. These pioneering works highlighted the                   restricted to a ﬁnite set of predeﬁned rates, thereby limiting
+                                                                                                                       the granularity and ﬂexibility of rate control. Unlike these
+                                             Jinsung Park, Junyong Shin, Yongjeong Oh, Jihun Park, and Yo-Seb          works, an importance-driven approach was proposed in [12],
+                                          Jeon are with the Department of Electrical Engineering, POSTECH, Po-         where feature scores are computed and low-importance features
+                                          hang, Gyeongbuk 37673, Republic of Korea (e-mail: jinsung@postech.ac.kr;
+                                          sjyong@postech.ac.kr; yongjeongoh@postech.ac.kr; jihun.park@postech.ac.kr;   are masked to achieve rate adaptation. However, estimating
+                                          yoseb.jeon@postech.ac.kr).                                                   feature importance requires gradient- or error-based evaluation,
+                                                                                                                                     2
+
+
+
+which incurs considerable computational overhead, especially        balance between representational ﬁdelity and computational
+for high-dimensional features.                                      complexity [18]–[21]. Notably, MSVQ inherently supports
+   The common limitation of all the aforementioned rate-            multiple transmission rates by selectively activating different
+adaptive methods is that they rely on analog transmission of        numbers of stages, making it a natural candidate for rate-
+semantic features. Such analog SC approaches face inherent          adaptive digital SC. Despite this potential, no prior work has
+drawbacks: direct analog mapping makes the system vulnerable        systematically investigated rate-adaptive SC based on MSVQ.
+to channel noise, interference, and circuit imperfections, while    In particular, when the semantic feature dimension is large,
+also being incompatible with modern wireless standards that         which is a common scenario in SC applications, the simple
+rely on digital communication. Furthermore, error correction        selection of the number of active stages is insufﬁcient to provide
+and retransmission mechanisms, essential for reliable commu-        ﬁne-grained rate control. Therefore, achieving ﬂexible and ﬁne-
+nication, are difﬁcult to integrate into purely analog pipelines.   grained rate adaptation in MSVQ-based SC still remains an
+                                                                    open and important problem.
+B. Digital Semantic Communication
+   Recent research has increasingly focused on digital SC to        C. Our Contributions
+overcome the inherent limitations of analog SC. Unlike analog         To address this research gap, we propose a novel framework
+approaches, digital SC encodes semantic features into discrete      for rate-adaptive SC based on MSVQ, referred to as MSVQ-
+representations, which can be further protected by channel          SC. Unlike existing approaches, the proposed framework reg-
+coding and error correction. This design enhances robustness        ulates the bit overhead not only at the stage level but also
+against noise and interference while ensuring compatibility with    at the individual VQ module level, thereby enabling ﬁne-
+modern wireless standards built on digital infrastructures. To      grained rate adaptation. Furthermore, we formulate and solve
+realize these beneﬁts, several digital SC frameworks have been      an optimization problem that determines the selection of VQ
+proposed that embed semantic processing within conventional         modules across stages by explicitly accounting for their impact
+digital pipelines.                                                  on task performance. The main contributions of this paper are
+   A widely adopted strategy in digital SC is to employ a           summarized as follows:
+quantization module that maps continuous semantic features             • We propose a novel rate-adaptive communication strategy
+into discrete indices. These indices are then encoded into bit           for the MSVQ-based SC. Unlike prior studies that restrict
+sequences and transmitted using standard digital modulation              rate adaptation to coarse stage-level control, our approach
+and channel coding techniques. Two representative quantiza-              enables ﬁne-grained rate control by dynamically adjusting
+tion strategies have been explored. Scalar quantization (SQ)             the activation of both stages and individual VQ mod-
+discretizes each feature dimension independently, offering sim-          ules. This mechanism signiﬁcantly improves ﬂexibility in
+plicity and low computational complexity, which makes it                 adapting to diverse channel conditions and enhances the
+attractive for lightweight devices and latency-sensitive appli-          efﬁciency of semantic information transmission. To the
+cations [13], [14]. In contrast, vector quantization (VQ) jointly        best of our knowledge, this is the ﬁrst work to investigate
+maps groups of feature values to codewords in a codebook.                module-level rate control in MSVQ-based SC.
+Since VQ captures cross-dimensional correlations and provides          • We formulate an optimization problem to determine the
+more compact representations, it generally achieves superior             optimal selection of activated VQ modules that minimizes
+performance compared to SQ in digital SC systems [15]. In                task loss under a given rate constraint. To solve this
+addition, the VQ approach can be extended to support multiple            problem, we adopt an incremental allocation algorithm in
+transmission rates, by adopting nested codebooks, as studied in          [22] and specify the conditions under which its optimality
+[16]. However, most VQ-based SC frameworks rely on a single-             is guaranteed. It should be noted that the problem of
+stage quantization mechanism. In such setups, achieving high             optimizing module selection in MSVQ-based SC has never
+semantic ﬁdelity requires signiﬁcantly larger codebooks, which           been explored in the literature.
+increases computational complexity due to expensive nearest-           • We further extend the proposed MSVQ-SC framework by
+neighbor searches. Moreover, excessively large codebooks often           incorporating entropy coding into each VQ module. In this
+suffer from sparse codeword utilization, leading to inefﬁcient           extension, module selection is reﬁned by considering the
+representation and the well-known codebook collapse problem              average bit overhead derived from the codeword distribu-
+[17].                                                                    tion of each module. This integration reduces communi-
+   Multi-stage vector quantization (MSVQ) has been proposed              cation overhead while maintaining adaptive rate control.
+as a promising solution to mitigate the limitations of the             • Through simulations on the CIFAR-10 dataset, we demon-
+single-stage VQ approach. MSVQ decomposes the quantization               strate that the proposed MSVQ-SC framework outper-
+process into multiple stages, where each stage quantizes the             forms existing digital SC methods while offering ﬁne-
+residual error of the previous one. As the number of stages in-          grained rate control across a wide range of operating
+creases, the overall quantization error is progressively reduced.        points. Moreover, we show that the incorporation of en-
+This design reduces the need for very large codebooks at each            tropy coding effectively enhances the transmission efﬁ-
+stage, alleviates codebook collapse, and achieves a favorable            ciency of the proposed framework.
+                                                                                                                                                    3
+
+
+
+                                                                                    B. Existing Single-Stage VQ Architecture
+                                                                                       One of the main factors that govern the performance of the
+                                                                                    receiver’s task is the design of a quantization module. This
+                                                                                    quantization module needs to properly capture the distribution
+                                                                                    of the semantic feature vector. To this end, a single-stage VQ
+                                                                                    architecture has been adopted in the literature [23]–[26], which
+                                                                                    utilizes a learnable VQ module that captures the distribution of
+                                                                                    the semantic features in a data-driven manner.
+                                                                                       In this architecture, the semantic feature vector z is ﬁrst
+Fig. 1. An illustration of the digital SC system considered in this work, where     partitioned into N sub-vectors, each with dimension D, in
+a receiver intends to perform an inference task using the received representation
+of the source data x ∈ RK sent from a transmitter.                                  order to avoid high computational complexity required when
+                                                                                    quantizing a high-dimensional semantic feature vector. Details
+             II. S YSTEM M ODEL AND P RELIMINARY                                    of our strategy to divide z into N sub-vectors will be discussed
+  In this section, we present a digital SC system considered in                     in Sec. III-B. Let zi ∈ RD be the i-th feature sub-vector,
+our work and introduce an existing single-stage VQ architecture                     where i ∈ {1, . . . , N } is the index corresponding to each sub-
+adopted in the literature.                                                          vector. Note that the feature dimension M holds M = N × D.
+                                                                                    Each sub-vector is quantized to zq,i according to the minimum
+                                                                                    Euclidean by selecting the nearest codeword ck in Csingle based
+A. Digital SC Systems                                                               on the Euclidean distance:
+   We consider a digital SC system in which a receiver intends
+to perform an inference task using the received representation of                                     ẑi = argmin kzi − ck k2 .                 (3)
+                                                                                                            ck ∈Csingle
+the source data x ∈ RK sent from a transmitter. The considered
+system is illustrated in Fig. 1.                                                    By concatenating the quantized sub-vectors, the quantized
+   At the transmitter, a semantic encoder fθ (·), parameterized                     semantic feature is obtained as
+by θ, is employed to extract high-level semantic features                                                                     T T
+                                                                                                         ẑ = ẑT
+                                                                                                                               
+                                                                                                                1 , · · · , ẑN   .       (4)
+from the input data. As a result, a lower-dimensional latent
+representation z ∈ RM is obtained as follows:                                          Although the single-stage VQ architecture discussed above
+                                                                                    supports a learnable VQ codebook framework in [27] to capture
+                            z = fθ (x) ∈ RM ,                                (1)    the distribution of the semantic feature vector, it faces signif-
+where M is the dimension of the semantic feature vector. The                        icant limitations for rate-adaptive SC. A key drawback is that
+output z serves as a compressed semantic representation that                        the reduction of the quantization error is achieved solely by
+captures task-relevant features of the input data. To transmit                      increasing the size of the VQ codebook, |Csingle |, which in turn
+the semantic feature vector z using digital communication,                          leads to a substantial increase in the computational complexity
+a quantization module Q : RM → {0, 1}Btot is employed                               of the quantization process. In addition, as the codebook size
+which transforms z into a ﬁnite-bit sequence with length Btot .                     grows, the utilization of codeword vectors becomes saturated—
+The resulting bit sequence is transmitted following a typical                       a phenomenon known as the codebook collapse problem [17].
+digital modulation process. For example, the bit sequence can                       Consequently, this architecture exhibits limited scalability in
+be modulated into a symbol sequence using QAM signaling                             supporting high-rate communication scenarios.
+and then transmitted with appropriate power allocation.
+                                                                                       III. P ROPOSED M ULTI -S TAGE VQ- BASED S EMANTIC
+   At the receiver, a transmitted bit sequence is reconstructed
+                                                                                                 C OMMUNICATIONS (MSVQ-SC)
+via a typical digital demodulation process which may include
+channel estimation, channel equalization, symbol demodula-                            In this section, we propose a digital SC framework based
+tion, and channel decoding. After this process, the reconstructed                   on MSVQ, referred to as MSVQ-SC. The proposed framework
+bit sequence is converted into the semantic feature vector,                         provides learnable and efﬁcient quantization of the semantic
+denoted by ẑ. Note that due to the quantization process applied                    feature vector while enabling ﬂexible and ﬁne-grained rate
+at the transmitter, the reconstructed vector ẑ may differ from                     control.
+the original feature semantic vector z. The reconstructed latent
+vector ẑ is then passed through a semantic decoder gφ (·),                         A. Digital SC with MSVQ
+parameterized by φ, which aims at reconstructing inference-                            In the proposed framework, we employ an MSVQ archi-
+related data from the semantic feature vector. For example,                         tecture as the quantization module for the semantic feature
+when considering an image reconstruction task, the output of                        vector. The MSVQ architecture enables a gradual reduction
+the semantic decoder is given by                                                    in quantization error without signiﬁcantly increasing the VQ
+                                                                                    codebook size, thereby effectively addressing the limitations
+                            x̂ = gφ (ẑ) ∈ RK ,                              (2)
+                                                                                    of the conventional single-stage VQ architecture introduced in
+where x̂ denotes the reconstructed source data.                                     Sec. II-B.
+                                                                                                                                               4
+
+
+
+                                                                               vectors. High-quality VQ codebooks across stages are therefore
+                                                                               essential for minimizing distortion and achieving high-ﬁdelity
+                                                                               reconstructions within the MSVQ framework.
+
+
+                                                                               B. Initial Training for Sub-Vector Construction
+                                                                                  In our approach, proper construction of the N sub-vectors
+                                                                               from the semantic feature vector is crucial for enabling effective
+                                                                               quantization. It is well known that the quantization error of a
+                                                                               given signal is closely related to its variance [28]. Furthermore,
+                                                                               [28] has shown that neural network outputs with higher vari-
+                                                                               ances tend to correspond to more important features during
+Fig. 2. Illustration of multi-stage VQVAE.                                     training. Motivated by these insights, we group entries with
+                                                                               similar variances into the same sub-vector. This allows sub-
+   In this architecture, multiple VQ modules connected in                      vectors containing high-variance entries to be properly priori-
+cascade are used to quantize each feature sub-vector zi , as                   tized in subsequent quantization and transmission processes.
+illustrated in Fig. 2. Let Tmax > 1 denote the total number of                    To achieve this, we ﬁrst quantify the intrinsic variance of
+VQ modules available for quantizing each sub-vector. The VQ                    each entry of the semantic feature vector z. However, since
+module in each stage t ∈ {1, . . . , Tmax } quantizes a residual               in our framework the codebooks are jointly trained with the
+vector produced at the previous stage (t − 1). For the i-th sub-               semantic encoder and decoder, the variance of each entry
+                                           (t)
+vector zi at stage t, the residual vector ri ∈ RD is deﬁned as                 inherently depends on the codebook design. To avoid this
+                                                       (t−1)
+the difference between the previous residual vector ri       and               entanglement, we introduce an initial training process in which
+                           (t)
+the quantization output z̃i as follows:                                        the semantic encoder-decoder pair is trained without the quan-
+                           (t)      (t−1)           (t)                        tization module. In this process, the semantic encoder’s output
+                          ri = ri              − z̃i .                   (5)   directly serves as the input to the semantic decoder. Let θini
+                                           (0)
+The initial residual vector is deﬁned as ri = zi .                             and φini denote the encoder and decoder parameters during the
+                                   (t−1)                                       initial training. The training loss used in this stage is given by
+  At stage t, the residual vector ri     is quantized by search-
+                                                                                                                                      2
+ing for the closest codeword in the Euclidean sense:                                      Lini (θini , φini ) = kx − gφini (fθini (x))k ,    (9)
+                    (t)                    (t−1)
+                   z̃i = argmin kri                     − ck k2 .        (6)   After the initial training process, we compute the variance of
+                                 (t)
+                            ck ∈Ci                                             each entry of the resulting semantic feature vector z using
+         (t)                                                                   the training dataset. The variance of the m-th entry of z is
+where Ci is the VQ codebook for the i-th sub-vector in stage t,
+                    (t)      (t)                        (t)                    expressed as
+which consists of Ki , 2Bi codeword vectors, and Bi ∈ N
+                                                                                             2      1 X
+the quantization bits allocated to the i-th sub-vector in stage                                             k fθini (x′ ) m − µm k2 ,
+                                                                                                                         
+                                                                                           σm   =                                        (10)
+t. Then, the quantized representation of the i-th sub-vector is                                    |D| ′
+                                                                                                       x ∈D
+obtained by summing the outputs of the VQ modules up to                        where D represents the training dataset, and
+stage t:
+                                                                                                      1 X
+                                                                                                                fθini (x′ ) m .
+                                                                                                                           
+                                         t                                                    µm =                                          (11)
+                             (t)
+                                         X      (t′ )                                                |D| ′
+                            ẑi =              z̃i .                     (7)                                  x ∈D
+                                       t′ =1
+                                                                                  Based on these computed variances, we divide z into N
+Accordingly, the residual error between the original sub-vector                sub-vectors so that each sub-vector comprises semantic feature
+and its quantized representation at stage t is given by                        entries with similar variances. Speciﬁcally, the i-th sub-vector
+                                                        t                      zi is constructed as
+                   (t)             (t)                           (t′ )
+                                                        X
+                 ri = zi − ẑi = zi −                           z̃i .    (8)                                               T
+                                                                                        zi = (z)m′(i−1)D+1 , · · · , (z)m′iD , ∀i ∈ [N ]   (12)
+                                                        t′ =1
+
+  The expression in (8) implies that the quantization error                    where m′i denotes the index of the i-th largest variance among
+decreases progressively as the number of the stages increases.                                      2
+                                                                               σ12 , σ22 , . . . , σM .
+Consequently, the more stages that are used, the closer the ﬁnal                  Remark 1 (Quantization Bit Allocation): Our sub-vector
+quantized representation approximates the original semantic                    construction also provides intuitive guidelines for allocating
+feature vector in the embedding space. This observation under-                 different quantization bits across sub-vectors and stages. In
+scores the importance of effectively training the quantization                 general, entries of the semantic feature vector with higher
+modules at each stage, ensuring that each codebook learns to                   variance require higher quantization bits to achieve compara-
+capture and reﬁne the remaining information in the residual                    ble quantization accuracy. Motivated by this observation, we
+                                                                                                                                                               5
+
+
+
+allocate higher quantization bits to sub-vectors composed of                            where sg(·) is a stop-gradient operation, and β is a
+higher-variance entries, following the constraint:                                      hyperparameter. In (16), the ﬁrst term corresponds to the
+              (t)         (t)                 (t)                                       reconstruction loss, while the last two terms correspond to
+            B1 ≥ B2 ≥ . . . ≥ BN , ∀t ∈ [Tmax ].                          (13)          the embedding loss. Since the training at stage t requires
+Similarly, since the quantization inputs in earlier stages natu-                        ﬁne-tuning the previously learned modules up to stage
+rally exhibit larger variances compared to those in later stages,                       (t − 1), the loss of the one-shot training strategy is given
+we allocate higher quantization bits to modules in the earlier                          by [21]
+stages, following the constraint:                                                                                 TX
+                                                                                                                   max
+
+            (1)  (2)          (T   )                                                                   Ljoint =           w(t) Lt (θ, φ, C¯(t) ).          (17)
+           Bi ≥ Bi ≥ . . . ≥ Bi max ,                 ∀i ∈ [N ].          (14)
+                                                                                                                   t=1
+Guided by these constraints, we determine the set of quantiza-                      •   Sequential Training: Sequential training also uses joint
+            (t)
+tion bits {Bi }∀i,t which will be explicitly speciﬁed in Sec.                           optimization, but in a progressive manner. Speciﬁcally,
+VI.                                                                                     when training the VQ module at stage t, we optimize it
+                                                                                        together with all previously trained modules up to stage
+                                                                                        (t − 1). This allows earlier modules to be ﬁne-tuned for
+C. Joint Training of Semantic Encoder, VQ Modules, and                                  better synergy with the newly added VQ module. During
+Semantic Decoder                                                                        each stage’s training, the encoder and decoder are also
+   After the sub-vector construction process, MSVQ modules                              optimized jointly. The loss function used for each stage
+are jointly trained with the semantic encoder and decoder, in                           follows the same form as in (16). The total loss of the
+order to enable efﬁcient ﬁnite-bit representation while guar-                           sequential training strategy for a conﬁguration up to stage
+anteeing the task performance. For the joint training process,                          t is given by [21]
+we consider two strategies, one-shot training and sequential                                                    t
+                                                                                                      (t)
+                                                                                                                X
+training. The one-shot strategy optimizes all these modules si-                                     Ljoint =          w(j) Lt (θ (t) , φ(t) , C̄ (t) ).    (18)
+multaneously, while the sequential strategy adopts a progressive                                                j=1
+approach by training the VQ modules for stages incrementally
+                                                                                      Using the above loss, we progressively train the model
+up to Tmax . In both strategies, we initialize the encoder and de-
+                                                                                      from the ﬁrst stage (i.e., t = 1) up to the ﬁnal stage (i.e.,
+coder using the parameters θini and φini , respectively, obtained
+                                                                                      t = Tmax ).
+from the initial training stage. In what follows, for notational
+simplicity, we deﬁne C¯(t) as a set of the VQ codebooks used                        The overall training procedure of the proposed MSVQ-SC
+in the MSVQ operation up to stage t, i.e.,                                       framework, including initial training, sub-vector construction,
+                                ′
+                                                                                 and joint training, is summarized in Algorithm 1.
+                       (t )
+             C¯(t) = {Ci }i∈[N ],t′ ≤t , ∀t ∈ [Tmax ].                    (15)
+                    (t)
+                                                                                    IV. R ATE -A DAPTIVE C OMMUNICATION S TRATEGY FOR
+We also deﬁne QC̄ (t) (z) = ẑ(t) as the output of the VQ modules                           THE P ROPOSED MSVQ-SC F RAMEWORK
+up to stage t for the input feature vector z. We assume that the
+                                                                                    In this section, we propose a rate-adaptive communication
+output ẑ(t) is obtained by rearranging N quantized sub-vectors
+   (t)                                                                           strategy that enables ﬂexible and ﬁne-grained rate control
+{ẑi }i∈[N ] .                                                                   within the proposed MSVQ-SC framework, allowing it to
+  •   One-Shot Training: In one-shot training, the encoder,                      dynamically adapt to varying rate constraints. To this end, we
+      decoder, and all quantization modules in an architecture                   consider a ﬁnite-capacity communication scenario1 in which
+      composed of Tmax stages are jointly trained using the                      Bcap ∈ N bits can be reliably transmitted using a capacity-
+      full conﬁguration. Although the model supports multiple                    achieving channel code in conjunction with appropriate mod-
+      conﬁgurations corresponding to different rates, only the                   ulation and power allocation schemes. Note that the number
+      complete conﬁguration, consisting of the encoder, all Tmax                 of reliably transmitted bits, Bcap , is determined by various
+      stages, and the decoder, is considered during training. All                factors, including transmit power, channel fading, interference,
+      modules in this path are optimized in a single end-to-end                  and noise. With this consideration, our focus is on adjusting
+      process. To support this scheme, motivated by the loss                     the length of the transmitted bit sequence, Btot , to satisfy
+      function in [27], we deﬁne a stage-wise loss function for                  the constraint imposed by Bcap . This abstraction also ensures
+      a conﬁguration utilizing up to stage t as                                  that the applicability of the proposed framework is not re-
+                                     (t)
+                                                              2                  stricted to a particular communication process; rather, it can be
+        Lt (θ, φ, C¯(t) ) = x − gφ (QC̄ (t) (fθ (x)))                            seamlessly integrated into various systems, such as uncoded or
+                                                       (t)
+                                                                      2          coded multiple-input multiple-output (MIMO) and orthogonal
+                                    + sg(fθ (x)) − QC̄ (t) (fθ (x))              frequency-division multiplexing (OFDM) systems.
+                                                                          2
+                                                        (t)
+                                    + β fθ (x) − sg(QC̄ (t) (fθ (x)))      ,        1 The ﬁnite-capacity scenario will be considered only for the optimization of
+                                                                                 the proposed MSVQ-SC framework and will be relaxed when evaluating its
+                                                                          (16)   performance, as will be shown in Sec. VI.
+                                                                                                                                         6
+
+
+
+ Algorithm 1: Training Procedure of the Proposed                        feature vector z is given by
+ MSVQ-SC Framework                                                                                           Ti
+                                                                                                           N X
+                                                                                                                       (t)
+                                                                                                           X
+  Initial Training & Sub-Vector Construction:                                                  Btot =                 Bi ,            (19)
+  Detach all MSVQ modules;                                                                                  i=1 t=1
+
+  Randomly initialize θini and φini ;                                   This expression implies that Btot can be dynamically ad-
+  for epoch ∈ {0, 1, . . .} do                                          justed by varying the number of stages applied to each sub-
+      Randomly split D into P batches {Dp }P                            vector. For example, if Ti is set to its maximum value (i.e.,
+                                           p=1 ;
+                                                                        Ti = Tmax ) for every sub-vector, the resulting bit overhead
+      for p = 1, . . . , P do                                                         PN PTmax (t)
+                                                                        is given by i=1 t=1       Bi bits with the best performance.
+          Compute Lini on Dp using (9);                                 Conversely, if Ti is set to its minimum value (i.e., Ti = 0),
+          Update θini and φini ;                                        no quantization is performed, yielding a total of 0 bits with
+      end                                                               the worst performance. Thus, by appropriately selecting the
+  end                                                                   number of stages across sub-vectors, the bit overhead can range
+                                                                                     PN PTmax (t)                               (t)
+              2                                                         from 0 to i=1 t=1        Bi with a granularity of Bi bits.
+  Compute σm    from (10), ∀m;
+                                                                        This approach offers ﬁne-grained rate control that is easily
+  Construct sub-vector zi from (12), ∀i;                                implemented via a simple switching operation. Motivated by
+  Joint Training:                                                       these considerations, we propose a stage selection strategy that
+  Attach all MSVQ modules;                                              determines the number of stages for each sub-vector under
+  Set θ = θini and φ = φini ;                                           the constraint Btot ≤ Bcap . Our stage selection strategy is
+                                                                        illustrated in Fig. 3.
+  if mode = O NE - SHOT TRAINING then
+      for epoch ∈ {0, 1, . . .} do
+          Randomly split D into P batches {Dp }P                        B. Optimization Problem for Stage Selection
+                                               p=1 ;
+          for p = 1, . . . , P do                                          In the stage selection approach, an arbitrary selection of
+                                                                        stages for N sub-vectors may lead to a substantial degradation
+              Compute Ljoint using (17);
+                                    (t′ )                               in task performance, particularly at lower rates where fewer
+              Update θ, φ, and {Ci }i∈[N ],t′ ∈[Tmax ] ;                stages are used. Because each module contributes differently
+          end                                                           to the ﬁdelity of the reconstructed data and overall task per-
+      end                                                               formance, a naive or random selection might omit the modules
+  end                                                                   critical for preserving semantic content.
+                                                                           To ensure robust task performance across varying rates,
+  else if mode = SEQUENTIAL TRAINING then
+                                                                        it is essential to prioritize the selection of stages based on
+      for t ∈ {0, 1, . . . , Tmax } do                                  their relative contribution to overall task quality. Motivated
+          for epoch ∈ {0, 1, . . .} do                                  by this observation, we formulate an optimization problem to
+              Randomly split D into P batches {Dp }P     p=1 ;          determine the optimal stage selection under the constraint on
+              for p = 1, . . . , P do                                   the total number of bits. Our problem is formulated as
+                                 (t)                                                                (T ) 
+                  Compute Ljoint using (18);
+                                                                                        X
+                                                                                   min      Ei x, ẑi i                            (20)
+                                            (t′ )                                {Ti }i
+              Update θ, φ, and {Ci                  }i∈[N ],t′ ∈[t] ;                     i
+                                                                                          N Ti
+           end                                                                            XX         (t)
+                                                                                  s.t.              Bi     ≤ Bcap , 0 ≤ Ti ≤ Tmax ,
+        end                                                                               i=1 t=1
+     end                                                                              (T ) 
+                                                                        where Ei x, ẑi i is a performance metric measured for the
+  end                                                                                                                     (T )
+                                                                        input data x and the i-th quantized sub-vector ẑi i when using
+                                                                        the VQ modules up to stage Ti .
+                                                                           We consider a metric that evaluates the stage selection quality
+A. Main Idea: Stage Selection                                           based on a task loss. This metric evaluates the impact of each
+                                                                        quantization module on the overall task loss when included
+   The aim of our strategy is to enable rate-adaptive SC,               or excluded. It enables the system to rank modules by their
+dynamically adjusting the number of transmitted bits to meet            relevance, ensuring that those with greater contributions to
+the rate constraint speciﬁed by Bcap . Recall that the number           task loss reduction are prioritized under the bit constraint.
+of bits for representing the output of the VQ module for the            To compute this metric, after the joint training process in
+                                          (t)
+i-th sub-vector at stage t is given by Bi . Therefore, if the           Sec. III-C, we assess a marginal task loss by assuming that the
+number of stages used to quantize the i-th sub-vector is set as         i-th sub-vector is quantized using only up to stage Ti , while
+Ti ≤ Tmax , the total number of bits representing the semantic          other sub-vectors are quantized using all Tmax . This assumption
+                                                                                                                                                               7
+
+
+
+
+Fig. 3. An illustration of rata-adaptive operation via stage selection in the proposed MSVQ-SC framework.
+
+isolates the marginal contribution of the stage selection for                  arrive at identical selection results without incurring extra
+the i-th sub-vector without being inﬂuenced by the selection                   communication overhead.
+in other sub-vectors. Following this strategy, for an image
+reconstruction task, the marginal loss is deﬁned as
+                                                                               C. Proposed Stage Selection Algorithm
+                      (T )              (T )
+               E x, ẑ\i i = kx − fφ (ẑ\i i )k2 ,       (21)                     The stage selection problem in (23) is a discrete optimization
+          (T )                                                                 problem. Suppose that the number of quantization bits allocated
+where ẑ\i i denotes the output of the overall quantization                    to each sub-vector is identical2 across all stages, i.e., Bi =
+                                                                                                                                             (t)
+module in which all sub-vectors except the i-th sub-vector                     Bi for all t ∈ [Tmax ]. In this case, an incremental allocation
+use all Tmax stages, while the i-th sub-vector uses only up to                 algorithm is known to yield an optimal solution [22], provided
+stage Ti . Notably, this metric can be adapted depending on the                that the objective function is strictly convex and monotonically
+target task. For example, in a classiﬁcation scenario, it may be               decreasing with respect to the number of selected stages.
+computed using the cross-entropy loss. This ﬂexibility ensures                    Motivated by this result, we adopt an incremental allocation
+that the proposed framework is applicable across various types                 algorithm to solve the stage selection problem in (23). In this
+of SC tasks.                                                                   algorithm, we iteratively increase the stage assignment variable
+   Although the marginal loss in (21) is a direct measure for                  Ti by one for the sub-vector that yields the largest decrease in
+minimizing the task loss, computing this metric requires the                   the objective. Speciﬁcally, at each iteration, we select the best
+knowledge of the decoder fφ (·), which is often not available                  index i∗ of the sub-vector, determined by
+at the transmitter. To circumvent such impractical requirement,                                             (T )              (T +1) 
+we approximate the marginal loss using its empirical estimate                     ∗              Ex Ei x, ẑi i      − Ex Ei x, ẑi i
+                                                                                 i = argmax                          (T +1)
+                                                                                                                                            . (24)
+computed from the training data, deﬁned as                                            i:Ti <Tmax                   Bi i
+                       (T )     1 X             (T )                        Note that the search is restricted to the sub-vectors whose stage
+                                         E x′ , ẑ\i i .
+              
+            Ex Ei x, ẑi i     =                            (22)
+                                 |D| ′                                         assignments have not yet reached Tmax . This iterative process
+                                          x ∈D
+                                                                               continues until the total bit overhead reaches its limit Bcap .
+We refer to this metric as an empirical marginal loss. With this
+                                                                               Through this procedure, the algorithm effectively captures the
+approximation, our optimization problem becomes
+                                                                               relative priority of each module based on its impact on the
+                               (T ) 
+               X 
+         min       Ex Ei x, ẑi i                          (23)                average performance loss. A VQ module is considered more
+          {Ti }i
+                    i                                                          important if assigning it an additional stage leads to a larger
+                     Ti
+                   N X                                                         reduction in the objective function. As a result, this importance-
+                              (t)
+                   X
+           s.t.              Bi     ≤ Bcap , 0 ≤ Ti ≤ Tmax .                   aware selection enables the system to prioritize and transmit the
+                   i=1 t=1                                                     most critical features, achieving effective performance under a
+Because the objective function of the reformulated problem                     given bit overhead constraint. Our stage selection algorithm is
+can be computed during ofﬂine training, the resulting values                   summarized in Algorithm 2.
+can be shared between the transmitter and the receiver via a                      2 This assumption may not hold depending on the quantization bit allocation
+lookup table comprising N Tmax values. Based on this lookup                    strategy. In this work, we intentionally allocate similar quantization bits to all
+table, both the transmitter and the receiver can independently                                                                     (t)
+                                                                               stages for each sub-vector so that the condition Bi = Bi for all t ∈ [Tmax ]
+solve the same stage selection problem, ensuring that they                     holds approximately.
+                                                                                                                                           8
+
+
+
+ Algorithm 2: Proposed Stage Selection Algorithm                            The numerical results demonstrate that our loss exhibits a
+  1. Initialization:                                                        convex-like trend and a monotonically decreasing property.
+  Ti = 0, ∀i ∈ [N ];                                                        This numerical evidence not only supports our conjecture
+                                                                            regarding the approximate convexity and monotonicity of the
+  2. Stage selection process:                                               empirical marginal loss, but also demonstrates the effectiveness
+         PN PTi       (t)
+  while i=1 t=1      Bi < Bcap do                                           of our stage selection algorithm in Algorithm 2 for solving
+                ∗
+      Choose i from (24);                                                   the problem in (23), despite the lack of a formal guarantee of
+      Ti∗ ← Ti∗ + 1;                                                        optimality.
+  end
+                                                                                 V. E NHANCEMENT OF T HE P ROPOSED MSVQ-SC
+                                                                                       F RAMEWORK VIA E NTROPY C ODING
+                                                                               Recall that in the proposed MSVQ-SC framework, the
+                                                                            transmitter conveys the indices of the codeword vectors de-
+                                                                            termined by the selected VQ modules. Typically, when using
+                                                                            learned VQ codebooks as in the proposed framework, the
+                                                                                                                          (t)
+                                                                            selection frequency of codeword vectors in Ci tends to follow
+                                                                            nonuniform distributions [25]. This observation suggests that
+                                                                            the bit overhead can be further reduced by applying entropy
+                                                                            coding when representing the selected codeword vector at each
+                                                                            stage. Inspired by this observation, in this section, we further
+                                                                            enhance the proposed MSVQ-SC framework by incorporating
+                                                                            the entropy coding into each VQ module. We refer to this
+                                                                            modiﬁed framework as an entropy-constrained MSVQ-SC (EC-
+                                                                            MSVQ-SC) framework.
+
+                                                                            A. Incorporating Entropy Coding into MSVQ-SC
+                                                                                   (t)
+                                                                              Let ci,k ∈ RD be the k-th codeword vector in the codebook
+                                                                             (t)
+Fig. 4. Numerical results for the average marginal task loss based on the   Ci . Then, the codebook for the i-th sub-vector in stage t is
+quantization error.                                                         expressed as
+                                                                                            (t)   (t) (t)             (t)
+                                                                                           Ci = ci,1 , ci,2 , . . . , c (t) .       (25)
+   A promising feature of the proposed algorithm is that it can                                                            i,Ki
+be executed ofﬂine after the training phase. Speciﬁcally, the               To apply entropy coding, after the joint training process, we
+empirical marginal loss in (22) can be computed using the                                                                (t)
+                                                                            measure the probability mass function of ci,k by using the
+learned semantic encoder, decoder, and VQ modules. Based                    training data as follows:
+on this computation, the stage selection order can be pre-
+                                                                                         (t)      (t)  (t) 
+determined and stored at both the transmitter and receiver. As                         pi,k = P z̃i = ci,k
+a result, no additional signaling or computational overhead is                                  1 X h (t)                 (t)
+                                                                                                                               i
+required during online communication.                                                        =         I Q (t) fθ (x) = ci,k ,        (26)
+                                                                                               |D| ′        C̄i
+                                                                                                  x ∈D
+   Remark 2 (Optimality of Stage-Selection Algorithm): Our
+stage selection algorithm in Algorithm 2 is guaranteed        to be                  (t)        (t)
+                                                                            where Q (t) (z) = z̃i denotes the output of the VQ modules
+                                                            (T )                  C̄i
+optimal only when the empirical marginal loss Ex Ei x, zq,ii                                                             (t)
+in (23) is strictly convex and monotonically decreasing [22].               up to stage t for the i-th sub-vector, and C¯i is a set of the
+Strictly speaking, this property may not always hold, as it can             VQ codebooks up to stage t for the i-th sub-vector, i.e.,
+                                                                                                       ′
+depend on various factors such as the input data distribution,                               (t)   (t )
+                                                                                           C¯i = {Ci }t′ ≤t , ∀t ∈ [Tmax ].             (27)
+the target task, and the design of the encoder-decoder network.
+Nevertheless, in most practical scenarios, the task loss is                 The entropy coding schemes, such as Huffman coding [29]
+expected to be monotonically decreasing with Ti since the dif-              or arithmetic coding [30], can be constructed based on the
+                                                                                                                               (t)
+                                                                                                                     (t)   B
+ference between the semantic feature vector z and its quantized             probability mass function for {pi,k }2k=1i
+                                                                                                                       . As a result, the
+representation typically reduces as the number of VQ stages                 average number of the bits required to convey the information
+increases. In addition, the task loss often exhibits an approx-                  (t)
+                                                                            of z̃i after the entropy coding is given by
+imately convex trend, because the performance improvement
+                                                                                                               (t)
+becomes progressively less sensitive to further reductions in                                          i   K
+                                                                                             (t)     X  (t)       (t)
+quantization error. To validate these conjectures, Fig. 4 plots the                        E BEC,i = −   pi,k log2 pi,k .               (28)
+empirical marginal loss for the scenario described in Sec. VI.                                             k=1
+                                                                                                                                        9
+
+
+                                   (t)         (t)
+This average overhead satisﬁes E BEC,i ≤ Bi , with equality            (28). The modiﬁed problem to optimize the stage selection is
+holding only when the selection probability is uniform, i.e.,          given by
+ (t)        (t)               (t)
+pi,k = 1/Ki for all k ∈ [Ki ].                                                     X             (T ) 
+                                                                               min     Ex Ei x, ẑi i                          (31)
+   By taking into account the use of the entropy coding, we also               {Ti }i
+                                                                                         i
+modify the original quantization rule in (6) to reﬂect a trade-off                        Ti
+                                                                                        N X
+between distortion and rate, as done in [31]. This modiﬁcation                          X          (t)
+                                                                                s.t.              B̄EC,i ≤ Bcap , 0 ≤ Ti ≤ Tmax ,
+allows the model to favor codeword vectors that are not only                            i=1 t=1
+close to the input residual vector but also statistically more
+                                                                                (t)
+probable. The modiﬁed quantization rule is given by                    where B̄EC,i denotes the average number of bits assigned to
+       (t)                      (t−1)                    (t)           the i-th sub-vector position at stage t, which is empirically
+      z̃i = argmin λ(t) kri             − ck k2 − log2 pi,k ,   (29)   computed using the training dataset based on the selected
+                   (t)
+              ck ∈Ci
+                                                                       entropy coding method. The stage selection problem in (31)
+where λ(t) serves as a hyperparameter that governs the trade-          is also a discrete optimization problem. The only difference
+off between distortion minimization and entropy regularization.        with the problem in (23) lies in the fact that the bit constraint
+                                                                                                                              (t)
+This formulation encourages the selection of codewords that are        is applied with respect to the average bit length B̄EC,i , instead
+                                                                                                 (t)
+not only close to the residual vector but also likely to occur,        of the quantization bit Bi .
+leading to more efﬁcient entropy coding.                                  Similar to the stage selection algorithm in Sec. IV-C, we
+   By considering the rate-distortion optimality, the semantic         solve the above problem by employing an incremental alloca-
+encoder, decoder, and VQ modules need to be jointly trained            tion algorithm introduced in [22]. Speciﬁcally, we select the
+                                 (t)
+with the codeword distribution pi,k . To make this distribution        best index i∗ of the sub-vector, determined by
+                        (t)
+learnable, we model pi,k in (29) using trainable parameters                                         (T )              (T +1) 
+   (t)                                                                    ∗              Ex Ei x, ẑi i      − Ex Ei x, ẑi i
+{wi,k }∀i,k as follows [25]:                                             i = argmax                          (Ti +1)
+                                                                                                                                    , (32)
+                                                                              i:Ti <Tmax                   B̄EC,i
+                                            (t)
+                          (t)        e−wi,k                            until the cumulative number of average bits consumed by all
+                         p̂i,k = P    (t)    (t)
+                                                   ,            (30)
+                                     Ki    −wi,j                       selected modules does not exceed the total communication
+                                     j=1 e
+                                                                       budget. Note that this algorithm can be performed ofﬂine after
+              (t)
+where each wi,k is a trainable parameter associated with the k-        computing the probability mass function from (26). As a result,
+th codeword of the i-th sub-vector in stage t. This parameteri-        the stage selection order can be saved at both the transmitter and
+zation allows the quantizer to adapt its codeword distribution to      receiver, implying that no extra signaling overhead is needed
+the underlying data distribution for an improved rate efﬁciency.       for sharing the stage selection.
+Based on this strategy, we jointly train the semantic encoder,            The above stage selection algorithm is not guaranteed to be
+decoder, VQ modules, and codeword distribution using the joint         optimal because the average bit lengths after entropy coding
+loss function suggested in [25]. Details of the joint training         may differ across stages depending on the codeword distribu-
+process can be found in [25].                                          tions and selected codewords, even if the objective function is
+                                                                       strictly convex and monotonically decreasing with respect to the
+B. Modiﬁed Rate-Adaptive Communication Strategy                        number of selected stages. Nevertheless, this algorithm offers a
+   Unlike in Sec. IV, where a ﬁxed-length representation is            practical alternative to solve the stage selection problem without
+assumed for codeword indices, the integration of entropy coding        incurring a signiﬁcant computational burden. Additionally, the
+into the proposed MSVQ-SC framework results in variable-               algorithm allows the system to prioritize ﬁne-grained encoding
+length bit representations. Speciﬁcally, since entropy coding          of the most essential components by considering the expected
+assigns shorter bit sequences to more frequent codewords and           loss reduction with respect to the cost of the increase in the
+longer sequences to less frequent ones, the number of bits             average bit length.
+required to represent each selected codeword varies depending            Remark 3 (Shared Codebook for Memory Reduction):
+on its probability within each VQ module. As a consequence,            The number of codebook parameters required for the proposed
+the total bit length is no longer ﬁxed but varies depending on         MSVQ-SC and EC-MSVQ-SC frameworks is given by
+the speciﬁc codewords selected from multiple VQ modules.
+                                                                                                       N TX
+                                                                                                          max
+   To accommodate this variability, we modify the rate-adaptive                                        X          (t)
+                                                                                                   D             Ki ,                (33)
+communication strategy in Sec. IV by accounting for the
+                                                                                                       i=1 t=1
+entropy-induced bit-lengths associated with each quantization
+                                                                                                                              (t)
+stage. To this end, the stage selection problem in (23) must           which can become prohibitively large when D, Ki , and N
+be reformulated by considering the bit budget constraint that          are large. To mitigate excessive memory requirements, we
+reﬂects the variable-length property of the entropy coding. Re-        introduce a simple modiﬁcation in which VQ codebooks are
+call that the average bit length of the codeword representation        shared across multiple VQ modules that use the same codebook
+corresponding to the i-th sub-vector in stage t is given as in         size. Speciﬁcally, the N sub-vectors are divided into G groups
+                                                                                                                                   10
+
+
+
+such that all VQ modules within the same group are constrained            of the quantization module with the semantic encoder and
+to have the same codebook. With this modiﬁcation, the number              decoder.
+of the codebook parameters becomes                                     • SingleVQ-SC [27]: This is an existing digital SC frame-
+
+                             TX
+                              max
+                                                                          work using the single-stage VQ framework in [27]. This
+                                     (t)                                  method jointly trains the semantic encoder and decoder
+                        DG          Ki .                    (34)
+                              t=1                                         along with VQ codebooks. Since this framework does
+                                                                          not support a rate-adaptive operation, it requires multiple
+This result implies that the number of parameters can be
+                                                                          pairs of the semantic encoder-decoder to support multiple
+signiﬁcantly reduced by setting G to a small value. Although
+                                                                          transmission rates.
+each shared codebook must learn more diverse distributions as
+                                                                       • NestedVQ-SC [16]: This is an existing digital SC frame-
+G decreases, the resulting performance degradation is expected
+                                                                          work using the single-stage VQ framework in [16]. This
+to be not signiﬁcant, as will be shown in Sec. VI.
+                                                                          method jointly trains the semantic encoder and decoder
+                                                                          along with VQ codebooks. Unlike SingleVQ-SC, this
+                 VI. S IMULATION R ESULTS
+                                                                          framework supports multiple transmission rates by intro-
+  In this section, we evaluate the superiority of the proposed            ducing a nested codebook design. Therefore, this frame-
+MSVQ-SC and EC-MSVQ-SC frameworks compared to exist-                      work requires only a single pair of the semantic encoder
+ing digital SC methods.                                                   and decoder.
+                                                                       The key parameters of the proposed framework are set as
+A. Experiment Setup                                                 follows: the number of quantization stages Tmax = 3, the latent
+   We consider an image reconstruction task using the CIFAR-        vector dimension M = 512, the sub-vector dimension D = 4,
+10 dataset. The CIFAR-10 dataset contains 60,000 color images       the number of sub-vectors N = 128, and the commitment
+of size 32 × 32 × 3 across 10 classes, with 50,000 images used      loss coefﬁcient β = 0.25. For the ﬁrst stage, we assign an
+for training and 10,000 for testing. The encoder for CIFAR-10       8-bit quantization codebook to the 64 sub-vectors with the
+consists of ﬁve convolutional layers: two downsampling layers       highest variance and a 6-bit codebook to the remaining 64
+with 64 and 128 output channels (kernel size 5 × 5, stride 2),      sub-vectors. For the second stage, 7-bit and 5-bit codebooks
+followed by two convolutional layers with 128 channels (kernel      are assigned to the high-variance and low-variance sub-vectors,
+size 5 × 5, stride 1), and a ﬁnal layer producing 8 channels        respectively. For the third stage, 6-bit and 4-bit codebooks are
+(kernel size 3 × 3, stride 1). Each layer, except the last, is      assigned in the same manner. Unless otherwise speciﬁed, each
+followed by a PReLU activation. The decoder is constructed          of the 128 sub-vectors in each stage is assigned a different
+symmetrically with ﬁve transposed convolutional layers: one         quantization codebook. The loss weights for stages 1, 2, and 3
+layer mapping 8 to 128 channels (kernel size 3 × 3, stride 1),      are set to w1 = 0.2, w2 = 0.2, and w3 = 1, respectively. We
+two layers with 128 channels (kernel size 5 × 5, stride 1), one     train the encoder, quantization modules, and decoder using the
+upsampling layer to 64 channels (kernel size 5 × 5, stride 2,       sequential training strategy described in Sec. III-C, employing
+output padding 1), and a ﬁnal layer that reconstructs the RGB       the Adam optimizer with a learning rate of 10−4 for a total of
+image with 3 output channels (kernel size 5×5, stride 2, output     30 epochs.
+padding 1). PReLU activations are used after all but the last
+layer.                                                              B. Evaluation under Finite-Capacity Scenarios
+   For performance comparison, we consider the following SC            To evaluate image reconstruction performance in various
+frameworks:                                                         aspects, we consider three performance metrics. (i) Peak signal-
+   • Ideal-SC: This is an ideal SC framework without any            to-noise ratio (PSNR), which is widely used in the literature to
+      quantization error (i.e., ẑ = z). The semantic encoder       measure the per-pixel difference between original and recon-
+      and decoder are trained without quantization effects. This    structed images, (ii) Structural similarity index (SSIM), which
+      method offers a performance upper bound for all the           considers luminance, contrast, and structural information to bet-
+      considered digital SC frameworks.                             ter reﬂect structural preservation, and (iii) Learned perceptual
+   • EC-MSVQ-SC (Proposed): This is the proposed MSVQ-              image patch similarity (LPIPS), which leverages features from
+      SC framework with entropy coding with a modiﬁed stage         a pre-trained VGG network to measure perceptual similarity.
+      selection strategy described in Sec. V. Unless speciﬁed          In Fig. 5, we compare the performance of various digital
+      otherwise, we set λ(1) = 2000, λ(2) = 5000, and λ(3) =        SC frameworks under the ﬁnite-capacity scenario using three
+      10000.                                                        metrics: PSNR in Fig. 5(a), LPIPS in Fig. 5(b), and SSIM
+   • MSVQ-SC (Proposed): This is the proposed MSVQ-SC               in Fig. 5(c). In particular, Fig. 5(a) shows that the proposed
+      framework without entropy coding along with the stage         frameworks achieve superior reconstruction ﬁdelity compared
+      selection method in Sec. IV.                                  to all baselines, with especially notable gains in the medium-
+   • ScalarQ-SC: This is an existing digital SC framework           to-high bit budget regimes. This result conﬁrms that the multi-
+      using the µ-law scalar quantization. This is a post quanti-   stage design more effectively captures task-relevant semantic
+      zation method which does not consider the joint training      features and reduces reconstruction errors. Fig. 5(b) further
+                                                                                                                                                                                                             11
+
+
+
+
+     32                                                              0.18                                                                  0.96
+
+
+                                                                                                                                           0.95
+     31                                                              0.16
+
+                                                                                                                                           0.94
+     30                                                              0.14
+                                                                                                                                           0.93
+
+     29                                                              0.12                                                                  0.92
+
+
+     28                                                               0.1                                                                  0.91
+
+
+                                                                                                                                            0.9
+     27                                                              0.08
+                                                                                                                                           0.89
+
+     26                                                              0.06
+                                                                                                                                           0.88
+
+
+     25                                                              0.04                                                                  0.87
+      900   1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000      900   1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000          900   1000 1100 1200 1300 1400 1500 1600 1700 1800 1900 2000
+
+
+
+
+                            (a) PSNR                                                          (b) LPIPS                                                              (c) SSIM
+Fig. 5. Comparison of the performances of various digital SC frameworks under the ﬁnite-capacity scenario.
+
+
+
+demonstrates that the proposed frameworks consistently achieve
+                                                                                                                 32
+lower LPIPS scores across nearly all bit constraints, reﬂect-
+ing both improved perceptual quality and better preservation
+                                                                                                                 31
+of semantic information. Finally, Fig. 5(c) indicates that the
+proposed frameworks achieve higher SSIM values than the
+                                                                                                                 30
+baselines, highlighting their ability to preserve structural infor-
+mation and maintain spatial integrity in reconstructed data. This                                                29
+property is particularly advantageous in applications such as
+object recognition and downstream inference, where structural                                                    28
+consistency is critical.
+   It is worth noting that although SingleVQ-SC provides the                                                     27
+
+most competitive baseline performance, it requires multiple
+                                                                                                                 26
+encoder-decoder pairs, whereas the proposed frameworks em-
+ploy only a single pair. This demonstrates that the proposed
+                                                                                                                 25
+frameworks achieve rate adaptivity without sacriﬁcing perfor-                                                                  1024                      1440                        1824
+mance by judiciously selecting the most effective VQ modules
+for a given bit budget. Moreover, the performance gains of
+                                                                                                       Fig. 6. Comparison of the PSNR performance of the proposed MSVQ-SC
+EC-MSVQ-SC over MSVQ-SC conﬁrm that the incorporation                                                  framework with different numbers of sub-vector groups.
+of entropy coding brings additional transmission efﬁciency by
+exploiting the non-uniform codeword distributions naturally                                                                        TABLE I
+                                                                                                         PSNR PERFORMANCE OF THE PROPOSED MSVQ-SC FRAMEWORK WITH
+present in the learned VQ codebooks. Taken together, the con-                                                       DIFFERENT BIT ALLOCATION STRATEGIES .
+sistent improvements across PSNR, LPIPS, and SSIM conﬁrm
+that the superiority of the proposed frameworks is not limited                                            Bit overhead                  896         1024           1200           1920             2088
+to a single metric. Instead, the results highlight its robustness                                            Type I                    27.46        28.02          28.70          31.02           31.21
+and adaptability across diverse bit budgets, while the compact                                               Type II                   27.26        27.83          28.65          31.01           31.22
+multi-stage codebook ensures reduced computational complex-                                                 Type III                   27.21        27.74          28.56          30.88           31.14
+ity. These advantages establish the proposed frameworks as a
+practical and scalable solution for rate-adaptive SC.
+   We now explore the effectiveness of the shared codebook                                             with G = 128. These ﬁndings conﬁrm that the shared code-
+strategy introduced in Remark 3, which is designed to reduce                                           book strategy provides a highly effective means of mitigating
+the memory requirements of the proposed frameworks. To this                                            memory burden while preserving reconstruction performance.
+end, in Fig. 6, we compare the PSNR performance of the                                                    We further investigate the impact of the quantization bit
+proposed MSVQ-SC framework under the ﬁnite-capacity sce-                                               allocation strategy, discussed in Remark 1, on the performance
+nario for different numbers of groups, G. The results show that                                        of the proposed frameworks. To this end, in Table I, we compare
+although the performance of the framework slightly decreases                                           the PSNR performance of the proposed MSVQ-SC framework
+as G becomes smaller, the degradation remains marginal.                                                under different bit allocation strategies, summarized as follows:
+Meanwhile, the memory requirement of the framework with                                                   • Type I: The ﬁrst 64 VQ modules, corresponding to sub-
+G = 16 is reduced by a factor of eight compared to the case                                                 vectors with higher variances, are assigned 8, 7, and 6
+                                                                                                                                                                    12
+
+
+
+
+     31.5                                                                                        32
+
+
+      31
+                                                                                                 31
+     30.5
+
+
+      30                                                                                         30
+
+
+     29.5
+                                                                                                 29
+      29
+
+
+     28.5                                                                                        28
+
+
+      28
+                                                                                                 27
+     27.5
+
+
+      27                                                                                         26
+       900   1000   1100   1200   1300   1400   1500   1600   1700   1800   1900   2000            -1      1      3      5       7      9      11      13     15
+
+
+
+
+Fig. 7. Comparison of the PSNR performance of the proposed EC-MSVQ-SC                     Fig. 8. Comparison of the PSNR performances of various digital SC frame-
+framework with different values of (λ(1) , λ(2) , λ(3) ).                                 works with different latencies (symbols/image) under the realistic communica-
+                                                                                          tion scenario.
+     bits for the ﬁrst, second, and third stages, respectively.
+     The remaining 64 VQ modules are assigned 6, 5, and 4                                 for λ(t) = 4096 and λ(t) = 2048, the increased emphasis on
+     bits for the ﬁrst, second, and third stages, respectively.                           the rate term results in greater reductions in bit overhead, but at
+   • Type II: The ﬁrst 64 VQ modules, corresponding to sub-                               the expense of higher quantization error, leading to more pro-
+     vectors with higher variances, are assigned 7 bits across all                        nounced degradation in reconstruction performance in the high-
+     stages, while the remaining 64 VQ modules are assigned                               overhead regime. These results highlight the inherent trade-off
+     5 bits across all stages.                                                            between rate efﬁciency and distortion, and demonstrate that the
+   • Type III: All VQ modules are uniformly assigned 6 bits                               proposed framework can ﬂexibly balance the two by adjusting
+     across all stages.                                                                   the parameter λ(t) .
+The results in Table I demonstrate that allocating more quanti-
+zation bits to high-variance sub-vectors (Type I and Type II)
+yields performance improvements compared to uniform allo-                                 C. Evaluation under Realistic Communication Scenarios
+cation (Type III). Furthermore, in the medium-to-low over-
+head regime, assigning more bits to earlier stages (Type I)                                  In this subsection, we evaluate the superiority of the pro-
+provides better reconstruction performance than uniformly dis-                            posed frameworks under a realistic communication scenario in
+tributing bits across stages (Type II). These ﬁndings validate                            which standard channel coding and modulation schemes are
+our variance-guided and stage-aware allocation principle in                               employed. Speciﬁcally, we consider LDPC coding with block
+Remark 1, conﬁrming its effectiveness as a practical design                               length 3156 and three different code rates (1/3, 1/2, and 2/3),
+guideline for the proposed frameworks.                                                    in combination with three modulation schemes: 4-QAM, 16-
+   We also investigate the effectiveness of the rate–distortion-                          QAM, and 64-QAM. The latency of realistic communications
+aware modiﬁcation introduced in Sec. V-A for the proposed EC-                             is deﬁned as the number of modulated symbols required to
+MSVQ-SC framework. To this end, in Fig. 7, we compare the                                 transmit a single image, measured in symbols per image. For
+PSNR performance of the proposed EC-MSVQ-SC framework                                     the proposed MSVQ-SC framework, the number of information
+with different values of λ(t) in (29). As a performance baseline,                         bits is set to 1052, 1578, and 2104 bits for code rates of 1/3,
+we also plot the PSNR of the proposed MSVQ-SC framework.                                  1/2, and 2/3, respectively. Unlike the proposed framework,
+Recall that a larger value of λ(t) places greater emphasis on                             the transmission rate of the existing SingleVQ-SC framework
+the distortion term, causing the performance to approach that                             cannot be adjusted in a ﬁne-grained manner. Therefore, we
+of the scheme without entropy coding. Conversely, a smaller                               adjust its codebook size so that the number of information bits
+λ(t) increases the relative weight of the rate term, reducing the                         is approximately 1024, 1536, and 2048 bits for code rates of
+inﬂuence of distortion. Although this leads to larger quantiza-                           1/3, 1/2, and 2/3, respectively. As shown in Fig. 8, the pro-
+tion errors, it signiﬁcantly decreases the bit overhead. Fig. 7                           posed framework consistently outperforms SingleVQ-SC while
+shows that when λ(t) = 8192, the distortion term dominates,                               enabling precise rate adaptation across diverse communication
+yielding reconstruction performance comparable to that of the                             scenarios. These results highlight that the proposed framework
+framework without entropy coding, with negligible degradation,                            can be seamlessly integrated into standard wireless systems
+while still achieving a reduction in bit overhead. In contrast,                           while retaining its rate-adaptive capability.
+                                                                                                                                                                13
+
+
+
+                          VII. C ONCLUSIONS                                        [10] M. Yang and H.-S. Kim, “Deep joint source channel coding for wireless
+                                                                                       image transmission with adaptive rate control,” in Proc. IEEE Int. Conf.
+   This paper has introduced MSVQ-SC, a novel rate-adaptive                            Acoust., Speech Signal Process. (ICASSP), May 2022, pp. 5193—5197.
+SC framework that enables ﬁne-grained rate control by selec-                       [11] Y. Guan, H. Zhang, and M. Zhang, “Mask learning enabled multi-task
+tively activating multi-stage VQ modules. Unlike conventional                          semantic communication with adaptive rate control,” in Proc. IEEE/CIC
+                                                                                       Int. Conf. Commun. China (ICCC Workshops), Aug. 2024, pp. 254–259.
+single-stage VQ methods, the proposed framework reduces                            [12] Y. Wang, S. Han, H. Liang, R. Meng, C. dong, and P. Zhang, “Feature
+computational complexity and mitigates codebook collapse                               importance-aware task-oriented semantic transmission and optimization,”
+by employing the MSVQ architecture. Meanwhile, the pro-                                IEEE Trans. Cogn. Commun. Netw., vol. 10, no. 4, pp.1175–1189, Aug.
+                                                                                       2024.
+posed framework also optimizes task performance under rate                         [13] M. Rao, N. Farsad, and A. Goldsmith, “Variable length joint source-
+constraints via the stage selection optimization. Extensions                           channel coding of text using deep neural networks,” in Proc. IEEE Int.
+with entropy coding and shared codebooks further improve                               Workshop Signal Process. Adv. Wireless Commun. (SPAWC), Aug. 2018,
+                                                                                       pp. 1–5.
+transmission efﬁciency and reduce memory requirements. Sim-                        [14] J. Park, H. Kim, J. Shin, Y. Oh, and Y.-S. Jeon, “End-to-end training
+ulation results have conﬁrmed that the proposed framework                              and adaptive transmission for OFDM-based semantic communication,” ICT
+consistently outperforms existing digital SC frameworks across                         Exp., early access, doi: 10.1016/j.icte.2025.05.005.
+                                                                                   [15] J. Shin, Y. Oh, J. Park, J. Park, and Y.-S. Jeon, “ESC-MVQ: End-to-end
+multiple metrics, while offering robust adaptability to varying                        semantic communication with multi-codebook vector quantization,” IEEE
+bit budgets and seamless integration with standard wireless                            Trans. Wireless Commun., early access, doi: 10.1109/TWC.2025.3605838.
+systems. These ﬁndings establish MSVQ-SC as a practical and                        [16] E. Fishel, M. Malka, S. Ginzach, and N. Shlezinger, “Remote inference
+                                                                                       over dynamic links via adaptive rate deep task-oriented vector quantiza-
+scalable solution for efﬁcient rate-adaptive SC.                                       tion,” 2025, arXiv preprint arXiv:2501.02521.
+   Future research may extend the proposed MSVQ-SC frame-                          [17] Y. Takida et al., “SQ-VAE: Variational Bayes on discrete representation
+                                                                                       with self-annealed stochastic quantization,” in Proc. Int. Conf. Machine
+work in two directions. First, an adaptive grouping strategy can                       Learning (ICML), Jul. 2022, vol. 162, pp. 20987–21012.
+be developed where each group is assigned a different number                       [18] B. H. Juang, Jr. and A. H. Gray, “Multiple stage vector quantization for
+of subvectors depending on their statistical characteristics or                        speech coding,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process.
+                                                                                       (ICASSP), Apr. 1982, pp. 591–600.
+importance. Such non-uniform grouping is expected to improve                       [19] F. Kossentini, M. J. T. Smith, and C. F. Barnes, “Necessary conditions
+codebook utilization and enhance overall transmission efﬁ-                             for the optimality of variable rate residual vector quantizers,” IEEE Trans.
+ciency. Second, the inherent stage-wise design of the MSVQ-                            Inf. Theory, vol 41, no. 6, pp. 1903–1914, Nov. 1995.
+SC framework can be further exploited to realize a feedback-                       [20] S. Bai, X. Bai, and W. Liu, “Multiple stage residual model for image
+                                                                                       classiﬁcation and vector compression,” IEEE Trans. Multimedia, vol. 18,
+based retransmission scheme. By allowing the receiver to selec-                        no. 7, pp. 1351-–1362, Jul. 2016.
+tively request retransmission of speciﬁc stages, the framework                     [21] J. Lee, J. Kim, and Y. Choi, “Learning variable-rate CSI compression
+could enhance reliability while preserving efﬁcient resource                           with multi-stage vector quantization,” in Proc. Int. Conf. Commun. (ICC),
+                                                                                       Jun. 2024, pp. 5123–5128.
+usage.                                                                             [22] B. Fox, “Discrete optimization via marginal analysis,” Management
+                                                                                       science, vol. 13, no. 3, pp. 210-–216, 1966.
+                                                                                   [23] J. Shin, Y. Kang, and Y.-S. Jeon, “Vector quantization for deep-learning-
+                               R EFERENCES                                             based CSI feedback in massive MIMO systems,” IEEE Wireless Commun.
+                                                                                       Lett., vol. 13, no. 9, pp. 2382–2386, Jun. 2024.
+[1] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and task-
+                                                                                   [24] J. Shin and Y.-S. Jeon, “Error-robust deep learning-based CSI feedback
+    oriented communications,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+                                                                                       in massive MIMO systems: A multi-rate vector quantization approach,” in
+    pp. 5–41, Jan. 2023.
+                                                                                       Proc. 15th Int. Conf. on ICT Convergence (ICTC), Oct. 2024, pp. 1–3.
+[2] X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,
+                                                                                   [25] J. Shin, J. Park, and Y.-S. Jeon, “Entropy-constrained VQ-VAE for deep-
+    open issues, and future research directions,” IEEE Wireless Commun., vol.
+                                                                                       learning-based CSI feedback,” IEEE Trans. Veh. Technol., vol. 74, no. 6,
+    29, no. 1, pp. 210–219, Feb. 2022.
+                                                                                       pp. 9870–9875, Jun. 2025.
+[3] W. Yang, H. Du, Z. Q. Liew, W. Y. B. Lim, Z. Xiong, D. Niyato, X.
+                                                                                   [26] J. Shin, E. Jeon, I. Kim, and Y.-S. Jeon “Deep learning-based CSI
+    Chi, X. Shen, and C. Miao, “Semantic communications for future Internet:
+                                                                                       feedback for Wi-Fi systems with temporal correlation,” IEEE Trans.
+    Fundamentals, applications, and challenges,” IEEE Commun. Surveys Tuts.,
+                                                                                       Commun., early access, doi: 10.1109/TCOMM.2025.3600202.
+    vol. 25, no. 1, pp. 213–250, 1Q 2023.
+                                                                                   [27] A. Van Den Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+[4] C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. V. Poor, “Less
+                                                                                       representation learning,” Proc. Int. Conf. Neural Inf. Process. Syst., Dec.
+    data, more knowledge: Building next generation semantic communication
+                                                                                       2017, pp. 6309–6318.
+    networks,” IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp. 37–76, Feb.
+                                                                                   [28] Y. Oh, J. Lee, C. G. Brinton, and Y.-S. Jeon, “Communication efﬁcient
+    2025.
+                                                                                       split learning via adaptive feature-wise compression,” IEEE Trans. Neural
+[5] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source channel
+                                                                                       Netw. Learn. Syst., vol. 36, no. 6, pp. 10844–10858, Jun. 2025.
+    coding for wireless image transmission,” IEEE Trans. Cogn. Commun.
+                                                                                   [29] D. A. Huffman, “A method for the construction of minimum-redundancy
+    Netw., vol. 5, no. 3, pp. 567–579, Sept. 2019.
+                                                                                       codes,” Proc. Inst. Radio Eng., vol. 40, no. 9, pp. 1098–1101, Sept. 1952.
+[6] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic com-
+                                                                                   [30] I. H. Witten, R. M. Neal, and J. G. Cleary, “Arithmetic coding for data
+    munications for VQA,” IEEE Wireless Commun. Lett., vol. 11, no. 3, pp.
+                                                                                       compression,” Commun. ACM, vol. 30, no. 6, pp. 520-–540, Jun. 1987.
+    553–557, Mar. 2022.
+                                                                                   [31] P. A. Chou, T. Lookabaugh, and R. M. Gray, “Entropy-constrained vector
+[7] W. Gong, H. Tong, S. Wang, Z. Yang, X. He, and C. Yin, “Adaptive bitrate
+                                                                                       quantization,” IEEE Trans. Acoust., Speech, Signal Process., vol. 37, no.
+    video semantic communication over wireless networks,” in Proc. Int. Conf.
+                                                                                       1, pp. 31–42, Jan. 1989.
+    Wireless Commun. Signal Process. (WCSP), Nov. 2023, pp. 122–127.
+[8] M. A. Jarrahi, E. Bourtsoulatze, and V.Abolghasemi, “Rate-adaptive joint
+    source channel coding using deep block-based compressed sensing,” in
+    Proc. IEEE 26th Int. Workshop Multimedia Signal Process. (MMSP), Oct.
+    2024, pp.1–6.
+[9] F. Liu, Z. Sun, Y. Yang, C. Guo, and S. Zhao, “Rate-adaptable multitask-
+    oriented semantic communication: An extended rate–distortion theory-
+    based scheme,” IEEE Internet Things J., vol. 11, no. 9, pp. 15557–15570,
+    May 2024.
+

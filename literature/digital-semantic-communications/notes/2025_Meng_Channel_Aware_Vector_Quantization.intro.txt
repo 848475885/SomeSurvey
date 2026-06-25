@@ -1,0 +1,120 @@
+﻿                                                                                                                                                                                           1
+
+
+
+
+                                                         Channel-Aware Vector Quantization for Robust Semantic
+                                                                               Communication on Discrete Channels
+                                           Zian Meng鈭?, Qiang Li鈭?, Member, IEEE, Wenqian Tang鈭?, Mingdie Yan鈭?, and Xiaohu Ge鈭?, Senior Member, IEEE
+                                                              鈭?Huazhong University of Science and Technology, 430074 P. R. China
+
+
+
+
+                                              Abstract鈥擠eep learning-based semantic communication has                      data [4], [5] by focusing on the extraction and transmission of
+                                           largely relied on analog or semi-digital transmission, which limits             meaningful information rather than raw bits, thereby fostering
+                                           compatibility with modern digital communication infrastruc-                     more efficient and intelligent communication [6].
+                                           tures. Recent studies have employed vector quantization (VQ)
+arXiv:2510.18604v1 [eess.SP] 21 Oct 2025
+
+
+
+
+                                           to enable discrete semantic transmission, yet existing methods                     An imperative avenue in semantic communication research
+                                           neglect channel state information during codebook optimiza-
+                                           tion, leading to suboptimal robustness. To bridge this gap, we                  involves designing semantic coding schemes [7]. Due to the
+                                           propose a channel-aware vector quantization (CAVQ) algorithm                    challenges in applying strict algorithmic strategies to semantic
+                                           within a joint source-channel coding (JSCC) framework, termed                   extraction and processing, there has been a growing reliance
+                                           VQJSCC, established on a discrete memoryless channel. In                        on data-driven deep learning (DL) techniques for the ad-
+                                           this framework, semantic features are discretized and directly                  vancement of semantic codecs [4], [8]鈥揫10]. DL鈥檚 nonlinear
+                                           mapped to modulation constellation symbols, while CAVQ inte-
+                                           grates channel transition probabilities into the quantization pro-              capacities enable the processing of semantic features from data
+                                           cess, aligning easily confused symbols with semantically similar                [11]. Essentially, semantics-driven codecs can be categorized
+                                           codewords. A multi-codebook alignment mechanism is further                      as representation learning, as they focus on embedding mean-
+                                           introduced to handle mismatches between codebook order and                      ingful features into low-dimensional forms while using joint
+                                           modulation order by decomposing the transmission stream into                    source-channel coding (JSCC) to balance compactness and
+                                           multiple independently optimized subchannels. Experimental
+                                           results demonstrate that VQJSCC effectively mitigates the dig-                  redundancy for error resilience [12]鈥揫14]. By autonomously
+                                           ital cliff effect, achieves superior reconstruction quality across              identifying the optimal redundancy level necessary to mitigate
+                                           various modulation schemes, and outperforms state-of-the-art                    channel degradation, these methodologies advance into com-
+                                           digital semantic communication baselines in both robustness and                 prehensive end-to-end solutions that jointly tackle the chal-
+                                           efficiency.                                                                     lenges in semantic extraction, representation, and transmission.
+                                              Index Terms鈥擲emantic communication, digital joint source-
+                                           channel coding, deep learning, channel-aware vector quantiza-                      Despite significant advancements in DL-based JSCC ap-
+                                           tion.                                                                           proaches, these methods predominantly assume continuous
+                                                                                                                           channel inputs with arbitrary precision [14]鈥揫16]. However,
+                                                                                                                           the fundamental requirements for transparent bit transmissions
+                                                                     I. I NTRODUCTION
+                                                                                                                           persist, with digital infrastructures remaining ubiquitously de-
+                                           A. Background and Significance                                                  ployed in foreseeable technological evolution cycles [17]. This
+                                                                                                                           leads to a critical conflict between analog JSCC assumptions
+                                           T     HE evolution from 5G to 6G requires a paradigm shift
+                                                 beyond Shannon鈥檚 communication framework, as the
+                                           conventional focus on bits leads to spectral inefficiency and
+                                                                                                                           and practical digital transmission mechanisms. In this context,
+                                                                                                                           ensuring seamless compatibility between semantic commu-
+                                           complex system architectures [1]. Conventional communi-                         nication paradigms and existing digital channel constraints
+                                           cation systems generally use separate source and channel                        emerges as an unavoidable challenge. Recent studies have
+                                           coding (SSCC), following Shannon鈥檚 separation theorem [2],                      attempted to address this problem, yet many approaches fall
+                                           which suggests it is optimal only if the block length is                        short of strictly modeling fully discrete channels. For instance,
+                                           infinite. In real-world applications with finite block length,                  some systems map semantic features to discrete constellations
+                                           SSCC鈥檚 effectiveness diminishes when channel errors exceed                      at the transmitter but still process noisy continuous constella-
+                                           the correction capacity of the channel coding. As intelli-                      tion points at the receiver. In parallel, methods based on vec-
+                                           gent applications continue to expand, including the industrial                  tor quantized variational autoencoder (VQ-VAE) enable fully
+                                           Internet, vehicular communications, and augmented reality,                      discrete semantic representations but lack the capability for
+                                           SSCC becomes increasingly inadequate [3]. Unlike syntax-                        channel-aware end-to-end optimization, leading to degraded
+                                           focused systems that strictly separate source and channel                       performance compared with analog baselines [12], [18]鈥揫20].
+                                           coding, semantic communication utilizes shared knowledge                        Motivated by this gap, this paper aims to resolve two pivotal
+                                           bases and end-to-end semantic coding to minimize redundant                      questions:
+
+                                             Zian Meng, Qiang Li (Corresponding author), Wenqian Tang, Mingdie Yan,
+                                           and Xiaohu Ge are with Huazhong University of Science and Technology,             1) How to design robust semantic communication architec-
+                                           430074 P. R. China (emails: zian@hust.edu.cn, wqtang@hust.edu.cn, yan-               tures under discrete channel models?
+                                           mingdie@hust.edu.cn, qli patrick@hust.edu.cn, xhge@mail.hust.edu.cn).
+                                             This work is partially supported by the Natural Science Foundation of China     2) How to perform end-to-end optimization of digital se-
+                                           (NSFC) under grant U24A20212.                                                        mantic coding and modulation?
+                                                                                                                                   2
+
+
+
+B. Related Works                                                   standard digital decoders.
+                                                                      Inspired by the VQ-VAE model [34], many emerging meth-
+   1) DL-Enabled JSCC: JSCC merges source and channel              ods leverage vector quantization with codebook-based frame-
+coding into a coherent process, achieving end-to-end optimal-      works to implement fully digital semantic communication
+ity in communication systems. Initial JSCC methods [21]鈥揫24]       structures [20], [35]鈥揫37]. In this approach, high-dimensional
+focused on specific source and channel distributions but faced     semantic data are encoded into continuous latent forms, then
+implementation challenges due to high complexity. Recent           mapped onto discrete codebook entries based on the nearest
+advances in DL have revitalized JSCC through data-driven           distance criteria. This indexing aligns perfectly with digital
+approaches, notably for wireless text transmission [8] and         communication pipelines by linking semantic symbols to mod-
+image transmission [9]. DL-based JSCC exhibits two core            ulation alphabets. However, the typical VQ-VAE framework
+attributes: source compression and end-to-end optimization.        does not consider channel states in its training objectives,
+Source compression leverages deep neural networks (DNNs)           which limits its adaptability to different channel conditions.
+to distill high-dimensional source data into lower-dimensional,    Moreover, it links codebook size directly to modulation orders,
+critical features, thus facilitating the efficient use of band-    restricting the flexibility in choosing modulation schemes
+width for transmission. Meanwhile, end-to-end optimization         while maintaining a constant quantization level.
+is achieved through gradient descent across simulated commu-
+nication channels, which enables the automatic balancing of
+semantic fidelity with resilience to channel disruptions. These    C. Contributions
+attributes collectively warrant the classification as JSCC.           The main contributions of this paper are summarized as
+   Based on the two attributes mentioned above, the design of      follows:
+DL-based JSCC frameworks revolves around two fundamen-                鈥?We propose VQJSCC, a robust digital semantic com-
+tal aspects. The first aspect involves the DNN architecture,            munication architecture that enables discrete signal pro-
+which demands customization to suit specific modalities and             cessing at both the encoder and decoder. A DL-based
+tasks. For instance, transformers are commonly utilized for             image transmission system is established on a discrete
+transmitting text, whereas convolutional neural networks are            memoryless channel (DMC), building upon the VQ-VAE
+used for image transmission. Additionally, various studies              backbone. Compared to existing analog and semi-digital
+integrate rate adaptation techniques, such as dynamic masking           JSCC schemes, VQJSCC provides channel-aware discrete
+[10], parameter lookup tables [13], or importance awareness             semantic coding and accommodates arbitrary modulation
+mechanism [25], to flexibly adjust the coding rate in response          schemes, addressing Question 1.
+to channel conditions. The second aspect concerns the design          鈥?To overcome the limitation of VQ methods that ignore
+of the simulated channel for training purposes. In most cases,          channel state information (CSI), we propose an algorithm
+the channel is modeled by either adding Gaussian noise                  of channel-aware vector quantization (CAVQ).In view of
+to the features extracted by the DNN to simulate additive               the fact that the transmission error determines the upper
+white Gaussian noise (AWGN) channels or by multiplying                  bound of the reconstruction loss, CAVQ designs a loss
+features with complex Gaussian random variables, followed               function that explicitly incorporates the channel transi-
+by the addition of AWGN noise, to simulate Rayleigh fading              tion probability and aggregates the codewords with high
+channels [8], [9], [26]鈥揫28]. However, these schemes require            error probabilities in the semantic space to minimize the
+full-resolution constellation transmission, creating a mismatch         transmission error, thereby achieving channel-aware joint
+with existing digital communication infrastructures and hinder-         optimization on discrete channel models. This addressed
+ing practical implementation [18], [28]鈥揫30]. This challenge            Question 2.
+motivates the development of JSCC methods accommodating               鈥?When the codebook and modulation orders are mis-

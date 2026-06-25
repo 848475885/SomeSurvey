@@ -1,0 +1,553 @@
+                                                                                                                                                                                                 D2-JSCC: Digital Deep Joint Source-channel
+                                                                                                                                                                                                    Coding for Semantic Communications
+2024 IEEE 35th International Symposium on Personal, Indoor and Mobile Radio Communications (PIMRC) | 979-8-3503-6224-4/24/$31.00 ©2024 IEEE | DOI: 10.1109/PIMRC59610.2024.10817394
+
+
+
+
+                                                                                                                                                                                                                        Jianhao Huang∗ , Kai Yuan† , Chuan Huang† , and Kaibin Huang∗
+                                                                                                                                                                                                 ∗
+                                                                                                                                                                                                 Department of Electrical and Electronic Engineering, The University of Hong Kong, 999077, Hong Kong.
+                                                                                                                                                                                                        †
+                                                                                                                                                                                                          Shenzhen Future Network of Intelligence Institute and School of Science and Engineering
+                                                                                                                                                                                                                    The Chinese University of Hong Kong, Shenzhen 518172, China.
+                                                                                                                                                                                               Emails: jianhaoh@hku.hk, kaiyuan3@link.cuhk.edu.cn, huangchuan@cuhk.edu.cn, and huangkb@eee.hku.hk.
+
+
+
+                                                                                                                                                                                          Abstract—Semantic communications (SemCom) have emerged                      those of the classical separation-based JPEG/JPEG2000/BPG
+                                                                                                                                                                                       as a new paradigm for supporting sixth-generation applications                 compression schemes combined with practical channel codes
+                                                                                                                                                                                       with high communication efficiencies. Most existing SemCom                     [2], [4]. However, the analog nature of the schemes make it
+                                                                                                                                                                                       techniques utilize deep neural networks (DNNs) to implement
+                                                                                                                                                                                       analog source-channel mappings, which are incompatible with                    incompatible with modern communication hardware that is
+                                                                                                                                                                                       existing digital communication architectures. To address this                  prevalently digital. This motivates researchers to transform
+                                                                                                                                                                                       issue, this paper proposes a novel framework of digital deep joint             continuous-valued outputs from DNNs into discrete constel-
+                                                                                                                                                                                       source-channel coding (D2 -JSCC) targeting image transmission                  lation symbols for transmission, thereby establishing a semi-
+                                                                                                                                                                                       in SemCom. The framework features digital source and channel                   analog deep JSCC framework [5]. In relevant schemes, an
+                                                                                                                                                                                       codings that are jointly optimized to reduce the end-to-end (E2E)
+                                                                                                                                                                                       distortion. First, deep source coding with an adaptive density                 additional DNN-based modulation block is introduced to gen-
+                                                                                                                                                                                       model is designed to efficiently extract and encode semantic fea-              erate transition probabilities from learned features to the con-
+                                                                                                                                                                                       tures according to their different distributions. Second, channel              stellation symbols. The DNNs for encoder, modulation, and
+                                                                                                                                                                                       coding is employed to protect encoded features against channel                 decoder are jointly trained to optimize the E2E performance.
+                                                                                                                                                                                       distortion. To facilitate their joint design, the E2E distortion is            However, the semi-analog JSCC still lacks the digital channel
+                                                                                                                                                                                       characterized as a function of the source and channel rates. Then
+                                                                                                                                                                                       to minimize the E2E distortion, we propose an efficient two-step               encoder/decoder and thus is incompatible with the standard
+                                                                                                                                                                                       algorithm to find the optimal trade-off between the source and                 systems. Furthermore, the DNN training relies on off-line
+                                                                                                                                                                                       channel rates for a given channel signal-to-noise ratio (SNR). Via             back propagation over a certain number of channel samples,
+                                                                                                                                                                                       experiments on simulating the D2 -JSCC with different channel                  and thus is sensitive to the variation of channel statistics and
+                                                                                                                                                                                       codes and real datasets, the proposed framework is observed                    machine task.
+                                                                                                                                                                                       to outperform the classic deep JSCC and separation-based
+                                                                                                                                                                                       approaches.                                                                       In this paper, we aim to propose a novel framework of
+                                                                                                                                                                                                                                                                      digital deep joint source-channel coding (D2 -JSCC) targeting
+                                                                                                                                                                                                              I. I NTRODUCTION
+                                                                                                                                                                                                                                                                      image transmission in SemCom. In particular, we consider a
+                                                                                                                                                                                          The sixth-generation (6G) mobile networks are being devel-                  point-to-point SemCom system, where the transmitter utilizes
+                                                                                                                                                                                       oped to support a broad range of emerging applications, such                   the DNNs to extract the low-dimensional features of image
+                                                                                                                                                                                       as autonomous vehicles, surveillance, and virtual/augmented                    data and sends them to the receiver for recovery. Specifically,
+                                                                                                                                                                                       reality (VR/AR) [1]. This poses tremendous challenges of                       the key contributions of this paper are summarized as follows:
+                                                                                                                                                                                       utilizing limited spectrum resources to meet much more strin-
+                                                                                                                                                                                       gent performance requirements than those for fifth-generation                     • D2 -JSCC Architecture: We propose a novel D2 -JSCC
+                                                                                                                                                                                       (5G) [1], [2]. As a promising solution empowered by artificial                      architecture for SemCom, which combines the deep
+                                                                                                                                                                                       intelligence (AI), semantic communications (SemCom) start                           source coding with the digital channel coding. First, the
+                                                                                                                                                                                       a new paradigm to effectively extract and transmit seman-                           deep source coding with an adaptive density model [6]
+                                                                                                                                                                                       tic features of raw data, thereby substantially reducing the                        is designed to efficiently extract and encode semantic
+                                                                                                                                                                                       communication overhead [2], [3]. However, the constraints                           features of data. Then, digital channel block coding is
+                                                                                                                                                                                       imposed by existing digital hardware present challenges in the                      employed to safeguard the encoded features for trans-
+                                                                                                                                                                                       development of AI-empowered transceivers for SemCom.                                missions. Based on the architecture, an end-to-end (E2E)
+                                                                                                                                                                                          Recently, the impressive capability of deep learning methods                     distortion minimization problem is formulated.
+                                                                                                                                                                                       for nonlinear mappings has sparked significant interests in                       • E2E Distortion Approximation: To facilitate the joint
+                                                                                                                                                                                       implementing analog joint source-channel coding (JSCC) for                          design of source-channel coding, the E2E distortion is
+                                                                                                                                                                                       real-world data. By using the deep neural networks (DNNs),                          approximately derived as a function with respect to
+                                                                                                                                                                                       a so called deep JSCC scheme directly maps the source data                          (w.r.t.) the parameters of DNNs and channel rate. From
+                                                                                                                                                                                       (e.g., image [2]), into a reduced-dimensional feature space for                     the observation of the E2E distortion, it is found that the
+                                                                                                                                                                                       transmissions over analog channels. The early work on deep                          key problem of minimizing the E2E distortion is to jointly
+                                                                                                                                                                                       JSCC schemes has shown a higher compression efficiency than                         adapt the source-channel rates to the channel signal-to-
+
+
+
+
+                                                                                                                                                                                      979-8-3503-6224-4/24/$31.00 ©2024 IEEE
+
+
+
+                                                                                                                                                                                               Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+                                                                     Joint optimization
+
+                                                                                SNR
+                                Entropy           Digital channel                         Digital channel          Entropy
+                                                                         Channel
+                                encoder              encoder                                 decoder               decoder
+
+                   Deep source encoder                                                                               Deep source decoder
+
+Fig. 1: The proposed D2 -JSCC architecture for SemCom. The solid and dashed arrows represent the directions of signal flows
+and optimization paths, respectively.
+
+                                           Adaptive density model                               Adaptive density
+                                                                EE                                      ED
+
+
+
+
+                                                         EE          concat                  Separate
+                                                                                               bits
+                                                                                                             ED
+
+                                         (a) Deep source encoder                             (b) Deep source decoder
+
+Fig. 2: Architectures of the deep source encoder and decoder using adaptive density model. ⌈·⌋, EE, and ED represent the
+quantization, entropy encoder, and entropy decoder, respectively.
+
+
+      noise ratio (SNR).                                                        A. Deep Source Coding
+  •   Optimal Rate Control: To minimize the E2E distortion,                       Source coding aims to compress data into bit streams within
+      we propose an efficient two-step algorithm to balance                     a certain amount of distortion, consisting of an encoding
+      the trade-off between the source and channel rates for a                  function F : X M → {0, 1}B , and a decoding function
+      given channel SNR. In the first step, the source encoder                  F −1 : {0, 1}B → X M , where X M is the set of all possible
+      is initially optimized by selecting a DNN model with                      data x of dimension M and B is the number of coded bits.
+      a suitable source rate from a designed look-up table                      The distortion of source coding, denoted by Ds , is measured
+      consisting of a set of trained models. In the second step,                using average mean square error (MSE) metric, i.e.,
+      the preceding DNNs (source encoder) are retrained to                                                                    
+      adapt to the channel SNR so as to achieve the optimal                                             1         −1         2
+                                                                                            Ds = Ex       ||x − F (F(x))|| .              (1)
+      E2E performance.                                                                                 M
+Experimental results reveal that the proposed D2 -JSCC mit-                        Since the data’s distribution is usually intractable, we
+igates the “leveling-off effect” and “cliff effect” commonly                    employ the method of deep source coding [6] that utilizes
+existing for digital system1 . In addition, the proposed scheme                 DNNs to learn the close-to-optimal encoding and decoding
+outperforms classic deep JSCC scheme.                                           functions according to a certain number of data samples. In the
+                                                                                following, we introduce the deep source encoder and decoder,
+        II. D2 -JSCC A RCHITECTURE AND P ROBLEM                                 as illustrated in Fig. 2.
+                      F ORMULATION                                                 1) Deep source encoder: First, the input image sample,
+                                                                                x ∈ X M , with element value ranging from 0 to 1, is mapped
+   Consider a point-to-point SemCom system where the trans-                     to a K-dimensional continuous vector, y, by the feature
+mitter aims to compress a M -dimensional image vector x,                        extraction function, Fϕ , parameterized by the variable ϕ. For
+and send it to the receiver for recovery. Due to the bandwidth                  lossy compression, K is much smaller than M . Then, y is
+limitation, x needs to be compressed and encoded into digital                   quantized as a discrete vector, ỹ ∈ ZK , i.e., ỹ = ⌈y⌋, where
+symbols for transmission. To boost the E2E performance of                       ⌈·⌋ denotes the uniform scalar quantization with step size being
+the SemCom system, a novel D2 -JSCC framework, which                            one [6]. It is worth mentioning that accurately learning the
+integrates the digital communication architecture with deep                     distribution of ỹ can significantly reduce the redundancy of
+learning techniques, is proposed as shown in Fig. 1.                            feature representation, leading to a lower source rate. To this
+                                                                                end, we introduce the adaptive density model to learn the
+   1 The “cliff effect” occurs when the channel SNR falls beneath a certain
+                                                                                probability density function (PDF) of y for each image sample.
+threshold and the E2E performance degrades drastically. The “leveling-off
+effect” refers to the fact that the E2E performance remains constant even       In the model, y is fed into a function Lθ1 (y) with parameter
+when the channel SNR is increased above the threshold.                          θ1 to extract the continuous vector, z ∈ RD , D < K, which
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+is quantized as z̃ ∈ ZD , i.e., z̃ = ⌈z⌋. The features, {yi },                 block code (e.g., polar code with binary phase shift keying
+conditioned on z̃ can be modeled as the independent while                      (BPSK) modulation) with N and L being the coded bit length
+not identically distributed (i.n.i.d.) Gaussian random variable                and block length, respectively. The channel rate, Rc , for the
+with mean ui and variance σi2 . In other words,                                block code is calculated as Rc = N
+                                                                                                                L and needs to be designed.
+                                                                               Assuming that the transmitted symbols are equiprobable, the
+                   pyi |z (yi |z̃) = N (yi ; ui , σi2 ),                (2)
+                                                                               block error probability of the code can be characterized as
+where N (a; u, σ) denotes the PDF of a Gaussian distribu-                      a function of the channel rate. For example, in the Additive
+tion with mean u and variance σ, evaluated at the point a.                     White Gaussian Noise (AWGN) channel with an SNR of γ,
+ui and σi are estimated by applying a transform function,                      the average block error probability with random coding and
+Lθ2 , with a parameter θ2 to z̃, i.e., [u, σ] = Lθ2 (z̃) with                  maximum likelihood (ML) decoder is approximated by [7]
+u = [u1 , u2 , · · · , uK ]T and σ = [σ1 , σ2 , · · · , σK ]T . The                                                   
+                                                                                               √
+conditional i.n.i.d. probability mass function (PMF) of ỹ can                               L (log2 (1 + γ) − Rc ) 
+be expressed as                                                                      ρ ≈ Q  r              
+                                                                                                                        , for large L. (4)
+                                                                                                                       
+                                                                                                          1       2
+                         K
+                            (Z
+                                ki +0.5
+                                                             )                                     1 − (1+γ)2 log2 (e)
+                         Y
+    Pỹ|z̃ (ỹ = k|z̃) =                N (yi ; ui , σi2 )dyi , (3)
+                         i=1      ki −0.5                                      For practical channel coding and modulation (e.g. polar coding
+                                                                               [8]), we approximate the average block error probability as
+with k = [k1 , k2 , · · · , kK ]T ∈ ZK . Then, lossless entropy
+encoding (e.g., arithmetic encoding [6]), is employed to en-                                                 ρ ≈ eβ1 Rc +β2 .                         (5)
+code the quantized vector ỹ into a bit stream, by ∈ {0, 1}By ,
+                                                                               Experiments have shown that this approximation is accurate
+according to its PMF, Pỹ|z̃ (ỹ|z̃). The bit length follows
+                                                                               when ρ is small. The parameters, β1 > 0, and, β2 ∈ R, which
+By ≈ − log2 Pỹ|z̃ (ỹ|z̃). It worth mentioning that the variable
+                                                                               depend on the SNR γ, channel code type, and block length L,
+z̃ is often referred to as the side information of features, and
+                                                                               can be easily estimated by offline simulations.
+needs to be transmitted to receiver. Hence, z̃, is encoded into
+bits bz ∈ {0, 1}Bz by the entropy encoder according to its
+PMF, Pz̃ (z̃), which is computed using the non-parametric                      C. Transmission Process
+fully-factorized density model [6]. Finally, the bits of features
+and side information are concatenated into the bit streams,                       Based on the preceding coding schemes, the overall trans-
+b ∈ {0, 1}B , with B = By + Bz for transmission. The                           mission process of the considered SemCom system is de-
+expected source rate of encoding data, x, is defined as                        scribed as follows. At the transmitter side, the input data
+the entropy of (ỹ, z̃), i.e., Rs = E{B} = H(ỹ, z̃) =                        vector, x, is encoded into the bit stream b ∈ {0, 1}B by the
+E − log2 Pỹ|z̃ (ỹ|z̃) − log2 Pz̃ (z̃) [6]. In conclusion, the                deep source encoder, i.e., b = F(x; Φ). Then, b is divided into
+encoding function F can be specified in terms of parameters                    multiple packets of equal length of N bits for transmission.
+{ϕ, θ1 , θ2 }, i.e., b = F(x; Φ), with Φ = {ϕ, θ1 , θ2 }.                      For each packet, the common (N, L) block code with the
+   2) Deep source decoder: As shown in Fig. 2(b), the                          rate Rc is employed to encode the data bits into a symbol
+received bits b̂ are separated into two parts: feature bits b̂y                sequence of length L, represented by si ∈ CL for packet i.
+and side information bits b̂z . First, b̂z is fed into the entropy             The transmitted symbols satisfy the unit power constraint, i.e.,
+                                                                                1    H
+decoder to decode the side information, ẑ, according to the                   L E(si si ) = 1. The total number of transmitted packets is
+                                                                                                     B
+shared PMF Pz̃ (z̃). Then, ẑ is fed into the function Lθ2 to                  calculated by T = ⌈ LR  c
+                                                                                                         ⌉, where ⌈·⌉ denotes the rounding-up
+compute the PMF, Pŷ|ẑ (ŷ|ẑ), given in (3). With Pŷ|ẑ (ŷ|ẑ)             operation. The bandwidth ratio is defined as TML to measure
+and b̂y , the feature vector, ŷ, is decoded by utilizing the                  the average channel uses for transmitting one element of x.
+entropy decoder. Finally, the decoded feature vector, ŷ, is input                The input-and-output relationship of the AWGN channel can
+into the recovery function Gψ parameterized by the variable                    be expressed as
+ψ to recover the image data x̂: x̂ = Gψ (ŷ). Function Gψ is
+                                                                                   ri,j = si,j + ni,j , i = 1, 2, · · · , T, j = 1, 2, · · · , L,     (6)
+designed to be the inverse function of Fϕ . In a nutshell, the
+source decoding function, F −1 , can be specified in terms of                  where si = [si,1 , si,2 , · · · , si,L ]T denotes the symbols in
+parameters {θ2 , ψ} as x̂ = F −1 (b̂; θ2 , ψ).                                 packet i, ri = [ri,1 , ri,2 , · · · , ri,L ]T denotes the received sym-
+   In the deep source encoder and decoder, the parameterized                   bols, and ni = [ni,1 , ni,2 , · · · , ni,L ]T is the independent and
+functions {Fϕ , Lθ1 , Lθ2 , Gψ } are designed by using DNNs,                   identically distributed (i.i.d.) circularly symmetric complex
+whose architecture and training process will be introduced in                  Gaussian (CSCG) noise with mean zero and variance δ 2 I.
+the sequel sections.                                                           The received SNRs, calculated as γ = δ12 , are same across
+                                                                               blocks.
+B. Digital Channel Coding                                                         At the receiver side, the symbols in the total of T received
+  The purpose of the digital channel coding is to protect the                  packets are decoded into the bit stream b̂ by the channel
+data bits delivered from source coding against channel errors.                 decoder. Then, the bit stream b̂ is fed into the deep source
+Without loss of generality, we consider an arbitrary (N, L)                    decoder F −1 to recover the data, i.e., x̂ = F −1 (b̂; θ2 , ψ). The
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+average E2E distortion of the considered system with D2 -JSCC                 Remark 3.1. Based Theorem 3.1, we can conclude that mini-
+can be then defined as                                                        mizing the source rate, Rs , and the block error probability, ρ,
+                   
+                      1
+                                                                             helps to reduce the channel distortion caused by transmission
+                                  2
+      Dt = Ex,N         ||x − x̂|| , with N = {ni }.       (7)                errors. However, decreasing ρ requires a lower channel rate
+                     M
+                                                                              Rc , which increases the bandwidth cost for transmission. On
+D. Problem Formulation                                                        the other hand, the source distortion, Ds , increases w.r.t.
+  Given the above system model, our goal is to minimize the                   decreasing Rs , which can increase the total distortion D̂t .
+E2E distortion in (7) subject to a constraint on the average                  Therefore, it is important to characterize the trade-off between
+channel uses. The optimization problem can be formulated as:                  Rc and Rs for the purpose of minimizing the E2E distortion
+                                                                              subject to a constraint on the total channel uses.
+              min       Dt                                             (8)
+           {Φ,ψ},Rc
+                                                                          B. Problem Approximation
+                              B
+              s.t.     Ex         L ≤ d, Rc ≥ 0,                                 According to Theorem 3.1, minimizing the E2E distortion,
+                             LRc                                              Dt , can be relaxed as minimizing its upper bound, D̂t . How-
+where d > 0 denotes the maximal number of channel uses.                       ever, it is still challenging to accurately characterize D̂t , since
+When the optimal channel rate, Rc∗ , for Problem (8) is                       the exact Lipschitz constant, Cψ , and the parameter, α̃ρ,Φ ,
+obtained, a (⌈LRc∗ ⌉, L) block code lcan bem constructed for                  are hard to estimate. To address this issue, we let (α̃ρ,Φ − 1)
+                                       B
+channel coding. Using the inequality LR  c
+                                            L ≤ RBc + L and                   be a strictly positive constant, denoted as α̂ > 0, and let
+Rs = Ex {B}, Problem (8) can be relaxed as                                    C̃ψ = α̂Cψ . Then, we approximate the upper bound, D̂t , as
+
+                       min        Dt                                   (9)                                    D̂t ≈ Ds + Dc ,                        (11)
+                     {Φ,ψ},Rc
+                                Rs                                            where Dc denotes the channel distortion, defined as
+                       s.t.          ˜ Rc ≥ 0,
+                                   ≤ d,                                                                        2Rs /K          
+                                Rc                                                     K                       2            1
+                                                                                 Dc =       1 − (1 − ρ)T̃ C̃ψ             +       .                  (12)
+where d˜ = d − L.                                                                      M                           2πe       12
+   However, there remain several challenges in solving Prob-                  When the DNN parameters {Φ, ψ} are fixed, the parameter
+lem (9). First, the E2E distortion Dt has no closed-form                      C̃ψ can be estimated by offline simulations to let D̂t fit the
+expression due to the intractability of DNNs, making it hard                  true E2E distortion Dt .
+to directly optimize the channel rate, Rc . Second, the quan-                    Based on the approximate E2E distortion given in (11), the
+tization operation and the digital source/channel coding are                  original problem (9) can be relaxed as:
+all discrete functions, which makes it difficult to optimize the
+parameters {Φ, ψ} of DNNs by applying the gradient descent                                             min          D̂t                              (13)
+                                                                                                     {Φ,ψ},Rc
+method [2].                                                                                                       Rs
+                                                                                                       s.t.            ˜ Rc ≥ 0.
+                                                                                                                     ≤ d,
+      III. C HARACTERIZATION OF E2E D ISTORTION                                                                   Rc
+  In this section, the E2E distortion is characterized as a                   According to Remark 3.1, the key idea of solving Problem
+function of the NN parameters and channel rate to help solving                (13) is to find the trade-off between the source rate, Rs , and
+Problem (9).                                                                  the channel rate, Rc .
+
+A. Upper bound on E2E distortion                                                       IV. O PTIMAL R ATE C ONTROL FOR D2 -JSCC
+   We present the main result of the E2E distortion in the                       In this section, we propose an efficient algorithm to optimize
+following theorem.                                                            the source and channel rates for D2 -JSCC. To reduce com-
+                                                                              putational complexity, the proposed algorithm is designed to
+Theorem 3.1. Given the data dimension M , there exists a
+constant α̃ρ,Φ > 1 w.r.t. ρ, Φ, such that the E2E distortion                  have two-step NN-optimization procedure: 1) Source-encoding
+                                                                              model selection and 2) model retraining, which are presented
+given in (7) is upper bounded by Dt ≤ D̂t with D̂t being
+defined as                                                                    in the following subsections.
+
+             K                                         2Rs /K
+                                                         2          1
+                                                                      
+                                                                              A. Step I: Source-encoding Model Selection
+D̂t ≜ Ds +      1 − (1 − ρ)T̃ Cψ (α̃ρ,Φ − 1)                     +      .
+             M                                             2πe     12            In Step I, we optimize the deep source encoder and decoder
+                                                                              by selecting a DNN model with a suitable source rate from a
+             |                     {z                                 }
+                                   Channel distortion
+                                                                      (10)    designed look-up table. In the followings, the look-up table
+                Rs                                                            with different DNN models is designed and then the joint
+Here, T̃ =      LRc   and Cψ denotes the Lipschitz constant
+                                                                              optimization algorithm for the DNNs and channel rate is
+of function Gψ with ||Gψ (y1 ) − Gψ (y2 )||2 ≤ Cψ ||y1 −
+                                                                              presented.
+y2 ||2 , ∀y1 , y2 ∈ Y K . The equality holds when ρ = 0.
+                                                                                 1) Model look-up table: The parameters {Φ, ψ} of a
+     Proof: Due to the space limitation, the proof will be                    set of DNNs are trained under error-free transmissions (i.e.,
+presented in the journal version of this paper.                               ỹ = ŷ). The key idea is to balance the source rate, Rs , and
+
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+the source distortion, Ds via minimizing the rate-distortion
+function similarly as in [6]:                                                                                        25.5
+
+                           min λDs + Rs ,                             (14)                                                                                (Rc* , Rs* )
+
+                          {Φ,ψ}
+                                                                                                                     25.0
+
+
+
+
+                                                                                     Log inverse of the distortion
+                                                                                                                                                                     λ↓
+where λ > 0 is a hyper-parameter. By approximating the quan-                                                                      (Rc* , Rs* )
+                                                                                                                                                                    (Rc , Rs )
+tization error as the uniform noise [6], the back-propagation                                                        24.5                   λ↑
+method can be easily utilized to train the parameters {Φ, ψ}
+                                                                                                                                           (Rc , Rs )
+according to Problem (14). By varying λ, a set of DNN models
+associated with different source rates and distortion levels can                                                     24.0
+                                                                                                                                             E2E performance of model selection with Bpp=0.07
+be obtained. For each DNN model, the parameters C̃ψ , Rs ,                                                                                   E2E performance of model selection with Bpp=0.09
+and Ds can be estimated using the real dataset.                                                                                              Solutions from model selection
+                                                                                                                     23.5                    Optimal Solutions
+   2) Joint model selection and rate control: To validate
+                                                                                                                            1.5   2.0            2.5        3.0          3.5     4.0       4.5
+the generality of the proposed algorithm, we consider two                                                                                               SNR (dB)
+types of block channel coding: the ideal random coding
+                                                                               Fig. 3: E2E performance of the D2 -JSCC system with the joint
+and practical polar coding. The relationships between the
+                                                                               model selection and rate control algorithm. The experiments
+block error probability, ρ, and the channel rate, Rc , over the
+                                                                               are conduced over Open Image Dataset [9] with random
+equivalent AWGN channel are specified in (4) and (5).
+                                                                               coding, block length L = 512, and bandwidth ratio being
+   Based on the preceding look-up table and the specific block
+                                                                               0.02.
+codes, we resort to an efficient algorithm to optimize Problem
+(13). When the NN parameters {Φ, ψ} are fixed and given
+the approximation, (1 − ρ)T̃ ≈ (1 − T̃ ρ), for small ρ, Problem                phenomenon is due to the fact that when the channel distortion
+(13) reduces to                                                                exponentially increases, Step I algorithm selects another NN
+                          min        T̃ ρ                             (15)     model with a lower source rate Rs to suppress the cliff
+                           Rc                                                  effect. To further analyze this issue, the behavior of the E2E
+                                          Rs                                   performance can be described as two stages: “leveling-off
+                           s.t.      Rc ≥     .
+                                          d˜                                   stage” and “cliff stage”:
+From Problem (15), we observe that when the channel rate is                        • “Leveling-off stage” denotes the SNR interval over which
+larger than the capacity, i.e., Rd˜s > log2 (1+γ), it is impossible                   the channel distortion approaches to zero, i.e., F1 =
+to construct a block code to achieve reliable communications                          {γ|0 ≤ Dc ≤ η1 } for small η1 > 0. In this stage, the
+due to a high error probability (ρ ≈ 1).                                              E2E performance is limited by the source encoding, i.e.,
+                                                                                      the source distortion Ds dominates the E2E distortion
+Lemma 4.1. Suppose that Rd˜s ≤ log2 (1 + γ). For random                               D̂t . To enhance the E2E performance, the source rate,
+coding and a sufficiently long block length L, the optimal                            Rs , needs to be increased to reduce the source distortion.
+solution Rc∗ for Problem (15) is given as Rc∗ = Rd˜s . For the                     • “Cliff stage” denotes the SNR interval over which the
+polar coding with the block error probability given in (5), the                       channel distortion dramatically increases, i.e., F2 =
+optimal solution Rc∗ of Problem (15) is given as                                      {γ|Dc ≥ η1 } for η1 > 0. This phenomenon is known as
+                                                                                      cliff effect. In this stage, the DNNs need to be retrained
+                      (
+                          Rs
+                  ∗        d˜
+                              , if Rd˜s ≥ β11 ,
+                Rc =      1                               (16)                        to reduce the source rate, Rs , to mitigate the cliff effect.
+                          β1 ,  Otherwise.
+                                                                                   In summary, retraining the DNNs to adaptively control
+      Proof: Lemma 4.1 can be proved by computing the first-                   the source rate Rs based on the channel SNR γ is crucial
+order gradient of the objective function in Problem (15).                      for enhancing E2E performance. An effective method for
+   Based on Lemma 4.1, we utilize the exhaustive search algo-                  controlling the DNNs is to adjust the hyper-parameter λ as
+rithm to find the DNN model with the lowest E2E distortion                     defined in (14). It has been noted that training the DNNs with a
+D̂t ({Φ, ψ}, Rc∗ ) from the established look-up table.                         higher λ leads to a consistent decrease in the source distortion,
+                                                                               Ds , while simultaneously increasing Rs . Inspired by this idea
+B. Step II: Source-encoding Model Retraining                                   and the performance behavior in Fig. 3, we propose an iterative
+   The performance of Step I algorithm is sub-optimal due                      algorithm to find the optimal λ∗ and retrain the DNNs.
+to the limited number of DNNs in the look-up table. In this                        Let λ1∗ , {Φ, ψ}1∗ , Dc1∗ and C̃ψ1∗ represent the hyper-
+subsection, the obtained NN parameters {Φ, ψ} are retrained                    parameter, NN parameters, channel distortion, and the es-
+to adapt to the channel SNR, thereby approaching the optimal                   timated parameter from the model selection algorithm, re-
+solution of Problem (13).                                                      spectively. The DNNs are initialized from the parameters
+   To this end, we examine the log inverse of the distortion,                  {Φ, ψ}1∗ . The estimated parameter C̃ψ w.r.t. the sensitivity
+i.e., 10 log( D̂1 ), w.r.t. the SNR γ after Step I algorithm as                of source decoder is assumed to be constant and equal to
+                 t
+shown in Fig. 3. It is observed that with the SNR decreasing,                  C̃ψ1∗ . Then, the algorithm for the model retraining iterates the
+the E2E performance will descend in a stepped manner. This                     following two steps: 1) model retraining for a fixed hyper-
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+parameter; 2) hyper-parameter updating, which are elaborated                          hyper-parameter λ̂0 is calculated by (19). The updating
+in the following subsections.                                                         of the hyper-parameter λ̂i follows:
+   1) Model retraining for a fixed hyper-parameter: By
+                                                                                                           λ̂i−1 + λ̄min
+involving channel distortion into Problem (14), we propose a                                       λ̂i =                 , λ̄max = λ̂i−1 ,            (21)
+new loss function to retrain the DNNs:                                                                           2
+                                                                               The updated hyper-parameter λ̂i will be used in step 1) for
+                      L̂ = λ̂i Ds + β D̂c + Rs ,                      (17)
+                                                                               retraining the DNNs. Finally, alternating the above two steps
+where β > 0 is a constant, and                                                 until the algorithm converges.
+                                   2Rs /K      
+         K               T̃
+                             
+                               1∗  2          1
+   D̂c =      1 − (1 − ρ) C̃ψ              +      ,                   (18)                         V. E XPERIMENTAL R ESULTS
+         M                           2πe     12
+                                                                               A. Experimental Settings
+and the channel rate Rc is calculated from Lemma 4.1. Here,
+λ̂i > 0, i ≥ 1, represent the updated hyper-parameter at the                      • DNN architecture and datasets: We adopt the classic
+i-th iteration, which is introduced later. The newly derived                        hyper-prior model in [6] as the source-encoding architec-
+loss function in (17) is differentiable w.r.t. the NN parameters                    ture to validate the proposed D2 -JSCC framework. The
+{Φ, ψ}. This allows the back-propagation algorithm to be                            optimized D2 -JSCC system is tested over two well-known
+applied to retraining the DNNs. When the DNNs are well                              image datasets: medium-size dataset Kodak (768 × 512
+retrained, the source distortion, Ds,i , and the source rate, Rs,i ,                pixels), and large-size dataset CLIC (up to 2048 × 1890
+can be estimated over the real dataset. Then, we compute Rc,i                       pixels) [6]. The dataset for training the deep source coders
+according to Lemma 4.1. Finally, the E2E distortion, D̂t,i , and                    in the model-selection step consists of 100, 000 images
+the channel distortion, D̂c,i , can be obtained by substituting                     sampled from the training dataset of the Open Images
+the solution (Ds,i , Rs,i , Rc,i ) into (18).                                       Dataset [9]. The look-up table is learned over 10, 000
+   2) Hyper-parameter updating: The updating of the                                 images randomly sampled from the validation dataset.
+hyper-parameter, λ̂i , is based on the performance behavior of                      During the model retraining step, we utilize a small
+the E2E distortion, as illustrated in Fig. 3. At i-th iteration,                    portion of the training dataset, i.e., 6000 images. For
+we first determine the stage of the channel distortion D̂c,i−1                      model training and optimization, images are randomly
+after the (i − 1)-th iteration.                                                     cropped into 256 × 256 pixels.
+                                                                                  • Model training settings: In developing the look-up table,
+   • Leveling-off stage (i.e., 0 ≤ D̂c,i−1 ≤ η1 ). In this
+      case, the source rate needs to be increased to reduce                         we train each NN model for a total of 200 epochs using
+      the source distortion. Initially, Dc,−1 = Dc1∗ . From the                     the Adam optimizer and a mini-batch size of 16. The
+      look-up table, we can easily find a NN model with a                           initial learning rate is set to 10−4 and is multiplied
+      neighbor hyper-parameter λ̃ > λ1∗ . It is apparent that                       by 0.1 when the computed loss remains unchanged.
+      the optimal hyper-parameter λ∗ for problem (14) falls                         The established look-up table comprises 16 models with
+      into the interval λ1∗ ≤ λ∗ ≤ λ̃. Due to the exponential                       Bpp values ranging from 0.012 to 1.36. During model
+      growth of the channel distortion, the optimal solutions for                   retraining, the training epoch for each iteration is set as
+      Problem (13) expect the channel distortion to be small                        10. The hyper-parameter β is set as 10−4 . The threshold
+      enough compared with the source distortion. Hence, the                        η1 is set as 1. All the experiments were conducted using
+      optimal parameter λ̂ for problem (18) is actually similar                     the PyTorch backend on a hardware platform equipped
+      to the one λ∗ for problem (14) and also falls into the                        with an Intel(R) Xeon(R) Silver 4210R CPU, NVIDIA
+      interval [λ1∗ , λ̃]. Following this idea, we initially set the                A100 GPU, and 40GB of RAM.
+                                                                                                                                    2
+                                                                                  • Channel codes: For channel coding in D -JSCC, we
+      hyper-parameter λ̂0 as
+                                                                                    consider both the ideal random coding and the practical
+                                       λ1∗ + λ̃                                     polar coding. For the former, the transmission errors can
+                               λ̂0 =            .                     (19)
+                                          2                                         be simulated by randomly flipping the source bits with
+     The updating of the hyper-parameter λ̂i follows the                            a bit error rate of ρb . The block length for the random
+     bisection search rule:                                                         coding is set as 1024. For polar coding, the modulation
+                                                                                    type is set as BPSK when the SNR is lower than 3 dB
+                          λ̂i−1 + λ̄max                                             or otherwise, quadrature phase shift keying (QPSK). Let
+                  λ̂i =                 , λ̄min = λ̂i−1 ,             (20)
+                                2                                                   b denote the modulated bits per symbol (e.g., b = 2 for
+    where the parameters λ̄min and λ̄max are initially set as                       QPSK). When     the optimal channel rate, Rc∗ , is achieved,
+                                                                                               Rc∗
+    min{λ1∗ , λ̃} and max{λ1∗ , λ̃}, respectively.                                  a (⌈4096 b ⌉, 4096) polar code can be constructed for
+  • Cliff stage (i.e., D̂c,i−1 ≥ η1 ). In this stage, the source                    transmission.
+    rate is reduced, while improving the E2E performance.                         • Benchmark schemes: The benchmark schemes include
+    Similarly, we first find a neighbor NN model from the                           both the deep JSCC schemes [2], [4] and the clas-
+    look-up table with the hyper-parameter being smaller than                       sic separated source-channel coding schemes. For deep
+    the one obtained from Step I, i.e., λ̃ < λ1∗ . The initial                      JSCC, we consider two architectures: the classic deep
+
+
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+      JSCC [4], namely, DJSCC, and the nonlinear transform
+      source-channel coding (NTSCC) [2]. Both the DJSCC                                              36
+      and NTSCC schemes directly employ the DNNs to map
+                                                                                                     34
+      image data into analog symbols for transmission, while
+      the latter involves an adaptive density model and demon-                                       32
+      strates superior performance. For the separated source-                                        30
+
+
+
+
+                                                                                         PSNR (dB)
+      channel coding schemes, we utilize the BPG scheme                                              28
+      combined with a c-rate (⌈4096c⌉, 4096) polar code and                                                          Hyper-prior model with capacity achieving code
+                                                                                                     26              D2-JSCC with random coding
+      QPSK modulation.
+                                                                                                                     D2-JSCC with polar coding
+                                                                                                     24              BPG with 0.79-rate polar code
+B. E2E Performance of D2 -JSCC                                                                                       BPG with 0.5-rate polar code
+                                                                                                     22              DJSCC with the training SNR being 10 dB
+   We quantify the E2E performance of the proposed D2 -JSCC                                                          NTSCC
+
+scheme using the widely used pixel-wise metric, i.e., the peak                                            2   4       6              8              10                12
+                                                                                                                          SNR (dB)
+signal-to-noise ratio (PSNR) [6]. Fig. 4 depicts the PSNR
+performance as a function of the SNR over different datasets.                                                     (a) Kodak dataset
+The “hyper-prior model with capacity-achieving code” can
+be seen as a performance bound on using the deep source
+                                                                                                     39
+coding, where the encoded bits are transmitted error-free at
+the capacity rate. For both the Kodak and CLIC datasets, we                                          37
+can observe that the proposed D2 -JSCC scheme mitigates the
+leveling-off and cliff effect and has a significant performance                                      35
+
+
+
+                                                                                         PSNR (dB)
+gain compared to the separate source-channel coding across
+                                                                                                     33
+low to high SNR regions. More specifically, as the SNR                                                               Hyper-prior model with capacity achieving code
+decreases, the performance of the BPG scheme with a fixed                                            31              D2-JSCC with random coding
+rate exponentially decreases, while the proposed scheme still                                                        D2-JSCC with polar coding
+                                                                                                                     BPG with 0.67-rate polar code
+maintains graceful performance degradation. For example, at                                          29              BPG with 0.87-rate polar code
+                                                                                                                     DJSCC with the training SNR being 10 dB
+an SNR of 2 dB, the proposed D2 -JSCC scheme with polar                                                              NTSCC
+                                                                                                     27
+coding still achieves 27.2 dB and 30.8 dB over Kodak and                                                  2   4       6              8              10                12
+CLIC datasets, respectively. Moreover, we observe from Fig.                                                               SNR (dB)
+4 that the proposed scheme with random coding has a compa-                                                        (b) CLIC dataset
+rable PSNR performance compared with the NTSCC scheme.
+The proposed scheme has a better performance compared with                       Fig. 4: PSNR performance versus the SNR over different
+the DJSCC scheme over some SNR regions. For example, at                          datasets. The average bandwidth ratio is set as 0.0625.
+an SNR of 12 dB and CLIC dataset, an around 2 dB gain can
+be observed.
+                                                                                 [2] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+                   VI. C ONCLUDING R EMARKS                                          transform source-channel coding for semantic communications,” IEEE J.
+                                                                                     Sel. Areas Commun., vol. 40, no. 8, pp. 2300–2316, June 2022.
+   This paper proposed a novel D2 -JSCC framework for image                      [3] J. Huang, D. Li, C. Huang, X. Qin, and W. Zhang, “Joint task and
+                                                                                     data-oriented semantic communications: A deep separate source-channel
+transmission problem in SemCom, where the digital source                             coding scheme,” IEEE Internet Things J., vol. 11, no. 2, pp. 2255–2272,
+and channel coding are jointly optimized to reduce the E2E                           Jan. 2024.
+distortion. Specifically, we designed a deep source coding                       [4] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+                                                                                     channel coding for wireless image transmission,” IEEE Trans. Cog.
+scheme with an adaptive density model to encode semantic                             Commun. Net., vol. 5, no. 3, pp. 567–579, May 2019.
+features according to their different distributions, leading to                  [5] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for digital
+an increased coding efficiency. To facilitate the joint design                       semantic communications via variational autoencoder,” arXiv preprint
+                                                                                     arXiv:2310.06690, 2023.
+of the source and channel coding, the E2E distortion was                         [6] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational
+characterized as a function of the NN parameters and channel                         image compression with a scale hyperprior,” in Proc. Int. Conf. Learn.
+rate. To minimize the E2E distortion, we proposed a two-                             Repres. (ICLR), Vancouver, CA, May 2018.
+                                                                                 [7] Y. Polyanskiy, H. V. Poor, and S. Verdú, “Channel coding rate in the
+step algorithm with low computational complexity. Simulation                         finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5, pp.
+results reveal that the proposed D2 -JSCC outperforms both                           2307–2359, 2010.
+the classic deep JSCC and the classical separation-based                         [8] E. Arikan, “Channel polarization: A method for constructing capacity-
+                                                                                     achieving codes for symmetric binary-input memoryless channels,” IEEE
+approaches.                                                                          Trans. Inf. Theory, vol. 55, no. 7.
+                                                                                 [9] A. Kuznetsova, H. Rom, N. Alldrin, J. Uijlings, I. Krasin, J. Pont-
+                              R EFERENCES                                            Tuset, S. Kamali, S. Popov, M. Malloci, A. Kolesnikov et al., “The
+                                                                                     open images dataset v4: Unified image classification, object detection,
+[1] Z. Lin, G. Zhu, Y. Deng, X. Chen, Y. Gao, K. Huang, and Y. Fang,                 and visual relationship detection at scale,” Inter. J. of Comput. Vis., vol.
+    “Efficient parallel split learning over resource-constrained wireless edge       128, no. 7, pp. 1956–1981, 2020.
+    networks,” Early Access in IEEE Trans. Mob. Comput., 2024.
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:57 UTC from IEEE Xplore. Restrictions apply.
+

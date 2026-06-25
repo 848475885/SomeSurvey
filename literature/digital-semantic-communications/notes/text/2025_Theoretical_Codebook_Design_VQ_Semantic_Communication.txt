@@ -1,0 +1,398 @@
+                                            A Theoretically-Grounded Codebook for Digital
+                                                      Semantic Communications
+                                                               Lingyi Wang∗ , Rashed Shelim∗ , Walid Saad∗ , and Naren Ramakrishnan†
+                                           ∗ Bradley Department of Electrical and Computer Engineering, Virginia Tech, Alexandria, VA, 22305, USA
+                                                           † Department of Computer Science, Virginia Tech, Alexandria, VA, 22305, USA
+
+                                                                          Emails: {lingyiwang, rasheds, walids, naren}@vt.edu
+
+
+
+                                            Abstract—The use of a learnable codebook provides an            challenge, learnable codebooks for vector quantization can
+                                         efficient way for semantic communications to map vector-
+arXiv:2510.07108v2 [cs.IT] 14 Oct 2025
+
+
+
+
+                                                                                                            be applied to discretize the semantic features without losing
+                                         based high-dimensional semantic features onto discrete symbol      semantic capacity [6]–[8]. Specifically, the use of a codebook
+                                         representations required in digital communication systems.
+                                         In this paper, the problem of codebook-enabled quantization        allows the semantic communication system to partition the
+                                         mapping for digital semantic communications is studied from        semantic feature space into a collection of disjoint subspaces
+                                         the perspective of information theory. Particularly, a novel       and label these subspaces with a finite integer index set. Then,
+                                         theoretically-grounded codebook design is proposed for jointly     each semantic feature vector can be quantized to a discrete
+                                         optimizing quantization efficiency, transmission efficiency, and   index by finding its optimally associated subspace.
+                                         robust performance. First, a formal equivalence is established
+                                         between the one-to-many synonymous mapping defined in                 Recently, a number of works studied the problem of
+                                         semantic information theory and the many-to-one quantization       codebook-enabled semantic communications [4]–[12]. Sev-
+                                         mapping based on the codebook’s Voronoi partitions. Then,          eral prior works in [4]–[7] primarily used a codebook for
+                                         the mutual information between semantic features and their         compact semantic discretization to reduce communication
+                                         quantized indices is derived in order to maximize semantic
+                                                                                                            costs by quantization loss-based end-to-end training. In [8]
+                                         information carried by discrete indices. To realize the seman-
+                                         tic maximum in practice, an entropy-regularized quantization       and [10], the authors proposed unified codebooks for multi-
+                                         loss based on empirical estimation is introduced for end-to-       task semantic communications by exploiting semantic rela-
+                                         end codebook training. Next, the physical channel-induced          tionships among tasks. The work in [11] investigated a mul-
+                                         semantic distortion and the optimal codebook size for semantic     tilevel codebook that used multi-head octonary quantization
+                                         communications are characterized under bit-flip errors and
+                                                                                                            to further compress indices. The authors in [12] proposed the
+                                         semantic distortion. To mitigate the semantic distortion caused
+                                         by physical channel noise, a novel channel-aware semantic          multi-codebook design with each codebook trained with dif-
+                                         distortion loss is proposed. Simulation results on image re-       ferent bit-flip probabilities for adaptive modulation. However,
+                                         construction tasks demonstrate the superior performance of         despite its success in addressing some meaningful problems,
+                                         the proposed theoretically-grounded codebook that achieves         this prior work [4]–[12] is limited in a number of ways:
+                                         a 24.1% improvement in peak signal-to-noise ratio (PSNR)
+                                         and a 46.5% improvement in learned perceptual image patch            • There is a lack of a unified theoretical foundation on
+                                         similarity (LPIPS) compared to the existing codebook designs           existing codebooks for semantic communications. More-
+                                         when the signal-to-noise ratio (SNR) is 10 dB.                         over, it is hard to determine the theoretically optimal
+                                           Index Terms—Digital semantic communication systems,                  codebook size.
+                                         codebook-enabled vector quantization, information theory.            • Existing codebook schemes solely optimize the quan-
+                                                                                                                tization distortion, which leads to codeword under-
+                                                              I. I NTRODUCTION                                  utilization or over-concentration.
+                                                                                                              • Existing codebook schemes cannot explicitly model
+                                            Semantic communication is emerging as a promising
+                                         communication paradigm that shifts the focus from con-                 the impact of physical-layer bit-flip errors on semantic
+                                         ventional bit-accurate delivery to goal-driven, meaning-               representations, thus lacking channel-aware distortion
+                                         preserving transmission [1]–[3]. Particularly, in an end-to-           metrics along with robustness optimization.
+                                         end semantic communication framework, the transmitter                 The main contribution of this paper is to overcome the
+                                         typically uses deep neural networks to extract semantic            aforementioned limitations of existing codebooks for digi-
+                                         features from raw data based on communication goals [3].           tal semantic communications by rethinking the codebook-
+                                         However, existing digital baseband hardware and protocol           enabled vector quantization from a perspective of informa-
+                                         stacks support only discrete bitstreams for channel coding         tion theory. In particular, we propose a novel theoretically-
+                                         and modulation [4]. Hence, it is challenging for semantic          grounded codebook design for better quantization efficiency,
+                                         communication systems to efficiently and reliably convert the      transmission efficiency, and robust performance. First, we
+                                         high-dimensional continuous semantic features into discrete        demonstrate that the critical one-to-many synonymous map-
+                                         indices with preserved critical meaning [5]. To address this       ping defined in semantic information theory can be realized
+Fig. 1. Illustration of a codebook-enabled digital semantic communication framework.
+
+through the many-to-one quantization mapping over the                       loss of generality, the source data consists of images. Let
+codebook’s Voronoi partitions. Our perspective provides an                  the image dataset be X , with each image X ∈ X ⊂
+unified theoretical-engineering model for codebook-enabled                  RH×W ×O , where H, W and O are the height, width,
+semantic communications. Then, we derive the mutual in-                     and the channel size of each input image, respectively.
+formation between semantic features and their quantized                     The learnable codebook for vector quantization is given
+indices. To maximize the semantic information carried by                    by C ≜ [c1 , c2 , . . . , ck , . . . , cK ] ⊂ RN , where K is the
+discrete indices, we propose an entropy-regularized quan-                   codebook size, and each element ck ∈ RN is called a
+tization loss with empirical estimation to ensure balanced                  semantic codeword with dimension size N and index k. The
+codeword utilization. Moreover, we characterize the channel-                codebook C serves as a shared, constant knowledge base for
+induced semantic distortion under bit-flip errors and the opti-             the transmitter and the receiver.
+mal distortion-aware codebook size. Driven by the channel-                     At the transmitter, the semantic encoder h(X; α) with
+induced semantic distortion, we propose a novel channel-                    parameters α extracts semantic features Z ∈ RM ×N from
+aware distortion loss to address semantic distortion induced                the raw image X. The learnable codebook C then serves
+by bit-flip errors. Extensive simulations on an image recon-                to map vector-based semantic representations onto discrete
+struction task demonstrate that the proposed theoretically-                 symbol representations in the digital communication system.
+grounded codebook achieves a 24.1% improvement in peak                      Particularly, each semantic vector zm ∈ Z ⊂ RN with
+signal-to-noise ratio (PSNR) and a 46.5% improvement in                     index m ≤ M is quantized by finding its nearest semantic
+learned perceptual image patch similarity (LPIPS) compared                  codeword ck ∈ C. The quantization mapping q (·) by the
+to the existing codebook designs when the signal-to-noise                   nearest-neighbor algorithm in the codebook-enabled semantic
+ratio (SNR) is 10 dB.                                                       space will be
+   The rest of this paper is organized as follows. In Section
+                                                                                       q (zm ) = arg       min       ∥zm − ck ∥2 .       (1)
+II, we present the codebook-enabled digital semantic commu-                                            k∈{1,...,K}
+nications. Then, we propose a novel theoretically-grounded
+                                                                            Then, with each vector zm ∈ Z mapped to an index by (1),
+codebook in Section III. In Section IV, we demonstrate
+                                                                            the index sequence of semantic features Z is obtained by
+the simulation results and analysis. Finally, conclusions are
+                                                                                            M
+drawn in Section V.                                                                S = [sm ]m=1 ∈ {1, . . . , K}M ,      sm = q(zm ).    (2)
+                                                                            The codebook-enabled vector quantization discretizes the
+           II. C ODEBOOK FOR D IGITAL S EMANTIC                             original floating-point semantics into compact integer indices,
+                     C OMMUNICATIONS                                        which stand in for the continuous feature. The resulting index
+  As shown in Fig. 1, we consider a codebook-enabled                        sequence is then processed by standard digital communica-
+digital semantic communication network, in which, without                   tion blocks, including channel coding, mapping of constel-
+lation symbols, modulation over carriers, and transmission
+over the physical channel.
+   The preimage of mapping q is represented by
+  q −1 (k) = z ∈ RN : q(z) = k
+            
+                                                        (3)
+      = z ∈ RN : ∥ z − ck ∥2 ≤ ∥ z − cj ∥2 , ∀ j ̸= k ,
+         
+
+which is a Voronoi region of RN including infinite distinct
+semantic vectors. This Voronoi region can be considered as
+a semantic feature cluster, which can be obtained by
+          K
+          [
+ RN =          q −1 (k),   q −1 (k) ∩ q −1 (ℓ) = ∅ (k ̸= ℓ). (4)
+         k=1
+
+(3) and (4) partition the semantic feature space into disjoint
+Voronoi regions, thus enabling quantization by mapping
+each feature vector to a unique representative codeword.
+Hence, the codebook induces an equivalence-class partition
+Z/q = {q −1 (1), . . . , q −1 (K)} of the continuous semantic
+space. The receiver demodulates and channel-decodes the
+received symbols to recover the integer index sequence S   b=
+      M
+ sm ]m=1 and recovers the semantic information zbm = csbm =
+[b
+q −1 (b
+      sm ). The recovered semantic features Z  b ∈ RM ×N are
+input into the semantic decoder g(·; β) with parameters β          Fig. 2. A showcase of the unified synonymous mapping and quantization
+                                                                   mapping from a joint perspective of theory and engineering.
+to accomplish the semantic task by X    c = g(Z; b β). To train
+the learnable codebook, the quantization loss [4]–[12] is
+minimized by                                                       e = {e
+                                                                   U       u1 , . . . , u             eJe}, Je ≪ J, where uj represents a
+                                                                                        eej , . . . , u
+                                                                   syntactic realization and u           eej represents a semantic concept.
+                               h X               i
+             Lqua = EZ∼pZ ∥          z − cq(z) ∥2 .         (5)
+                                                                   Then, the synonymous mapping is given by f : U                             e → U.
+   Although (5) can measure the semantic distortion caused         The synonymous mapping f induces an equivalence-class
+by the quantization mapping, it cannot ensure the maximum          partition partition as U/f = { f (e                           uej ), . . . , f (e
+                                                                                                                u1 ), . . . , f (e                 uJe)},
+semantic information carried by each index, s.e., efficient se-    which can be obtained by
+mantic codeword design, and explicitly evaluate the semantic
+                                                                             Je
+distortion from the physical channel noise.                                  [
+                                                                     U=               uej ),
+                                                                                   f (e             uej ) ∩ f (e
+                                                                                                Uf (e          um         uej ̸= u
+                                                                                                                 e ) = ∅ (e      eme ). (6)
+                                                                             j=1
+                                                                             e
+      III. T HEORETICALLY-G ROUNDED C ODEBOOK
+   In this section, we first rethink the quantization mapping         In practice, the learnable codebook realizes the synony-
+of the codebook from a perspective of semantic information         mous mapping f by the quantization mapping q. In partic-
+theory, as shown in Fig. 2. Then, a theoretically-grounded         ular, as discussed in (1)–(4), the learnable codebook C ≜
+codebook is proposed with the entropy regularization for the       [c1 , c2 , . . . , ck , . . . , cK ] ⊂ RN , partitions the continuous
+maximum mutual information between semantic features and           semantic feature space RN into K Voronoi cells, where each
+their quantized discrete indices, along with a novel channel-      semantic codeword ck provides a standard syntax for a set of
+aware semantic distortion loss to alleviate the impact of          synonymous syntaxes f (e             uej ). Since the semantic information
+physical channel noise.                                            is embedded in and cannot be directly separated from its
+                                                                   syntactic representations, the semantic encoder is applied to
+                                                                   infer a latent meaning representation with semantic features
+A. Relationships Between Synonymous Mapping And Quan-              z from the observed data X. However, in practice, the same
+tization Mapping                                                   semantic concept can produce a semantic feature cluster,
+   Semantic information theory [13] is based on a consen-          represented by q −1 (k), due to morphological variability and
+sus that there is a one-to-many synonymous mapping f               observation noise. This reflects the fact that a single meaning
+between the semantic source U        e and the syntactic source    can manifest through diverse syntactic expressions. During
+U to generate the raw message, as shown in Fig. 2. For             quantization mapping, regardless of its low-level syntactic
+instance, the semantic concept of “happiness” can be rep-          variations, any semantic feature vector in the Voronoi region
+resented by various syntactic realizations such as text in-        of ck is assigned the same integer index k. In this way, the
+formation “joy” and smiling images. Let the syntactic set          codebook-enabled vector quantization acts as the many-to-
+be U = {u1 , . . . , uj , . . . , uJ } and the semantic set be     one mapping from syntactic expressions to a single semantic
+symbol. Let the one-to-many semantic mapping between                with                            "                   #
+semantic concept u                                e → RN .
+                 e and semantic features z be φ : U                                                     X
+                                                                                  bk = EZ∼pZ
+                                                                                  π                           I{q(z) = k} .   (11)
+The semantic mapping φ means that one semantic concept
+                                                                                                        z∈Z
+can behave different features with different contexts, and
+coding noise from source data. The q ◦ φ and f coincide             Then, the estimated mutual information between semantic
+on every semantic concept as                                        features and their quantized indices can be rewritten as
+                                                                                                        hX            i
+                  u) ∈ q −1 (k) ⇐⇒ q (φ(e
+ f (ũ) = Uk ⇐⇒ φ(e                     u)) = k. (7)                     sb(Z; S) = H(S)
+                                                                                     b     = −EZ∼pZ          log π
+                                                                                                                 bq(z) .     (12)
+
+Hence, from the perspective of information theory, the code-        Hence, the quantization loss with entropy regularization for
+book can preserve the theoretical advantages of synonymic           end-to-end codebook training can be represented by
+                                                                                        h X               i
+diversity with Voronoi regions partitioned by the quantization           Lreg = EZ∼pZ ∥       z − cq(z) ∥2 − γ H(S),
+                                                                                                                b           (13)
+mapping, and enhances the transmission efficiency by pro-
+viding discrete semantic representations that can be directly       where γ > 0 is a parameter that captures the tradeoff between
+deployed in existing digital communication systems.                 quantization fidelity and index-entropy. The gradient with
+                                                                    respect to the empirical frequencies π
+                                                                                                         bk is
+B. Entropy Regularized Indices                                                       ∂(−H(S))
+                                                                                         b
+                                                                                                            bk ,
+                                                                                                  = 1 + log π              (14)
+   Now, we derive the entropy regularization based on mutual                             πk
+                                                                                        ∂b
+information between semantic features and their quantized           which drives the occurrence probability π bk of each index
+indices to maximize semantic information carried by discrete        toward the uniform distribution 1/K.
+indices. Let pZ (z) be the density of the continuous semantic
+feature vector z ∈ RN , and then we have pZ,S (z, k) =              C. Physical Channel-Induced Semantic Distortion
+pZ (z) I{q(z) = k}, where I(x) is a binary-valued indicator
+                                                                       Now, we explore the semantic distortion over the phys-
+function that equals to 1 if the condition x holds true and
+                                                                    ical channel. In particular, each index s ∈ {1, . . . , K} is
+0 otherwise. By definition of information theory, the mutual
+                                                                    encoded into a L-length binary sequence b ∈ {0, 1}L , where
+information between semantic features and their quantized
+                                                                    L = ⌈log2 K⌉, and ⌈x⌉ returns the smallest integer ≥ x.
+indices is
+                                                                    We consider the indices are transmitted over a memoryless
+                 K Z
+                X                       pZ,S (z, k)                 binary symmetric channel with bit-flip probability p. Let bb
+    s(Z; S) =          pZ,S (z, k) log               dz             be the received binary vector, and dH (b, bb) be Hamming
+                                       pZ (z) pS (k)      (8)
+                k=1
+                                                                    distance. Then, the error-weight distribution of the binary
+             = H(S) − H(S | Z) = H(S),                              index sequence can be obtained by
+where H(S | Z) = 0 since the index sequence S is                                       L
+determined given semantic features Z by the many-to-one               Pr dH (b, b) = w =
+                                                                                 b                 pw (1 − p)L−w , w ≤ L, (15)
+                                                                                               w
+quantization mapping q. Let the occurrence probability of
+each index be πk = Pr[q(z) = k]. Equivalently, the coding-          and the overall index-error probability can be represented by
+                                                                                                            
+rate can be rewritten as                                            Pe = Pr bb ̸= b = 1 − Pr dH (b, bb) = 0 = 1 − (1 − p)L .
+                             p(s = q(z) | z)
+               Z
+                                                                                                                              (16)
+    s(Z; S) = pZ (z) log                     dz
+                                  πq(z)                             The conditional probability with random labeling can be
+       Z                                               (9)          approximately represented by
+                       1
+     = pZ (z) log          dz = −E [log πS ] ≤ log K,                                                
+                     πq(z)                                                                           1 − Pe , ℓ = k,
+where the equality holds when π1 = π2 = · · · = πK = 1/K.                    Pr( sb = ℓ | s = k) =        Pe                  (17)
+                                                                                                             , ℓ ̸= k.
+Hence, to increase the effective semantic information car-                                             K −1
+ried by the discrete indices and improve the transmission           Then, the physical channel-induced semantic distortion based
+efficiency, we need to ensure every codeword is equitably           on average squared-error is obtained by
+accessible, which can be realized by introducing the entropy                   K
+                                                                                                                             
+                                                                                                       X Pe
+regularization of indices. However, in practice, the actual
+                                                                              X
+                                                                       Dch =       πk (1 − Pe ) · 0 +           ∥ck − cℓ ∥22 
+distribution pZ (z) is unknown, and, thus, it is hard to directly                                          K −1
+                                                                              k=1                               ℓ̸=k
+calculate the entropy H(S) for end-to-end codebook training.                      K
+Here, we utilize the batch samples Z ∼ pZ to do empirical                         X
+                                                                                           ¯ 2k ,
+                                                                           = Pe         πk ∆
+estimation, and the estimated entropy H(S)
+                                         b       of indices can
+                                                                                  k=1
+be represented by                                                                                                             (18)
+                               K                                    with
+                                                                                    ¯ 2k =      1 X
+                                                                                                    ∥ck − cℓ ∥22 .
+                               X
+                  H(S)
+                  b    =−            bk log π
+                                     π      bk ,            (10)                    ∆                                         (19)
+                                                                                              K −1
+                               k=1                                                                       k̸=ℓ
+Thus, the total semantic distortion induced by the physical               IV. S IMULATION R ESULTS A ND A NALYSIS
+channel noise can be expressed as                                 A. Simulation Setup
+                     h X                i
+ DS (K, p) = EZ∼pZ ∥        z − cq(z) ∥2 +Dch (K, p). (20)           For our simulations, an image semantic communication
+              |           {z            }                         network with the reconstruction task is considered with
+                       quantization loss                          a single-antenna transmitter and a single-antenna receiver,
+                                                                  where the semantic encoder and decoder are based on vector
+In traditional communication systems, a codebook is de-           quantized-variational autoencoder (VQ-VAE) [14] with the
+signed to map fixed-length bit sequences to modulation sym-       same training parameters provided in [8]. The end-to-end
+bols, typically by maximizing minimum Euclidean distance          training loss of the semantic network for image reconstruc-
+or optimizing channel capacity under bit-error probability        tion can be represented by
+p. However, in the semantic communication framework,
+                                                                                                                     2
+the codebook is constructed to quantize high-dimensional                  L(α, β, C) =      Gjℓ (X) − Gjℓ (X)
+                                                                                                           c    + LC .
+features to accurately convey the semantic information and                                |         {z        2
+                                                                                                              }            (24)
+directly minimize semantic distortion DS (K, p) rather than                                    reconstruction loss
+bit-level errors. In this context, the optimal codebook size      The reconstruction loss is based on the pretrained VGG16
+K ∗ is therefore chosen to balance semantic fidelity against      network [15] to capture the semantic similarity in the latent
+bandwidth cost. Hence, given the bit-error probability p and      space, where Gjℓ is the Gramm matrix, represented by
+the bandwidth weighting factor λ, the optimal codebook size
+for semantic communications can be selected by                                          Hj    Wj
+                                                                                   1 XX
+                                                                     Gℓj (X) =              ℓj (X)o,h,w ℓj (X)o′ ,h,w ,    (25)
+          K ∗ = arg min {DS (K, p) + λ R(K)} ,            (21)                   Hj W j w=1
+                                                                                        h=1
+                      K
+                                                                  and ℓj (·) represents the first j layers of VGG16 with pa-
+where R(K) = M log2 K is the total bit-rate.                      rameter ℓ, o ≤ Oj . We set j = 8, ω = 0.1 and γ = 0.1.
+   In addition to the selection of the optimal codebook size,     The modulation scheme is set to 64-QAM [11], and the
+the conventional codebooks [4]–[7] for semantic communica-        codebook size is set to K = 256. We adopt VOC-2012 as
+tions only minimize the quantization error and cannot capture     the training database, which consists of 11, 530 images of 20
+the impact of physical-layer bit flips on digital communica-      classes. We introduce the JPEG+LDPC scheme based on joint
+tion. Thus, existing semantic codebooks experience severe         photographic experts group (JPEG) and 1/2-rate low-density
+semantic distortion or even total information loss under high     parity-check (LDPC) code, the BPG+LDPC scheme based on
+error-rate conditions. Driven by channel-induced semantic         better portable graphics (BPG) and the 1/2-rate LDPC code,
+distortion (13), we further introduce the generalized channel-    and the VQ-VAE scheme [8] that only considers quantization
+aware distortion loss, which can be represented by                loss as the benchmark schemes. LPIPS [16] and PSNR are
+                                    "    K
+                                                   #              used to evaluate the quality of reconstructed images.
+                                                                     Fig. 3 and Fig. 4 respectively show the LPIPS performance
+                                        X
+      Lch = Ep [Dch (K, p)] = Ep Pe            ¯ 2k ,
+                                            πk ∆          (22)
+                                           k=1
+                                                                  and the PSNR performance of different schemes across dif-
+                                                                  ferent SNRs in a Rayleigh fading channel. Compared to the
+which imposes structured constraints on the codebook to           existing VQ-VAE-based scheme, the proposed theoretically-
+enhance the robustness of semantic communications. The            grounded codebook achieves a 24.1% improvement in PSNR
+total loss function for the codebook can be represented by        and a 46.5% improvement in LPIPS compared to the existing
+                 h X                i                             VQ-VAE method when SNR is 10 dB. These improvements
+ LC = EZ∼pZ ∥           z − cq(z) ∥2 + ωLch − γ H(S),
+                                                 b      (23)      can be attributed to the proposed index-entropy regularization
+                                                                  and channel-aware semantic distortion loss, which is further
+where ω ∈ (0, 1) is the weight factor for the channel-aware       demonstrated by the ablation experiments. In particular, we
+semantic distortion.                                              independently introduce the regularization item and channel-
+   Fundamentally, the proposed entropy regularization and         aware distortion loss to the VQ-VAE-based schemes, respec-
+the channel-aware semantic distortion loss enable the code-       tively named “VQ-VAE + Index Entropy” and “VQ-VAE +
+book to find an optimal space partition scheme. In particular,    Channel-Aware”. Under low-SNR conditions with high bit-
+the entropy regularization of discrete indices encourages         flip rates, the quantized indices of the semantic features can
+more fair partitions of the semantic feature space based on       be distorted over the physical channel. In this context, the
+the occurrence probability of each index, thus maximizing         channel-aware semantic distortion loss can reduce the spatial
+the semantic information carried by each index. The channel-      distance between the original features from the transmitter
+induced distortion loss reduces the spatial distance between      and the distorted features at the receiver based on distor-
+the original features and distorted quantization based on the     tion probability. The distortion loss suppresses the semantic
+possibility of physical-layer bit-flip errors, which alleviates   distortion caused by error bits, thus enhancing the semantic
+semantic distortion and enhances semantic robustness.             robustness. In the context of high SNRs with accurate symbol
+Fig. 3. The LPIPS performance of different schemes across different SNRs.   Fig. 4. The PSNR performance of different schemes across different SNRs.
+
+transmission, the entropy regularization of discrete indices                     cation networks,” IEEE Commun. Surveys Tuts., vol. 27, no. 1, pp.
+encourages more fair partitions of the semantic feature                          37–76, 2025.
+                                                                             [2] W. Saad, O. Hashash, C. K. Thomas, C. Chaccour, M. Debbah,
+space based on the occurrence probability of each index,                         N. Mandayam, and Z. Han, “Artificial general intelligence (AGI)-native
+and maximizes the information carried by each index, thus                        wireless systems: A journey beyond 6G,” Proceedings of the IEEE, pp.
+improving transmission efficiency. Hence, the channel-aware                      1–39, 2025, to appear.
+                                                                             [3] L. Wang, W. Wu, F. Zhou, Z. Yang, Z. Qin, and Q. Wu, “Adaptive re-
+semantic distortion loss and entropy regularization can enable                   source allocation for semantic communication networks,” IEEE Trans.
+an efficient codebook design by the optimal space partitions.                    Commun., vol. 72, no. 11, pp. 6900–6916, 2024.
+                                                                             [4] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+                       V. C ONCLUSION                                            communications with masked vq-vae enabled codebook,” IEEE Trans.
+                                                                                 Wireless Commun., vol. 22, no. 12, pp. 8707–8722, 2023.
+   In this paper, we have rethought the codebook-enabled vec-                [5] Y. Huh, H. Seo, and W. Choi, “Universal joint source-channel coding
+tor quantization for digital semantic communications through                     for modulation-agnostic semantic communication,” IEEE Journal on
+                                                                                 Selected Areas in Communications, 2025, to appear.
+an information-theoretic perspective and introduced a novel,                 [6] K. Ye, M. Gong, S. Wang, and D. Feng, “Low-rate semantic commu-
+theoretically-grounded codebook design that jointly enhances                     nication with codebook-based conditional generative models,” arXiv
+quantization efficiency, transmission efficiency, and robust-                    preprint arXiv:2504.04977, 2025.
+                                                                             [7] H. Zhang, M. Tao, Y. Sun, and K. B. Letaief, “Improving learning-
+ness. We have demonstrated that the one-to-many synony-                          based semantic coding efficiency for image transmission via shared
+mous mapping of semantic information theory can be realized                      semantic-aware codebook,” IEEE Trans. Commun., vol. 73, no. 2, pp.
+through the Voronoi regions partitioned by the quantization                      1217–1232, 2025.
+                                                                             [8] L. Wang, W. Wu, F. Zhou, F. Tian, Q. Wu, and W. Saad, “A
+mapping, thus unifying abstracted semantic information the-                      unified hierarchical semantic knowledge base for multi-task semantic
+ory with the codebook-based implementation. Building on                          communication,” in Proc. IEEE Int. Conf. Commun. (ICC), 2024, pp.
+this foundation, we have derived the mutual information                          2937–2943.
+                                                                             [9] Y. Li, Z. Jin, T. Song, X. Song, and J. Hu, “Robust task-oriented
+between high-dimensional semantic features and their quan-                       communication with semantic-aware masking and discrete codebook,”
+tized discrete indices, and have introduced the index-entropy                    in Proc. IEEE Wirel. Commun. Netw. Conf. (WCNC), 2025, pp. 1–6.
+regularization. The entropy-regularized quantization loss has               [10] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified
+                                                                                 multi-task semantic communication system for multimodal data,” IEEE
+encouraged the balanced codeword utilization and maximized                       Trans. Commun., vol. 72, no. 7, pp. 4101–4116, 2024.
+the semantic information carried by each index. We have                     [11] Y. Zhou, Y. Sun, G. Chen, X. Xu, H. Chen, B. Huang, S. Cui, and
+further analyzed the impact of physical-layer bit-flip errors                    P. Zhang, “Moc-rvq: Multilevel codebook-assisted digital generative
+                                                                                 semantic communication,” arXiv preprint arXiv:2401.01272, 2024.
+on semantic distortion, proposed the channel-aware semantic                 [12] J. Shin, Y. Oh, J. Park, J. Park, and Y.-S. Jeon, “Esc-mvq: End-to-end
+distortion loss for robust performance, and presented the                        semantic communication with multi-codebook vector quantization,”
+optimal codebook size under error-rate and bandwidth con-                        arXiv preprint arXiv:2504.11709, 2025.
+                                                                            [13] K. Niu and P. Zhang, The Mathematical Theory of Semantic Commu-
+straints. Extensive simulations on image reconstruction tasks                    nication. Springer Nature, 2025.
+have demonstrated that the proposed theoretically-grounded                  [14] A. van den Oord, O. Vinyals, and k. kavukcuoglu, “Neural discrete
+codebook achieves 24.1% improvement in PSNR and 46.5%                            representation learning,” in Proc. Adv. Neural Inf. Process. Syst.
+                                                                                 (NeurIPS), I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus,
+improvement in LPIPS compared to the existing VQ-VAE                             S. Vishwanathan, and R. Garnett, Eds., vol. 30, 2017.
+designs when SNR is 10 dB.                                                  [15] K. Simonyan and A. Zisserman, “Very deep convolutional networks for
+                                                                                 large-scale image recognition,” arXiv preprint arXiv:1409.1556, 2015.
+                            R EFERENCES                                     [16] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The
+                                                                                 unreasonable effectiveness of deep features as a perceptual metric,”
+ [1] C. Chaccour, W. Saad, M. Debbah, Z. Han, and H. Vincent Poor, “Less         in Proc. IEEE Conf. Comput. Vis. Pattern Recog. (CVPR), 2018, pp.
+     data, more knowledge: Building next-generation semantic communi-            586–595.
+

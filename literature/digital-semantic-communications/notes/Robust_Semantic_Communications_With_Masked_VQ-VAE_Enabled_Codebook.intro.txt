@@ -1,0 +1,120 @@
+﻿IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023                                                                           8707
+
+
+
+
+      Robust Semantic Communications With Masked
+               VQ-VAE Enabled Codebook
+Qiyu Hu , Student Member, IEEE, Guangyi Zhang , Student Member, IEEE, Zhijin Qin , Senior Member, IEEE,
+Yunlong Cai , Senior Member, IEEE, Guanding Yu , Senior Member, IEEE, and Geoffrey Ye Li , Fellow, IEEE
+
+
+   Abstract鈥?Although semantic communications have exhibited                                               I. I NTRODUCTION
+satisfactory performance on a large number of tasks, the impact
+of semantic noise and the robustness of the systems have not been
+well investigated. Semantic noise refers to the misleading between
+the intended semantic symbols and received ones, thus causes the
+                                                                                  T     RADITIONAL communication systems focus on efficient
+                                                                                        symbol transmission and accurate symbol recovery [1],
+                                                                                  where symbol-error rate (SER) and bit-error rate (BER) are
+failure of tasks. In this paper, we first propose a framework for                 usually used as the performance metrics. Various new appli-
+the robust end-to-end semantic communication systems to combat                    cations generate unprecedented amounts of data for serving
+the semantic noise. In particular, we analyze sample-dependent
+and sample-independent semantic noise. To combat the seman-
+                                                                                  different types of tasks while the conventional communication
+tic noise, the adversarial training with weight perturbation is                   system is facing the bottleneck to support such massive
+developed to incorporate the samples with semantic noise in the                   amount of data [2]. Moreover, it causes critical challenges for
+training dataset. Then, we propose to mask a portion of the                       conventional communications to support massive connectivity
+input, where the semantic noise appears frequently, and design                    over limited spectrum resources but with low latency [3].
+the masked vector quantized-variational autoencoder (VQ-VAE)
+with the noise-related masking strategy. We use a discrete
+codebook shared by the transmitter and the receiver for encoded                   A. Prior Work
+feature representation. To further improve the system robustness,                    With the development of deep neural networks (DNNs) [3]
+we develop a feature importance module (FIM) to suppress the
+noise-related and task-unrelated features. Thus, the transmit-                    and end-to-end learning [4], [5], [6], semantic communica-
+ter simply needs to transmit the indices of these important                       tions, which extract and transmit the task-related meanings
+task-related features in the codebook. Simulation results show                    of data [7], [8], [9], [10], have emerged as a key technology
+that the proposed method can be applied in many downstream                        and received great attention. For example, in the image trans-
+tasks and significantly improve the robustness against semantic                   mission for object detection task, the location and shape of an
+noise with remarkable reduction on the transmission overhead.
+                                                                                  object are task-related while the background is unrelated to the
+   Index Terms鈥?Adversarial training, feature importance mod-                     task and unnecessary to transmit. Moreover, semantic commu-
+ule (FIM), masked vector quantized-variational autoencoder                        nication is robust to unfriendly channel environments, i.e., low
+(VQ-VAE), robust semantic communications, semantic noise.
+                                                                                  signal-to-noise ratio (SNR), which fits well the applications
+  Manuscript received 8 June 2022; revised 18 October 2022 and                    requiring high reliability [11]. These advantages motivate us to
+20 January 2023; accepted 28 March 2023. Date of publication 12 April             develop communication systems by considering the semantic
+2023; date of current version 12 December 2023. This work was supported
+in part by the National Natural Science Foundation of China under Grant           meaning beyond digital bits to enhance transmission accuracy
+61971376, Grant U22A2004, Grant 61831004, Grant 62293484, and Grant               and efficiency.
+61925105; in part by the Tsinghua University鈥揅hina Mobile Communi-                   The existing works on semantic communications can be
+cations Group Company Ltd. Joint Institute; in part by the Fundamental
+Research Funds for the Central Universities under Grant 226-2022-00195;           divided into two categories: data reconstruction [10], [11],
+and in part by the Defense Industrial Technology Development Program              [12], [13], [14], [15], [16] and task execution [17], [18], [19],
+under Grant JCKY2020210B021. An earlier version of this paper was                 [20], [21]. For the data reconstruction, the semantic informa-
+presented in part at the 96th IEEE Vehicular Technology Conference
+(VTC2022-Fall), London/Beijing, September 2022 [DOI: 10.1109/VTC2022-             tion behind the data is extracted and only the related data is
+Fall57202.2022.10012843]. The associate editor coordinating the review of         reconstructed based on the received semantic information. The
+this article and approving it for publication was S. Bi. (Corresponding author:   joint semantic-channel coding (JSCC) scheme in [11] extracts
+Yunlong Cai.)
+  Qiyu Hu, Guangyi Zhang, Yunlong Cai, and Guanding Yu are with the Col-          the semantic information from text. In [13], reinforcement
+lege of Information Science and Electronic Engineering, Zhejiang University,      learning is exploited to recover the text. The semantic com-
+Hangzhou 310027, China, and also with the Zhejiang Provincial Key Labora-         munication system in [14] with channel feedback can improve
+tory of Information Processing, Communication and Networking (IPCAN),
+Hangzhou 310027, China (e-mail: qiyhu@zju.edu.cn; zhangguangyi@                   the quality of image reconstruction. The attention-based
+zju.edu.cn; ylcai@zju.edu.cn; yuguanding@zju.edu.cn).                             semantic communication system in [15] focuses on speech
+  Zhijin Qin is with the Department of Electronic Engineering, Tsinghua           signals.
+University, Beijing 100084, China (e-mail: qinzhijin@tsinghua.edu.cn).
+  Geoffrey Ye Li is with the Department of Electrical and Electronic                 For the task-specific applications, the task-related semantic
+Engineering, Imperial College London, SW7 2AZ London, U.K. (e-mail:               information encoded at the transmitter is directly applied
+geoffrey.li@imperial.ac.uk).                                                      for task execution at the receiver. In particular, the image
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TWC.2023.3265201.                                         classification-oriented semantic communications in [17] can
+  Digital Object Identifier 10.1109/TWC.2023.3265201                              improve the recognition accuracy. The task of image
+                       1536-1276 漏 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:04:47 UTC from IEEE Xplore. Restrictions apply.
+8708                                                           IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 12, DECEMBER 2023
+
+
+
+re-identification for a person in [18] can enhance the retrieval              algorithm [29]. The existing DL-enabled systems are vulner-
+accuracy. The semantic communication system in [19] con-                      able and particularly unstable to these adversarial samples,
+siders edge inference with classification task. The semantic                  where small and imperceptible perturbations of the data sam-
+communication system in [20] is designed for the multi-modal                  ples are sufficient to fool them and would result in incorrect
+data task: the visual question answering.                                     results [25]. To improve the robustness of DL models against
+   Though the aforementioned deep learning (DL)-based                         adversarial samples, there have been some methods, such
+semantic communication systems have exhibited very impres-                    as input denoising [32], defensive distillation [33], gradient
+sive performance in certain tasks, the impact of noise and                    regularization [34], weight perturbation [35], and adversarial
+the system robustness still need to be further investigated.                  training [36].
+There have been studies on analyzing the generation and
+characteristics of different kinds of image and text noise and
+a number of denoising algorithms have been proposed [22].                     B. Motivation and Contributions
+However, there exists a particular type of noise in semantic                     It is foreseen that the robustness of semantic communica-
+communications that has not been well studied [8]. More or                    tions in terms of security and reliability is important in future
+less similar to the noise in the conventional systems, semantic               applications, such as self-driving vehicles and medical diagno-
+noise causes misunderstanding of semantic information and                     sis. Although there have been a number of methods for gener-
+decoding errors, which results in misleading between the                      ating adversarial perturbations in the field of image processing,
+intended semantic meaning and the reconstructed one at the                    the semantic noise model in wireless communications has not
+receiver. The semantic noise can be generated in different                    been well investigated. Moreover, the performance of these
+stages, including semantic encoding, data transmission, and                   methods against adversarial perturbations is unsatisfactory and
+decoding [9]. In the semantic encoding stage, the semantic                    even deteriorates in the clean samples without noise. More
+noise corresponds to the mismatch between the original signal                 importantly, the impacts of wireless channels and transmission
+and the encoded signal after semantic encoding, which is                      overhead in communications are usually ignored. Therefore,
+related to the representational capability of the encoder. In the             in this paper, we model the semantic noise in the communica-
+data transmission stage, the signal distortion caused by channel              tion field and design a robust semantic communication system
+fading and some well-designed signals sent by malicious                       that can effectively combat semantic noise with lower trans-
+attackers both introduce semantic noise. In the decoding stage,               mission overhead. We propose a DL-enabled end-to-end robust
+the misinterpretation, incorrect representation, and confusion                semantic communication system to combat the semantic noise.
+of meanings introduce semantic noise to the receiver. For                     Both the transmitter and receiver are represented by DNNs.
+example, in the process of semantic symbol recognition,                       Since it is a data-driven method without pre-assumed channel
+the same semantic symbol is employed to represent different                   models as a prerequisite, it can potentially provide a solution
+sets of data with different meanings when the reconstructed                   with high generalization capability to various communication
+symbols are ambiguous.                                                        scenarios.
+   Semantic noises for different categories of sources, e.g., text               We firstly model the semantic noise in practical wireless
+and image, are generally different [23]. The semantic noise                   communication environments. In particular, we employ the
+in text refers to semantic ambiguity, where slight changes to                 iterative FGSM method to generate the sample-dependent
+words in the sentence, e.g., synonym replacement or randomly                  semantic noise at the transmitter instantly, which adds different
+reverse alphabetical order, may make the DL model misunder-                   semantic noise at each image. Since it is difficult to acquire
+stand the semantic meaning of the sentence [24]. The semantic                 each channel and the transmitted signal, we further propose an
