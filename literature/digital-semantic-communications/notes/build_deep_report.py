@@ -1130,6 +1130,44 @@ SEARCH_LOG = [
 ]
 
 
+OVERHEAD_EXAMPLES_BY_PDF = {
+    "Vector_Quantized_Semantic_Communication_System.pdf": """以 Kodak 768×512 RGB 测试图和 VQ-DeepSC3 配置为计算实例。论文按原始 8-bit RGB 计，原图数据量为 768×512×3×8 = 9,437,184 bits。VQ-DeepSC3 给出多尺度码本数量 N1=2、N2=64、N3=4、N4=4；若按论文多尺度 CNN 的逐级 2 倍下采样理解，四个 index feature map 尺寸约为 384×256、192×128、96×64、48×32，因此源端语义 index bit 数为 384×256×log2(2)+192×128×log2(64)+96×64×log2(4)+48×32×log2(4)=261,120 bits。源压缩率为 9,437,184/261,120=36.1×。若接论文使用的 LDPC 码率 Rc=1/2，则信道编码后约 522,240 coded bits；相对原图仍为 9,437,184/522,240=18.1×。""",
+    "Robust_Semantic_Communications_With_Masked_VQ-VAE_Enabled_Codebook.pdf": """论文给出 224×224 RGB 输入、patch size=16、codebook size=256、masking ratio=0.5、16-QAM 与 1/2 LDPC 的实例。原始图像 bit 数为 224×224×3×8 = 1,204,224 bits。patch 网格为 14×14=196 个 token，K=256 表示每个 index 为 8 bits；mask 后保留 196×0.5=98 个 index，所以语义 payload 为 98×8=784 bits。16-QAM 每符号 4 bits，因此语义符号数为 784/4=196 symbols/image。论文对 JPEG+LDPC 的参照计算为 224×224×3×8×2/(11.2×4)=53,760 symbols/image；因此 masked VQ-VAE 链路的符号开销比例为 196/53,760=0.36%。按源 bit 直接比较，1,204,224/784=1,536×。""",
+    "Learning_Based_Joint_Coding-Modulation_for_Digital_Semantic_Communication_Systems.pdf": """以 CIFAR-10 为例，论文数据是 32×32 彩色图像，若按 8-bit RGB 原始数据量计算，Braw=32×32×3×8=24,576 bits。主实验 code length n=1536，BPSK 每个 channel symbol 承载 1 bit，因此传输数字语义序列大小 Bsem=n=1,536 bits，对应 1,536 个 BPSK symbols；压缩率为 24,576/1,536=16×。论文还画出 n=512 的低开销点，此时 Bsem=512 bits，压缩率为 24,576/512=48×。这两个数值都不包含额外外部信道码冗余，因为该文把 BPSK 调制误差放进端到端 JCM 训练中。""",
+    "Robust_Information_Bottleneck_for_Task-Oriented_Communication_With_Digital_Modulation.pdf": """以论文 CIFAR-10 主设置为例。原始样本为 32×32×3 RGB，按 8-bit 像素为 24,576 bits。论文实验使用 d=16 个离散表示，主实验 K=16，并映射到 16-PSK；每个离散变量携带 log2(16)=4 bits，所以语义 payload 为 16×4=64 bits，同时需要约 16 个 K-PSK channel symbols。按 raw RGB bit 计，压缩率为 24,576/64=384×。如果 K 扫描到 64，则同样 d=16 时 payload 为 16×6=96 bits，压缩率为 256×；这说明该文用 K 控制表示细粒度和信道易错性之间的折中。""",
+    "Joint_Coding-Modulation_for_Digital_Semantic_Communications_via_Variational_Autoencoder.pdf": """论文对 CIFAR-10 明确定义 source dimension 为 k=32×32×3=3,072，并用 transmission rate r=n/k，而不是直接用 HWC×8。主实验 n=128 channel uses，因此按论文定义 r=128/3,072=1/24。若换成 bit 等价量，16-QAM 时 128 个 symbols 可携带 128×4=512 bits；与 8-bit RGB 原始量 24,576 bits 相比，压缩率为 48×。在 Tiny ImageNet 64×64×3 场景，论文图中使用 n=1024 channel uses，则 r=1024/(64×64×3)=1/12；若用 16-QAM，payload 为 4,096 bits，而原始 8-bit RGB 为 98,304 bits，压缩率为 24×。""",
+    "OFDM-Based_Digital_Semantic_Communication_With_Importance_Awareness.pdf": """以 STL-10 图像为例，论文使用 96×96 彩色图像，原始 8-bit RGB 数据量为 96×96×3×8=221,184 bits。实验设置语义特征数 C=512，并给出总 bit budget B∈[800,1300]。若取高预算 1300 bits，压缩率为 221,184/1,300=170.1×；低预算 800 bits 时压缩率为 221,184/800=276.5×。OFDM 参数为 256 个 data subcarriers、16 个 pilots 和 CP length 72，即一个 OFDM symbol 的时间域长度为 344。若采用 64-QAM，每个数据子载波承载 6 bits，1300 bits 需要 ceil(1300/6)=217 个数据子载波，可放入一个含 256 data subcarriers 的 OFDM symbol；实际物理资源还要加 16 pilots 和 72 CP 的开销。""",
+    "Digital-SC_Digital_Semantic_Communication_With_Adaptive_Network_Split_and_Learned_Non-Linear_Quantization.pdf": """论文给出一般开销为 w2×h2×z×q bits，其中 q 是每个量化输出的 bit-depth。以 CIFAR-10 32×32×3 为例，原始 RGB bit 数为 24,576 bits。文中图像重建比较中，传输 feature 使用 40 channel uses，并采用 2-bit quantization，因此可按 40×2=80 bits 计算实际语义 payload；压缩率为 24,576/80=307.2×。论文的 pruning ablation 还给出通道数从 z=128 剪到 z=13 的设置；在同一空间尺寸和 q=2 下，payload 比例变为 13/128=10.16%，即仅保留约十分之一的语义通道开销。""",
+    "From_Analog_to_Digital_Multi-Order_Digital_Joint_Coding-Modulation_for_Semantic_Communication.pdf": """论文把源编码器输出的熵模型 rate 用来控制 channel bandwidth ratio，定义 CBR ρ=ns/nx，其中 ns 是传输 channel symbols 数，nx 是输入源符号数。以 Kodak 图像 768×512 RGB 为例，nx=768×512×3=1,179,648，原始 8-bit 数据量为 9,437,184 bits。论文 Fig.13 使用平均 CBR=0.0625，因此 channel symbols 数 ns=0.0625×1,179,648=73,728 symbols。若采用 16-QAM，则等价 payload 为 73,728×4=294,912 bits，对 raw bit 的压缩率为 9,437,184/294,912=32×；若采用 64-QAM，则 payload 为 442,368 bits，压缩率为 21.3×。传统 BPG+LDPC 在 SNR=10 dB 的参照链路使用 LDPC rate=2/3 和 16-QAM，因此同一 294,912 coded bits 只对应 196,608 source bits。""",
+    "Universal_Joint_Source-Channel_Coding_for_Modulation-Agnostic_Semantic_Communication.pdf": """以 CIFAR-10 为例，原始 8-bit RGB 为 24,576 bits。论文 Basic 模型固定 N=256 channel symbols，More Symbols 模型固定 N=1024。Basic 在 BPSK 下等价 payload 为 256 bits，压缩率 96×；在 16-QAM 下 payload 为 256×4=1,024 bits，压缩率 24×；在 256-QAM 下 payload 为 256×8=2,048 bits，压缩率 12×。More Symbols 模型若采用 16-QAM，payload 为 1024×4=4,096 bits，压缩率为 6×。论文强调的是同一个网络跨调制阶数泛化，因此 N 固定，实际 bit 开销随 log2(M) 改变。""",
+    "D2-JSCC_Digital_Deep_Joint_Source-channel_Coding_for_Semantic_Communications.pdf": """以 Kodak 768×512 RGB 图像为例，原始数据量为 768×512×3×8=9,437,184 bits。论文的数字链路先由 entropy model 产生源 bitstream Bs，再按信道条件用 polar/channel code 转为 coded bits；因此开销实例要从 bpp 或 source rate 代入。若取一个 0.05 bpp 的数字图像传输工作点，则源 payload 为 0.05×768×512=19,661 bits，raw/source 压缩率为 9,437,184/19,661=480×。论文采用 polar code 形式 (ceil(4096c),4096)；若等效码率 Rc=1/2，则 coded bits 约为 39,322 bits，QPSK 下 channel symbols 约为 19,661。若 Rc=2/3，则 coded bits 约为 29,492 bits，QPSK symbols 约 14,746。""",
+    "Joint_Source-Channel_Coding_for_Robust_Digital_Semantic_Communications.pdf": """论文在 CIFAR-10 上给出明确的 binary latent 长度：分类任务 N=128，重建任务 N=512。CIFAR-10 原始 8-bit RGB 为 24,576 bits。分类时数字语义 payload 为 128 bits，压缩率 24,576/128=192×；若用 4-QAM，每符号 2 bits，则只需 64 channel symbols。重建时 payload 为 512 bits，压缩率为 48×，4-QAM 下为 256 symbols。论文给出的 JPEG+1/2 LDPC baseline 平均 bit 序列长度在分类中约 14,966 bits；经过 1/2 LDPC 后为 29,932 coded bits，4-QAM 下 14,966 symbols，显著高于所提方法的 64 symbols。""",
+    "Joint_Source-Channel_Coding_for_Channel-Adaptive_Digital_Semantic_Communications.pdf": """该文延续 binary semantic bitstream，并把 N 个 bit 按自适应 M-QAM 分组。以 CIFAR-10 重建设置 N=512 作为实例，原始 8-bit RGB 为 24,576 bits，语义源 payload 为 512 bits，源压缩率 48×。若全用 QPSK/4-QAM，每符号 2 bits，需要 512/2=256 symbols；若全用 16-QAM，需要 512/4=128 symbols；若全用 64-QAM，需要 ceil(512/6)=86 symbols。自适应调制时，如果前 256 个高重要 bit 用 4-QAM、后 256 个低重要 bit 用 16-QAM，则符号数为 256/2+256/4=192 symbols；payload bit 数不变，但信道资源和误码敏感性发生变化。""",
+    "Blind_Training_for_Channel-Adaptive_Digital_Semantic_Communications.pdf": """论文给出 encoder 输出长度：MNIST 为 32，CIFAR-10/STL-10 为 96。以 CIFAR-10 为例，原始 8-bit RGB 为 32×32×3×8=24,576 bits，语义 bitstream 长度为 96 bits，压缩率为 24,576/96=256×。若目标平均传输率 Rtarget=4 bits/channel use，则 96 bits 约需 96/4=24 channel symbols；若 Rtarget=6，则约需 16 symbols。论文中的玩具例子也给出 16-bit 序列希望映射为 4 个 symbols，即平均 4 bits/symbol；候选调制分配如 {8,4,2,2} 可在 4 个 symbols 内传完 16 bits，同时让更重要的 bit 使用更可靠的低阶调制。""",
+    "MaskDSC_Resilient_Digital_Semantic_Communication_with_Masked_Transformer_and_Unequal_Error_Protection.pdf": """论文定义 CBR 为 ρ=k/(H×W×3)，k 是总 channel symbols，而不是直接的 source bits。Kodak 常用图像为 768×512 RGB，因此 H×W×3=1,179,648，原始 8-bit RGB 为 9,437,184 bits。Fig.3 在 Kodak 上使用平均 CBR ρ=0.05，所以 k=0.05×1,179,648=58,982 channel symbols。若按 QPSK 和 Rc=1/2 估算可承载的 source payload，则为 58,982×2×1/2=58,982 bits；raw/source 压缩率为 9,437,184/58,982=160×。Fig.6/表格还出现类似压缩率 CBR≈0.07 的可视化点，此时 k≈82,575 symbols；在同样 QPSK、Rc=1/2 下 source payload≈82,575 bits，压缩率≈114×。""",
+    "2025_Kim_UEP_Digital_Semantic_Communication.pdf": """论文系统模型把 M 个语义特征逐个用 B-bit uniform quantizer 量化，总语义 bit 数 K=M×B；实验表明 CIFAR-10/CIFAR-100 的 K=12,288，MNIST 的 K=3,136。以 CIFAR-10 为例，原始 RGB bit 数为 24,576 bits，语义 bitstream 为 K=12,288 bits，因此源压缩率为 2×；这篇论文的重点不是高压缩，而是对 12,288 个 semantic bits 做 UEP。若采用固定 repetition Rfix=8，则 coded blocklength 约为 12,288×8=98,304 bits；Rfix=12 时为 147,456 bits。Block-UEP/Bit-UEP 通过按目标 bit-flip probability 分配 repetition、polar 或 LDPC block，使总 blocklength 低于等保护方案，同时保持 PSNR。""",
+    "2025_Meng_Channel_Aware_Vector_Quantization.pdf": """论文 CIFAR-10 输入为 32×32×3，原始 8-bit RGB 为 24,576 bits。方法定义 encoder 输出 N 个 feature vectors，每个 position 在 l 个子向量上量化；codebook order 为 mb 时，每个 index 需要 mb bits，因此总 payload 为 N×l×mb bits。论文实验展示 mb=4/6/8，对应 K=16/64/256，并与 16-QAM/64-QAM/256-QAM 比较；Fig.7/8 中 l=3。若以常见 CIFAR latent 网格 N=64、l=3、mb=6 为具体工作点，则 payload=64×3×6=1,152 bits，压缩率为 24,576/1,152=21.3×；若 mb=8、l=3，则 payload=1,536 bits，压缩率 16×。当 mc=6 的 64-QAM 与 mb=6 对齐时，1,152 bits 刚好是 192 个 64-QAM symbols；当 mb=8 配 64-QAM 时，index bit 会跨 symbol 拆分，论文用 multi-codebook 子信道处理这种错位。""",
+    "2026_Chen_VQ_DSC_R_OFDM.pdf": """论文在 DIV2K 上把测试图裁成 1024×1024 RGB，原始数据量为 1024×1024×3×8=25,165,824 bits。BCR 定义为索引序列传输 bit 数 Bs 相对原图 bit 数 H×W×O×8 的比例；实验使用 BCR=0.006 和 BCR=0.02。BCR=0.006 时，Bs=25,165,824×0.006≈150,995 bits，压缩率约 166.7×；BCR=0.02 时，Bs≈503,316 bits，压缩率 50×。论文 OFDM 设置为 1024 subcarriers、14 OFDM symbols，并采用 4-QAM；可用资源网格总数约 14,336 个复符号，若全部用于数据则仅能承载 28,672 coded/source bits，因此该文的 Bs 是 index 序列总 bit 开销，实际分配到多个 OFDM resource blocks/frames，并额外含 pilot 间隔 9 和 5 带来的导频开销。""",
+    "Digital_Semantic_Communications_with_Variable_Product_Quantization_for_Image_Transmission.pdf": """以论文 ImageNet/Kodak 256×256 crop 设置为例，原始 8-bit RGB 为 256×256×3×8=1,572,864 bits。VPQ-SemCom 的 rate 以 bpp 计，Fig.3(b) 中 VPQ-SemCom 约 0.38 bpp，因此源 payload 为 0.38×256×256=24,904 bits，raw/source 压缩率为 63.2×。论文设置 downsampling factor f=16，latent 网格约为 16×16=256 positions；有 L=16 个 subcodebooks，每个 Vi=256，即每个 sub-index 8 bits。若所有 16 个 subcodebooks 都使用，单 latent position 需要 16×8=128 bits；rate module 通过选择前 myi 个 subcodebooks 降低到目标 bpp。side information rate m≈0.015 bpp 时，额外侧信息约 0.015×65,536=983 bits。""",
+    "Fully_Learnable_Multi-Rate_Quantization_for_Digital_Semantic_Communication_Systems.pdf": """论文用 ImageNet-1k 256×256×3 图像，原始 8-bit RGB 数据量为 1,572,864 bits。ConcreteSC 输出最多 Nmax 个 soft bits，推理时只发送前 Nfb 个 bit；论文展示的典型 Nfb 包括 16、32、64。Nfb=16 时语义 payload 为 16 bits，压缩率 1,572,864/16=98,304×；Nfb=32 时为 49,152×；Nfb=64 时为 24,576×。若采用 4-QAM，每个 symbol 2 bits，则这三档分别需要 8、16、32 个 channel symbols。这里的开销极小，因为目标是低比特语义重建并依赖强神经 decoder，而非传统保真图像压缩。""",
+    "VQ-SDSC_Vector_Quantized_Satellite_Digital_Semantic_Communication_Framework.pdf": """论文报告 VQ-SDSC 与 TF-JCM 在相同 CBR=0.03125、64-QAM 下比较。若以 256×256 RGB 图像为例，H×W×C=196,608，按 CBR 定义 channel symbols 数 k=0.03125×196,608=6,144 symbols。64-QAM 每 symbol 6 bits，因此等价 payload 为 6,144×6=36,864 bits；原始 8-bit RGB 为 1,572,864 bits，压缩率为 42.7×。若换成 CIFAR-10 32×32×3，同一 CBR 给出 k=96 symbols、payload=576 bits、raw/payload 仍为 42.7×。码本层面，若 codebook size 为 K，则每个 index 为 log2K bits；64-QAM 只是把这些 index bits 分组到 6-bit constellation symbols。""",
+    "ESC-MVQ_End-to-End_Semantic_Communication_With_Multi-Codebook_Vector_Quantization.pdf": """论文明确定义压缩比 ψ=transmission bits/(C×H×W×8)，并在 CIFAR-10/CIFAR-100 与 STL-10 上使用 ψ=3/64。CIFAR-100 图像为 3×32×32，原始 bit 数 24,576，因此传输 semantic bits 为 24,576×3/64=1,152 bits。论文每个 VQ subvector index 使用 B=9 bits，所以 index 数约 1,152/9=128 个；rate constraint R=4 bits/symbol 时，理想符号数为 1,152/4=288 symbols。STL-10 为 3×96×96，原始 bit 数 221,184，同样 ψ 下传输 bit 数为 10,368 bits。多码本数量 V=5 改变的是不同 μ 区间 bit 的保护与调制分配，不改变 ψ 给定的源 bit 开销。""",
+    "A_Hierarchical_Error_Protection_Framework_for_Learnable_Residual_Vector_Quantization_in_Digital_Semantic_Communication_Systems.pdf": """以 Kodak 768×512 RGB 为例，原始 bit 数为 9,437,184。论文按 CBR 报告开销，CBR=0.0156 时语义 index bits 约 9,437,184×0.0156=147,220 bits，raw/source 压缩率约 64.1×；CBR=0.00391 时为 36,911 bits，压缩率 255.7×；CBR=0.0299 时为 282,171 bits，压缩率 33.4×。ResUME(4,12) 表示 4-stage residual VQ 且每 stage 12-bit codebook index，因此每个保留 latent position 为 4×12=48 bits；在 CBR=0.0156 的 147,220-bit 预算下，等价 latent positions 数约 147,220/48=3,067。UEP 调制向量如 M=[1,2,4,4] 改变各 stage 的调制保护，不改变源 index bit 总量。""",
+    "Low-Bitrate_High-Quality_Digital_Semantic_Communication_Based_on_RVQGAN.pdf": """论文语音采样率为 16 kHz，目标语义码率为 3,000 bit/s。若按 16-bit PCM 原始语音计，1 秒原始数据量为 16,000×16=256,000 bits。RVQGAN 使用 320-sample hop，因此每秒 16,000/320=50 frames；目标 3 kb/s 对应每帧 3,000/50=60 bits。论文设置 Nq=6 个 residual quantizers，因此每层每帧 10 bits，codebook size 为 2^10=1024；每秒 index 数为 50×6=300 个，payload 为 300×10=3,000 bits。相对原始 PCM 压缩率为 256,000/3,000=85.3×；相对 6 kb/s Opus baseline，语义码率为其一半。""",
+    "Generative_AI-Based_Vector_Quantized_End-to-End_Semantic_Communication_System_for_Wireless_Image_Transmission.pdf": """论文直接给出关键 ledger：每张图有 N=4096 个 quantized indices，codebook K=256，每个 index 8 bits，因此 Bsem=4096×8=32,768 bits/image。以 Kodak 768×512 RGB 为例，原始 bit 数为 9,437,184，因此 source-level 压缩率为 9,437,184/32,768=288×。若使用 LDPC code rate Rc=0.67，则 coded bits≈32,768/0.67=48,907；QPSK 下 channel symbols≈24,454。论文还报告 BPG 最大压缩平均约 5 KB=40,000 bits，SVQ-WGAN 的 32,768-bit source payload 低于该 baseline；表中有效 bpp 为 0.438，而 BPG 为 0.562。""",
+    "SQ-GAN_Semantic_Image_Communications_Using_Masked_Vector_Quantization.pdf": """论文输入图像尺寸为 H=256、W=512，原始 RGB bit 数为 256×512×3×8=3,145,728 bits。latent grid 为 H/16×W/16=16×32=512 positions；codebook J=1024，因此每个 selected latent index 为 log2(1024)=10 bits。论文 bpp 公式为 BPP=(1/256)[10(mx+ms)+2]。若取 mx=ms=0.1，BPP=(1/256)[10×0.2+2]=4/256=0.015625 bpp；总传输 bits 为 0.015625×256×512=2,048 bits，raw/source 压缩率为 3,145,728/2,048=1,536×。直接按 index 数看，约 0.1×512=51 个图像 indices 和 51 个 SSM indices，共约 102×10=1,020 index bits，其余由 mask/位置等开销补足到 bpp 公式。""",
+    "Conditional_Entropy-Constrained_Multi-Stage_Vector_Quantization_for_Semantic_Communication.pdf": """论文 CIFAR-100 特征维度 M=512，STL-10 特征维度 M=4608，sub-vector dimension D=4，stage 数 S=2，codebook K=256。以 CIFAR-100 为例，原始 32×32×3×8=24,576 bits；subvector 数为 M/D=512/4=128，固定长度 MSVQ payload 为 128×2×log2(256)=128×2×8=2,048 bits，压缩率 12×。STL-10 原始 bit 数为 96×96×3×8=221,184，subvector 数 4608/4=1,152，fixed payload=1,152×2×8=18,432 bits，压缩率同样 12×。CEC 的 Huffman/conditional entropy coding 会把每 stage 的 8-bit 固定 index 替换成接近 H(Is|I<s) 的变长码，因此实际 bit 数低于上述 fixed-length 上界。""",
+    "2025_MSVQ_SC_Multi_Stage_Vector_Quantization_Semantic_Communication.pdf": """论文 CIFAR-10 原始数据量为 24,576 bits；semantic latent vector dimension M=512、D=4，因此 N=128 个 sub-vectors，Tmax=3 stages。Type-I 设计中，高方差 64 个 sub-vectors 的三阶段 bit 数为 8/7/6，低方差 64 个为 6/5/4，所以全三阶段 payload 为 64×(8+7+6)+64×(6+5+4)=2,304 bits，压缩率为 24,576/2,304=10.67×。论文表 I 还评估 896、1024、1200、1920、2088 bits 等 stage-selection 开销；例如 1024 bits 时压缩率为 24×。实际通信设置中 LDPC block length=3156，code rate=1/2 时 source information bits=1578，coded bits=3156；若用 16-QAM，延迟为 3156/4=789 symbols/image。""",
+    "2024_Miao_VQ_DeepVSC_Dual_Stage_Vector_Quantization_Video_Semantic_Communication.pdf": """论文用 bit compression ratio BCR=final bit sequence/original video bit sequence，并报告 VQ-DeepVSC BCR≈0.023，H.265 baseline≈0.024。以一个 16-frame、256×256 RGB clip 为具体代入实例，原始 bit 数为 16×256×256×3×8=25,165,824 bits。VQ-DeepVSC 在 BCR=0.023 时传输 bits≈25,165,824×0.023=578,814 bits，压缩率约 43.5×；H.265 在 0.024 时为 603,980 bits。若接论文 realistic transmission 的 LDPC rate=3/4，则 coded bits≈578,814/(3/4)=771,752；16-QAM 下 symbols≈192,938。论文内部 MSVQ 也可写成每 key frame bitstream Ls×B，其中 Ls=U×c、B=log2(codebook size)。""",
+    "2024_Activation_Map_Based_Vector_Quantization_360_Image_Semantic_Communication.pdf": """该文以 bpp/压缩比报告 360 图像开销，正文没有给出单一固定 H、W。按其 bpp 定义，若采用 1024×2048 RGB 360 图像作为计算实例，原始 bit 数为 1024×2048×3×8=50,331,648 bits。若取曲线中的 0.05 bpp 工作点，payload 为 0.05×1024×2048=104,858 bits，raw/source 压缩率为 480×。论文设置 codebook embedding space dimension 为 1024；若实际码本 cardinality 也取 K=1024，则每个 index 为 10 bits，上述 104,858-bit 预算对应约 10,486 个 indices。需要注意：论文原文主要给 bpp 曲线和 embedding dimension，未把每张图的固定 token 网格与 codebook cardinality 完整列成 ledger。""",
+    "Vision_Transformer-Based_Semantic_Communications_With_Importance-Aware_Quantization.pdf": """论文输入统一 resize 为 3×224×224，原始 8-bit RGB 为 224×224×3×8=1,204,224 bits。ViT patch size P=16，所以 patch 数 N=(224/16)^2=196，每个 patch 原始元素数 P^2C=16^2×3=768。若所有 patch 用 Mi=1 bit/element，传输量 B=768×196=150,528 bits；论文压缩率定义为 ρ=B/(8HWC)，因此 ρ=150,528/1,204,224=0.125，正好对应文中低开销点。若 ρ=0.5，则目标 bit 数为 0.5×1,204,224=602,112 bits，平均每个 patch 元素 Mi=602,112/(768×196)=4 bits；IAQ 的实际作用是在同样平均预算下给高 attention patch 分配高于 4 的 bit depth，给背景 patch 分配低于 4。量化器信息开销 Badd=log2(Mmax+1)N+16；若 Mmax=8，则 Badd≈196×3.17+16≈637 bits。""",
+    "sDMCMA_Semantic_Digital_Modulation_Constellation_Mapping_Scheme_for_Semantic_Communication.pdf": """论文给出一个四个语义量化值的 toy example：每个值 2 bits，总语义 payload 为 4×2=8 bits。传统映射在较低阶调制下需要更多 transmission units；sDMCMA 通过 semantic-to-constellation bit-position mapping，把 MSB 或更重要 bit 放在更可靠的 constellation decision region。若代入 CIFAR-10 并假设每个 RGB scalar 都做 2-bit semantic quantization，则 payload 为 32×32×3×2=6,144 bits；用 256-QAM 每 symbol 8 bits，理想符号数为 6,144/8=768 symbols。若与原始 8-bit RGB 24,576 bits 比较，该 2-bit scalar payload 的源压缩率为 4×；sDMCMA 本身不改变 bit 数，而是降低同样 bit 数在符号错误下造成的语义失真。""",
+    "2025_Channel_Capacity_Codebook_Design_VQ_Semantic_Communication.pdf": """该文是 codebook/channel-capacity 设计，开销由 N 个 VQ indices 和 codebook size K 决定。以 CIFAR-10 32×32×3 为实例，原始 8-bit RGB 为 24,576 bits。若实验采用任务语义向量 N=16、K=16 的低维配置，则 payload=N×log2K=16×4=64 bits，压缩率 384×；若为了降低量化误差把 K 增到 64，则 payload=16×6=96 bits，压缩率 256×。论文的新增点是 codeword activation distribution 与 channel capacity 匹配：如果经过 capacity-aware 设计后的 index entropy 为 3.2 bits/index，而不是固定 log2K=4，则熵编码 payload 可从 64 bits 降至 16×3.2=51.2 bits，同时保持更适合信道转移概率的 codebook 布局。""",
+    "2025_Theoretical_Codebook_Design_VQ_Semantic_Communication.pdf": """这篇理论论文同样以 Bsem=Nlog2K 作为离散语义 index 的基本开销。以 CIFAR-10 任务样本为代入实例，原始 8-bit RGB 为 24,576 bits。若 semantic encoder 产生 N=16 个 indices，K=16，则 payload=64 bits，压缩率 384×；若 K=64，则 payload=96 bits，压缩率 256×；若 N 增到 32 且 K=64，则 payload=192 bits，压缩率 128×。理论分析关注的正是这个三角关系：增大 K 或 N 可降低量化失真，但会提高每样本 bit 开销，并在 bit/index error 下扩大码字跳变风险，因此最优 codebook 不是单纯越大越好。""",
+    "2025_Token_Based_Prompt_Transmission_JSCC_Modulation.pdf": """论文关注 token/prompt 级数字语义传输，开销由 token 数 T 和 vocabulary size V 决定。若采用常见约 V=50,000 的 tokenizer，则每个 token 需要 ceil(log2V)=16 bits。以 128-token prompt 为例，token payload 为 128×16=2,048 bits；若语义筛选后只传 64 个任务相关 tokens，则 payload 为 1,024 bits。若原始 UTF-8 prompt 长 512 bytes，则原始文本 bit 数为 512×8=4,096 bits；128-token 方案相对原始文本压缩 2×，64-token 方案压缩 4×。用 16-QAM 时，2,048 bits 需要 512 channel symbols，1,024 bits 需要 256 symbols；后续 JSCC/modulation 模块处理的是这些 token bits 或其 learned modulation representation。""",
+}
+
+
 def intro_logic(p: dict) -> list[str]:
     return [
         "现有进展：连续 DeepJSCC/任务导向 SemCom 已证明端到端语义传输可在低 SNR 或低带宽下优于传统分离式通信。",
@@ -1149,11 +1187,16 @@ def table(rows: list[list[str]], headers: list[str]) -> str:
 
 def paper_section(p: dict) -> str:
     f = FIGS.get(p["pdf"], {})
-    pdf_link = f"papers/{p['pdf']}"
     method_asset = f.get("method_asset", "")
     result_asset = f.get("result_asset", "")
     method_page = f.get("method_page", "?")
     result_page = f.get("result_page", "?")
+    overhead_example = OVERHEAD_EXAMPLES_BY_PDF.get(p["pdf"], "")
+    overhead_example_html = (
+        f'<div class="derivation calc-example"><strong>实际数值计算实例：</strong>{esc(overhead_example)}</div>'
+        if overhead_example
+        else ""
+    )
     meta_rows = [
         ["作者", p["authors"]],
         ["来源/年份", f"{p['source']} · {p['venue']} · {p['year']}"],
@@ -1174,19 +1217,18 @@ def paper_section(p: dict) -> str:
     if method_asset:
         figs += f"""
         <figure>
-          <a href="{esc(pdf_link)}"><img src="{esc(method_asset)}" loading="lazy" alt="{esc(p['title'])} 方法页"></a>
-          <figcaption>方法/架构图页：来自《{esc(p['title'])}》PDF p.{esc(method_page)}；点击图片或标题 PDF 链接可打开本地全文。</figcaption>
+          <img src="{esc(method_asset)}" loading="lazy" alt="{esc(p['title'])} 方法页">
+          <figcaption>方法/架构图页：来自《{esc(p['title'])}》PDF p.{esc(method_page)}。</figcaption>
         </figure>"""
     if result_asset:
         figs += f"""
         <figure>
-          <a href="{esc(pdf_link)}"><img src="{esc(result_asset)}" loading="lazy" alt="{esc(p['title'])} 结果页"></a>
+          <img src="{esc(result_asset)}" loading="lazy" alt="{esc(p['title'])} 结果页">
           <figcaption>关键结果图/表页：来自《{esc(p['title'])}》PDF p.{esc(result_page)}，通常包含 SNR/PSNR/MS-SSIM/BER/Accuracy/码率等结果。</figcaption>
         </figure>"""
     return f"""
     <article id="{esc(p['id'])}" class="paper">
       <h2>{esc(p['title'])}</h2>
-      <p class="pdfline"><a href="{esc(pdf_link)}">本地 PDF</a></p>
       {table(meta_rows, ["字段", "内容"])}
       <h3>实验设置</h3>
       {table(exp_rows, ["项目", "提取结果"])}
@@ -1196,6 +1238,7 @@ def paper_section(p: dict) -> str:
       <p><strong>技术路线：</strong>{esc(p['route'])}。{esc(p['quantization'])}</p>
       <p><strong>实际传输单位：</strong>{esc(p['unit'])}。<strong>码本/离散集合：</strong>{esc(p['codebook'])}</p>
       <div class="derivation"><strong>传输开销推导：</strong>{esc(p['overhead'])}</div>
+      {overhead_example_html}
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>{esc(p['decoder_input'])}</p>
       <p><strong>错误建模/纠错机制：</strong>{esc(p['error_handling'])}</p>
@@ -1229,7 +1272,7 @@ def build_html() -> str:
         ]
         for p in PAPERS
     ]
-    related_rows = [[r["year"], r["title"], r["reason"], r.get("pdf", "")] for r in RELATED]
+    related_rows = [[r["year"], r["title"], r["reason"]] for r in RELATED]
     excluded_rows = [[r["title"], r["reason"]] for r in EXCLUDED]
     search_items = "".join(f"<li>{esc(x)}</li>" for x in SEARCH_LOG)
     sections = "\n".join(paper_section(p) for p in PAPERS)
@@ -1238,7 +1281,7 @@ def build_html() -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>数字语义通信文献深度调研</title>
+  <title>数字语义通信文献深度调研（公开版）</title>
   <script>
     window.MathJax = {{tex: {{inlineMath: [['$', '$'], ['\\\\(', '\\\\)']]}}}};
   </script>
@@ -1275,7 +1318,7 @@ def build_html() -> str:
     .logic {{ padding-left: 22px; }}
     .logic li {{ margin: 6px 0; }}
     .derivation {{ background: #f8fafc; border-left: 4px solid var(--accent); padding: 12px 14px; margin: 12px 0; }}
-    .pdfline a {{ color: var(--accent); font-weight: 650; }}
+    .calc-example {{ background: #f0fdfa; border-left-color: #0d9488; }}
     .figgrid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }}
     figure {{ margin: 0; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfe; overflow: hidden; }}
     figure img {{ width: 100%; display: block; background: #fff; }}
@@ -1293,7 +1336,7 @@ def build_html() -> str:
 <body>
 <div class="layout">
   <nav>
-    <h1>数字语义通信文献深度调研</h1>
+    <h1>数字语义通信文献深度调研（公开版）</h1>
     <div class="small">核心论文导航使用完整论文标题；点击跳转到独立小节。</div>
     <a href="#overview">总览与检索策略</a>
     <a href="#comparison">横向比较表</a>
@@ -1303,11 +1346,11 @@ def build_html() -> str:
   </nav>
   <main>
     <header id="overview">
-      <h1>数字语义通信：2021 至今系统性文献调研</h1>
+      <h1>数字语义通信：2021 至今系统性文献调研（公开版）</h1>
       <p class="lead">本报告把旧版摘要列表整体返工为可长期查阅的深度笔记。纳入标准聚焦数字化语义变量：VQ/PQ/RVQ/MSVQ、码本 index、离散 token、semantic bits、数字调制符号、OFDM/UEP/BSC/BER 建模。MDPI 期刊论文按项目规则排除。</p>
       <div class="badges">
         <span class="badge">核心深读 {len(PAPERS)} 篇</span>
-        <span class="badge">PDF 库 {len(list((ROOT / 'papers').glob('*.pdf')))} 份</span>
+        <span class="badge">公开版：不含 PDF 链接</span>
         <span class="badge alt">本地图页 {len(list((ROOT / 'assets').glob('*.png')))} 张</span>
         <span class="badge alt">IEEE 优先，arXiv 备选</span>
       </div>
@@ -1342,7 +1385,7 @@ def build_html() -> str:
     <section id="related">
       <h2>相关但非核心与排除项</h2>
       <h3>相关但非核心</h3>
-      {table(related_rows, ["年份", "论文/候选", "不纳入核心主表原因", "本地 PDF"])}
+      {table(related_rows, ["年份", "论文/候选", "不纳入核心主表原因"])}
       <h3>排除项</h3>
       {table(excluded_rows, ["项目", "排除原因"])}
     </section>
@@ -1360,7 +1403,7 @@ def write_csv(path: pathlib.Path, rows: list[dict], fields: list[str]) -> None:
 
 
 def main() -> None:
-    (ROOT / "index.html").write_text(build_html(), encoding="utf-8")
+    (ROOT / "index.html").write_text(build_html(), encoding="utf-8-sig")
     manifest_path = ROOT / "manifest.jsonl"
     with manifest_path.open("w", encoding="utf-8") as f:
         for p in PAPERS:

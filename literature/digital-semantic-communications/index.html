@@ -40,6 +40,7 @@
     .logic { padding-left: 22px; }
     .logic li { margin: 6px 0; }
     .derivation { background: #f8fafc; border-left: 4px solid var(--accent); padding: 12px 14px; margin: 12px 0; }
+    .calc-example { background: #f0fdfa; border-left-color: #0d9488; }
     .figgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
     figure { margin: 0; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfe; overflow: hidden; }
     figure img { width: 100%; display: block; background: #fff; }
@@ -221,6 +222,7 @@
       <p><strong>技术路线：</strong>多尺度 VQ-DeepSC。CNN 语义编码器产生多尺度 feature map，每个尺度用共享 embedding/codebook 最近邻量化；indices 再转 bitstream。</p>
       <p><strong>实际传输单位：</strong>codebook index / bitstream。<strong>码本/离散集合：</strong>有码本；多尺度 embedding spaces，具体 codebook 维度以每尺度 N_l 与 K_l 表示。</p>
       <div class="derivation"><strong>传输开销推导：</strong>传输开销可写为 $$B_{sem}=\sum_l N_l\lceil\log_2 K_l\rceil$$；若接 LDPC 码率 $$R_c$$ 和 $$M$$ 阶调制，则信道比特/符号数约为 $$B_{tx}=B_{sem}/R_c,\ N_{sym}=B_{tx}/\log_2 M$$。论文直接报告的是相近 transmitted symbols 与 compression ratio；对原始 Kodak RGB，原始 bit 约为 $$HWC\times8$$。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 Kodak 768×512 RGB 测试图和 VQ-DeepSC3 配置为计算实例。论文按原始 8-bit RGB 计，原图数据量为 768×512×3×8 = 9,437,184 bits。VQ-DeepSC3 给出多尺度码本数量 N1=2、N2=64、N3=4、N4=4；若按论文多尺度 CNN 的逐级 2 倍下采样理解，四个 index feature map 尺寸约为 384×256、192×128、96×64、48×32，因此源端语义 index bit 数为 384×256×log2(2)+192×128×log2(64)+96×64×log2(4)+48×32×log2(4)=261,120 bits。源压缩率为 9,437,184/261,120=36.1×。若接论文使用的 LDPC 码率 Rc=1/2，则信道编码后约 522,240 coded bits；相对原图仍为 9,437,184/522,240=18.1×。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>经过信道译码后的 recovered indices，而不是带 soft information 的连续 latent。</p>
       <p><strong>错误建模/纠错机制：</strong>信道错误主要由传统 LDPC/AMC 处理；若 index bit 出错会跳到错误 codeword，但模型本身没有在训练中显式模拟 index flip 语义跳变。</p>
@@ -260,6 +262,7 @@
       <p><strong>技术路线：</strong>masked VQ-VAE codebook。语义编码器输出 feature 后进入 masked VQ-VAE；通过 mask 与 feature importance module 删除噪声相关或任务无关 feature；发送 codebook indices。</p>
       <p><strong>实际传输单位：</strong>codebook index / selected semantic tokens。<strong>码本/离散集合：</strong>有码本；码本作为收发双方共享知识库，论文强调 codebook basis 的语义相似度约束。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若保留 $$N_s$$ 个重要 feature，每个索引来自 $$K$$ 个 codeword，则 $$B_{sem}=N_s\lceil\log_2 K\rceil$$；mask 降低 $$N_s$$，patch size 决定 token 数。论文以 patch/压缩率和检索指标给出开销收益，精确 bit 数需由保留 token 数和码本大小推导。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文给出 224×224 RGB 输入、patch size=16、codebook size=256、masking ratio=0.5、16-QAM 与 1/2 LDPC 的实例。原始图像 bit 数为 224×224×3×8 = 1,204,224 bits。patch 网格为 14×14=196 个 token，K=256 表示每个 index 为 8 bits；mask 后保留 196×0.5=98 个 index，所以语义 payload 为 98×8=784 bits。16-QAM 每符号 4 bits，因此语义符号数为 784/4=196 symbols/image。论文对 JPEG+LDPC 的参照计算为 224×224×3×8×2/(11.2×4)=53,760 symbols/image；因此 masked VQ-VAE 链路的符号开销比例为 196/53,760=0.36%。按源 bit 直接比较，1,204,224/784=1,536×。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>多数实验中 decoder 假设收到经通信链路恢复后的 index 或受语义噪声扰动的 feature/index。</p>
       <p><strong>错误建模/纠错机制：</strong>论文重点是 semantic noise，不是 bit flip 到邻近/远端 codeword 的物理层模型；index 错误的跳变风险被间接缓解，但未完全用 BSC/BER 端到端建模。</p>
@@ -299,6 +302,7 @@
       <p><strong>技术路线：</strong>概率式 joint coding-modulation。NN encoder 输出每个 BPSK 符号取值的概率，用随机码/Gumbel 技巧采样离散调制符号，避免硬量化不可导。</p>
       <p><strong>实际传输单位：</strong>BPSK symbol / bit。<strong>码本/离散集合：</strong>无 VQ 码本；离散字母是 BPSK constellation。</p>
       <div class="derivation"><strong>传输开销推导：</strong>固定 code length 为 $$n$$ 时，BPSK 每个符号 1 bit，语义链路开销 $$B_{sem}=n$$；论文 n=1536 时原始 CIFAR-10 RGB 为 $$32\times32\times3\times8=24576$$ bits，语义 bitstream 约为 1/16 原始 bit 数，不含训练随机性和物理编码冗余。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 CIFAR-10 为例，论文数据是 32×32 彩色图像，若按 8-bit RGB 原始数据量计算，Braw=32×32×3×8=24,576 bits。主实验 code length n=1536，BPSK 每个 channel symbol 承载 1 bit，因此传输数字语义序列大小 Bsem=n=1,536 bits，对应 1,536 个 BPSK symbols；压缩率为 24,576/1,536=16×。论文还画出 n=512 的低开销点，此时 Bsem=512 bits，压缩率为 24,576/512=48×。这两个数值都不包含额外外部信道码冗余，因为该文把 BPSK 调制误差放进端到端 JCM 训练中。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到经 AWGN 扰动后的 BPSK demodulation 结果或其等效离散/连续判决。</p>
       <p><strong>错误建模/纠错机制：</strong>显式考虑符号经 AWGN 后错误，但粒度是 BPSK symbol，不是 VQ index。误码会改变 learned bit/symbol，模型通过端到端训练吸收。</p>
@@ -338,6 +342,7 @@
       <p><strong>技术路线：</strong>DT-JSCC + robust information bottleneck。把输入编码成 d 个离散表示，每个表示从 K 个 codeword/符号中采样；再映射到 K-PSK constellation。</p>
       <p><strong>实际传输单位：</strong>discrete representation / PSK symbol。<strong>码本/离散集合：</strong>有 learnable codebook；K 在实验中可从 2 到 64 扫描，主实验 K=16。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若编码成 $$d$$ 个离散变量、每个变量 K 类，则语义 payload $$B_{sem}=d\lceil\log_2 K\rceil$$；当 K-PSK 与 K 对齐时每个变量对应一个 channel symbol，符号数约 $$d$$。论文同时用互信息 $$I(Z;\hat Z)$$ 与任务信息刻画有效传输率。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以论文 CIFAR-10 主设置为例。原始样本为 32×32×3 RGB，按 8-bit 像素为 24,576 bits。论文实验使用 d=16 个离散表示，主实验 K=16，并映射到 16-PSK；每个离散变量携带 log2(16)=4 bits，所以语义 payload 为 16×4=64 bits，同时需要约 16 个 K-PSK channel symbols。按 raw RGB bit 计，压缩率为 24,576/64=384×。如果 K 扫描到 64，则同样 d=16 时 payload 为 16×6=96 bits，压缩率为 256×；这说明该文用 K 控制表示细粒度和信道易错性之间的折中。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到 demodulation 后的 corrupted discrete vector \hat z。</p>
       <p><strong>错误建模/纠错机制：</strong>显式建模 $$p(\hat z|z)$$，即符号错误导致离散类别变化；RIB 让 codeword/分布保留必要冗余以抵抗这种变化。</p>
@@ -377,6 +382,7 @@
       <p><strong>技术路线：</strong>VAE joint coding-modulation。用 VAE 学习从源数据到离散 constellation symbols 的 transition probability，避免硬调制不可导。</p>
       <p><strong>实际传输单位：</strong>constellation symbol。<strong>码本/离散集合：</strong>无显式 VQ 码本；离散集合是 M 阶调制星座。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若每个样本发送 $$n_s$$ 个 M 阶星座符号，则语义 bit 等价量为 $$B_{sem}=n_s\log_2 M$$；论文通过 transmission rate 与 modulation order 给出实验点，具体原图压缩率需按输入 bit 数 $$HWC8$$ 对比。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文对 CIFAR-10 明确定义 source dimension 为 k=32×32×3=3,072，并用 transmission rate r=n/k，而不是直接用 HWC×8。主实验 n=128 channel uses，因此按论文定义 r=128/3,072=1/24。若换成 bit 等价量，16-QAM 时 128 个 symbols 可携带 128×4=512 bits；与 8-bit RGB 原始量 24,576 bits 相比，压缩率为 48×。在 Tiny ImageNet 64×64×3 场景，论文图中使用 n=1024 channel uses，则 r=1024/(64×64×3)=1/12；若用 16-QAM，payload 为 4,096 bits，而原始 8-bit RGB 为 98,304 bits，压缩率为 24×。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经过实际数字调制、AWGN 和 demodulation 后的符号/概率信息。</p>
       <p><strong>错误建模/纠错机制：</strong>显式考虑 constellation symbol 错误；但不以 bit-level index flip 为中心，而是以符号级转移概率吸收误差。</p>
@@ -416,6 +422,7 @@
       <p><strong>技术路线：</strong>OFDM + semantic importance bit allocation。语义 encoder 提取 feature，scalar quantizer 数字化，再映射到 OFDM 子载波；语义重要性决定子载波和 bit 数。</p>
       <p><strong>实际传输单位：</strong>quantized bit / OFDM symbol。<strong>码本/离散集合：</strong>无 VQ 码本；使用标量量化 levels 与 bit allocation。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若第 i 个语义 feature 分配 $$b_i$$ bits，则 $$B_{sem}=\sum_i b_i$$；OFDM 资源开销还包括每子载波调制阶数与信道编码。论文把优化变量定义为 subcarrier assignment 与 bit allocation，而非固定 CBR。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 STL-10 图像为例，论文使用 96×96 彩色图像，原始 8-bit RGB 数据量为 96×96×3×8=221,184 bits。实验设置语义特征数 C=512，并给出总 bit budget B∈[800,1300]。若取高预算 1300 bits，压缩率为 221,184/1,300=170.1×；低预算 800 bits 时压缩率为 221,184/800=276.5×。OFDM 参数为 256 个 data subcarriers、16 个 pilots 和 CP length 72，即一个 OFDM symbol 的时间域长度为 344。若采用 64-QAM，每个数据子载波承载 6 bits，1300 bits 需要 ceil(1300/6)=217 个数据子载波，可放入一个含 256 data subcarriers 的 OFDM symbol；实际物理资源还要加 16 pilots 和 72 CP 的开销。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到 OFDM 解调/译码后的量化语义 bits 或对应 feature 值。</p>
       <p><strong>错误建模/纠错机制：</strong>考虑 bit allocation 与频选信道质量，但主要不是训练 decoder 从错误 bitstream 中恢复；误码影响通过资源分配和传统 OFDM 可靠性间接控制。</p>
@@ -455,6 +462,7 @@
       <p><strong>技术路线：</strong>learned non-linear quantization。DNN 在设备端切分，设备输出中间语义 feature；非线性可训练量化 levels 将 feature 变为 bit sequence，并通过 structured pruning 降维。</p>
       <p><strong>实际传输单位：</strong>bit sequence / quantized intermediate feature。<strong>码本/离散集合：</strong>无 VQ 码本；有码字意义上的 learned quantization levels。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若切分层输出维度为 $$D_s$$、剪枝后保留 $$D_r$$、每维量化 $$b$$ bits，则 $$B_{sem}=D_r b$$；策略网络实际改变 $$D_r$$ 与 split，使 CBR 随输入和信道约束变化。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文给出一般开销为 w2×h2×z×q bits，其中 q 是每个量化输出的 bit-depth。以 CIFAR-10 32×32×3 为例，原始 RGB bit 数为 24,576 bits。文中图像重建比较中，传输 feature 使用 40 channel uses，并采用 2-bit quantization，因此可按 40×2=80 bits 计算实际语义 payload；压缩率为 24,576/80=307.2×。论文的 pruning ablation 还给出通道数从 z=128 剪到 z=13 的设置；在同一空间尺寸和 q=2 下，payload 比例变为 13/128=10.16%，即仅保留约十分之一的语义通道开销。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>edge decoder 收到经数字系统恢复的 quantized feature bit sequence。</p>
       <p><strong>错误建模/纠错机制：</strong>论文主要假设数字链路能传输 bit sequence；对 bit error 后 feature 值跳变没有像 BSC/soft decoding 那样端到端建模。</p>
@@ -494,6 +502,7 @@
       <p><strong>技术路线：</strong>MDJCM。在 NTSCC 中加入多阶 modulation/demodulation 模块；训练时把调制看作受约束量化并加入 scaling 与人工噪声。</p>
       <p><strong>实际传输单位：</strong>digital constellation symbol。<strong>码本/离散集合：</strong>无 VQ 码本；离散集合由 modulation constellation 决定。</p>
       <div class="derivation"><strong>传输开销推导：</strong>每个 channel use 承载 $$\log_2 M$$ bits，对 n 个符号 $$B_{sem}=n\log_2 M$$；论文重点比较相同 bandwidth ratio 下多阶调制性能，压缩率由 NTSCC latent 维度和 M 决定。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文把源编码器输出的熵模型 rate 用来控制 channel bandwidth ratio，定义 CBR ρ=ns/nx，其中 ns 是传输 channel symbols 数，nx 是输入源符号数。以 Kodak 图像 768×512 RGB 为例，nx=768×512×3=1,179,648，原始 8-bit 数据量为 9,437,184 bits。论文 Fig.13 使用平均 CBR=0.0625，因此 channel symbols 数 ns=0.0625×1,179,648=73,728 symbols。若采用 16-QAM，则等价 payload 为 73,728×4=294,912 bits，对 raw bit 的压缩率为 9,437,184/294,912=32×；若采用 64-QAM，则 payload 为 442,368 bits，压缩率为 21.3×。传统 BPG+LDPC 在 SNR=10 dB 的参照链路使用 LDPC rate=2/3 和 16-QAM，因此同一 294,912 coded bits 只对应 196,608 source bits。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经过数字调制信道后的符号判决/等效 latent。</p>
       <p><strong>错误建模/纠错机制：</strong>显式把调制错误作为训练近似的一部分，但 bit-level mapping 不如 sDMCM/UEP 细。</p>
@@ -533,6 +542,7 @@
       <p><strong>技术路线：</strong>uJSCC with VQ codebooks。NN encoder/decoder 共享一套主干，VQ codebook 数字化语义 latent；每个 modulation order 选择对应 BN 统计。</p>
       <p><strong>实际传输单位：</strong>VQ index / modulation symbol。<strong>码本/离散集合：</strong>有 trained VQ codebooks；多 BN 使共享参数适应不同输出统计。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若每个 latent block 量化为 K 个 codeword，$$B_{sem}=N\lceil\log_2 K\rceil$$；不同调制阶数改变每个 channel use 可承载 bits，因此 $$N_{sym}=B_{sem}/\log_2 M$$。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 CIFAR-10 为例，原始 8-bit RGB 为 24,576 bits。论文 Basic 模型固定 N=256 channel symbols，More Symbols 模型固定 N=1024。Basic 在 BPSK 下等价 payload 为 256 bits，压缩率 96×；在 16-QAM 下 payload 为 256×4=1,024 bits，压缩率 24×；在 256-QAM 下 payload 为 256×8=2,048 bits，压缩率 12×。More Symbols 模型若采用 16-QAM，payload 为 1024×4=4,096 bits，压缩率为 6×。论文强调的是同一个网络跨调制阶数泛化，因此 N 固定，实际 bit 开销随 log2(M) 改变。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到调制/解调后的 VQ 表示，BN 分支按调制阶数解释统计。</p>
       <p><strong>错误建模/纠错机制：</strong>考虑 modulation order 变化对离散表示的影响，但没有把具体 bit flip/index flip 作为主要训练噪声。</p>
@@ -572,6 +582,7 @@
       <p><strong>技术路线：</strong>digital deep source-channel coding。深度 source coder 提取并压缩语义 feature，adaptive density model 估计分布；外接 channel code 保护 bitstream。</p>
       <p><strong>实际传输单位：</strong>bitstream。<strong>码本/离散集合：</strong>无 VQ 码本；更接近 learned entropy/source coding。</p>
       <div class="derivation"><strong>传输开销推导：</strong>总 bit budget 分成 source rate $$R_s$$ 和 channel redundancy $$R_c$$；给定总信道资源，优化 $$D(R_s,R_c,SNR)$$。若 source bitstream 长度为 $$B_s$$，码率 $$r_c$$，实际发送 $$B_s/r_c$$ bits。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 Kodak 768×512 RGB 图像为例，原始数据量为 768×512×3×8=9,437,184 bits。论文的数字链路先由 entropy model 产生源 bitstream Bs，再按信道条件用 polar/channel code 转为 coded bits；因此开销实例要从 bpp 或 source rate 代入。若取一个 0.05 bpp 的数字图像传输工作点，则源 payload 为 0.05×768×512=19,661 bits，raw/source 压缩率为 9,437,184/19,661=480×。论文采用 polar code 形式 (ceil(4096c),4096)；若等效码率 Rc=1/2，则 coded bits 约为 39,322 bits，QPSK 下 channel symbols 约为 19,661。若 Rc=2/3，则 coded bits 约为 29,492 bits，QPSK symbols 约 14,746。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经过 channel decoding 的 source bitstream。</p>
       <p><strong>错误建模/纠错机制：</strong>信道错误由 channel code 负责；语义 decoder 不直接处理错误 bitstream。</p>
@@ -611,6 +622,7 @@
       <p><strong>技术路线：</strong>BSEC robust JSCC。binary-output JSCC encoder 输出 bit，通信链路用不确定性 demodulation 与 BSEC 等效模型训练。</p>
       <p><strong>实际传输单位：</strong>bit / erased bit / soft uncertainty。<strong>码本/离散集合：</strong>无 VQ 码本；离散变量是 binary encoder output。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 encoder 输出 B bits，则 $$B_{sem}=B$$；调制阶数 M 时符号数 $$B/\log_2 M$$，BSEC 训练通过 erasure/flip 参数决定有效信息保留。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文在 CIFAR-10 上给出明确的 binary latent 长度：分类任务 N=128，重建任务 N=512。CIFAR-10 原始 8-bit RGB 为 24,576 bits。分类时数字语义 payload 为 128 bits，压缩率 24,576/128=192×；若用 4-QAM，每符号 2 bits，则只需 64 channel symbols。重建时 payload 为 512 bits，压缩率为 48×，4-QAM 下为 256 symbols。论文给出的 JPEG+1/2 LDPC baseline 平均 bit 序列长度在分类中约 14,966 bits；经过 1/2 LDPC 后为 29,932 coded bits，4-QAM 下 14,966 symbols，显著高于所提方法的 64 symbols。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到含不确定性/擦除建模的 bit 表示，而不是完美 index。</p>
       <p><strong>错误建模/纠错机制：</strong>显式处理 bit error/erasure，比只靠 LDPC 的 VQ 系统更接近数字语义误码问题。</p>
@@ -650,6 +662,7 @@
       <p><strong>技术路线：</strong>BSEC + channel-adaptive modulation。binary-output JSCC encoder 输出 latent bits；新 demodulation 估计不确定性；训练用 BSEC 参数分布覆盖环境。</p>
       <p><strong>实际传输单位：</strong>bit / soft-erasure representation。<strong>码本/离散集合：</strong>无 VQ 码本；离散单位是 semantic bits。</p>
       <div class="derivation"><strong>传输开销推导：</strong>开销为 encoder bit 数 $$B$$；推理选择第 j 个 latent 的调制阶数 $$M_j$$，总符号数约 $$\sum_j b_j/\log_2 M_j$$，其中 bit 可靠性由 BSEC 参数和 demodulation uncertainty 调节。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>该文延续 binary semantic bitstream，并把 N 个 bit 按自适应 M-QAM 分组。以 CIFAR-10 重建设置 N=512 作为实例，原始 8-bit RGB 为 24,576 bits，语义源 payload 为 512 bits，源压缩率 48×。若全用 QPSK/4-QAM，每符号 2 bits，需要 512/2=256 symbols；若全用 16-QAM，需要 512/4=128 symbols；若全用 64-QAM，需要 ceil(512/6)=86 symbols。自适应调制时，如果前 256 个高重要 bit 用 4-QAM、后 256 个低重要 bit 用 16-QAM，则符号数为 256/2+256/4=192 symbols；payload bit 数不变，但信道资源和误码敏感性发生变化。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到带不确定性的 bit/erasure 表示，而不是无误 bitstream。</p>
       <p><strong>错误建模/纠错机制：</strong>明确处理 bit error/erasure；不是 VQ index 跳变，但机制直接针对数字 bit 受损。</p>
@@ -689,6 +702,7 @@
       <p><strong>技术路线：</strong>blind parallel-BSC training。semantic encoder 输出 bits；训练时不指定具体物理信道，而用 parallel BSC 的可学习 flip probability 表征每个 bit/substream 可靠性。</p>
       <p><strong>实际传输单位：</strong>bit / parallel BSC output。<strong>码本/离散集合：</strong>无 VQ 码本；可与 VQ/SQ baseline 对比。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若有 B 个 semantic bits，$$B_{sem}=B$$；每个 BSC 分支有目标 flip probability $$\mu_i$$。推理时选功率/调制使实际 BER 接近 $$\mu_i$$，符号开销随所选 $$M_i$$ 为 $$\sum_i b_i/\log_2M_i$$。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文给出 encoder 输出长度：MNIST 为 32，CIFAR-10/STL-10 为 96。以 CIFAR-10 为例，原始 8-bit RGB 为 32×32×3×8=24,576 bits，语义 bitstream 长度为 96 bits，压缩率为 24,576/96=256×。若目标平均传输率 Rtarget=4 bits/channel use，则 96 bits 约需 96/4=24 channel symbols；若 Rtarget=6，则约需 16 symbols。论文中的玩具例子也给出 16-bit 序列希望映射为 4 个 symbols，即平均 4 bits/symbol；候选调制分配如 {8,4,2,2} 可在 4 个 symbols 内传完 16 bits，同时让更重要的 bit 使用更可靠的低阶调制。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到经过 BSC 扰动的 bits；实际部署中接收 hard bits，其错误率由调制/功率匹配。</p>
       <p><strong>错误建模/纠错机制：</strong>非常明确地处理 bit error；它不要求知道具体信道，只要求实际链路能实现目标 BER。</p>
@@ -728,6 +742,7 @@
       <p><strong>技术路线：</strong>masked Transformer + UEP。视觉 token 以因果顺序建模；masked Transformer 同时用于 entropy modeling 和 error concealment；物理层对关键 packets 做 UEP。</p>
       <p><strong>实际传输单位：</strong>token bitstream / packet。<strong>码本/离散集合：</strong>可与 VQ/entropy coding 结合；核心不是单一 codebook，而是 token/context model。</p>
       <div class="derivation"><strong>传输开销推导：</strong>总开销由 entropy-coded token bitstream 给出；若 token i 的码长为 $$l_i$$，关键 token 采用更强 channel code 码率 $$R_i$$，则 $$B_{tx}=\sum_i l_i/R_i$$。UEP 不改变源 bitstream，但改变实际信道开销。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文定义 CBR 为 ρ=k/(H×W×3)，k 是总 channel symbols，而不是直接的 source bits。Kodak 常用图像为 768×512 RGB，因此 H×W×3=1,179,648，原始 8-bit RGB 为 9,437,184 bits。Fig.3 在 Kodak 上使用平均 CBR ρ=0.05，所以 k=0.05×1,179,648=58,982 channel symbols。若按 QPSK 和 Rc=1/2 估算可承载的 source payload，则为 58,982×2×1/2=58,982 bits；raw/source 压缩率为 9,437,184/58,982=160×。Fig.6/表格还出现类似压缩率 CBR≈0.07 的可视化点，此时 k≈82,575 symbols；在同样 QPSK、Rc=1/2 下 source payload≈82,575 bits，压缩率≈114×。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到部分可靠、部分可能带错的 token bitstream，并用 masked Transformer 补偿。</p>
       <p><strong>错误建模/纠错机制：</strong>显式承认 bit/packet error，不再要求全 bit 无误；关键 token 用 UEP，非关键 token 交给上下文模型恢复。</p>
@@ -767,6 +782,7 @@
       <p><strong>技术路线：</strong>semantic bit UEP。先由数字语义 encoder 产生 semantic bits；学习得到每个 bit 的目标 flip probability，再据此分配不等保护。</p>
       <p><strong>实际传输单位：</strong>bit。<strong>码本/离散集合：</strong>无 VQ 码本；关注 semantic bits 的保护级别。</p>
       <div class="derivation"><strong>传输开销推导：</strong>源开销 $$B_{sem}=B$$；信道开销由每个 bit/block 的重复次数或 channel code blocklength 决定，$$B_{tx}=\sum_i n_i$$。论文的核心是最小化满足 $$P_{e,i}\le\mu_i$$ 的总 blocklength。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文系统模型把 M 个语义特征逐个用 B-bit uniform quantizer 量化，总语义 bit 数 K=M×B；实验表明 CIFAR-10/CIFAR-100 的 K=12,288，MNIST 的 K=3,136。以 CIFAR-10 为例，原始 RGB bit 数为 24,576 bits，语义 bitstream 为 K=12,288 bits，因此源压缩率为 2×；这篇论文的重点不是高压缩，而是对 12,288 个 semantic bits 做 UEP。若采用固定 repetition Rfix=8，则 coded blocklength 约为 12,288×8=98,304 bits；Rfix=12 时为 147,456 bits。Block-UEP/Bit-UEP 通过按目标 bit-flip probability 分配 repetition、polar 或 LDPC block，使总 blocklength 低于等保护方案，同时保持 PSNR。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到经 channel coding 保护后但仍可能有残余误码的 semantic bits。</p>
       <p><strong>错误建模/纠错机制：</strong>明确处理 bit error；关键是把每个 bit 的语义重要性转化为不同的目标误码率。</p>
@@ -806,6 +822,7 @@
       <p><strong>技术路线：</strong>CAVQ / channel-aware codebook。语义 feature 先 VQ 离散化，再直接映射到 modulation symbols；CAVQ 在量化距离中加入信道转移概率，让易混符号对应语义相近 codewords。</p>
       <p><strong>实际传输单位：</strong>codebook index / modulation symbol。<strong>码本/离散集合：</strong>有码本；多码本 alignment 处理 codebook order 与 modulation order 不匹配。</p>
       <div class="derivation"><strong>传输开销推导：</strong>单码本时 $$B_{sem}=N\lceil\log_2K\rceil$$；若 modulation order 为 M 且 K 不匹配，多子信道分解后总开销为各子码本索引 bits 之和。论文强调有效开销与 constellation order 对齐。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文 CIFAR-10 输入为 32×32×3，原始 8-bit RGB 为 24,576 bits。方法定义 encoder 输出 N 个 feature vectors，每个 position 在 l 个子向量上量化；codebook order 为 mb 时，每个 index 需要 mb bits，因此总 payload 为 N×l×mb bits。论文实验展示 mb=4/6/8，对应 K=16/64/256，并与 16-QAM/64-QAM/256-QAM 比较；Fig.7/8 中 l=3。若以常见 CIFAR latent 网格 N=64、l=3、mb=6 为具体工作点，则 payload=64×3×6=1,152 bits，压缩率为 24,576/1,152=21.3×；若 mb=8、l=3，则 payload=1,536 bits，压缩率 16×。当 mc=6 的 64-QAM 与 mb=6 对齐时，1,152 bits 刚好是 192 个 64-QAM symbols；当 mb=8 配 64-QAM 时，index bit 会跨 symbol 拆分，论文用 multi-codebook 子信道处理这种错位。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 直接接收可能错误的 symbol/index，并映射到对应 codeword。</p>
       <p><strong>错误建模/纠错机制：</strong>非常明确地处理 index/symbol error：不是防止错误，而是让错误落到语义相近 codeword。</p>
@@ -845,6 +862,7 @@
       <p><strong>技术路线：</strong>Swin + SQC + ANDVQ + CDM。Swin Transformer 提取层级 feature；VQ 模块映射到 shared semantic quantized codebook；indices 经 OFDM 传输。</p>
       <p><strong>实际传输单位：</strong>SQC index / OFDM symbol。<strong>码本/离散集合：</strong>有 shared semantic quantized codebook；ANDVQ 用 KNN 统计自适应噪声方差并 EMA 稳定码本。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若层级 feature 产生 $$N$$ 个 SQC indices，码本大小 K，则 $$B_{sem}=N\lceil\log_2K\rceil$$；OFDM 实际开销需除以调制阶数与信道码率，并加 pilot/CSI 开销。论文主要报告 CBR/重建指标而非逐项 bit ledger。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文在 DIV2K 上把测试图裁成 1024×1024 RGB，原始数据量为 1024×1024×3×8=25,165,824 bits。BCR 定义为索引序列传输 bit 数 Bs 相对原图 bit 数 H×W×O×8 的比例；实验使用 BCR=0.006 和 BCR=0.02。BCR=0.006 时，Bs=25,165,824×0.006≈150,995 bits，压缩率约 166.7×；BCR=0.02 时，Bs≈503,316 bits，压缩率 50×。论文 OFDM 设置为 1024 subcarriers、14 OFDM symbols，并采用 4-QAM；可用资源网格总数约 14,336 个复符号，若全部用于数据则仅能承载 28,672 coded/source bits，因此该文的 Bs 是 index 序列总 bit 开销，实际分配到多个 OFDM resource blocks/frames，并额外含 pilot 间隔 9 和 5 带来的导频开销。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经 OFDM 影响后的 index/feature 表示以及 refined CSI。</p>
       <p><strong>错误建模/纠错机制：</strong>处理了噪声和多径导致的 index 传输问题，但更偏连续 CSI/OFDM 鲁棒化；对 bit-level index flip 的语义邻近映射不如 CAVQ 清晰。</p>
@@ -884,6 +902,7 @@
       <p><strong>技术路线：</strong>VPQ-SemCom。语义 feature 被分成多个子向量，用 product quantization 的多个轻量 codebooks 表示；rate adaptation 根据 feature entropy 动态调整长度/码率。</p>
       <p><strong>实际传输单位：</strong>PQ sub-index / bitstream。<strong>码本/离散集合：</strong>多 lightweight codebooks；每个子空间一个 codebook。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 feature 被分成 m 个子向量、每个子码本大小 K_j，则每个 token 开销 $$\sum_{j=1}^m\lceil\log_2K_j\rceil$$；若保留 N 个 token，则 $$B_{sem}=N\sum_j\lceil\log_2K_j\rceil$$。rate adaptation 改变 N 或子码本使用，论文以多 bitrate/SNR 下性能体现。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以论文 ImageNet/Kodak 256×256 crop 设置为例，原始 8-bit RGB 为 256×256×3×8=1,572,864 bits。VPQ-SemCom 的 rate 以 bpp 计，Fig.3(b) 中 VPQ-SemCom 约 0.38 bpp，因此源 payload 为 0.38×256×256=24,904 bits，raw/source 压缩率为 63.2×。论文设置 downsampling factor f=16，latent 网格约为 16×16=256 positions；有 L=16 个 subcodebooks，每个 Vi=256，即每个 sub-index 8 bits。若所有 16 个 subcodebooks 都使用，单 latent position 需要 16×8=128 bits；rate module 通过选择前 myi 个 subcodebooks 降低到目标 bpp。side information rate m≈0.015 bpp 时，额外侧信息约 0.015×65,536=983 bits。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到经数字系统恢复后的 PQ sub-indices。</p>
       <p><strong>错误建模/纠错机制：</strong>论文主要关注压缩/码本表示；信道错误多由传统数字链路吸收，未显式训练 index error。</p>
@@ -923,6 +942,7 @@
       <p><strong>技术路线：</strong>ConcreteSC。不用大 VQ codebook，而用 temperature-controlled concrete distributions 做可微离散化；masking 控制 rate。</p>
       <p><strong>实际传输单位：</strong>learned quantized bits / concrete categorical variables。<strong>码本/离散集合：</strong>无大码本；用可学习 concrete distribution 近似离散选择。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 mask 后保留 L 个离散变量、每个变量 b bits，则 $$B_{sem}=Lb$$；multi-rate 通过 mask 改变 L，不需要重训。复杂度随 bit length 线性增长，而 VQ 大码本常随 K 指数增长。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文用 ImageNet-1k 256×256×3 图像，原始 8-bit RGB 数据量为 1,572,864 bits。ConcreteSC 输出最多 Nmax 个 soft bits，推理时只发送前 Nfb 个 bit；论文展示的典型 Nfb 包括 16、32、64。Nfb=16 时语义 payload 为 16 bits，压缩率 1,572,864/16=98,304×；Nfb=32 时为 49,152×；Nfb=64 时为 24,576×。若采用 4-QAM，每个 symbol 2 bits，则这三档分别需要 8、16、32 个 channel symbols。这里的开销极小，因为目标是低比特语义重建并依赖强神经 decoder，而非传统保真图像压缩。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经信道扰动后的量化变量/bit 表示。</p>
       <p><strong>错误建模/纠错机制：</strong>训练中考虑 channel noise，但误差模型不是显式 index flip；由于没有大码本，单个符号错到远端 codeword 的风险被弱化。</p>
@@ -962,6 +982,7 @@
       <p><strong>技术路线：</strong>satellite VQ + semantic forwarding。semantic encoder 输出矩阵 L，训练 codebook E，将 feature 向量映射为 codebook indices，并优化 constellation symbol distribution。</p>
       <p><strong>实际传输单位：</strong>VQ index / constellation symbol。<strong>码本/离散集合：</strong>有码本 E=[e1,...,eK]。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 L 含 M 个向量、码本大小 K，则 $$B_{sem}=M\lceil\log_2K\rceil$$；poster 未给完整 K/M 数值表，需从实现或扩展版补齐。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文报告 VQ-SDSC 与 TF-JCM 在相同 CBR=0.03125、64-QAM 下比较。若以 256×256 RGB 图像为例，H×W×C=196,608，按 CBR 定义 channel symbols 数 k=0.03125×196,608=6,144 symbols。64-QAM 每 symbol 6 bits，因此等价 payload 为 6,144×6=36,864 bits；原始 8-bit RGB 为 1,572,864 bits，压缩率为 42.7×。若换成 CIFAR-10 32×32×3，同一 CBR 给出 k=96 symbols、payload=576 bits、raw/payload 仍为 42.7×。码本层面，若 codebook size 为 K，则每个 index 为 log2K bits；64-QAM 只是把这些 index bits 分组到 6-bit constellation symbols。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到量化 index/调制符号恢复后的语义 feature。</p>
       <p><strong>错误建模/纠错机制：</strong>提到 channel adaptability，但两页 poster 没有充分展开 index error 模型。</p>
@@ -1001,6 +1022,7 @@
       <p><strong>技术路线：</strong>multi-codebook VQ + JCAMP/JCAP。一个 encoder-decoder 对，多套 VQ codebooks，每套 codebook 对应不同 bit-flip probability/鲁棒性；推理时按信道为 sub-vector 选 codebook、modulation 和 power。</p>
       <p><strong>实际传输单位：</strong>codebook index / bit / symbol。<strong>码本/离散集合：</strong>多码本 V；每个 sub-vector 可以选择不同 codebook。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若有 N 个 sub-vectors、选择第 v 个码本大小 K_v，则 $$B_{sem}=\sum_i\lceil\log_2K_{v_i}\rceil$$；JCAMP 还选择 modulation order 和 power，使实际 BER 匹配训练得到的 $$\mu_{i,v}$$。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文明确定义压缩比 ψ=transmission bits/(C×H×W×8)，并在 CIFAR-10/CIFAR-100 与 STL-10 上使用 ψ=3/64。CIFAR-100 图像为 3×32×32，原始 bit 数 24,576，因此传输 semantic bits 为 24,576×3/64=1,152 bits。论文每个 VQ subvector index 使用 B=9 bits，所以 index 数约 1,152/9=128 个；rate constraint R=4 bits/symbol 时，理想符号数为 1,152/4=288 symbols。STL-10 为 3×96×96，原始 bit 数 221,184，同样 ψ 下传输 bit 数为 10,368 bits。多码本数量 V=5 改变的是不同 μ 区间 bit 的保护与调制分配，不改变 ψ 给定的源 bit 开销。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收经 BSC/实际链路扰动的 indices/bits，而非假设完全可靠。</p>
       <p><strong>错误建模/纠错机制：</strong>非常明确地处理 VQ index/bit error：错误概率进入码本训练，推理用 BER matching 让实际错误分布和训练一致。</p>
@@ -1040,6 +1062,7 @@
       <p><strong>技术路线：</strong>ResUME / RVQ + unequal modulation。残差 VQ 多阶段逐层编码 residual；层级越早语义越重要，因此给不同 RVQ stage 分配不同 modulation order。</p>
       <p><strong>实际传输单位：</strong>RVQ stage index / modulation symbol。<strong>码本/离散集合：</strong>有码本；RVQ(n,k) 表示 n-stage、每 stage k-bit codebook。</p>
       <div class="derivation"><strong>传输开销推导：</strong>RVQ(n,k) 每个位置开销为 $$nk$$ bits；若有 N 个位置，则 $$B_{sem}=Nnk$$，CBR 由 $$B_{sem}/(HWC8)$$ 得到。论文直接报告 CBR=0.00391、0.0156、0.0299 等。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>以 Kodak 768×512 RGB 为例，原始 bit 数为 9,437,184。论文按 CBR 报告开销，CBR=0.0156 时语义 index bits 约 9,437,184×0.0156=147,220 bits，raw/source 压缩率约 64.1×；CBR=0.00391 时为 36,911 bits，压缩率 255.7×；CBR=0.0299 时为 282,171 bits，压缩率 33.4×。ResUME(4,12) 表示 4-stage residual VQ 且每 stage 12-bit codebook index，因此每个保留 latent position 为 4×12=48 bits；在 CBR=0.0156 的 147,220-bit 预算下，等价 latent positions 数约 147,220/48=3,067。UEP 调制向量如 M=[1,2,4,4] 改变各 stage 的调制保护，不改变源 index bit 总量。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到各 stage 经不同调制保护后的 indices。</p>
       <p><strong>错误建模/纠错机制：</strong>显式考虑 index symbol 由 b bits 表示且经 BSC 发生错误；用 modulation order 进行层级 UEP。</p>
@@ -1079,6 +1102,7 @@
       <p><strong>技术路线：</strong>RVQGAN speech semantic codec。多尺度语义 codec 使用 RVQGAN 抽取语义 token/code indices；U-Net CNS 恢复受信道影响的语义 feature，Transformer predictor 修正 code。</p>
       <p><strong>实际传输单位：</strong>RVQ code index / low-bitrate token stream。<strong>码本/离散集合：</strong>有码本；Residual VQ 多阶段 codebooks。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 RVQ 每帧产生 L 个 codebook indices、每个 codebook K 阶，则帧开销 $$B_f=L\lceil\log_2K\rceil$$；总 bitrate $$R=B_f\times f_{frame}$$。论文直接给出 3 kb/s 工作点。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文语音采样率为 16 kHz，目标语义码率为 3,000 bit/s。若按 16-bit PCM 原始语音计，1 秒原始数据量为 16,000×16=256,000 bits。RVQGAN 使用 320-sample hop，因此每秒 16,000/320=50 frames；目标 3 kb/s 对应每帧 3,000/50=60 bits。论文设置 Nq=6 个 residual quantizers，因此每层每帧 10 bits，codebook size 为 2^10=1024；每秒 index 数为 50×6=300 个，payload 为 300×10=3,000 bits。相对原始 PCM 压缩率为 256,000/3,000=85.3×；相对 6 kb/s Opus baseline，语义码率为其一半。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到可能受信道影响的 RVQ indices/semantic features，经 CNS/predictor 后重建。</p>
       <p><strong>错误建模/纠错机制：</strong>有面向 channel effect 的恢复模块，但 index bit error 的精确 BSC/BER 映射不如 Blind/ESC-MVQ 清晰。</p>
@@ -1118,6 +1142,7 @@
       <p><strong>技术路线：</strong>VQ generative semantic codec。encoder 用 spatial attention 提取 latent，经 learned codebook VQ 后只发送 code index；生成式 decoder/critic 根据 quantized latent 重建。</p>
       <p><strong>实际传输单位：</strong>VQ index / LDPC-protected bits。<strong>码本/离散集合：</strong>有码本；shared knowledge base。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 latent map 尺寸为 h×w 且每位置一个 K 阶 index，$$B_{sem}=hw\lceil\log_2K\rceil$$；LDPC 后 $$B_{tx}=B_{sem}/R_c$$。论文强调相对 BPG/JSCC 的复杂度和低 SNR 表现，精确 bit ledger 需按 latent map/codebook 实验配置推导。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文直接给出关键 ledger：每张图有 N=4096 个 quantized indices，codebook K=256，每个 index 8 bits，因此 Bsem=4096×8=32,768 bits/image。以 Kodak 768×512 RGB 为例，原始 bit 数为 9,437,184，因此 source-level 压缩率为 9,437,184/32,768=288×。若使用 LDPC code rate Rc=0.67，则 coded bits≈32,768/0.67=48,907；QPSK 下 channel symbols≈24,454。论文还报告 BPG 最大压缩平均约 5 KB=40,000 bits，SVQ-WGAN 的 32,768-bit source payload 低于该 baseline；表中有效 bpp 为 0.438，而 BPG 为 0.562。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收 LDPC 恢复后的 index，或低 SNR 下残余错误较少的 bitstream。</p>
       <p><strong>错误建模/纠错机制：</strong>主要依靠 LDPC 抑制 bit error；生成式 decoder 可能容忍部分 latent 误差，但没有专门 index flip 训练。</p>
@@ -1157,6 +1182,7 @@
       <p><strong>技术路线：</strong>semantic mask + VQ-GAN。先用现成 semantic segmentation 得到类别重要性，SAMM 只编码任务相关区域/feature，再用 VQ-GAN codebook 表示。</p>
       <p><strong>实际传输单位：</strong>VQ token/index。<strong>码本/离散集合：</strong>有码本；VQ-GAN latent codebook。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 mask 后保留 N_m 个 latent positions，每个位置 K 阶 index，则 $$B_{sem}=N_m\lceil\log_2K\rceil$$；mask 直接降低 N_m。论文更关注 source compression rate，而非无线信道开销。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文输入图像尺寸为 H=256、W=512，原始 RGB bit 数为 256×512×3×8=3,145,728 bits。latent grid 为 H/16×W/16=16×32=512 positions；codebook J=1024，因此每个 selected latent index 为 log2(1024)=10 bits。论文 bpp 公式为 BPP=(1/256)[10(mx+ms)+2]。若取 mx=ms=0.1，BPP=(1/256)[10×0.2+2]=4/256=0.015625 bpp；总传输 bits 为 0.015625×256×512=2,048 bits，raw/source 压缩率为 3,145,728/2,048=1,536×。直接按 index 数看，约 0.1×512=51 个图像 indices 和 51 个 SSM indices，共约 102×10=1,020 index bits，其余由 mask/位置等开销补足到 bpp 公式。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 假设收到无误 VQ token/index 或 legacy 系统传来的 bitstream。</p>
       <p><strong>错误建模/纠错机制：</strong>几乎不处理信道 bit/index error；它是语义源编码而不是完整信道语义通信。</p>
@@ -1196,6 +1222,7 @@
       <p><strong>技术路线：</strong>CEC-MSVQ。多阶段 VQ 逐步量化 residual；条件熵模型显式估计 stage-wise code distribution，训练 rate-distortion objective。</p>
       <p><strong>实际传输单位：</strong>multi-stage VQ index / entropy-coded bitstream。<strong>码本/离散集合：</strong>多阶段码本；每 stage 小 codebook。</p>
       <div class="derivation"><strong>传输开销推导：</strong>原始 MSVQ 开销 $$B=\sum_l N_l\log_2K_l$$；加入 conditional entropy coding 后期望码长 $$E[B]=\sum_l H(I_l|I_{&lt;l})$$，低于固定长度索引。multi-rate 通过启用前 L&#x27; 个 stage 控制。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文 CIFAR-100 特征维度 M=512，STL-10 特征维度 M=4608，sub-vector dimension D=4，stage 数 S=2，codebook K=256。以 CIFAR-100 为例，原始 32×32×3×8=24,576 bits；subvector 数为 M/D=512/4=128，固定长度 MSVQ payload 为 128×2×log2(256)=128×2×8=2,048 bits，压缩率 12×。STL-10 原始 bit 数为 96×96×3×8=221,184，subvector 数 4608/4=1,152，fixed payload=1,152×2×8=18,432 bits，压缩率同样 12×。CEC 的 Huffman/conditional entropy coding 会把每 stage 的 8-bit 固定 index 替换成接近 H(Is|I&lt;s) 的变长码，因此实际 bit 数低于上述 fixed-length 上界。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 接收 entropy-decoded indices，默认 bitstream 正确。</p>
       <p><strong>错误建模/纠错机制：</strong>没有重点建模 bit/index error；熵编码甚至可能放大 bit error 的同步问题，需要外部保护。</p>
@@ -1235,6 +1262,7 @@
       <p><strong>技术路线：</strong>MSVQ-SC。多个 VQ stage 逐级细化 residual，每个 stage 中还有多个可选 VQ module；增量分配算法选择模块满足 rate constraint。</p>
       <p><strong>实际传输单位：</strong>multi-stage codebook index。<strong>码本/离散集合：</strong>有码本；多 stage/multi-module codebooks。</p>
       <div class="derivation"><strong>传输开销推导：</strong>固定长度时 $$B_{sem}=\sum_{active}N_l\lceil\log_2K_l\rceil$$；若加入 entropy coding，则用 codeword 概率得到期望码长。论文把 module selection 写成 rate-constrained loss minimization。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文 CIFAR-10 原始数据量为 24,576 bits；semantic latent vector dimension M=512、D=4，因此 N=128 个 sub-vectors，Tmax=3 stages。Type-I 设计中，高方差 64 个 sub-vectors 的三阶段 bit 数为 8/7/6，低方差 64 个为 6/5/4，所以全三阶段 payload 为 64×(8+7+6)+64×(6+5+4)=2,304 bits，压缩率为 24,576/2,304=10.67×。论文表 I 还评估 896、1024、1200、1920、2088 bits 等 stage-selection 开销；例如 1024 bits 时压缩率为 24×。实际通信设置中 LDPC block length=3156，code rate=1/2 时 source information bits=1578，coded bits=3156；若用 16-QAM，延迟为 3156/4=789 symbols/image。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到被选择模块的 index 序列，默认正确解码。</p>
       <p><strong>错误建模/纠错机制：</strong>信道错误不是重点；如果某 stage index 错误，会污染 residual refinement，论文没有专门处理。</p>
@@ -1274,6 +1302,7 @@
       <p><strong>技术路线：</strong>dual-stage VQ video SemCom。第一阶段选取/插值关键帧降低帧间冗余；第二阶段用 semantic VQ encoder/decoder 对关键帧做 index compression，并有 adjustable index selection/recovery。</p>
       <p><strong>实际传输单位：</strong>frame key index / VQ index。<strong>码本/离散集合：</strong>有码本；语义向量量化用于关键帧。</p>
       <div class="derivation"><strong>传输开销推导：</strong>视频开销约为关键帧数 $$T_k$$ 乘每帧 VQ index bits：$$B_{sem}=\sum_{t\in K}N_t\lceil\log_2K\rceil$$；帧间插值降低 $$T_k/T$$，adjustable index selection 改变 N_t。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文用 bit compression ratio BCR=final bit sequence/original video bit sequence，并报告 VQ-DeepVSC BCR≈0.023，H.265 baseline≈0.024。以一个 16-frame、256×256 RGB clip 为具体代入实例，原始 bit 数为 16×256×256×3×8=25,165,824 bits。VQ-DeepVSC 在 BCR=0.023 时传输 bits≈25,165,824×0.023=578,814 bits，压缩率约 43.5×；H.265 在 0.024 时为 603,980 bits。若接论文 realistic transmission 的 LDPC rate=3/4，则 coded bits≈578,814/(3/4)=771,752；16-QAM 下 symbols≈192,938。论文内部 MSVQ 也可写成每 key frame bitstream Ls×B，其中 Ls=U×c、B=log2(codebook size)。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到关键帧的 VQ indices；错误 index 的恢复主要由 recovery module 和上下文插值缓解。</p>
       <p><strong>错误建模/纠错机制：</strong>考虑低 SNR/多径性能，但 index bit error 的明确概率模型不如 BSC 类论文。</p>
@@ -1313,6 +1342,7 @@
       <p><strong>技术路线：</strong>AM-VQ。DNN 提取 360 图像语义 feature；activation map 衡量区域/feature 重要性并自适应 VQ，GAN 判别器提升重建。</p>
       <p><strong>实际传输单位：</strong>VQ index。<strong>码本/离散集合：</strong>有码本；activation map 决定量化强度/选择。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若按 activation map 保留/量化 N_a 个 feature index，则 $$B_{sem}=N_a\lceil\log_2K\rceil$$；论文以 same transmission symbols 比较，具体压缩率由 N_a 和 K 推导。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>该文以 bpp/压缩比报告 360 图像开销，正文没有给出单一固定 H、W。按其 bpp 定义，若采用 1024×2048 RGB 360 图像作为计算实例，原始 bit 数为 1024×2048×3×8=50,331,648 bits。若取曲线中的 0.05 bpp 工作点，payload 为 0.05×1024×2048=104,858 bits，raw/source 压缩率为 480×。论文设置 codebook embedding space dimension 为 1024；若实际码本 cardinality 也取 K=1024，则每个 index 为 10 bits，上述 104,858-bit 预算对应约 10,486 个 indices。需要注意：论文原文主要给 bpp 曲线和 embedding dimension，未把每张图的固定 token 网格与 codebook cardinality 完整列成 ledger。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 默认接收恢复后的 VQ indices。</p>
       <p><strong>错误建模/纠错机制：</strong>信道错误不是核心；若 index 错误，论文没有显式邻近 codeword 或 UEP 机制。</p>
@@ -1352,6 +1382,7 @@
       <p><strong>技术路线：</strong>ViT IAQ。预训练 ViT attention score 衡量 patch 重要性；为每个 patch 分配不同 quantization bits Mi，并把 bit sequence 过 BSC。</p>
       <p><strong>实际传输单位：</strong>patch-wise quantized bit sequence。<strong>码本/离散集合：</strong>无 VQ 码本；使用 uniform quantizer 和可变 bit depth。</p>
       <div class="derivation"><strong>传输开销推导：</strong>论文明确定义总 bit 长度 $$B=P^2C\sum_{i=1}^N M_i$$，另有 $$B_{add}$$ 传输量化器信息；原图 bit 为 $$HWC\times8$$，压缩率可由 $$B+B_{add}$$ 对比得到。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文输入统一 resize 为 3×224×224，原始 8-bit RGB 为 224×224×3×8=1,204,224 bits。ViT patch size P=16，所以 patch 数 N=(224/16)^2=196，每个 patch 原始元素数 P^2C=16^2×3=768。若所有 patch 用 Mi=1 bit/element，传输量 B=768×196=150,528 bits；论文压缩率定义为 ρ=B/(8HWC)，因此 ρ=150,528/1,204,224=0.125，正好对应文中低开销点。若 ρ=0.5，则目标 bit 数为 0.5×1,204,224=602,112 bits，平均每个 patch 元素 Mi=602,112/(768×196)=4 bits；IAQ 的实际作用是在同样平均预算下给高 attention patch 分配高于 4 的 bit depth，给背景 patch 分配低于 4。量化器信息开销 Badd=log2(Mmax+1)N+16；若 Mmax=8，则 Badd≈196×3.17+16≈637 bits。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到可能有 bit error 的 patch-wise bit sequence，再反量化成图像/feature。</p>
       <p><strong>错误建模/纠错机制：</strong>显式讨论 one-bit error 导致量化值偏移，并用 BSC 重新构造分配问题；但不涉及 VQ index 跳到远端 codeword。</p>
@@ -1391,6 +1422,7 @@
       <p><strong>技术路线：</strong>semantic digital constellation mapping。不改变上游语义 encoder，而重新设计 semantic information value 的 bit-to-constellation mapping，使重要 bit 位落在更可靠星座位。</p>
       <p><strong>实际传输单位：</strong>quantized semantic bit / modulation symbol。<strong>码本/离散集合：</strong>无 VQ 码本；核心是 constellation mapping/interleaving 表。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若语义值量化为 n bits、调制为 m-bit PAM/QAM，则每个符号承载 m bits；传统方式可能需要 $$\lceil n/m\rceil$$ 次传输，sDMCM 在 n&lt;m 时可让一个高阶星座承载多个语义值。论文还给出例子：4 个 2-bit 语义值传统 16-QAM 需 8 次传输，而 m=4 的 256-QAM 可减少次数。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文给出一个四个语义量化值的 toy example：每个值 2 bits，总语义 payload 为 4×2=8 bits。传统映射在较低阶调制下需要更多 transmission units；sDMCMA 通过 semantic-to-constellation bit-position mapping，把 MSB 或更重要 bit 放在更可靠的 constellation decision region。若代入 CIFAR-10 并假设每个 RGB scalar 都做 2-bit semantic quantization，则 payload 为 32×32×3×2=6,144 bits；用 256-QAM 每 symbol 8 bits，理想符号数为 6,144/8=768 symbols。若与原始 8-bit RGB 24,576 bits 比较，该 2-bit scalar payload 的源压缩率为 4×；sDMCMA 本身不改变 bit 数，而是降低同样 bit 数在符号错误下造成的语义失真。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到有 bit/symbol error 的调制结果，再通过 sDMCM 反映射得到量化语义值。</p>
       <p><strong>错误建模/纠错机制：</strong>非常明确处理 bit/symbol error，但不是让错误消失，而是让错误造成的语义数值 MSE 尽量小。</p>
@@ -1430,6 +1462,7 @@
       <p><strong>技术路线：</strong>channel-capacity codebook。离散 codebook 把语义 feature 空间划为 Voronoi/indices；训练时把 code activation 分布和信道容量诱导的最优输入分布对齐。</p>
       <p><strong>实际传输单位：</strong>codebook index。<strong>码本/离散集合：</strong>有码本；重点是 codebook size 与 activation distribution。</p>
       <div class="derivation"><strong>传输开销推导：</strong>固定长度索引开销 $$B_{sem}=N\lceil\log_2K\rceil$$；论文还从信道容量角度讨论 optimal codebook usage。若 code activation entropy 小于 $$\log_2K$$，可用 entropy coding 进一步降至 $$NH(I)$$。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>该文是 codebook/channel-capacity 设计，开销由 N 个 VQ indices 和 codebook size K 决定。以 CIFAR-10 32×32×3 为实例，原始 8-bit RGB 为 24,576 bits。若实验采用任务语义向量 N=16、K=16 的低维配置，则 payload=N×log2K=16×4=64 bits，压缩率 384×；若为了降低量化误差把 K 增到 64，则 payload=16×6=96 bits，压缩率 256×。论文的新增点是 codeword activation distribution 与 channel capacity 匹配：如果经过 capacity-aware 设计后的 index entropy 为 3.2 bits/index，而不是固定 log2K=4，则熵编码 payload 可从 64 bits 降至 16×3.2=51.2 bits，同时保持更适合信道转移概率的 codebook 布局。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到离散 indices；主要假设离散信道容量约束而非逐 bit 错误恢复。</p>
       <p><strong>错误建模/纠错机制：</strong>考虑 channel-aware codebook，但对具体 index bit flip 的处理不如 CAVQ。</p>
@@ -1469,6 +1502,7 @@
       <p><strong>技术路线：</strong>theoretical codebook。把语义同义一对多映射与 VQ Voronoi partition 对应，最大化语义 feature 与 quantized index 的互信息。</p>
       <p><strong>实际传输单位：</strong>codebook index。<strong>码本/离散集合：</strong>有码本；理论讨论 K 的选择。</p>
       <div class="derivation"><strong>传输开销推导：</strong>基础开销 $$B_{sem}=N\lceil\log_2K\rceil$$；理论部分把 K 增大带来的量化信息增益与 bit-flip 造成的 semantic distortion 平衡，给出 optimal codebook size 的判断。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>这篇理论论文同样以 Bsem=Nlog2K 作为离散语义 index 的基本开销。以 CIFAR-10 任务样本为代入实例，原始 8-bit RGB 为 24,576 bits。若 semantic encoder 产生 N=16 个 indices，K=16，则 payload=64 bits，压缩率 384×；若 K=64，则 payload=96 bits，压缩率 256×；若 N 增到 32 且 K=64，则 payload=192 bits，压缩率 128×。理论分析关注的正是这个三角关系：增大 K 或 N 可降低量化失真，但会提高每样本 bit 开销，并在 bit/index error 下扩大码字跳变风险，因此最优 codebook 不是单纯越大越好。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到可能因 bit flip 错误的 index。</p>
       <p><strong>错误建模/纠错机制：</strong>明确讨论 bit-flip errors 和 semantic distortion，但偏理论，不是完整系统。</p>
@@ -1508,6 +1542,7 @@
       <p><strong>技术路线：</strong>token JSCC-modulation。把 tokenizer 产生的离散 token 当作通信基本单元，联合设计 token semantic coding、channel coding 和 modulation。</p>
       <p><strong>实际传输单位：</strong>token index / bit / modulation symbol。<strong>码本/离散集合：</strong>token vocabulary 本身就是 codebook；可能另有 task-specific token mapping。</p>
       <div class="derivation"><strong>传输开销推导：</strong>若 vocab 大小为 V、发送 T 个 token，最朴素开销 $$B_{sem}=T\lceil\log_2V\rceil$$；若引入语义信道编码和 modulation，则实际 $$B_{tx}$$ 取决于冗余和 $$\log_2M$$。压缩来自减少 token 数或改变 token 重要性保护。</div>
+      <div class="derivation calc-example"><strong>实际数值计算实例：</strong>论文关注 token/prompt 级数字语义传输，开销由 token 数 T 和 vocabulary size V 决定。若采用常见约 V=50,000 的 tokenizer，则每个 token 需要 ceil(log2V)=16 bits。以 128-token prompt 为例，token payload 为 128×16=2,048 bits；若语义筛选后只传 64 个任务相关 tokens，则 payload 为 1,024 bits。若原始 UTF-8 prompt 长 512 bytes，则原始文本 bit 数为 512×8=4,096 bits；128-token 方案相对原始文本压缩 2×，64-token 方案压缩 4×。用 16-QAM 时，2,048 bits 需要 512 channel symbols，1,024 bits 需要 256 symbols；后续 JSCC/modulation 模块处理的是这些 token bits 或其 learned modulation representation。</div>
       <h3>信道如何作用于离散变量</h3>
       <p><strong>decoder 输入：</strong>decoder 收到可能错误/受保护等级不同的 token 或 token bits。</p>
       <p><strong>错误建模/纠错机制：</strong>论文方向正对 token index error；细节取决于 token-channel mapping 和冗余设计。</p>
@@ -1534,10 +1569,10 @@
 <tr><td>2024</td><td>A Unified Multi-Task Semantic Communication System for Multimodal Data</td><td>有 unified codebook 和 indices，覆盖多模态多任务；但重点是多任务统一语义系统，信道侧离散误码分析不是主线。</td></tr>
 <tr><td>2024</td><td>Rate-Adaptive Coding Mechanism for Semantic Communications With Multi-Modal Data</td><td>含传统 channel encoder/decoder 与 UEP 思想，适合作为系统参照；但不是聚焦 VQ/token/codebook 数字化语义变量。</td></tr>
 <tr><td>2024</td><td>Integrating Pre-Trained Language Model with Physical Layer Communications</td><td>VQ-VAE 与 bit error/noise 结合，面向 on-device AI/LM 通信；主题更宽，未以 Digital Semantic Communications 为论文主轴。</td></tr>
-<tr><td>2025</td><td>VQ-DeepISC: Vector Quantized-Enabled Digital Semantic Communication with Channel Adaptive Image Transmission</td><td>Semantic Scholar/关键词检索发现；与 VQ-DSC-R/Channel-aware VQ 路线接近，本轮未取得全文，列入后续补充。</td><td></td></tr>
-<tr><td>2025</td><td>An Efficient Vector Quantization-Based Semantic Communication System for Virtual Reality Video Transmission</td><td>检索发现的 VR 视频 VQ 方向，主题相关但全文未纳入本轮核心阅读。</td><td></td></tr>
-<tr><td>2025</td><td>Doppler-Adaptive Digital Semantic Communication for Low Earth Orbit Satellite Systems</td><td>卫星/LEO 数字语义通信扩展方向，候选相关；未在本轮完成全文下载和深读。</td><td></td></tr>
-<tr><td>2025</td><td>Post-Deployment Fine-Tunable Semantic Communication</td><td>被关键词检索命中，但核心是部署后微调，不是数字化语义变量和信道误码机制。</td><td></td></tr></tbody></table></div>
+<tr><td>2025</td><td>VQ-DeepISC: Vector Quantized-Enabled Digital Semantic Communication with Channel Adaptive Image Transmission</td><td>Semantic Scholar/关键词检索发现；与 VQ-DSC-R/Channel-aware VQ 路线接近，本轮未取得全文，列入后续补充。</td></tr>
+<tr><td>2025</td><td>An Efficient Vector Quantization-Based Semantic Communication System for Virtual Reality Video Transmission</td><td>检索发现的 VR 视频 VQ 方向，主题相关但全文未纳入本轮核心阅读。</td></tr>
+<tr><td>2025</td><td>Doppler-Adaptive Digital Semantic Communication for Low Earth Orbit Satellite Systems</td><td>卫星/LEO 数字语义通信扩展方向，候选相关；未在本轮完成全文下载和深读。</td></tr>
+<tr><td>2025</td><td>Post-Deployment Fine-Tunable Semantic Communication</td><td>被关键词检索命中，但核心是部署后微调，不是数字化语义变量和信道误码机制。</td></tr></tbody></table></div>
       <h3>排除项</h3>
       <div class='table-wrap'><table><thead><tr><th>项目</th><th>排除原因</th></tr></thead><tbody><tr><td>MDPI semantic communication / quantization results</td><td>AGENTS.md 明确排除 MDPI；即便关键词命中也不纳入候选核心池。</td></tr>
 <tr><td>General semantic communication surveys without digital/VQ/token focus</td><td>只作背景，不进入核心论文表。</td></tr>
