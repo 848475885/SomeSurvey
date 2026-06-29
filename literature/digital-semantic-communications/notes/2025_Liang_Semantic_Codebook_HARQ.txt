@@ -1,0 +1,1580 @@
+14332
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Semantic Codebook-Based HARQ for
+Wireless Image Transmission
+Gaohong Liang , Xuefei Zhang , Senior Member, IEEE, Ji Zhang , Yao Sun , Senior Member, IEEE,
+Qimei Cui , Senior Member, IEEE, and Xiaofeng Tao , Senior Member, IEEE
+Abstract—Semantic communication (SemCom) lies in the
+emphasis on ensuring the correct semantic understanding rather
+than error-free bit transmission. However, traditional hybrid
+automatic repeat request (HARQ) mechanism relies on a bit-level
+check, and it cannot effectively address errors at the semantic
+level. In this paper, we propose a semantic codebook-based
+HARQ (SCB-HARQ) mechanism for the reliable and efficient
+SemCom. To enable semantic-level error detection, SCB-HARQ
+leverages a shared semantic codebook trained offline at both
+the transmitter and receiver. This codebook serves as prior
+information for evaluating the distortion of received semantic
+features, quantifying the extent to which they deviate from
+the intended meaning. To reduce the transmission overhead of
+features in the codebook, a weighted semantic feature index
+(WSFI) clustering method is introduced to map features into a
+compact index representation. Then, a masked rate-adaptive joint
+source-channel coding (JSCC) method is proposed to locate and
+retransmit the distorted features. The simulation results demonstrate that the proposed SCB-HARQ outperforms the traditional
+HARQ mechanism, achieving a 46.29% improvement in image
+reconstruction performance while reducing the transmission data
+volume by 51.27%.
+Index Terms—HARQ, semantic communications, semanticlevel error checking, semantic codebook, weighted semantic
+feature index.
+
+I. I NTRODUCTION
+
+T
+
+HE concept of semantic communication (SemCom), initially proposed by Weaver and Shannon [1], is based
+on the principle of “semantic-meaning passing”. Currently,
+SemCom has drawn a lot of interest as a new paradigm
+to improve data transmission efficiency and robustness by
+exploiting semantic information. The fundamental distinction
+between SemCom and traditional syntactic communication
+Received 9 January 2025; revised 5 July 2025; accepted 19 August 2025.
+Date of publication 29 August 2025; date of current version 23 December
+2025. This work was supported in part by National Key R&D Program of
+China (2022YFB2902900), in part by the National Natural Science Foundation
+of China (No. 62271073), and in part by PCL-CMCC Foundation for science
+and innovation (2024ZY1A0010). The associate editor coordinating the review
+of this article and approving it for publication was B. Soret. (Corresponding
+author: Xuefei Zhang.)
+Gaohong Liang and Xuefei Zhang are with the School of Information and
+Communication Engineering, Beijing University of Posts and Telecommunications, Beijing 100876, China.
+Ji Zhang is with PA Company SC Branch, China Telecom Company Ltd.,
+Chengdu 610000, China (e-mail: zhangxuefei@bupt.edu.cn).
+Yao Sun is with the James Watt School of Engineering, the University of
+Glasgow, G12 8QQ Glasgow, U.K.
+Qimei Cui and Xiaofeng Tao are with the School of Information and
+Communication Engineering, Beijing University of Posts and Telecommunications, Beijing 100876, China, and also with the Peng Cheng Laboratory,
+the Department of Broadband Communication, Shenzhen 518055, China.
+Digital Object Identifier 10.1109/TCOMM.2025.3604326
+
+lies in its emphasis on ensuring the correct semantic understanding rather than error-free bit transmission [2], [3], [4].
+The booming development of artificial intelligence (AI) has
+significantly enhanced the performance of feature extraction
+and reconstruction across diverse modalities of source data,
+including text [5], speech [6], images [7], [8], [9], [10], [11],
+[12], [13] and videos [14]. This advancement has expedited
+the evolution of communication from a syntactic to a semantic paradigm, which conveys the “meanings” of transmitted
+information rather than the raw data.
+Most SemCom systems implement a deep joint sourcechannel coding (DJSCC) scheme, which typically comprises
+two neural networks, as the semantic encoder and the semantic
+decoder, respectively. A non-trainable layer is incorporated
+between them to represent the channel. As such, the semantics of the source information is extracted, minimizing the
+volume of data transmitted. Some early studies on SemCom
+have shown the robustness in low signal-to-noise ratio (SNR)
+and limited bandwidth conditions, compared with traditional
+syntactic communication. Additionally, literature [15], [16],
+[17], [18] integrate a channel adaptive module into the DJSCC
+framework, further enhancing the robustness of SemCom
+systems.
+Despite the benefits mentioned above, it is possible that
+the transmitted semantic features still become distorted due
+to channel fading or interference during wireless transmission, ultimately leading to transmission failures. Thus, hybrid
+automatic repeat request (HARQ) mechanism is a necessity to
+improve transmission reliability. Traditional HARQ serves as
+a cornerstone of reliable transmission in wireless communication systems [19]. The primary function of this mechanism
+is to correct erroneous data packets. Upon detecting errors
+in the received data, the receiver temporarily stores the corrupted packets and requests retransmission. The most common
+technique used for error detection is cyclic redundancy check
+(CRC), which depends on adding redundant bits in the original
+message and then checking the received data.
+In SemCom systems, the emphasis should be shifted to
+the semantic-level check. As such, the conventional CRC
+error detection method cannot be applied. Literature [20], [21]
+utilize a semantic similarity detection network called SimCRC
+for semantic error detection. Furthermore, the decoder proposed in [22] consolidates information received from previous
+transmissions rather than discarding it to improve the transmission reliability. Notably, all the above-mentioned approaches
+assume that the received semantic features should be totally
+decoded to source data first, followed by entering SimCRC.
+
+0090-6778 © 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+As a result, although these approaches achieve semantic
+error detection, they introduce additional latency before
+retransmission compared to the conventional CRC method,
+which performs error detection prior to source decoding.
+Furthermore, only a few works have explored HARQ mechanisms for SemCom, which enable semantic error detection
+prior to full data decoding [23], [24]. However, these
+approaches suffer from significant limitations. The approach in
+[23] relies heavily on a pre-trained distortion evaluation model
+for semantic error detection, making it sensitive to minor
+changes and often requiring retraining without substantial performance improvements. Additionally, literature [24] utilizes
+similarity ranking to detect semantic errors, but it introduces
+excessive communication overhead to establish these rankings
+between the transmitter and receiver, rendering it impractical
+for resource-constrained scenarios. Therefore, it is imperative
+to find a new retransmission mechanism for SemCom.
+Currently, several studies have also proposed codebookbased SemCom frameworks to enhance robustness and
+transmission efficiency. For instance, the authors in [25]
+propose a vector quantized variational autoencoder (VQ-VAE)based SemCom framework, where only the indices of semantic
+features within a codebook are transmitted. At the receiver,
+the corresponding features are retrieved from the codebook
+using the received indices, enabling the reconstruction of the
+source data. Building upon this concept, [26], [27] further
+employ generative models to reconstruct source content from
+the received indices, thereby enhancing transmission performance by mitigating the effects of channel noise on semantic
+representations. In addition, [28] utilizes a semantic-aware
+codebook to improve the efficiency of semantic encoding.
+Motivated by these advancements, we propose leveraging the features in the codebook as prior information for
+semantic-level error checking, rather than relying on them
+exclusively for data reconstruction. Specifically, by evaluating
+the semantic similarity between the received features and the
+corresponding features in the codebook, our method can detect
+distorted features and trigger retransmission, thereby enabling
+more reliable data transmission.
+Therefore, this paper proposes a novel semantic codebookbased hybrid automatic retransmission request (SCB-HARQ)
+mechanism that achieves semantic-level error detection. To
+the best of our knowledge, this is the first work to formally introduce a codebook-guided HARQ mechanism that
+enables pre-decoding retransmission decisions, thereby bridging semantic understanding and transmission reliability in a
+unified framework. The main contributions of this paper are
+as follows:
+• Semantic codebook: We design a two-stage semantic
+codebook that serves as a lightweight prior for semantic error detection with minimal transmission overhead.
+The codebook comprises two components: Basic Feature
+Set: High-fidelity semantic feature vectors are extracted
+via a VQGAN model to serve as reference for evaluating semantic consistency. Index-Map Set: To further
+reduce transmission cost, we cluster the spatial distribution of features into compact index-map set using a
+weighted semantic feature index-map (WSFI) metric that
+accounts for both feature similarity and spatial seman-
+
+14333
+
+tics. The two-stage quantization encodes features into a
+compact index, enabling low-overhead transmission and
+supporting semantic-level error detection at the receiver.
+• SCB-HARQ mechanism: The SCB-HARQ aims to
+address two fundamental problems in SemCom. First,
+it leverages the semantic codebook as prior information
+to decide whether a semantic retransmission is needed.
+Then, an masked rate-adaptive JSCC method is proposed
+to identify the semantic features required retransmission.
+In this way, SCB-HARQ retransmits only the distorted
+features at an adaptive coding rate, enhancing both the
+transmission reliability and efficiency.
+• Simulation results demonstrate that SCB-HARQ
+improves the transmission performance by 46.29%,
+and reduces the required data transmission volume by
+51.27%, significantly outperforming traditional HARQ
+methods.
+The rest of the paper is organized as follows. Section II
+presents a detailed review of related work. The system
+model of SCB-HARQ is presented in Section III. The details
+of the semantic codebook construction, the architecture of
+the masked rate-adaptive JSCC, and the enhanced semantic
+decoder network are presented in Section IV. In Section V,
+the principle and training strategy of the SCB-HARQ are
+presented. Simulation results are given in Section VI. Finally,
+Section VII summarizes the paper.
+II. R ELATED W ORKS
+This section reviews the existing literature on SemCom
+for wireless image transmission, followed by an analysis of
+HARQ mechanisms currently applied in this field, which are
+designed to further enhance the reliability and efficiency of
+the data transmission.
+A. SemCom for Image Transmission
+In wireless image transmission, the SemCom approach
+involves extracting rich semantic features from images at the
+transmitter. These features are then transmitted by the DJSCC
+scheme, followed by reconstruction at the receiver. Inspiringly,
+SemCom achieves higher image reconstruction performance
+than traditional communication, especially in the low bandwidth and low SNR condition. Specifically, a DJSCC method
+for wireless image transmission proposed in [7] effectively
+overcomes abrupt quality degradations, known as the “cliff
+effect”. Afterwards, several modifications and extensions have
+been provided in [15], [16], [17], [18], [29], [30], and [31]. For
+instance, an adaptive SNR decoder based on DJSCC is devised
+to enhance the robustness against channel noise in [15].
+Furthermore, [18] integrates orthogonal frequency division
+multiplexing (OFDM) into the DJSCC framework, increasing
+robustness to dynamic channel conditions. Additionally, a
+channel-adaptive DJSCC scheme utilizes estimated channel
+state information (CSI) to allocate transmission power across
+subchannels in [16]. On this basis, [17] proposes a policy
+network that dynamically adjust the transmission rate based
+on both the CSI and the image content, thereby promoting the
+channel bandwidth utilization under the varying conditions.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14334
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 1. The overall architecture of the proposed SCB-HARQ for wireless image transmission.
+
+Although the studies mentioned above have proved that
+SemCom can improve the transmission reliability, the semantic
+distortion caused by the noises, channel fading, and interferences is a tough nut. As such, the integration of SemCom with
+HARQ mechanisms seems a promising way for transmission
+reliability promotion.
+B. HARQ for SemCom System
+HARQ stands for the hybrid automatic repeat request
+(ARQ), implying the combination of forward error correction
+(FEC) and ARQ feedback mechanism where the receiver sends
+a retransmission request if an error is detected in the received
+data. After receiving the request, the transmitter retransmits
+the packets, thereby improving the transmission reliability. In
+[9], the feedback mechanism is first introduced in SemCom by
+providing the feedback relying on the CSI. This idea is further
+extended in [10], where the encoder leverages the semantic
+information and the feedback to generate coded symbols.
+These studies discussed above primarily rely on the feedback from previous transmission to guide the encoding of
+subsequent data, demonstrating that incorporating the positive
+effect of feedback mechanisms on SemCom. Additionally,
+[20] replaces the conventional CRC with a SimCRC model
+to trigger retransmission. Then, [21] enhances the accuracy of
+the error detection accuracy by analyzing the feature structure
+of the reconstructed image. On the basis of SimCRC, [22]
+proposes an incremental knowledge-based HARQ mechanism
+for SemCom, where the semantic decoder integrates the
+incremental knowledge from previous transmissions into the
+semantic information in the retransmission.
+However, the retransmission methods mentioned above need
+the receiver decodes all semantic features prior to error detection, thereby resulting in the additional computing cost and
+time. Furthermore, these methods usually rely on transmitting
+redundant information multiple times, lacking of the ability to
+accurately identify and correct the specific distorted semantic
+features.
+To address above problem, [23] proposed a feature distortion
+evaluation (FDE) network to measure semantic similarity
+between the original feature and its reconstructed counterpart before data reconstruction. However, the FDE model’s
+
+reliance on a predefined semantic similarity metric makes
+it highly sensitive to changes in the metric formulation. As
+even minor modifications to the metric function can disrupt
+the metric’s distribution, often requiring retraining without
+yielding substantial benefits. To overcome this limitation, [24]
+utilizes similarity ranking to capture the relative semantic
+relationships between original and reconstructed features. But
+it is impractical in the resource-constrained scenarios due
+to the cost of more exchanges between the transmitter and
+receiver to establish the similarity ranking.
+These limitations underscore the need for a semantic error
+detection and retransmission mechanism that is both robust
+to metric variations and efficient in communication overhead.
+Motivated by this, we propose a semantic codebook-based
+HARQ (SCB-HARQ) framework, which leverages compact
+semantic priors to enable low-cost and accurate semantic-level
+error control.
+III. S YSTEM M ODEL
+In this section, we describe the system model of SCBHARQ for wireless image transmission, mainly consisting
+of the transmitter, the stochastic wireless channel and the
+receiver, as illustrated in Fig. 1.
+A. Transmitter
+As shown in Fig. 1, the source image x ∈ RH×W ×3 , where
+H, W , and 3 denote the height, width, and color channels of
+the RGB image, is fed into the semantic encoder Fs (·, θs ),
+parameterized by θs . The semantic features are extracted as
+Z ∈ RM ×M ×B , where B represents the number of feature
+map channels, and each feature map has dimensions M × M .
+Subsequently, Z is used as the input for both the semantic
+codebook and the rate-adaptive JSC encoder, respectively.
+The features in Z are matched with the entries in the
+semantic codebook through a two-stage quantization process,
+yielding the corresponding index V represented as a fixedlength integer. Due to the minimal number of bits required
+for V , it is assumed to be transmitted error-free by the
+control channel, consistent with the configuration in [32] and
+[33]. Simultaneously, the rate-adaptive JSC encoder function
+Fc (·, θc ), parameterized by θc , maps Z into the output signal
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+Y = Fc (Z, θc ). During the r-th retransmission, the retransmitted features are selected based on HARQ feedback fr ,
+which acts as a mask to correctly select the received features,
+ensuring that the encoding focuses exclusively on the features
+that require retransmission. The retransmitted features are
+then encoded into a variable-length vector Yr ∈ CL , where
+the length L depends on the number of retransmissions r.
+This design allows the coding length to adapt dynamically to
+the prevailing transmission conditions, ensuring efficient and
+flexible communication.
+At the first transmission, Y is transmitted over a stochastic wireless channel, which can either be an additive white
+Gaussian noise (AWGN) channel or Rayleigh fading channel.
+Consequently, the output of the channel is denoted as Ŷ and
+is given by:
+(
+h · Y + η, for Rayleigh fading channel;
+(1)
+Ŷ =
+Y + η,
+for AWGN channel;
+where η denotes the white Gaussian noise, modeled as
+η ∼ CN 0, σ 2 Ik , indicating a independent and identically
+distributed (i.i.d.) Gaussian distribution with zero mean and
+variance σ 2 . For the Rayleigh fading model, the multiplicative
+effect of the channel gain on the transmitted signal is captured
+by H (Y ) = h · Y , where h follows Rayleigh distribution.
+B. Receiver
+The error-free received index V is used directly to retrieve
+the corresponding feature vectors Zq from the semantic codebook. At the same time, the rate-adaptive JSC decoder function
+Gc (·, φc ), parameterized by φc , decodes the received signal Ŷ
+to the semantic feature vectors Ẑ = Gc (Ŷ , φc ).
+Next, the decision function DEC(·) evaluates the semantic
+similarity between each received feature ẑ(i,j) in Ẑ and its
+(i,j)
+in Zq . Here, i and j denote the
+corresponding feature zq
+horizontal and vertical indices in the feature map, allowing
+for precise evaluation of semantic distortion at the level of
+individual features. On this basis, the DEC(·) generates a
+binary feedback vector f , indicating the features in Ẑ that
+require retransmission. This process will be repeated until
+either accomplishing a successful transmission or reaching the
+maximum number of retransmissions.
+After all the transmissions, the enhanced semantic decoder
+Gs (·, φs ) uses the received vectors Ẑ and Zq together to
+recover the source image x̂ ∈ RH×W ×3 , where φs represents
+the parameters of the semantic decoder.
+IV. K EY C OMPONENTS IN SCB-HARQ
+This section presents a detailed explanation of some key
+components in SCB-HARQ, e.g., the semantic codebook, the
+masked rate-adaptive JSCC scheme and the enhanced semantic
+decoder. Firstly, the semantic codebook is investigated as
+a prior information for semantic error detection. Then, the
+masked rate-adaptive JSCC scheme is designed to identify
+which semantic features need to be retransmitted. Finally,
+the enhanced semantic decoder is designed to use the quantized features and the received features together for image
+reconstruction.
+
+14335
+
+A. Semantic Codebook
+The semantic codebook consists of two main components:
+a basic feature set Z and an index-map set I. The basic
+feature set Z comprises a collection of representative semantic
+feature vectors extracted from image datasets. The index-map
+set I, on the other hand, contains a set of prototypical spatial
+configurations of feature indices, obtained by clustering the
+index-maps derived from Z. During transmission, each source
+image is matched to its closest index-map in I, and only
+the corresponding compact index V is transmitted, instead
+of the full index-map. This design substantially reduces the
+transmission overhead while preserving essential semantic
+structure.
+1) The Basic Feature Set: To obtain the basic feature set Z,
+we utilize the framework of VQGAN [34]. In this framework,
+the semantic encoder first maps the image features to a series
+of discrete feature vectors, which captures the segments of the
+real texture information from the source image. Subsequently,
+the semantic decoder weights and combines discrete feature
+vectors to reconstruct the image.
+As depicted in Fig. 2, the source image x is fed into
+the encoder to extract the semantic feature map Z ∈
+RM ×M ×B , where each spatial location (i, j) corresponds to a
+B-dimensional feature vector z(i,j) that represents the semantic
+embedding of the local patch at that position. These feature
+vectors are then passed through a quantization module. In this
+module, each feature vector z(i,j) is replaced by the nearest
+1
+vector from the basic feature set Z = {znq }N
+n=1 , where N1
+denotes the size of the basic feature set. The nearest codebook
+(i,j)
+is determined based on the Euclidean distance
+vector zq
+between the feature vector z(i,j) and the vectors in Z, which
+is given as:
+z(i,j)
+= arg min
+z(i,j) − znq .
+q
+n
+zq ∈Z
+
+(2)
+
+The quantized feature tensor Zq is then constructed by
+(i,j)
+to its correassigning each selected codebook vector zq
+sponding spatial location (i, j). This process is summarized
+as:
+n
+o
+Zq = z(i,j)
+|
+(i,
+j)
+∈
+[1,
+M
+]
+×
+[1,
+M
+]
+,
+(3)
+q
+where [1, M ]×[1, M ] denotes the set of all spatial coordinates
+in the M × M feature map. As such, Zq retains the spatial
+structure of the original feature tensor Z while discretizing its
+content using vectors from Z. The resulting Zq is then fed
+into the semantic decoder to reconstruct the output image x̂.
+The formula of this process is provided below:
+x̂ = G (Zq , φs ) = G (q (F (x, θs )) , φs ) .
+
+(4)
+
+Beyond the standard autoencoder structure, VQGAN integrates a discriminator network that distinguishes between real
+and generated images. It is worth noting that this adversarial
+learning framework allows the basic feature set to capture
+more detailed and real semantic features. Therefore, reconstructed image x̂ closely approximates the source image while
+preserving finer details and textures [35].
+For clarity, we visualize the texture semantics of the basic
+feature set, represented by the blue-grey shaded components
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14336
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 2. VQGAN-based framework for basic feature set construction.
+
+in Fig. 2. This visualization is presented as a 3 × 3 grid
+of small images, where each small image corresponds to a
+feature vector in the basic feature set, illustrating the specific
+texture semantic information extracted from the source image.
+Notably, the superposition of multiple semantic features can
+capture more comprehensive and realistic texture information,
+demonstrating that the constructed basic feature set Z effectively represents diverse texture semantics [36]. This capability
+provides a solid foundation for semantic error detection and
+image reconstruction.
+2) The Index-Map Set: Based on the basic feature set, any
+source image x can be represented by a spatial collection of
+quantized features Zq ∈ RM ×M ×B . An equivalent representation is an index-map I ∈ {1, 2, . . . , N1 }M ×M , as shown
+at the bottom center of Fig. 2, which specifies the respective
+entries in the basic feature set. However, direct transmission of
+the full index-map I incurs substantial overhead. Specifically,
+each spatial location requires log2 (N1 ) bits. The index-map
+contains M 2 entries, resulting in a total of M 2 log2 (N1 ) bits
+per image. Such overhead significantly exceeds the payload
+capacity of the control channel in practical wireless systems
+for free error, rendering direct transmission infeasible.
+To reduce transmission overhead, we employ an indexmap to convert Zq into a compact representation. This is
+accomplished by clustering similar index-maps to form a
+representative set, denoted as I. To this end, we introduce
+a novel distance metric, termed the weighted semantic feature index-map (WSFI) distance, as detailed in Section V-B.
+WSFI captures structural similarities among image indexmaps, enabling more effective clustering into a compact set
+of representative patterns. Rather than transmitting the entire
+index-map, only the cluster index V is sent, requiring just
+log2 (N2 ) bits, where N2 is the size of I. This significantly
+reduces control channel usage from M 2 log2 (N1 ) to log2 (N2 ),
+while preserving the global semantic structure necessary for
+robust error detection.
+Overall, the semantic codebook provides auxiliary information specifically for semantic error detection, which is crucial
+
+for balancing semantic fidelity and transmission efficiency.
+The basic feature set Z ensures diverse and robust feature
+representations, while the index-map set I compresses these
+representations into compact indices, reducing transmission
+overhead with minimal loss of semantic content.
+B. Masked Rate-Adaptive JSCC
+In the proposed masked rate-adaptive JSCC framework,
+binary feedback f is used as a spatial mask to identify semantic features requiring retransmission. These masked features
+are then processed by a JSCC module composed of multiple
+independently trained encoder-decoder pairs, each designed to
+operate at a specific coding rate.
+To support adaptive rate control, we define the image
+dimension n = H × W × 3 as the source bandwidth, and the
+channel dimension k = C ×M ×M as the channel bandwidth,
+where C denotes the number of output channels in the encoder.
+Since k is typically smaller than n, the resulting coding process
+involves bandwidth compression. The compression ratio, or
+coding rate, is given by:
+k
+C · M2
+=
+.
+(5)
+n
+H ·W ·3
+This coding rate R serves as a critical design parameter and
+is adjusted by modifying the number of output filters in the
+encoder’s convolutional layers. By increasing or decreasing
+C, the encoder flexibly adapts to different channel bandwidth
+constraints, balancing compression efficiency and robustness
+to transmission errors.
+To accommodate varying rate requirements across diverse
+channel conditions, we construct a set of U JSCC
+encoder-decoder pairs, each targeting a predefined rate Ru ,
+where u ∈ {1, 2, . . . , U }.
+R=
+
+C. Enhanced Semantic Decoder
+At the receiver, we propose an enhanced semantic decoder
+combining the outputs of the semantic codebook and the rateadaptive JSC decoder. Given that quantization errors from
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+Fig. 3. The detailed architecture of the enhanced semantic decoder in
+SCB-HARQ.
+
+14337
+
+Specifically, V is matched with I to retrieve the corresponding index-map I, which is then used to recover quantized
+features Zq from Z, effectively reversing the transmitter’s
+feature-to-index mapping process. The received signal Ŷ0 is
+decoded by the rate-adaptive JSC decoder 0 to obtain the
+reconstructed features Ẑ0 . Subsequently, the decision function
+DEC(·) computes the cosine similarity between the received
+feature vector ẑ(i,j) in Ẑ and its corresponding quantized
+(i,j)
+feature vector zq
+from Zq . Here, (i, j) denotes the spatial
+location corresponding to the i-th row and j-th column of
+the feature map, enabling fine-grained semantic distortion
+assessment. The similarity score S (i,j) is calculated as:
+(i,j)
+
+the semantic codebook and transmission errors from the JSC
+decoder may result in a negative impact reconstruction quality,
+respectively.
+The decoder adopts a dual-branch architecture. The first
+branch takes the JSCC-decoded features Ẑ as the primary
+input, which preserves detail but may be noisy. The second
+branch uses the quantized semantic features Zq from the
+codebook, which are more stable but may lack high-frequency
+details. To fuse these complementary inputs, we introduce
+a residual correction module composed of stacked residual
+blocks and group normalization layers. The final reconstructed
+image x̂ is obtained by:
+
+
+x̂ = Gs Ẑ, Zq , φs
+(6)
+In this formulation, the enhanced decoder achieves more
+accurate and robust reconstruction compared to conventional
+single-branch designs. The detailed structure is illustrated in
+Fig. 3.
+V. S EMANTIC C ODEBOOK -BASED HARQ
+In this section, the process of SCB-HARQ is proposed.
+Meanwhile, three training phases of SCB-HARQ are provided
+in detail.
+A. SCB-HARQ
+The structure of the SCB-HARQ system is shown in Fig. 4,
+which is divided into two parts: the upper part describes
+how the semantic codebook maps the extracted features of
+semantic encoder to their corresponding indices, and the lower
+part details the retransmission procedure facilitated by the
+rate-adaptive JSCC scheme.
+As shown in the upper part of Fig. 4, the semantic encoder
+extracts the features Z, which are then matched with Z by
+Eq.2. This process produces the quantized features Zq and
+an index-map I. Subsequently, the index-map I is flattened,
+and the nearest one is retrieved from the index-map set I,
+generating the corresponding index V .
+As shown in the lower part of Fig. 4, the features Z are
+encoded by the rate-adaptive JSC encoder 0 into the initial
+transmission signal Y0 . The transmitter concatenates V and
+Y0 before transmitting them to the receiver. Importantly, V is
+transmitted error-free by control plane, ensuring reliable and
+accurate recovery of the quantized features at the receiver.
+
+S (i,j) =
+
+ẑ(i,j) · zq
+
+(i,j)
+
+kẑ(i,j) k2 kzq
+
+k2
+
+(7)
+
+where the operator (·) indicates the dot product, and k · k2
+denotes the L2 norm. Cosine similarity is chosen due to its
+proven effectiveness in semantic feature comparison and deep
+representation learning. Importantly, the SCB-HARQ framework is inherently agnostic to the choice of similarity metric
+and can be readily adapted to utilize alternative measures such
+as Euclidean distance or L1 distance for evaluating semantic
+consistency.
+Based on a predefined semantic similarity threshold ξt , the
+binary feedback mask f ∈ {0, 1}M ×M is generated as:
+(
+1, if S (i,j) ≥ ξt ,
+(i,j)
+(8)
+f
+=
+0, otherwise,
+where f (i,j) = 1 indicates that the semantic feature at location
+(i, j) is accepted, while f (i,j) = 0 triggers retransmission.
+In addition, when there are still features in the (r − 1)-th
+transmission that are not received correctly, a binary feedback
+vector fr is generated to precisely identify features that have
+undergone semantic distortion and require retransmission. It
+acts as a mask to trigger the r-th retransmission. On this
+basis, the distorted features, represented as Zr , are selected and
+encoded by a rate-adaptive JSC encoder to produce the retransmission signal Yr . The masking mechanism ensures that only
+distorted features are retransmitted, effectively minimizing
+bandwidth usage. Moreover, the proposed system achieves an
+optimal balance between transmission efficiency and semantic
+accuracy by dynamically adjusting the encoding rate during
+retransmission.
+After the r-th retransmission, the receiver obtains Ẑr , and
+S is recalculated by DEC(·). The retransmission repeats until
+S reaches a threshold or the maximum number of retransmissions is reached. Finally, Ẑ, which aggregates features
+from multiple transmissions, are combined with the quantized
+features Zq to reconstruct the image.
+B. Training Strategy
+The training of the SCB-HARQ system is conducted in
+three distinct phases. In Phase 1, the semantic codec and
+codebook are constructed. Phase 2 focuses on training multiple
+JSC encoder-decoder pairs for the rate-adaptive JSCC scheme.
+Finally, Phase 3 is integrated with the previously trained components to enable end-to-end SCB-HARQ communication.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14338
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 4. Illustration of the SCB-HARQ system structure, showing the semantic codebook matching process and the retransmission procedure.
+
+Each phase builds upon the foundation established by the
+previous one, with the overarching objective of improving
+system efficiency and reliability for image transmission.
+1) Phase 1 Joint Construction of Semantic Codec and
+Semantic Codebook: In this phase, we focus on the joint construction of the semantic codec and codebook. To achieve this,
+we establish a semantic feature-aware loss function Lperceptual
+for training the VQGAN model, which is formulated as:
+Lperceptual = kx − x̂k1 + kFs (x, θs ) − Gs (x, φs )k22 ,
+
+(9)
+
+where kx − x̂k1 measures the average absolute difference
+between the output x̂ and the source image x. The term
+kFs (x, θs ) − Gs (x, φs )k22 denotes the perceptual loss, which
+captures the semantic feature discrepancies between the output
+and the source data in a high-dimensional space. This perceptual loss encourages the model to focus on semantic accuracy
+during pre-training, promoting the restoration of more realistic
+and semantically consistent features.
+Due to the quantization operation in Eq.4 is nondifferentiable, we employ the straight-through gradient estimator [35], [37], [38] to approximate gradients by directly
+copying them from the decoder to the encoder, such enabling
+
+end-to-end training using the code-level loss function:
+LVQ = ksg(Z) − Zq k22 + βksg(Zq ) − Zk22 ,
+
+(10)
+
+where sg(·) denotes the stop-gradient operator, and β is a
+weight parameter that controls the update rates for the encoder
+and the basic feature set.
+Since we employ a generative adversarial network as the
+generator module in the VQGAN, the total loss function for
+Phase 1, denoted as LPhase1 , incorporates the adversarial loss
+function LGAN . Thus, the overall loss function for Phase 1 is
+given by:
+LPhase1 = LVQ + λLGAN + γLperceptual ,
+
+(11)
+
+where λ and γ are the weighting factors for LGAN and
+Lperceptual , respectively.
+Using the loss function LPhase1 , the VQGAN network is
+trained to produce the basic feature set, along with the
+semantic encoder and decoder. Once the basic feature set is
+generated, constructing index-map set I can be modeled as
+a clustering problem. To construct I, we propose WSFI as
+a distance metric to guide the clustering process. This metric
+jointly evaluates the similarity between training samples based
+on two dimensions:
+• the semantic similarity of their quantized feature tensors;
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+• the structural similarity of their corresponding
+index-maps.
+Consider two training samples denoted by (Zq1 , I1 ) and
+(Zq2 , I2 ), where Zq1 and Zq2 denote the quantized semantic
+feature tensors, and I1 and I2 are the associated index-maps.
+The WSFI distance between them is defined as:
+DW SF I ((Zq1 , I1 ), (Zq2 , I2 )) , Df eature (Zq1 , Zq2 )
++αDindex−map (I1 , I2 ) ,
+
+(12)
+
+where Dfeature (·) and Dindex-map (·) represent the mean squared
+error (MSE) between quantized features and index-maps,
+respectively. The weighting coefficient α ≥ 0 balances their
+relative contributions.
+Building upon Eq.12, the WSFI distance is further introduced to model the semantic similarity between a training
+sample (Zq , I) and a candidate set of index-maps A,
+associated with corresponding quantized feature ZA . This
+relationship is formally defined as:
+A
+DWSFI
+((I, Zq ), (A, ZA )) , min DWSFI ((I, Zq ), (A, ZA )) ,
+A∈A
+(13)
+where (ZA , A) denotes a single candidate pair within the
+dataset (ZA , A).
+The subsequent step employs Eq. 13 to guide the learning
+of an optimal index-map set I. Specifically, the training
+objective is to minimize the expected WSFI distance between
+each training sample (Zq , I) and its closest centroid in I,
+thereby ensuring that the learned centroids are semantically
+representative. Accordingly, the objective function used during
+the clustering process is defined as:
+ I
+
+(I, I, Zq , ZI )
+(14)
+min E(I,Zq )∼p(I,Zq ) DWSFI
+I
+
+s.t.
+
+I = {Ic(1) , Ic(2) , . . . , Ic(N2 ) },
+
+(15)
+
+ZI = {ZI (1) , ZI (2) , . . . , ZI (N2 ) }.
+
+(16)
+
+c
+
+c
+
+c
+
+where E(I,Zq )∼p(I,Zq ) [·] denotes the expectation over the pair
+(I, Zq ) drawn from the distribution p(I, Zq ). The index-map
+(1)
+(N )
+set I = {Ic , . . . , Ic 2 } represents the centroids to be
+(i)
+optimized, where each Ic is selected from the training dataset
+and is associated with a quantized feature map ZI (i) . The set
+c
+ZI = {ZI (1) , . . . , ZI (N2 ) } collects these feature maps for all
+c
+c
+I
+centroids. The function DWSFI
+(·) computes the WSFI distance
+between the sample (I, Zq ) and its closest centroid in I,
+considering both index-map and semantic feature similarity.
+The clustering problem can be solved using learningbased algorithms, particularly the K-means algorithm, which
+iteratively refines the centroids to minimize WSFI distance.
+The details of the basic feature set and the index-map set
+construction are provided in Algorithm 1.
+2) Phase 2 Information-Theoretic Modeling of Masked
+Rate-Adaptive JSCC: In this phase, we construct a theoretical model for the masked rate-adaptive JSCC scheme
+based on mutual information maximization. The goal is to
+reliably retransmit a subset of semantic features under a
+constrained bandwidth. The selected features are denoted as
+Zf = Mask(Z, f ). These features are encoded by the JSCC
+encoder Fc (·, θc ) into the transmission signal Y , which is
+
+14339
+
+Algorithm 1 Joint Construction of Semantic Codec and
+Semantic Codebook
+Stage 1: : Basic feature set construction.
+Input: A batch of x.
+Output: Basic feature set Z, semantic codec, x̂.
+Initialization: The basic feature set Z, the parameters of
+VQGAN: β, λ, γ, α.
+1: for training iterations do
+2:
+Z ← Fs (x, θs ).
+3:
+Quantization by Eq. 2.
+4:
+Image reconstruction by Eq. 4.
+5:
+Compute loss function value via Eq. 11 and update
+parameters: β, λ, γ, α.
+6: end for
+Stage 2: K-means-based index-map set construction.
+Input: A tuple (Zq , I).
+Output: A set of feature index-maps I.
+Initialization: The clustering centers by randomly selecting
+N2 index-maps.
+7: repeat
+8:
+Calculate the WFSI distance by Eq. 12.
+9:
+Choose the closest clustering center by Eq. 13.
+10:
+Update the centroids of the clusters by Eq. 16.
+11: until Convergence, i.e., the centroids no longer change
+significantly.
+
+subsequently distorted by the wireless channel and received
+as Ŷ . The decoder Gc (·, φc ) then reconstructs the semantic
+representation Ẑf from Ŷ .
+To maximize information preservation during retransmission while controlling the coding rate, we define the following
+constrained optimization problem:
+max
+
+I(Zf ; Ŷ )
+
+(17)
+
+s.t.
+
+k/n ≤ Rmax ,
+
+(18)
+
+θc ,φc
+
+where Rmax is the maximum allowable rate determined by the
+channel resource budget. To facilitate optimization, we adopt
+a variational approximation pφc (Ẑf | Ŷ ) to the true posterior
+p(Zf | Ŷ ), modeled by the decoder network.
+Theorem 1: Suppose both the true and variational posteriors follow multivariate Gaussian distributions with isotropic
+covariance:
+p(Zf | Ŷ ) = N (Zf ; µ(Ŷ ), σ 2 I),
+2
+
+pφc (Ẑf | Ŷ ) = N (Gc (Ŷ ), σ I).
+
+(19)
+(20)
+
+The variational lower bound of I(Zf ; Ŷ ) can be expressed
+as:
+i
+1 h
+(21)
+I(Zf ; Ŷ ) ≥ − 2 E kZf − Ẑf k2 + a,
+2σ
+where a denotes a constant. The complete proof of Theorem 1
+can be found in Appendix A.
+During inference, the system dynamically selects one of the
+trained encoder-decoder pairs based on retransmission feedback, such as the number of previous transmission attempts.
+This design enables flexible, efficient, and robust semantic
+retransmission across diverse channel conditions. The training
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14340
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Algorithm 2 Training Procedure for the Masked RateAdaptive JSCC
+Input: A batch of training images x, semantic encoder
+Fs (x, θs ), semantic decoder Gs (x̂, φs ).
+Output: Reconstructed image x̂; multiple JSCC encoderdecoder pairs trained for different target rates.
+1: Initialize: Parameters θc and φc for the JSCC encoder
+and decoder.
+2: for each predefined target rate Ru do
+3:
+Configure encoder Fc (·; θc ) and decoder Gc (·; φc ) with
+output channel size C corresponding to R` .
+4:
+Z ← Fs (x; θs ).
+5:
+Zf ← Mask(Z, f ).
+6:
+Y ← Fc (Zf ; θc ).
+7:
+Ŷ ← Channel(Y ).
+8:
+Ẑf ← Gc (Ŷ ; φc ).
+9:
+x̂ ← Gs (Ẑf ; φs ).
+10:
+Compute reconstruction loss between x and x̂ using
+Eq. (21).
+11:
+Update parameters θc and φc to minimize the loss.
+12: end for
+
+procedure for these rate-adaptive JSCC modules is described
+in Algorithm 2.
+3) Phase 3 Information-Theoretic Modeling of the SCBHARQ System: In the final phase, the SCB-HARQ system
+integrates semantic codebook, the masked rate-adaptive JSCC,
+and HARQ mechanism to enable SemCom for wireless image
+transmission. Therefore, we design an end-to-end training
+objective for the SCB-HARQ system by maximizing the
+mutual information between the source image x and its reconstruction x̂ = Gs (Zq , Ẑ, φs ). By the data processing inequality
+[39], our objective is formulated as:
+max I(x; x̂) = max I(x; Gs (Zq , Ẑ; φs ))
+φs
+
+φs
+
+≤ max
+φs
+
+I(x; Zq , Ẑ)
+
+(22)
+(23)
+
+Directly optimizing I(x; Zq , Ẑ) is intractable due to the
+involvement of the generally unknown and computationally
+challenging true distributions p(Zq , Ẑ | x) and p(Zq , Ẑ).
+Therefore, we derive a variational lower bound for approximation.
+Following the variational inference principle, we approximate the true posterior p(x | Zq , Ẑ) with a parameterized
+decoder distribution qφs (x | Zq , Ẑ), implemented via a neural
+network. Minimizing the Kullback-Leibler (KL) divergence
+between the true and approximate posteriors yields a tractable
+lower bound for the mutual information objective. This bound
+is formally presented in Theorem 2.
+Theorem 2: Assuming the variational decoder distribution
+qφs (x | zq , ẑ) is an isotropic Gaussian:
+qφs (x | Zq , Ẑ) = N (x; Gs (Zq , Ẑ; φs ), σ 2 I),
+
+(24)
+
+a variational lower bound of the mutual information objective
+in Eq. (23) is given by:
+h
+i
+1
+I(x; Zq , Ẑ) ≥ − 2 Ep(x,Zq ,Ẑ) kx − Gs (Zq , Ẑ; φs )k2
+2σ
+
+Algorithm 3 Training of the SCB-HARQ System
+Input: A batch of x, semantic codebook, masked rate-adaptive
+JSCC, Fs (x, θs ).
+Output: x̂, the enhanced semantic decoder Gs (·, φs ).
+1: Z ← Fs (x, θs ).
+2: Y ← Fc (Z, θc ).
+3: V ← map(Z, Z).
+4: Transmit Y and V through the channel.
+5: Zq ← map(V, Z).
+6: Ẑ ← Gc (Ŷ , φc ).
+7: Calculate the semantic similarity S (i,j) by Eq. 7.
+8: while S (i,j) < ξt and r <= rmax do
+9:
+Feedback fr ,
+10:
+Adjust coding rate by r,
+11:
+r + 1.
+12: end while
+13: x̂ ← Gs (Zq , Ẑ, φs ).
+14: Update the parameter φs by Eq. 27.
+d
+log(2πσ 2 )
+(25)
+2
+where d is the dimensionality of x, H(x) is the entropy of the
+source. Consequently, maximizing this lower bound is equivalent to minimizing the expected MSE of the reconstruction
+x̂. The proof of Theorem 2 is provided in Appendix B.
+To further constrain the redundancy introduced by retransmissions and encourage spatially selective refinement, we
+introduce a bandwidth-aware regularization term:
+
+
+rX
+M X
+M
+max
+X
+1
+ kYr k0 + λg
+Rretx =
+σ (ξth − S(i, j))
+rmax r=1 CM 2
+M 2 i=1 j=1
++ H(x) −
+
+(26)
+Here, Yr denotes the transmitted feature tensor during the rth retransmission, and kYr k0 counts the number of non-zero
+elements, thereby measuring the sparsity of the transmission.
+The term is normalized by the bandwidth CM 2 . The second
+term applies a sigmoid gating function σ(·) to the difference
+between the semantic similarity score S(i, j) and a predefined
+threshold ξth , scaled by a coefficient λg . This encourages
+the model to suppress retransmissions for features that are
+already semantically consistent with the codebook, thereby
+reducing unnecessary retransmission overhead. Finally, this
+penalty is averaged over the maximum number of retransmissions rmax to ensure scale invariance across different system
+configurations.
+By combining the information-theoretic surrogate and the
+retransmission regularizer, the full training loss is given as:
+LPhase 3 = E[kx − x̂k2 ] + Rretx
+
+(27)
+
+This objective provides a principled and fully differentiable
+framework for training the SCB-HARQ decoder with both
+semantic fidelity and bandwidth efficiency.
+VI. S IMULATION S ETUP
+In this section, simulations are performed to evaluate the
+proposed system. The details of the simulation settings are
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+14341
+
+introduced. Then, the proposed SCB-HARQ is compared with
+other baselines.
+A. Experimental Setup
+1) Dataset: Our experiments adopt widely used highquality DIV2K image dataset for training, which provides
+a comprehensive set of 800 training samples. We test the
+performance of our method on the Kodak image dataset, comprising 24 high-resolution images that are specifically designed
+to rigorously evaluate image reconstruction techniques. During training, images are randomly cropped into patches of
+256 × 256 pixels.
+2) The Proposed SCB-HARQ Will Be Compared With the
+Following Methods: (1) a CNN-based deep joint sourcechannel coding (DJSCC) scheme, which is commonly
+regarded as a benchmark of SemCom without HARQ. We
+compare this method with the proposed method to evaluate
+the performance gain achieved by the semantic codebook and
+HARQ. (2) an ablation experiment of the SCB-HARQ method
+only involving the semantic codebook without the HARQ
+mechanism, denoted by SCB, to examine the impact of the
+HARQ on retransmission efficiency and performance. (3) the
+traditional incremental redundancy HARQ (II-HARQ) method
+[40], employs JPEG for source encoding, 1/2 rate LDPC for
+channel coding, and 4 QAM for modulation. The CRC is
+then used to detect errors in the received data. When CRC
+check fails, indicating the presence of transmission errors, the
+system requests the transmission of incremental redundancy
+information. This iterative process continues until successful
+reception is confirmed or the predefined maximum number of
+transmissions is reached.
+The peak signal-to-noise ratio (PSNR), multi-scale structural similarity (MS-SSIM), and learned perceptual image
+patch similarity (LPIPS), are used to evaluate the performance
+of image reconstruction under different SNR conditions.
+Higher PSNR indicates better reconstruction quality in terms
+of pixel-level. MS-SSIM assesses structural consistency across
+multiple scales, with higher scores reflecting greater preservation of visual structures between the reconstructed and source
+images. Additionally, LPIPS provides a measure of perceptual
+similarity, where lower values indicate that the reconstructed
+image is more perceptually similarity to the source.
+3) Training Details: We employ the CNN as the backbone
+for both the encoder and decoder. We adopt the Adam optimizer, setting its learning rate to 1 × 10−4 . For the DIV2K
+dataset, we configure the batch size to 16. By adjusting the
+output feature channel C, the compression ratio is defined as
+k/n = [0.042, 0.084, 0.167, 0.250], and the maximum number
+of retransmissions is set to 3. The implementation is conducted
+using the PyTorch framework, and training is executed on a
+GeForce RTX 4090 GPU.
+B. Simulation Analysis
+1) Size of Semantic Codebook: To determine an appropriate
+size of the basic feature set N1 , we conducted a series of
+exploratory experiments. The length of the vectors in the basic
+feature set is fixed at 512, while the size of N1 varies among
+
+Fig. 5. Impact of basic feature set size on image reconstruction performance
+in VQGAN.
+
+Fig. 6. Impact of base feature set size on PSNR performance in the SCBHARQ.
+
+{256, 512, 1024, 2048}. As illustrated in Fig. 6, increasing the
+size of the basic feature set generally improves reconstruction
+performance. Specifically, the PSNR increases as the size of
+the basic feature set grows from 256 to 2048. This trend
+indicates that a larger feature set captures more detailed and
+rich semantic information, which enhances the reconstruction
+quality of the source images. However, it is noteworthy that
+the rate of improvement in PSNR almost diminishes as N1
+increases beyond 1024, suggesting that additional features
+offer little performance gain but significantly increase computational cost. This finding is further supported by the LPIPS,
+which shows a reduced rate of decrease as N1 grows beyond
+1024, indicating that larger feature sets also diminish gains in
+terms of perceptual quality.
+The index-map I is generated based on the features in Z, as
+previously described. The size of the basic feature set N1 plays
+a critical role in determining the diversity of the index-maps.
+An increase in N1 yields a richer set of base features, leading
+to a more diverse collection of index-maps. Thus, clustering
+more diverse index-maps result in a larger I, which effectively
+minimizes quantization distortion. It indicates that the size
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14342
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Fig. 7. Impact of semantic similarity threshold on PSNR/MS-SSIM under various SNR levels.
+
+of the index-map set N2 is intrinsically determined by N1 ,
+and the choice of N1 must strike a balance between semantic
+fidelity and computational cost.
+Fig. 5 focuses on the effect of different sizes of the basic
+feature set on the quality of reconstructed images in the
+VQGAN framework without involving JSCC module and
+transmission process. To further evaluate the impact of basic
+feature set size on SCB-HARQ, we conduct a comparative
+analysis of PSNR performance using the Kodak dataset for
+different sizes of basic feature set. Fig. 6 illustrates that as
+the size of basic feature set increases from 512 to 2048, there
+is a significant improvement in PSNR across various SNR
+conditions. However, it is noteworthy that the performance
+promotion is marginal once the number of basic features in the
+set exceeds a certain point. Based on empirical observations,
+the size of the basic feature set is chosen as 1024, as it offers
+an optimal trade-off between performance and computational
+cost. Consequently, the experiments were conducted using
+a feature set of size 1024 × 512, where the set contains
+1024 features, each with a length of 512.
+2) The Threshold of Semantic Similarity: We investigated
+the optimal semantic similarity threshold for SCB-HARQ,
+evaluating thresholds from 0.0 to 0.9 under various SNR
+conditions in Fig. 7. A threshold within [0.6, 0.8] improves
+performance, but gains diminish beyond this range. This is
+primarily due to the constraint of limiting the maximum
+number of retransmissions to 3, which is designed to balance
+resource utilization and transmission performance. Based on
+the trends, a threshold of ξt = 0.75 is recommended as it
+improves transmission quality with reasonable overhead.
+3) Comparison Between WSFI-Based and Direct IndexMap Transmission: In the SCB-HARQ system, the index
+V plays a critical role in enabling the receiver to detect
+semantic distortions by evaluating the similarity between
+the received feature vectors and their corresponding
+quantized representations from the semantic codebook.
+The resulting similarity scores are then used to selectively
+trigger retransmissions of semantically corrupted features.
+Therefore, a central question arises: How effective is
+semantic error detection when relying solely on the
+compact index V ? To answer this, we conducted a
+
+Fig. 8. Impact of basic feature set size on image reconstruction performance
+in VQGAN.
+
+comparative study between two representative approaches,
+WSFI-512 and direct transmission of VQGAN-1024
+index-map.
+• WSFI-512 (two-stage): The index-maps are offline clustered into N2 = 512 representative patterns. During
+inference, only the nearest cluster index V ∈ {1, . . . , N2 }
+is transmitted, requiring only log2 N2 = 9 bits per image.
+• VQGAN-1024 (single-stage): The full index-map generated by a VQGAN model with base feature set
+size N1 = 1024 is transmitted directly. Given
+M = 48, this results in a transmission cost of
+M 2 × log2 N1 = 2304 × 10 = 23,040 bits per image.
+As shown in Fig. 8, VQGAN-1024 avoids clusteringinduced quantization errors and achieves slightly higher
+PSNR. However, it incurs significant transmission overhead,
+exceeding 23,000 bits per image, which makes it impractical in bandwidth-constrained systems. In contrast, WSFI-512
+reduces the index overhead to just 9 bits, achieving over
+99.96 percent compression. Although this compact representation causes a minor PSNR drop of about 2 dB under
+poor channel conditions, it retains sufficient semantic fidelity
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+14343
+
+Fig. 9. Performance of the Kodak dataset over the AWGN and Rayleigh channels.
+
+Fig. 10. Examples of visual comparison of Kodak dataset under AWGN channel at SNR = 10 dB.
+
+for accurate error detection and effective retransmission.
+WSFI-512 thus offers a compelling trade-off between communication efficiency and reconstruction quality.
+4) Performance of SCB-HARQ in Terms of SNRs: Fig. 9
+presents the PSNR and MS-SSIM performance on the Kodak
+dataset over both AWGN channel and Rayleigh fading channels. First, Fig. 9(a) and 9(b) depict the relationship between
+PSNR and SNR, and the relationship between MS-SSIM and
+SNR under AWGN channel conditions, respectively. The proposed SCB-HARQ consistently outperforms baseline methods,
+including DJSCC, traditional II-HARQ, and the SCB method.
+Especially in the low SNR regime, SCB-HARQ achieves
+significant gains in both PSNR and MS-SSIM. Specifically,
+SCB improves the performance in PSNR at SNR = 1 dB by
+36.6%, 20.9%, compared with traditional II-HARQ, DJSCC,
+respectively. On this basis, SCB-HARQ further improves
+communication performance by integrating the retransmission
+mechanism, which retransmits the distorted features iteratively
+based on feedback. As a result, SCB-HARQ achieves a PSNR
+improvement of 46.62%, 29.45%, and 7.07%, compared with
+
+traditional II-HARQ, DJSCC, and SCB, respectively. Similar trends are observed for MS-SSIM, where SCB-HARQ
+achieves improvements of 34.72%, 13.47%, and 6.79%. These
+results highlight the important role of the semantic codebook
+and HARQ mechanism on transmission reliability in low SNR
+conditions.
+Next, Fig. 9(c) and 9(d) illustrate the PSNR and MS-SSIM
+performance on the Kodak dataset over a Rayleigh fading
+channel. The results demonstrate that the SCB-HARQ outperforms the basic methods (i.e., DJSCC, traditional II-HARQ,
+and SCB) under all SNRs for PSNR and MS-SSIM. The
+MS-SSIM and PSNR of SCB-HARQ increase progressively
+with the growing SNR, and then gradually stabilize at high
+SNRs. It indicates less or even no need for retransmissions in
+the high SNR conditions. Notably, the PSNR of the SCBHARQ is nearly double that of the traditional II-HARQ,
+further validating its effectiveness in SemCom. This significant
+improvement can be attributed to two key factors: (1) the
+semantic codebook, which accurately identifies distorted features. (2) the HARQ mechanism, which enhances robustness
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14344
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+TABLE I
+T HE T OTAL DATA VOLUME IN B ITS C OMPARISON B ETWEEN SCB-HARQ
+AND T RADITIONAL II-HARQ FOR O NE I MAGE D URING C HANNEL
+T RANSMISSION U NDER THE SNR=10 D B
+
+a 51.27% reduction in total data volume. In future work, we
+will explore advanced CSI-aware semantic coding strategies,
+and investigate simplified encoder-decoder architectures to
+further reduce system complexity while maintaining semantic
+robustness.
+A PPENDIX A
+P ROOF OF T HEOREM 1
+
+against channel noise through targeted retransmissions. Additionally, in comparison to AWGN channels, Rayleigh channels
+present greater challenges due to their dynamic and unpredictable characteristics. Nevertheless, SCB-HARQ demonstrates superior performance gains under Rayleigh channel
+conditions, particularly at low SNR. It highlights the effectiveness of the rate-adaptive JSCC scheme, which dynamically
+adjusts to varying channel conditions, thereby enhancing the
+transmission reliability of SCB-HARQ.
+The reconstructed images of different transmission schemes
+under AWGN conditions in the case of SNR = 10 dB,
+as well as the randomly selected original image of the
+Kodak dataset, are shown in Fig. 10. In the reconstructed
+images, the corresponding PSNR and MS-SSIM are provided
+below each image for quantitative comparison. It can be
+observed that the reconstructed image (c) from the proposed
+SCB-HARQ is almost indistinguishable from the original
+image (b). Specifically, the reconstructed image (c) demonstrates superior visual quality, effectively addressing the issues
+of blurred details, indistinct edges, and color distortions
+observed in the image (d) and image (e) reconstructed by
+traditional II-HARQ and DJSCC, respectively. Additionally,
+compared to the image (f) generated by the standard SCB
+method, image (c) preserves richer texture details. This
+improvement can be attributed to the retransmission of distorted features, which enhances the representation of finer
+image structures, resulting in a more accurate and detailed
+reconstruction.
+Moreover, Table I compares the number of bits for
+one image transmission using SCB-HARQ and traditional
+II-HARQ schemes. This result shows a 51.27% reduction in
+total data volume when employing the SCB-HARQ, highlighting the benefits of SCB-HARQ on data reduction and
+transmission reliability.
+VII. C ONCLUSION
+In this paper, we propose a semantic codebook-based
+HARQ for SemCom (SCB-HARQ), designed for a reliable
+and efficient wireless image transmission. Specifically, the
+SCB-HARQ utilizes the semantic codebook to detect the
+semantic errors for each received semantic feature based on a
+predefined similarity threshold. This approach overcomes the
+limitations of traditional bit-level error detection in SemCom
+and addresses the high computational complexity associated
+with existing semantic error detection methods. On this basis,
+the system triggers adaptive rate coding to optimize the utilization of channel resources during retransmission. Compared to
+traditional II-HARQ, the proposed SCB-HARQ demonstrates
+a 46.29% improvement in transmission performance and
+
+The mutual information between the latent feature Zf and
+the prediction Ŷ can be decomposed as:
+I(Zf ; Ŷ ) = H(Zf ) − H(Zf | Ŷ )
+
+(28)
+
+h
+i
+= H(Zf ) + Ep(Ŷ ), p(Zf |Ŷ ) log p(Zf | Ŷ )
+
+(29)
+
+≥ H(Zf ) + Eq [log q(Zf )]
+h h
+ii
+− Ep(Ŷ ) Eq log p(Zf | Ŷ )
+
+
+= H(Zf ) − KL q(Zf ) k p(Zf | Ŷ )
+
+(30)
+(31)
+
+When the Gaussian assumptions in Eq. 19 and Eq. 20 hold,
+the KL divergence can be computed in closed form:
+
+
+2
+1
+d
+2
+(32)
+I(Zf ; Ŷ ) = log(2πeσ ) − 2 E Ẑf − Zf
+2
+2σ
+
+
+2
+d
+1
+= − 2 E Zf − Ẑf
++ log(2πeσ 2 ) (33)
+2σ
+2
+Therefore, the mutual information is lower-bounded by:
+
+
+2
+1
+I(Zf ; Ŷ ) ≥ − 2 E Zf − Ẑf
++a
+(34)
+2σ
+where a = d2 log(2πeσ 2 ) is a constant independent of model
+parameters.
+A PPENDIX B
+P ROOF OF T HEOREM 2
+We derive a variational lower bound on the mutual
+information I(x; Zq , Ẑ) as follows:
+"
+#
+p(x, Zq , Ẑ)
+I(x; Zq , Ẑ) = Ep(x,Zq ,Ẑ) log
+(35)
+p(x)p(Zq , Ẑ)
+"
+#
+p(x | Zq , Ẑ)
+= Ep(x,Zq ,Ẑ) log
+(36)
+p(x)
+h
+i
+= Ep(x,Zq ,Ẑ) log p(x | Zq , Ẑ) + H(x)
+(37)
+h
+i
+≥ Ep(x,Zq ,Ẑ) log qφs (x | Zq , Ẑ) + H(x) (38)
+h
+i
+1
+= − 2 Ep(x,Zq ,Ẑ) kx − Gs (Zq , Ẑ; φs )k2
+2σ
+(39)
+d
+− log(2πσ 2 ) + H(x)
+(40)
+2
+R EFERENCES
+[1]
+[2]
+
+C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+Z. Lu et al., “Semantics-empowered communications: A tutorial-cumsurvey,” IEEE Commun. Surveys Tuts., vol. 26, no. 1, pp. 41–79, 1st
+Quart., 2024.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+LIANG et al.: SEMANTIC CODEBOOK-BASED HARQ FOR WIRELESS IMAGE TRANSMISSION
+
+[3]
+
+K. Niu et al., “A paradigm shift toward semantic communications,”
+IEEE Commun. Mag., vol. 60, no. 11, pp. 113–119, Nov. 2022.
+[4] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 1, pp. 5–41, Jan. 2023.
+[5] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint sourcechannel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+Process. (ICASSP), Apr. 2018, pp. 2326–2330.
+[6] Z. Weng and Z. Qin, “Semantic communication systems for
+speech transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+pp. 2434–2444, Aug. 2021.
+[7] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cognit.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[8] K. Yang, S. Wang, J. Dai, K. Tan, K. Niu, and P. Zhang, “WITT: A
+wireless image transmission transformer for semantic communications,”
+in Proc. IEEE Int. Conf. Acoust., Speech Signal Process., Jun. 2023,
+pp. 1–5.
+[9] D. B. Kurka and D. Gunduz, “DeepJSCC-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, May 2020.
+[10] H. Wu, Y. Shao, E. Ozfatura, K. Mikolajczyk, and D. Gündüz,
+“Transformer-aided wireless image transmission with channel
+feedback,” IEEE Trans. Wireless Commun., vol. 23, no. 9,
+pp. 11904–11919, Sep. 2024.
+[11] D. Huang, X. Tao, F. Gao, and J. Lu, “Deep learning-based image
+semantic coding for semantic communications,” in Proc. IEEE Global
+Commun. Conf. (GLOBECOM), Dec. 2021, pp. 1–6.
+[12] H. Zhang, S. Shao, M. Tao, X. Bi, and K. B. Letaief, “Deep learningenabled semantic communication systems with task-unaware transmitter
+and dynamic data,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+pp. 170–185, Jan. 2023.
+[13] J. Dai et al., “Nonlinear transform source-channel coding for semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,
+pp. 2300–2316, Aug. 2022.
+[14] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Wireless semantic communications for video conferencing,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 1, pp. 230–244, Jan. 2023.
+[15] M. Ding, J. Li, M. Ma, and X. Fan, “SNR-adaptive deep joint
+source-channel coding for wireless image transmission,” in Proc.
+IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Jun. 2021,
+pp. 1555–1559.
+[16] H. Wu, Y. Shao, K. Mikolajczyk, and D. Gündüz, “Channel-adaptive
+wireless image transmission with OFDM,” IEEE Wireless Commun.
+Lett., vol. 11, no. 11, pp. 2400–2404, Nov. 2022.
+[17] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+image transmission with adaptive rate control,” in Proc. IEEE Int. Conf.
+Acoust., Speech Signal Process. (ICASSP), May 2022, pp. 5193–5197.
+[18] M. Yang, C. Bian, and H.-S. Kim, “Deep joint source channel coding
+for wireless image transmission with OFDM,” in Proc. IEEE Int. Conf.
+Commun., Jun. 2021, pp. 1–6.
+[19] A. Ahmed, A. Al-Dweik, Y. Iraqi, H. Mukhtar, M. Naeem, and
+E. Hossain, “Hybrid automatic repeat request (HARQ) in wireless
+communications systems and standards: A contemporary survey,” IEEE
+Commun. Surveys Tuts., vol. 23, no. 4, pp. 2711–2752, 2021.
+[20] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[21] F. Ni, R. Li, Z. Zhao, and H. Zhang, “Topology data analysis-based error
+detection for semantic image transmission with incremental knowledgebased HARQ,” 2024, arXiv:2403.11542.
+[22] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+control in semantic communication with incremental knowledge-based
+HARQ,” IEEE Open J. Commun. Soc., vol. 3, pp. 1076–1089, 2022.
+[23] J. Hu, F. Wang, W. Xu, H. Gao, and P. Zhang, “SemHARQ:
+Semantic-aware HARQ for multi-task semantic communications,” 2024,
+arXiv:2404.08490.
+[24] Y. Sheng, L. Liang, H. Ye, S. Jin, and G. Ye Li, “Semantic communication for cooperative perception using HARQ,” 2024, arXiv:2409.09042.
+[25] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+[26] Y. Zhou et al., “MOC-RVQ: Multilevel codebook-assisted digital generative semantic communication,” 2024, arXiv:2401.01272.
+
+14345
+
+[27] P. Ye, Y. Sun, S. Yao, H. Chen, X. Xu, and S. Cui, “Codebookenabled generative end-to-end semantic communication powered by
+transformer,” in Proc. IEEE Conf. Comput. Commun. Workshops, May
+2024, pp. 1–6.
+[28] H. Zhang, M. Tao, Y. Sun, and K. B. Letaief, “Improving learning-based
+semantic coding efficiency for image transmission via shared semanticaware codebook,” IEEE Trans. Commun., vol. 73, no. 2, pp. 1217–1232,
+Feb. 2025.
+[29] M. Yang, C. Bian, and H.-S. Kim, “OFDM-guided deep joint source
+channel coding for wireless multipath fading channels,” IEEE Trans.
+Cognit. Commun. Netw., vol. 8, no. 2, pp. 584–599, Jun. 2022.
+[30] D. B. Kurka and D. Gündüz, “Successive refinement of images with
+deep joint source-channel coding,” in Proc. IEEE 20th Int. Workshop
+Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2019, pp. 1–5.
+[31] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+image transmission using deep source channel coding with attention
+modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,
+pp. 2315–2328, Apr. 2022.
+[32] P. Yi, Y. Cao, X. Kang, and Y.-C. Liang, “Semantic communication
+systems with a shared knowledge base,” in Proc. IEEE Int. Conf.
+Commun. Workshops, May 2023, pp. 1374–1379.
+[33] H. Zhang, M. Tao, and S. Shao, “A Wyner–Ziv coding-based semantic
+communication approach with a shared semantic codebook,” in Proc.
+IEEE Globecom Workshops, Dec. 2023, pp. 1261–1266.
+[34] C. Chen et al., “Real-world blind super-resolution via feature matching
+with implicit high-resolution priors,” in Proc. 30th ACM Int. Conf.
+Multimedia, Oct. 2022, pp. 1329–1338.
+[35] P. Esser, R. Rombach, and B. Ommer, “Taming transformers for highresolution image synthesis,” in Proc. IEEE/CVF Conf. Comput. Vis.
+Pattern Recognit. (CVPR), Jun. 2021, pp. 12873–12883.
+[36] K. Liu, Y. Jiang, I. Choi, and J. Gu, “Learning image-adaptive codebooks
+for class-agnostic image restoration,” in Proc. IEEE/CVF Int. Conf.
+Comput. Vis. (ICCV), Oct. 2023, pp. 5350–5360.
+[37] A. V. D. Oord, O. Vinyals, and K. Kavukcuoglu, “Neural discrete
+representation learning,” in Proc. Adv. Neural Inf. Process. Syst., vol. 30,
+2017, pp. 1–10.
+[38] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating
+gradients through stochastic neurons for conditional computation,” 2013,
+arXiv:1308.3432.
+[39] T. M. Cover and J. A. Thomas, Elements of Information Theory, 2nd
+ed., Hoboken, NJ, USA: Wiley, 2006.
+[40] S. B. Wicker, Error Control Systems for Digital Communication and
+Storage, vol. 1. Englewood Cliffs, NJ, USA: Prentice-Hall, 1995.
+
+Gaohong Liang received the B.S. degree in communication engineering from Chongqing University of
+Posts and Telecommunications, Chongqing, China,
+in 2023. She is currently a Postgraduate Student with
+Beijing University of Posts and Telecommunications (BUPT), Beijing, China. Her research interests
+include HARQ, machine learning, and semantic
+communications.
+
+Xuefei Zhang (Senior Member, IEEE) received
+the B.S. and Ph.D. degrees in telecommunications engineering from Beijing University of Posts
+and Telecommunications (BUPT), Beijing, China,
+in 2010 and 2015, respectively. From 2013 to
+2014, she was visiting the School of Electrical and
+Information Engineering, The University of Sydney, Sydney, NSW, Australia. She is currently an
+Associate Professor with the School of Information and Communication Engineering, BUPT. Her
+research interests include semantic communication
+and satellite-terrestrial integrated networks.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+14346
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 73, NO. 12, DECEMBER 2025
+
+Ji Zhang received the B.S. degree in computer
+communication from the University of Electronic
+Science and Technology of China in 1997, and
+the master’s degree in business administration from
+Sichuan University, China, in 2008. He is currently
+the Chief Expert of Sichuan Cloud Network Integration Engineering Research Center, a Senior Member
+of China Communications Society, and a Governmental Project Review Expert and the Professorate
+Senior Engineer of China Telecom. He is currently
+leading several major research projects and committed to the research of key technologies in the 5G+ industrial internet field. He
+has won multiple China 5G Blooming Cup awards and the title of National
+Best 5G Practitioner.
+
+Yao Sun (Senior Member, IEEE) is currently a
+Lecturer with the James Watt School of Engineering, University of Glasgow, Glasgow, U.K.
+He has extensive research experience in wireless communication area. His research interests
+include intelligent wireless networking, semantic
+communications, blockchain systems, and resource
+management in next generation mobile networks. He
+has won the IEEE Communication Society of TAOS
+Best Paper Award in 2019 ICC. He has served as the
+TPC Chair for UCET 2021; and the TPC Member
+for several international flagship conferences, including ICC 2022, VTC spring
+2022, GLOBECOM 2020, WCNC 2019, and ICCT 2019. He has been the
+guest editor of special issues of several international journals.
+
+Qimei Cui (Senior Member, IEEE) received the
+B.E. and M.S. degrees in electronic engineering
+from Hunan University, Changsha, China, in 2000
+and 2003, respectively, and the Ph.D. degree in
+information and communications engineering from
+Beijing University of Posts and Telecommunications
+(BUPT), Beijing, China, in 2006. Since 2014, she
+has been a Full Professor with the School of Information and Communication Engineering, BUPT. In
+2016, she was a Visiting Professor with the Department of Electronic Engineering, University of Notre
+Dame, Notre Dame, IN, USA. Her research interests include B5G/6G wireless
+communications, mobile computing, and the IoT. She was a recipient of the
+Best Paper Award from IEEE ISCIT 2012, IEEE WCNC 2014, and WCSP
+2019; the Honorable Mention Demo Award from ACM MobiCom 2009;
+and the Young Scientist Award from URSI GASS 2014. She serves as a
+Technical Program Committee Member for several international conferences,
+such as IEEE ICC, IEEE WCNC, IEEE PIMRC, IEEE ICCC, WCSP 2013,
+and IEEE ISCIT 2012. She serves as the Technical Program Chair for APCC
+2018, the Track Chair for IEEE/CIC ICCC 2018, and the Workshop Chair
+for WPMC 2016. She serves as an Editor for Science China Information
+Science, a Guest Editor for EURASIP Journal on Wireless Communications
+and Networking, International Journal of Distributed Sensor Networks, and
+Journal of Computer Networks and Communications.
+
+Xiaofeng Tao (Senior Member, IEEE) received the
+B.S. degree in electrical engineering from Xi’an
+Jiaotong University, Xi’an, China, in 1993, and
+the M.S. and Ph.D. degrees in telecommunication engineering from Beijing University of Posts
+and Telecommunications (BUPT), Beijing, China,
+in 1999 and 2002, respectively. He is currently
+a Professor with BUPT. He has authored or coauthored over 200 papers and three books in wireless
+communication areas. His research interests include
+5G/B5G networks. He is a fellow of the Institution of
+Engineering and Technology and the Chair of IEEE ComSoc Beijing Chapter.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:34:57 UTC from IEEE Xplore. Restrictions apply.
+
+

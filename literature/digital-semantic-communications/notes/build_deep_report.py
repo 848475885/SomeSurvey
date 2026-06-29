@@ -1061,8 +1061,161 @@ PAPERS = [
     ),
 ]
 
+PAPERS.extend([
+    mk(
+        "Important Bits Prefix M-Ary Quadrature Amplitude Modulation for Semantic Communications",
+        "2026_Lu_Important_Bits_Prefix_MQAM_Semantic_Communications.pdf",
+        2026,
+        "Haonan Lu, Rui Meng, Xiaodong Xu, Yiming Liu, Ping Zhang, Dusit Niyato",
+        "IEEE Wireless Communications Letters, vol. 15, 2026",
+        "IEEE",
+        "IEEE 11520830; DOI 10.1109/LWC.2026.3693913; arXiv 2508.11351",
+        "文本语义传输与图像分类任务中的 semantic-aware channel modulation",
+        "20 Newsgroup、Bangladesh News Articles；DPPO 图像语义方案使用 STL-10。",
+        "Conventional MQAM、SOM、sDMCM、JSCC；LDA/DPPO 两类 SemCom 前端作为语义源。",
+        "SER、important SER(ISER)、unimportant SER(USER)、CosSim、STL-10 task accuracy、MSE/MAE。",
+        "AWGN；显式推导 MQAM/IBP-MQAM 星座判决错误对 prefix/suffix bits 的影响。",
+        "主要讨论 p=2 important prefix bits，suffix bits 为 s=n-p；STL-10 实验 1000-bit budget、33% important ratio，图 3 中各方案约 166 个 64-constellation symbols，训练 SNR=5 dB 并扫 SNR。",
+        "IBP-MQAM / important bits prefix semantic-aware modulation",
+        "语义信息先被量化成 important/unimportant bits；前 p 个 bit 映射到 QPSK prefix center，后 s 个 bit 映射到同一 prefix 下的 suffix sub-constellation；不是 VQ，而是 bit-level semantic unequal protection。",
+        "important-prefix bitstream / MQAM symbol",
+        "无 VQ 码本；离散集合是 MQAM 星座，prefix sub-constellation 由 p=2 的 QPSK center 组织，suffix 点由 alpha 控制。",
+        "若语义量化后总 bit 数为 B，M=2^n-QAM 每个符号携带 n bits，则符号数 $$N_{sym}=\\lceil B/n\\rceil$$。IBP-MQAM 不减少 B，而通过 prefix/suffix 几何改变重要 bit 的错误概率；对于 A 个 important bits 和 B 个 unimportant bits，论文进一步把 $$P_i,P_u$$ 代入 MSE/MAE 期望，解释同样 bit budget 下任务收益来自错误不等保护。",
+        "传统 MQAM 对所有 bit 同等保护；但 SemCom 的 bits 语义重要性不同，重要 bit 一旦翻转会造成更大的语义误差。之前的 digital semantic modulation 检索常漏掉该文，因为题名/关键词强调 MQAM 与 semantic communication，而不使用 digital semantic communication。",
+        "提出 Important Bits Prefix MQAM，把重要 bits 放进 prefix 决策区域，使同 prefix 符号聚在一起，利用 alpha 在 important/unimportant error rate 之间调节。",
+        "从星座几何推导 ISER/USER/SER，并在 LDA 文本语义和 DPPO 图像分类语义中验证：同样符号数下，优先降低 important bit 错误比单纯降低总 BER 更贴近任务目标。",
+        "图 2 的仿真与理论 ISER/USER 基本一致；图 3 显示在 STL-10 上 IBP-MQAM 在低中 SNR 下优于 MQAM，并与 SOM/sDMCM/JSCC 形成可比较的 modulation-level 语义保护路线。",
+        "接收端拿到 demodulated/restructured bits，再由 inverse quantization 与知识库恢复 SemInf；不是 soft VQ index，也不是连续 latent。",
+        "论文显式处理 bit/symbol error：AWGN 使星座判决跨 prefix 或 suffix，分别形成 ISER/USER。它并不处理 VQ index 跳变问题，但清楚处理了 semantic bits 经过数字调制后的不等错误后果。",
+        "这是本轮加入泛化 semantic communication、MQAM、semantic modulation 检索后补到的核心论文。它属于数字语义通信的调制层工作：核心贡献不是压缩，而是同样数字 bit payload 下的 semantic-aware symbol mapping。",
+        "语义源量化前端仍较依赖 LDA/DPPO 设定；重要 bit 划分需要先验或额外算法；没有端到端学习 codebook-index 错误恢复，也未讨论现代信道译码 soft information 如何与 IBP-MQAM 联合。",
+        strict="核心",
+        cls="5. semantic-aware modulation / unequal bit protection",
+    ),
+    mk(
+        "Semantic-Oriented Modulation for Wireless Communication",
+        "Semantic-Oriented_Modulation_for_Wireless_Communication.pdf",
+        2025,
+        "Yangfan Wang, Xuefei Zhang, Yao Sun, Qimei Cui, Xiaofeng Tao",
+        "IEEE Internet of Things Journal, vol. 12, no. 14, 2025",
+        "IEEE",
+        "IEEE 10979950; DOI 10.1109/JIOT.2025.3565017",
+        "图像传输、图像分类、文本传输、语音分类中的离散星座语义特征传输。",
+        "CIFAR-10、MNIST、European Parliament proceedings corpus、Edinburgh DataShare speech dataset。",
+        "JSCC-DT、JSCC-BOM(9-bit quantizer + LDPC rate 4/7 + 16-QAM)、JCM。",
+        "PSNR、SSIM、ACC、BLEU、CosSim、KL divergence、EMD、SDR latency。",
+        "AWGN；另有 USRP/SDR 实测链路验证。",
+        "主实验 SOM 采用 L=8、M=4；两个 feature 组成一个 complex value，再映射成 8 个 4-QAM symbols，即每个 feature 4 个 symbols；重要特征实验用 top 62.5% feature 采用 L=8,M=4，其余可采用 L=2,M=64。",
+        "SOM multilayer local-amplification modulation",
+        "把归一化后的连续 semantic feature value 直接映射到多层离散 M-QAM constellation points，绕开先量化成 IEEE754/bitstream 再调制的路径。",
+        "M-QAM constellation symbol sequence",
+        "无 VQ 码本；离散集合是每层 M-QAM constellation，L 层局部放大构成层级离散近似。",
+        "若 encoder 输出 N 个实值 features，则配对为 N/2 个 complex values；SOM 每个 complex value 发送 L 个 M-QAM symbols，总符号数 $$N_{sym}=NL/2$$，等效 constellation bit 承载为 $$N_{sym}\\log_2 M$$。主设置 L=8,M=4 时，每个 feature 使用 4 个 4-QAM symbols，相当于 8 个 constellation bits 的自由度；JSCC-BOM 用 9-bit quantizer、LDPC 4/7、16-QAM，约 4 个 16-QAM symbols/feature，用相同 channel resource 对齐。",
+        "模拟/神经 JSCC 的连续特征有噪声鲁棒性，但不兼容数字系统；传统 bit-oriented modulation 会让 sign/exponent 等少数 bit 错误造成特征值大跳变。",
+        "提出训练无关的 SOM：用多层 M-QAM 对 feature value 逐层局部放大并细化，试图保留 analog feature 的小误差特性，同时保持数字星座兼容。",
+        "把 feature value 的误差分解为 quantization error 与 decision error；再用特征重要性分配不同 L/M 资源，较重要特征获得更多层或更稳健的配置。",
+        "图 9 显示 SOM 在四类任务中总体优于 JSCC-BOM/JCM；图 10 显示 feature-level CosSim/KL/EMD 更接近原始特征；SDR 实验表明可落到现有硬件链路。",
+        "接收端得到的是经过 M-QAM 最近邻判决后的离散符号序列，再经 multilayer demapper 还原近似连续 feature vector。",
+        "论文显式建模 symbol decision error 对 feature value 的影响，但不是 VQ index error。其关键是把单个 bit 翻转造成的大幅数值跳变，替换为星座邻域判决导致的受控 feature deviation。",
+        "这篇之所以容易被 digital semantic communication 关键词漏掉，是因为题名只写 Semantic-Oriented Modulation，摘要使用 semantic communication、modulation、discrete values，不强调 VQ/codebook。加入泛化 semantic communication + modulation 后应纳入核心。",
+        "SOM 不压缩 semantic encoder 本身，只定义特征到符号的调制映射；实际 N 取决于任务模型，论文没有把每个任务 encoder 输出维度整理成统一 payload ledger；错误恢复主要依赖局部几何而非纠错码或 learned recovery。",
+        strict="核心",
+        cls="3. 离散星座直接承载语义特征并建模 symbol error",
+    ),
+    mk(
+        "Semantic Codebook-Based HARQ for Wireless Image Transmission",
+        "Semantic_Codebook-Based_HARQ_for_Wireless_Image_Transmission.pdf",
+        2025,
+        "Gaohong Liang, Xuefei Zhang, Ji Zhang, Yao Sun, Qimei Cui, Xiaofeng Tao",
+        "IEEE Transactions on Communications, vol. 73, no. 12, 2025",
+        "IEEE",
+        "IEEE 11145114; DOI 10.1109/TCOMM.2025.3604326",
+        "无线图像传输中的 semantic-level error detection 与 HARQ 重传。",
+        "DIV2K 训练；Kodak 测试；训练 crop 为 256×256。",
+        "DJSCC、传统 II-HARQ(JPEG + 1/2 LDPC + 4-QAM + CRC)、SCB ablation。",
+        "PSNR、MS-SSIM、LPIPS、总传输 bit volume、retransmission gain。",
+        "AWGN 与 Rayleigh fading；最多 3 次 retransmissions。",
+        "语义 encoder 输出 Z in R^{M×M×B}；basic feature set size N1 典型比较 256/512/1024/2048；WSFI-512 用 N2=512 个 index-map clusters；压缩率 k/n=[0.042,0.084,0.167,0.250]。",
+        "semantic codebook + WSFI index-map + masked rate-adaptive JSCC HARQ",
+        "两级语义码本：basic feature set 用 VQGAN 提供局部语义 feature vectors；index-map set 用 WSFI 聚类把整幅图的 spatial index-map 压成一个 cluster index V。V 用作语义错误检测 prior，而图像内容仍由 rate-adaptive JSCC features 传输。",
+        "compact index V plus masked JSCC feature stream",
+        "有码本；basic feature set size N1，index-map set size N2；WSFI-512 明确 N2=512，direct VQGAN-1024 明确 N1=1024、M=48。",
+        "完整 index-map 需要 $$M^2\\log_2 N_1$$ bits；WSFI 两级表示只传 $$\\log_2 N_2$$ bits。论文给出 direct VQGAN-1024: M=48,N1=1024，因此 $$48^2\\times10=23,040$$ bits/image；WSFI-512 只需 $$\\log_2 512=9$$ bits/image。JSCC 主链路的 coding rate 定义为 $$k/n=C M^2/(H W 3)$$，HARQ 只重传 semantic-distorted masked features。",
+        "传统 HARQ 的 CRC 是 bit-level，只能判断码块是否错；SemCom 需要判断接收 feature 是否在语义上偏离，且不希望等完整 decoder 输出后再检测。",
+        "利用共享语义码本作为接收端先验：收到 feature 后与码本对应 feature 比较，生成 mask，只对语义失真的 feature 做 rate-adaptive retransmission。",
+        "把 compact semantic index 用作 pre-decoding semantic check，使 HARQ 从 bit-level packet control 变成 feature-level semantic control。",
+        "摘要报告相对传统 HARQ 图像重建性能提升 46.29%、总数据量降低 51.27%；图 9/10 显示 AWGN/Rayleigh 下 Kodak PSNR/MS-SSIM 与视觉结果均优于 DJSCC/II-HARQ/SCB。",
+        "控制信道中 V 假设 error-free；主数据信道中接收的是带噪 JSCC feature，经 decoder 得到 Z-hat，并与码本恢复出的 Zq 做 semantic similarity 决策。",
+        "论文真正处理的是连续/JSCC semantic feature 经信道失真后的检测与重传，而不是让 VQ index 本身经过有误 bit channel。V 被假设无误传输，因此它绕开了 index flip 跳到错误 codeword 的问题，但在 HARQ 层很好地处理了 feature corruption。",
+        "这篇由泛化 semantic communication + codebook + HARQ 检索补入；标题没有 digital，但摘要和方法明确使用 semantic codebook、compact index、feature-level retransmission，是数字语义通信可靠性方向的重要扩展。",
+        "核心 index V 假设走 error-free control channel，弱化了数字 index 自身的误码问题；码本主要用于检测/重传 prior，而不是完整替代语义内容传输；训练和多模块复杂度较高。",
+        strict="核心",
+        cls="5. semantic codebook-assisted HARQ / feature error control",
+    ),
+    mk(
+        "VQ-VAE Based Digital Semantic Communication with Importance-Aware OFDM Transmission",
+        "2025_Lyu_VQ-VAE_Digital_Semantic_Communication_OFDM.pdf",
+        2025,
+        "Ming Lyu, Hao Chen, Dan Wang, Chen Qiu, Guangyin Feng, Nan Ma, Xiaodong Xu",
+        "arXiv:2508.08686, 2025",
+        "arXiv",
+        "arXiv 2508.08686",
+        "图像重建中的 VQ-VAE digital semantic features 与 OFDM importance-aware resource allocation。",
+        "CelebA-HQ 30,000 张高质量人脸图像，重采样到 128×128。",
+        "DeepSC、VQ-VAE、VQ-VAE+FIT、proposed VQ-VAE rematching + FIT。",
+        "PSNR、SSIM、视觉重建结果。",
+        "Rayleigh fading；OFDM，2.4 GHz，20 MHz，16-QAM，CP length 72，CPI 为 448 OFDM symbols × 792 subcarriers，reference signals time interval 4、frequency interval 6。",
+        "VQ-VAE encoder 将 3×128×128 图像压缩为 16×32×32 semantic features；codebook size 1024；uniform bit quantization 后 16-QAM 调制；重要 feature 靠近 reference signals。",
+        "VQ-VAE discrete codebook + bit quantization + importance-aware OFDM",
+        "VQ-VAE 先用共享 codebook 把连续 latent 匹配为 discrete features K；不同于 index-based 方法，论文强调直接传输 codebook vectors/features K，而不是传 index；K 再 uniform bit-quantized 成 bitstream，经 16-QAM/OFDM。",
+        "bit-quantized semantic feature values over OFDM REs",
+        "有码本；VQ-VAE codebook size J=1024，code vectors e_j in R^D；接收端 rematching 到最近 codebook vector 以纠正 feature errors。",
+        "原图按论文尺寸为 $$3\\times128\\times128$$，若按 8-bit RGB 为 $$3\\times128\\times128\\times8=393,216$$ bits。encoder 输出 $$16\\times32\\times32=16,384$$ feature scalars；论文称 compression rate 为 1/3，等价于 feature-scalar 数相对 raw scalar 数 $$16,384/(3\\times128\\times128)=1/3$$。若每个 feature scalar 用 c-bit uniform quantizer，则 payload $$B_{sem}=16,384c$$ bits；16-QAM 下符号数 $$N_{sym}=B_{sem}/4$$。OFDM 资源还需加 reference signals 与 CP；CPI 总 RE 为 448×792，pilot 间隔 4×6，重要特征占靠近 pilot 的 4Nref RE。",
+        "多数 SemCom 直接传连续特征或端到端 analog symbols，不兼容数字 OFDM；VQ index 传输又会因为 index 错误跳到完全不同 codeword。",
+        "用 VQ-VAE codebook 生成离散 semantic features，再对 feature values 做 bit quantization 和 OFDM 映射；重要 feature 靠近导频以降低信道估计误差；接收端 rematch 回 codebook 做纠错。",
+        "把 VQ 离散性、OFDM pilot-neighborhood 可靠性和 codebook rematching 结合，缓解 Rayleigh/OFDM 信道中的 feature distortion。",
+        "图 3/4 显示 proposed VQ-VAE+FIT+rematching 在低 SNR 下 PSNR/SSIM 优于 DeepSC、VQ-VAE 和 VQ-VAE+FIT；图 5 给出视觉重建对比。",
+        "接收端先得到经 OFDM channel estimation/equalization、demodulation、bit dequantization 后的 K'，再与共享 codebook 最近邻 rematching 成 z_q。",
+        "论文显式讨论 feature transmission error：当 feature error 小于 codebook minimum distance 的一半时可 perfect rematching；当超过时可能映射到邻近 codeword。它没有传 index，而是传 quantized feature values，因此解决的是 feature-vector corruption，不是 index-bit flip。",
+        "这篇是加入泛化 semantic communication + OFDM + VQ-VAE 检索后新增的核心补充；IEEE snippet 里的 arnumber 曾错配到其他 workshop 文，最终采用 arXiv 开放全文。",
+        "arXiv 版本参数表仍不够完整：c-bit quantizer 的具体 c 未在抽取段落中清楚列出，导致 bit payload 只能写成 16,384c；“compression rate 1/3”按 feature-scalar 数定义，不等于实际传输 bit 压缩率。",
+        strict="核心",
+        cls="4. VQ-VAE feature corruption with OFDM-aware protection",
+    ),
+])
+
 
 RELATED = [
+    {
+        "title": "SeER: Semantic Error Ratio for Wireless Semantic Communication",
+        "year": 2025,
+        "reason": "本轮 broad semantic communication 检索命中。摘要聚焦 semantic error ratio/评价指标，适合支撑错误度量背景，但不是新的离散语义表示、码本传输或 bit/index/symbol error 处理机制，因此列为相关非核心。",
+        "pdf": "",
+    },
+    {
+        "title": "Semantic Importance-Aware Reordering-Enhanced Semantic Communication System With OFDM Transmission",
+        "year": 2025,
+        "reason": "命中 OFDM + semantic communication。摘要显示重点是重要性重排序和 OFDM 资源映射，和已有 OFDM importance-aware 路线相关；本轮未确认其提供新的 VQ/index/bit ledger，暂列相关非核心，后续可全文补读。",
+        "pdf": "",
+    },
+    {
+        "title": "Model Shift Modulation for Semantic Communication",
+        "year": 2025,
+        "reason": "命中 semantic modulation 检索。题名相关，但摘要侧重 model-shift modulation 概念，未在本轮确认其属于离散 semantic feature/token/codebook 传输开销可追踪的核心数字语义通信，暂列候选相关。",
+        "pdf": "",
+    },
+    {
+        "title": "Secure Image Semantic Communication Using Semantic Codebook",
+        "year": 2025,
+        "reason": "命中 semantic codebook 检索。摘要侧重安全图像语义通信与 codebook，和本综述主题相邻；因本轮优先补调制/HARQ/OFDM 缺口，暂未纳入核心深读。",
+        "pdf": "",
+    },
+    {
+        "title": "Learning Mutual Modulation for Semantic Communication With Multiple Users",
+        "year": 2025,
+        "reason": "命中 semantic modulation 检索。多用户 mutual modulation 与数字调制相关，但本轮摘要筛查未确认其具有明确离散语义 payload/压缩率/index error ledger，暂列相关候选。",
+        "pdf": "",
+    },
     {
         "title": "DeepJSCC-Q: Channel Input Constrained Deep Joint Source-Channel Coding",
         "year": 2022,
@@ -1115,6 +1268,7 @@ RELATED = [
 
 
 EXCLUDED = [
+    {"title": "Semantic Communication on Digital Wireless Communication System", "reason": "本轮 broad semantic communication 检索命中，内容与数字无线语义通信相关；但出版版本属于 MDPI Electronics，AGENTS.md 明确排除 MDPI，因此不纳入核心表。"},
     {"title": "MDPI semantic communication / quantization results", "reason": "AGENTS.md 明确排除 MDPI；即便关键词命中也不纳入候选核心池。"},
     {"title": "General semantic communication surveys without digital/VQ/token focus", "reason": "只作背景，不进入核心论文表。"},
     {"title": "Pure analog DeepJSCC image/video works", "reason": "2021 至今相关但不属于严格数字语义通信；仅在演进脉络中作为对照。"},
@@ -1122,6 +1276,9 @@ EXCLUDED = [
 
 
 SEARCH_LOG = [
+    "2026-06-29 追加泛化检索：在既有 digital semantic communication 之外加入 broad query `semantic communication`，再与 modulation、MQAM、QAM、constellation mapping、semantic codebook、HARQ、OFDM、VQ-VAE 等词组合；检索到的论文先读 abstract 判断是否真正涉及离散语义变量/数字调制/码本/bit-symbol error，而不是只看标题是否含 digital。",
+    "本轮新纳入核心：Important Bits Prefix M-Ary Quadrature Amplitude Modulation for Semantic Communications、Semantic-Oriented Modulation for Wireless Communication、Semantic Codebook-Based HARQ for Wireless Image Transmission、VQ-VAE Based Digital Semantic Communication with Importance-Aware OFDM Transmission。前两篇解释了为什么 `digital semantic communication` 可能漏掉 modulation-layer SemCom：题名和索引词主要写 semantic communication / modulation / MQAM，而非 digital semantic communication。",
+    "本轮元数据校验：部分网页 snippet 给出的 IEEE arnumber 与实际论文错配。Semantic Codebook-Based HARQ 最终用 DOI 10.1109/TCOMM.2025.3604326 下载到 IEEE 11145114；VQ-VAE+OFDM 的 IEEE snippet 编号指向无关 workshop 文，故采用 arXiv 2508.08686 开放全文并记录原因。",
     "IEEE Xplore: digital semantic communication, VQ semantic communication, digital JSCC semantic communication, semantic digital modulation, OFDM digital semantic communication, product quantization semantic communication.",
     "arXiv: vector quantization semantic communication, token communications, codebook design, channel-aware VQ, VQ-DeepVSC, VQ-DSC-R, MSVQ/CEC-MSVQ.",
     "Semantic Scholar: 对 12 组必需关键词检索，并以 VQ-DeepSC、VPQ-SemCom、D2-JSCC、MaskDSC、ESC-MVQ、sDMCM 等为 seed 做 references/citations 扩展。",
@@ -1131,6 +1288,10 @@ SEARCH_LOG = [
 
 
 OVERHEAD_EXAMPLES_BY_PDF = {
+    "2026_Lu_Important_Bits_Prefix_MQAM_Semantic_Communications.pdf": """以论文 STL-10/DPPO 实验为具体代入例子。STL-10 输入图像按 96×96 RGB、8-bit 原始像素计算，原始数据量为 96×96×3×8=221,184 bits。论文给出 DPPO-based SemCom 在 1000-bit budget、33% important ratio 下工作；图 3 说明各方案传输 166 个 symbols，且每个 symbol 对应 64 constellation points，即每个符号 n=log2(64)=6 bits，因此实际星座承载约为 166×6=996 bits，与 1000-bit budget 对齐。IBP-MQAM 的 payload 不因调制而改变，仍约为 1000 semantic bits；其中 important bits 约 0.33×1000≈330 bits，被放在每个符号的 p=2 prefix 保护位置，unimportant bits 约 670 bits 位于 suffix。按 raw RGB bit 计算，压缩率为 221,184/996≈222×；若按名义 1000-bit budget，则为 221.2×。该论文的增益来自同样 996~1000 bits 下 ISER/USER 重新分配，而不是进一步减少 payload。""",
+    "Semantic-Oriented_Modulation_for_Wireless_Communication.pdf": """以论文主设置 L=8、M=4 和文中复杂度/延迟实验展示的 N=512 feature-vector 长度为数值例子。若源任务取 CIFAR-10 图像传输，原始 32×32 RGB 图像为 32×32×3×8=24,576 bits。SOM 先把 N=512 个实值 semantic features 两两组成 N/2=256 个 complex values；每个 complex value 映射成 L=8 个 4-QAM symbols，因此总传输符号数为 256×8=2,048 个 4-QAM symbols。按 4-QAM 每符号 2 constellation bits 计，等效星座承载为 4,096 bits；按信道资源计为每 feature 4 个 symbols。raw/constellation-bit 压缩率为 24,576/4,096=6×。论文同时给出 JSCC-BOM 公平设置：每 feature 先 9-bit quantization，再用 LDPC rate 4/7，得到 9/(4/7)=15.75 coded bits/feature；16-QAM 每符号 4 bits，约 3.94≈4 symbols/feature，与 SOM 的 4 symbols/feature 对齐。这里 N=512 是文中用于复杂度/延迟说明的 feature 数例子；不同任务的 encoder 输出 N 可变。""",
+    "Semantic_Codebook-Based_HARQ_for_Wireless_Image_Transmission.pdf": """以论文 WSFI-512 与 VQGAN-1024 的 index-map 对比为具体例子。训练 crop 为 256×256 RGB，若按 8-bit 原图计算，原始数据量为 256×256×3×8=1,572,864 bits。论文给出 VQGAN-1024 direct index-map：basic feature set size N1=1024，每个 spatial index 需要 log2(1024)=10 bits；feature map spatial size M=48，因此完整 index-map 有 M^2=48^2=2,304 个 indices，总控制开销为 2,304×10=23,040 bits/image。WSFI-512 将整张图的 index-map 聚类为 N2=512 个 representative patterns，推理时只传 cluster index V，因此控制开销为 log2(512)=9 bits/image；相对 direct index-map 的压缩为 23,040/9=2,560×，也就是减少 99.96%。若与原始 RGB bit 比较，direct index-map 压缩率为 1,572,864/23,040=68.3×，WSFI compact index 本身为 1,572,864/9≈174,763×。注意 SCB-HARQ 的总传输还包括 masked rate-adaptive JSCC 主链路，论文对该主链路定义 k/n=C M^2/(H W 3)，并报告相对传统 II-HARQ 总数据量减少 51.27%。""",
+    "2025_Lyu_VQ-VAE_Digital_Semantic_Communication_OFDM.pdf": """以论文 CelebA-HQ 128×128 实验为具体代入。原始图像为 3×128×128，按 8-bit RGB 计算为 3×128×128×8=393,216 bits。论文 VQ-VAE encoder 输出 semantic features 尺寸为 16×32×32，共 16,384 个 feature scalars，并称 feature-scalar compression rate 为 16,384/(3×128×128)=1/3。codebook size 为 1024，若传 index 则每个 index 需要 10 bits，但论文明确说不传 index，而是传 codebook-matched features K，再进行 uniform bit quantization。令每个 feature scalar 的 quantizer bit-depth 为 c，则语义 payload 为 16,384c bits；16-QAM 每符号承载 4 bits，因此需要 4,096c 个 QAM symbols。举例若 c=4，则 Bsem=65,536 bits，raw/payload 压缩率为 393,216/65,536=6×，需要 16,384 个 16-QAM symbols；若 c=8，则 Bsem=131,072 bits，压缩率为 3×。OFDM 层还有 CP length=72、448×792 RE 的 CPI 网格、按 4×6 间隔插入 reference signals 的导频开销；这些决定物理资源占用，而论文的 1/3 是 feature-scalar 数量压缩，不是最终 bit 压缩率。""",
     "Vector_Quantized_Semantic_Communication_System.pdf": """以 Kodak 768×512 RGB 测试图和 VQ-DeepSC3 配置为计算实例。论文按原始 8-bit RGB 计，原图数据量为 768×512×3×8 = 9,437,184 bits。VQ-DeepSC3 给出多尺度码本数量 N1=2、N2=64、N3=4、N4=4；若按论文多尺度 CNN 的逐级 2 倍下采样理解，四个 index feature map 尺寸约为 384×256、192×128、96×64、48×32，因此源端语义 index bit 数为 384×256×log2(2)+192×128×log2(64)+96×64×log2(4)+48×32×log2(4)=261,120 bits。源压缩率为 9,437,184/261,120=36.1×。若接论文使用的 LDPC 码率 Rc=1/2，则信道编码后约 522,240 coded bits；相对原图仍为 9,437,184/522,240=18.1×。""",
     "Robust_Semantic_Communications_With_Masked_VQ-VAE_Enabled_Codebook.pdf": """论文给出 224×224 RGB 输入、patch size=16、codebook size=256、masking ratio=0.5、16-QAM 与 1/2 LDPC 的实例。原始图像 bit 数为 224×224×3×8 = 1,204,224 bits。patch 网格为 14×14=196 个 token，K=256 表示每个 index 为 8 bits；mask 后保留 196×0.5=98 个 index，所以语义 payload 为 98×8=784 bits。16-QAM 每符号 4 bits，因此语义符号数为 784/4=196 symbols/image。论文对 JPEG+LDPC 的参照计算为 224×224×3×8×2/(11.2×4)=53,760 symbols/image；因此 masked VQ-VAE 链路的符号开销比例为 196/53,760=0.36%。按源 bit 直接比较，1,204,224/784=1,536×。""",
     "Learning_Based_Joint_Coding-Modulation_for_Digital_Semantic_Communication_Systems.pdf": """以 CIFAR-10 为例，论文数据是 32×32 彩色图像，若按 8-bit RGB 原始数据量计算，Braw=32×32×3×8=24,576 bits。主实验 code length n=1536，BPSK 每个 channel symbol 承载 1 bit，因此传输数字语义序列大小 Bsem=n=1,536 bits，对应 1,536 个 BPSK symbols；压缩率为 24,576/1,536=16×。论文还画出 n=512 的低开销点，此时 Bsem=512 bits，压缩率为 24,576/512=48×。这两个数值都不包含额外外部信道码冗余，因为该文把 BPSK 调制误差放进端到端 JCM 训练中。""",
@@ -1251,9 +1412,25 @@ def paper_section(p: dict) -> str:
     """
 
 
+def sorted_core_papers() -> list[dict]:
+    return sorted(PAPERS, key=lambda p: (p["year"], p["title"].lower()))
+
+
+def build_year_nav(papers: list[dict]) -> str:
+    parts: list[str] = []
+    current_year: int | None = None
+    for p in papers:
+        if p["year"] != current_year:
+            current_year = p["year"]
+            parts.append(f"<div class='nav-year'>{esc(current_year)}</div>")
+        parts.append(f"<a class='paper-link' href='#{esc(p['id'])}'>{esc(p['title'])}</a>")
+    return "\n".join(parts)
+
+
 def build_html() -> str:
-    nav = "\n".join(f"<a href='#{esc(p['id'])}'>{esc(p['title'])}</a>" for p in PAPERS)
-    overview_rows = [[p["year"], p["title"], p["task"], p["route"], p["unit"], p["channel_class"]] for p in PAPERS]
+    papers = sorted_core_papers()
+    nav = build_year_nav(papers)
+    overview_rows = [[p["year"], p["title"], p["task"], p["route"], p["unit"], p["channel_class"]] for p in papers]
     comparison_rows = [
         [
             p["year"],
@@ -1270,12 +1447,13 @@ def build_html() -> str:
             p["result"][:100] + ("..." if len(p["result"]) > 100 else ""),
             p["limitation"][:100] + ("..." if len(p["limitation"]) > 100 else ""),
         ]
-        for p in PAPERS
+        for p in papers
     ]
-    related_rows = [[r["year"], r["title"], r["reason"]] for r in RELATED]
+    related = sorted(RELATED, key=lambda r: (r["year"], r["title"].lower()))
+    related_rows = [[r["year"], r["title"], r["reason"]] for r in related]
     excluded_rows = [[r["title"], r["reason"]] for r in EXCLUDED]
     search_items = "".join(f"<li>{esc(x)}</li>" for x in SEARCH_LOG)
-    sections = "\n".join(paper_section(p) for p in PAPERS)
+    sections = "\n".join(paper_section(p) for p in papers)
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1297,6 +1475,8 @@ def build_html() -> str:
     nav {{ position: sticky; top: 0; height: 100vh; overflow: auto; padding: 18px; background: #17202a; color: #e8eef6; }}
     nav h1 {{ font-size: 18px; line-height: 1.35; margin: 0 0 12px; }}
     nav .small {{ color: #a8b3c2; font-size: 12px; margin-bottom: 16px; }}
+    nav .nav-year {{ color: #93c5fd; font-size: 13px; font-weight: 700; margin: 16px 0 4px; padding: 6px 4px; border-top: 1px solid rgba(255,255,255,.16); }}
+    nav a.paper-link {{ padding-left: 14px; }}
     nav a {{ display: block; color: #dbeafe; text-decoration: none; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 13px; }}
     nav a:hover {{ background: rgba(255,255,255,.08); }}
     main {{ padding: 28px 36px 80px; max-width: 1260px; }}
@@ -1404,9 +1584,10 @@ def write_csv(path: pathlib.Path, rows: list[dict], fields: list[str]) -> None:
 
 def main() -> None:
     (ROOT / "index.html").write_text(build_html(), encoding="utf-8-sig")
+    papers = sorted_core_papers()
     manifest_path = ROOT / "manifest.jsonl"
     with manifest_path.open("w", encoding="utf-8") as f:
-        for p in PAPERS:
+        for p in papers:
             rec = {
                 "title": p["title"],
                 "year": p["year"],
@@ -1422,7 +1603,7 @@ def main() -> None:
                 "channel_error_class": p["channel_class"],
             }
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
-        for r in RELATED:
+        for r in sorted(RELATED, key=lambda r: (r["year"], r["title"].lower())):
             rec = {
                 "title": r["title"],
                 "year": r["year"],
@@ -1447,16 +1628,16 @@ def main() -> None:
                 "channel_error_class": p["channel_class"],
                 "pdf": p["pdf"],
             }
-            for p in PAPERS
+            for p in papers
         ],
         ["year", "title", "source", "venue", "task", "route", "transmission_unit", "channel_error_class", "pdf"],
     )
     candidate_rows = []
     seen = set()
-    for p in PAPERS:
+    for p in papers:
         seen.add(p["title"].lower())
         candidate_rows.append({"title": p["title"], "year": p["year"], "decision": "included_core", "reason": p["strict"], "source": p["source"]})
-    for r in RELATED:
+    for r in sorted(RELATED, key=lambda r: (r["year"], r["title"].lower())):
         seen.add(r["title"].lower())
         candidate_rows.append({"title": r["title"], "year": r["year"], "decision": "related_not_core", "reason": r["reason"], "source": "search/citation"})
     ss_path = ROOT / "notes" / "search_semantic_scholar_results.jsonl"
@@ -1471,10 +1652,11 @@ def main() -> None:
                 continue
             seen.add(title.lower())
             candidate_rows.append({"title": title, "year": item.get("year", ""), "decision": "screened_or_future_check", "reason": f"Semantic Scholar {item.get('type')} hit; not all are strict digital SemCom", "source": item.get("query", item.get("seed", "Semantic Scholar"))})
+    candidate_rows.sort(key=lambda r: (int(r["year"]) if str(r["year"]).isdigit() else 9999, str(r["title"]).lower()))
     write_csv(ROOT / "candidate_pool_expanded.csv", candidate_rows, ["title", "year", "decision", "reason", "source"])
     write_csv(ROOT / "excluded_papers.csv", EXCLUDED, ["title", "reason"])
     strategy = "# Search Strategy and Saturation Log\n\n" + "\n".join(f"- {x}" for x in SEARCH_LOG) + "\n\n" + (
-        "Candidate pool is intentionally larger than the final core set. IEEE papers were downloaded first via the IEEE Xplore literature skill; when the IEEE download for VQ-DeepVSC timed out without CAPTCHA/429, the legal arXiv version was used as fallback. MDPI venues are excluded by project rule.\n"
+        "Candidate pool is intentionally larger than the final core set. IEEE papers were downloaded first via the IEEE Xplore literature skill with serial access and safe intervals; when search snippets exposed wrong arnumbers, DOI/arXiv records were used for verification and legal fallback. MDPI venues are excluded by project rule.\n"
     )
     (ROOT / "search_strategy.md").write_text(strategy, encoding="utf-8-sig")
 

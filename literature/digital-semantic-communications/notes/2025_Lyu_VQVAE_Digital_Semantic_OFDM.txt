@@ -1,0 +1,873 @@
+VQ-VAE Based Digital Semantic Communication
+with Importance-Aware OFDM Transmission
+
+arXiv:2508.08686v2 [eess.SP] 29 Dec 2025
+
+Ming Lyu, Hao Chen, Dan Wang, Chen Qiu, Guangyin Feng, Nan Ma and Xiaodong Xu
+
+Abstract—Semantic communication (SemCom) signiﬁcantly reduces redundant data and improves transmission efﬁciency by
+extracting the latent features of information. However, most of
+the conventional deep learning-based SemCom systems focus on
+analog transmission and lack in compatibility with practical
+digital communications. This paper proposes a vector quantizedvariational autoencoder (VQ-VAE) based digital SemCom system
+that directly transmits the semantic features and incorporates
+the importance-aware orthogonal frequency division multiplexing
+(OFDM) transmission to enhance the SemCom performance,
+where the VQ-VAE generates a discrete codebook shared between
+the transmitter and receiver. At transmitter, the latent semantic
+features are ﬁrstly extracted by VQ-VAE, and then the shared
+codebook is adopted to match these features, which are subsequently transformed into a discrete version to adapt the digital
+transmission. To protect the semantic information, an importanceaware OFDM transmission strategy is proposed to allocate the
+key features near the OFDM reference signals, where the feature
+importance is derived from the gradient-based method. At the
+receiver, the features are rematched with the shared codebook to
+further correct errors. Finally, experimental results demonstrate
+that our proposed scheme outperforms the conventional DeepSC
+and achieves better reconstruction performance under low SNR
+region.
+Index Terms—Semantic communication (SemCom), feature importance, vector quantised-variational autoencoder (VQ-VAE),
+orthogonal frequency division multiplexing (OFDM), reference
+signals.
+
+I. I NTRODUCTION
+With the exponential growth of wireless data trafﬁc driven
+by rapid advancements in information technology, conventional
+communication systems are reaching their physical and operational limits, highlighting the urgent need for more intelligent and efﬁcient communication paradigms. Concurrently,
+the ﬂourishing development of deep learning has inspired
+This work was supported by the National Science and Technology Major
+Project - Mobile Information Networks under Grant No. 2024ZD1300700.
+M. Lyu is with the Department of Broadband Communication, Pengcheng
+Laboratory, Shenzhen, China, 518055, and also with the School of Future Technology, South China University of Technology, Guangzhou, China, 511442.
+Email: lvm@pcl.ac.cn.
+H. Chen, D. Wang and C. Qiu are with the Department of Broadband
+Communications, Pengcheng Laboratory, Shenzhen, China, 518055, Emails:
+chenh03@pcl.ac.cn, wangd01@pcl.ac.cn, qiuch@pcl.ac.cn.
+G. Feng is with the School of Microelectronics, South China University of
+Technology, Guangzhou, China, 511442. Email: gyfeng88@scut.edu.cn.
+N. Ma and X. Xu are with the State Key Laboratory of Networking
+and Switching Technology, Beijing University of Posts and Telecommunications, Beijing, China, 100876, and also with the Department of Broadband
+Communication, Pengcheng Laboratory, Shenzhen, China, 518055. Email:
+manan@bupt.edu.cn, xuxiaodong@bupt.edu.cn.
+
+researchers to explore new paradigms for intelligent communication. Semantic communication (SemCom), which aims to
+extract latent information via deep learning, is regarded to
+signiﬁcantly reduce the redundant data [1], [2]. However, most
+of the existing works transmit semantic features directly or
+map them to analog symbols, resulting in incompatibility with
+practical digital systems [3]–[5].
+To address the above mentioned challenges, the authors in
+[6] extended the classical deep joint source-channel coding
+by quantizing semantic features which represented as vectors
+into scalars for digital transmission. In contrast, the vector
+quantized-variational autoencoder (VQ-VAE) is employed to
+generate discrete feature indices, which is suitable for digital
+transmission [7]. Moreover, VQ-VAE maps continuous latent
+variables to a discrete codebook, serving as a shared knowledge
+base between the transmitter and the receiver [8]. By transmitting only the indices of discrete features within the codebook,
+the amount of data required to be transmitted is signiﬁcantly
+reduced [9]. However, transmission errors of feature indices
+lead to incorrect mappings in the codebook in complex channel
+environments, where the retrieved features differ substantially
+from the original ones, causing poor performance for image
+reconstruction.
+On the other hand, semantic importance has been widely
+investigated to enhance transmission efﬁciency and robustness
+by prioritizing the transmission of critical semantic features
+[4], [10]. The authors in [10] studied an importance-aware
+image transmission model in orthogonal frequency division
+multiplexing (OFDM)-based SemCom systems, which maps the
+critical semantic features into subcarriers with higher signal-tonoise ratio (SNR) to preserve key semantic information, thereby
+enhancing the image reconstruction accuracy. However, most of
+the existing OFDM-based SemCom systems still rely on end-toend optimization models and lack error correction mechanisms
+of semantic features.
+In this paper, we propose a novel VQ-VAE based digital
+SemCom system that directly transmits the semantic features
+and integrates the importance-aware OFDM transmission to
+maintain compatibility with practical digital systems and reduce transmission errors under complex channel environments,
+where the VQ-VAE generates a discrete codebook shared
+between the transmitter and receiver. At VQ-VAE encoder,
+the latent features are extracted and matched with the shared
+codebook to produce discrete features, which are then directly
+transmitted. To the best of our knowledge, most VQ-VAE-
+
+VQ-VAE Encoder
+
+D
+
+Nearest
+neighbour
+
+H
+
+OFDM
+Transmitter
+
+H
+
+W
+Source image
+
+Feature Importance
+
+D
+
+Bit Quantification
+W
+
+J
+D
+
+Wireless
+Channel
+
+Shared Codebook
+
+D
+
+D
+Nearest
+neighbour
+
+H
+
+W
+Reconstructed image
+VQ-VAE Decoder
+
+Bit De-quantification
+
+H
+
+OFDM
+Receiver
+
+W
+Feature Importance-based OFDM Transmission
+
+Fig. 1. VQ-VAE based digital SemCom system with importance-aware OFDM transmission.
+
+based studies focus on the transmission of semantic indices,
+while few have explored the direct transmission of semantic
+features, particularly in the context of OFDM transmission.
+Then, to enhance the protection of semantic features, the most
+important semantic features are allocated near the reference
+signals during the OFDM transmission process, where the
+feature importance is determined through gradient-based evaluation. Finally, by leveraging a shared codebook and a feature
+rematching mechanism at the receiver, the system enables
+effective error correction during the wireless transmission of
+semantic features.
+II. S YSTEM M ODEL
+As illustrated in Fig. 1, we consider a VQ-VAE based digital
+SemCom system with importance-aware OFDM transmission,
+where the transmitter and receiver are equipped with the VQVAE encoder and decoder, respectively. The VQ-VAE encoder
+and decoder consist of a CNN for feature extraction and a
+nearest-neighbor operation for feature discretization. The CNN
+is composed of a series of convolutional layers followed by
+parametric ReLU activation functions and residual blocks. A
+common codebook E = [e1 , . . . ej , . . . eJ ] is generated by the
+VQ-VAE, which is shared by the transmitter and receiver, with
+ej ∈ RD being ﬁxed after the VQ-VAE training phase.
+At transmitter, the VQ-VAE encoder is employed to extract discrete semantic features via the shared codebook. To
+protect the semantic features, a gradient-based evaluator is
+implemented to determine the importance weights of these
+features, which allows the bit-quantized features to be allocated
+at the OFDM transmitter. Here, the most important features are
+allocated near the reference signals to reduce the channel distortion. At receiver, channel estimation is usually more accurate
+for data located closer to the reference signals, resulting in
+lower errors for important features and enhancing transmission
+accuracy. After channel estimation and demodulation at the
+OFDM receiver, the features are reconstructed via inverse bitquantization and subsequently input into the VQ-VAE decoder.
+
+Finally, the received features are rematched with the shared
+codebook to correct errors. Next, the detail of the proposed
+semantic transmission scheme is introduced in sequel.
+A. VQ-VAE Encoder
+At the VQ-VAE encoder, an input image is represented by
+a vector z ∈ Rl , and the neural networks of VQ-VAE ﬁrst
+encodes z into a feature tensor ze ∈ RD×H×W , where D is
+the number of features, and H ×W is the shape of each feature.
+The process of extracting semantic features is represented as
+ze = Nθ1 (z),
+
+(1)
+
+where Nθ1 (·) denotes the encoder CNN with parameter θ1 .
+Then, the discrete latent features K = [k1 , . . . ki , . . . , kD ]
+where K ∈ RD×H×W are calculated by a nearest neighbor
+look-up using the shared codebook E with the feature tensor
+ze . Speciﬁcally, each vector in ze is replaced by the closest
+codebook entry in E in terms of Euclidean distance, i.e., [11]
+K = arg min kze − ej k2 , ∀ej ,
+ej
+
+(2)
+
+where k·k2 is the 2-norm, the resulting features K thus consist
+of selected codebook vectors. Notably, we transmit the features
+K rather than their corresponding indices in the codebook.
+Subsequently, K is input into the OFDM-based digital semantic transmission module, which transmits the bit-quantized
+semantic data according to their importance. The detailed
+description of this module will be provided in Section III.
+B. VQ-VAE Decoder
+After transmission, the features K′ = [k′1 , . . . k′i , . . . , k′D ]
+where K′ ∈ RD×H×W are inputed into decoder, where the
+i-th feature error Ei can be represented as
+Ei = ki − ki ′ 2 = Eb,i + Eh,i ,
+
+(3)
+
+where Eh,i and Eb,i denote the wireless channel transmission
+errors and the bit quantization errors of the i-th feature,
+respectively.
+
+Unimportant Semantic
+
+Reference signal
+Important Semantic
+Unimportant Semantic
+
+Insert CP
+
+Important Semantic
+
+IDFT
+
+Bit
+Quantification
+
+Allocation
+
+Feature importance
+
+Modulation
+
+Reference signals
+
+Reference
+signals
+
+Removal CP
+
+Wireless
+Channel
+
+DFT
+
+Channel
+Estiamtion
+
+De-llocation
+
+Bit
+De-quantification
+
+Demodulation
+
+OFDM Transmitter
+
+Semantic data
+
+(b)
+
+OFDM Receiver
+(a)
+
+Fig. 2. (a) The proposed OFDM transmission with feature importance framework; (b) REs distribution on the OFDM
+time-frequency resources grid.
+Then, the distorted elements in K′ are rematched to the
+vector ej in the shared codebook by a nearest neighbor look-up
+to correct the errors, i.e.,
+′
+
+zq = arg min kK − ej k2 , ∀ej ,
+ej
+
+(4)
+
+where zq ∈ RD×H×W is the corrected semantic features.
+Next, we further analyze the error correction process of
+the rematching mechanism. When the semantic features being
+transmitted in K corresponds to the basis vector ei in the
+codebook, the minimum distance dmin between ei and other
+vectors ej in the codebook can be calculated as
+J
+
+dmin = min kej − ei k2 .
+j=1
+
+In this section, we propose a OFDM transmission with
+feature importance framework, as shown in Fig. 2. Due to the
+non-uniform channel quality across the OFDM time-frequency
+resources, we adopt a discrete reference signals distribution
+pattern [12], placing important semantic signals around the
+reference signals.
+A. OFDM Transmitter
+After the VQ-VAE encoder, we extract the continuous-valued
+semantic features ki undergo uniform bit-quantization [13],
+yielding a discrete bitstream bi , which can be represented as
+
+(5)
+
+When Ei < dmin
+2 , the transmission error of the feature can be
+
+perfect corrected by rematching with the vectors in the shared
+codebook through a nearest-neighbor look-up at the receiver.
+Additionally, when Ei > dmin
+2 , the error of feature mapped
+to a neighboring vector, allowing for imperfect but effective
+correction. For the index-based transmission method, features
+are directly retrieved from the codebook using the transmitted
+indices, making it unable to correct transmission errors. In
+addition, an erroneous index may result in the mapping to a
+vector that is signiﬁcantly distant from the original one.
+Finally, the recovered semantic features zq are input into
+the VQ-VAE decoder to reconstruct image z′ , which can be
+represented as
+(K′ ),
+z′ = Nθ−1
+2
+
+III. OFDM T RANSMISSION WITH F EATURE I MPORTANCE
+AWARENESS
+
+(6)
+
+(·) denotes the decoder CNN with parameter θ2 .
+where Nθ−1
+2
+The decoder CNN inverts the operations performed by the
+encoder through a series of transpose convolutional layers.
+Our proposed feature rematching mechanism based on VQVAE signiﬁcantly improves the robustness of semantic feature
+transmission and the quality of image reconstruction.
+
+bi = Qc (ki ),
+
+(7)
+
+where Qc (·) denotes the uniform bit-quantizer, c is the number
+of quantization bits. The quantization results can be represented
+L
+as B = [b1 , . . . bi , . . . , bD ] with bi ∈ {0, 1} , where L
+denotes the total number of each feature bits. Since different
+semantic features bi contribute unequally to image reconstruction ﬁdelity, a gradient-based evaluator is adopted to calculate
+the importance of each feature.
+The impact of each feature on image reconstruction is evaluated by analyzing the gradient variations of the loss L(z, z′ )
+within the neural network, i.e.,
+1
+2
+(8)
+L(z, z′ ) = kz′ − zk ,
+l
+2
+
+where k·k denotes the squared Euclidean norm.
+Speciﬁcally, we ﬁrst compute the gradients with respect
+to
+′
+)
+the i-th feature ki and obtain a gradient matrix ∂L(z,z
+.
+Then,
+∂ki
+by applying global average pooling to the gradient matrix, the
+importance weights vector of the feature tensor K is denoted
+as ω = [ω1 , . . . ωi , . . . , ωD ], i.e., [10]
+H
+
+ωi =
+
+W
+
+1 X X ∂L(z, z′ )
+.
+HW n=1 m=1 ∂ki,nm
+
+(9)
+
+For different values of ωi , the corresponding semantic features are mapped onto OFDM time-frequency resource elements (REs) with varying priorities, as shown in Fig. 2(b).
+For simplicity, each unit in the time-frequency grid is denoted
+as a RE: blue REs represent the reference signals, green REs
+represent the important semantic symbols, blank REs represent
+the unimportant semantic symbols. Subsequently, we map each
+part step by step onto the OFDM time-frequency grid.
+Firstly, the discrete reference signals are uniformly distributed over the time and frequency domains, which facilitates accurate estimation of the channel’s time-varying and
+frequency-selective fading. Then, the numbers of important and
+unimportant semantic features are calculated. Since semantic
+symbols transmitted closer to reference signals achieve higher
+accuracy, four green REs are allocated around each reference
+signal, while the remaining REs are allocated to unimportant
+semantic features. Suppose the total number of REs within
+a coherent processing interval (CPI) is NCP I , and the total
+number of reference signals is Nref . Then, the number of
+REs allocated to important semantic is 4Nref , and the number of unimportant semantic is NCP I − 5Nref . Accordingly,
+the total number of important semantic features is denoted
+4Nref
+. Finally, the top-Dimp semantic
+as Dimp = D NCP I −N
+ref
+features, ranked by feature importance ω, are modulated and
+sequentially mapped onto the green REs, while the remaining
+semantic features are modulated and mapped onto the remaining blank REs.
+After the semantic symbols are mapped onto the timefrequency resources, an inverse discrete Fourier transform
+(IDFT) is applied and a cyclic preﬁx (CP) is added to generate
+the transmitted signal x ∈ RNc ×Nt , as shown in Fig. 2(a). The
+signal x then propagates through a time-frequency dual-varying
+channel, resulting in the received signal y ∈ RNc ×Nt expressed
+as
+y = h ∗ x + n,
+
+(10)
+Nc ×Nt
+
+is the
+where ∗ denotes convolution operation, h ∈ R
+impulse response of the multipath channel, and n is the
+circularly symmetric complex Gaussian noise with zero mean
+and variance CN (0, σ 2 I), where I ∈ RNc ×Nt being the identity
+matrix.
+B. OFDM Receiver
+At the OFDM receiver, the received signal y undergoes
+CP removal, followed by a discrete Fourier transform (DFT)
+to convert it into the frequency domain, thereby enabling the
+separation of reference signals and semantic data.
+Subsequently, channel estimation is performed for the semantic data. The least squares (LS) method is ﬁrst employed
+to estimate the channel hLS corresponding to the reference
+signals. Based on hLS , bilinear interpolation is then applied to
+obtain the estimated channel ĥ for the semantic data. Finally,
+the estimated channel ĥ is used to equalize the semantic data.
+In the following, the transmission errors in the feature
+importance-based OFDM transmission are analyzed through
+
+the channel estimation procedure. The channel estimation error
+Eh , primarily arises from the LS estimation and bilinear
+interpolation processes, can be expressed as
+Eh = h − ĥ = ELS + Esd ,
+
+(11)
+
+where ELS and Esd denotes the error brought by the LS estimation and interpolation processes, respectively. The estimation
+error ELS at the reference signal positions can be expressed as
+o
+n
+
+σ2
+2
+ELS = E khLS − hk = E nH (xxH )−1 n = 2 , (12)
+σx
+where σx2 denotes power of the reference signals.
+Suppose the values of the reference signals R11 (n0 , m0 ),
+R12 (n0 , m1 ), R21 (n1 , m0 ) and R22 (n1 , m1 ) have been obtained through LS estimation, as shown in Fig. 2(b). Interpolation is ﬁrst applied along the horizontal axis, and then
+along the vertical axis to compute the value of semantic data
+S(n, m). The linear interpolation error Esd is represented
+by the Lagrange interpolation remainder term, which can be
+expressed as
+M0
+(m − m0 )(m1 − m)
+2
+[M1 (m1 − m) + M2 (m − m0 )](n − n0 )(n1 − n)
++
+, (13)
+2(m1 − m0 )
+
+Esd ≤
+
+where M0 , M1 , M2 are the bounded of the second-order partial
+derivatives of the interpolated function.
+Proof 1: Please see Appendix A.
+From (13), it is observed that the distance between the semantic data and the reference signals controls the interpolation
+error Esd . When important semantic data are positioned close
+to the reference signals, their errors approximate the reference
+signals estimation error ELS . In contrast, the unimportant
+semantic data error is further affected by interpolation errors
+Esd , which depend on the density of the reference signals. A
+higher reference signals density results in a shorter distance to
+the semantic data and thus a smaller interpolation error Esd .
+After channel equalization, the semantic symbols are demodulated and the original feature ordering is restored to obtain the
+output B′ . The bitstream B′ is then dequantized to recover the
+semantic features K′ , which can be represented by
+′
+k′i = Q−1
+c (bi ),
+
+(14)
+
+′
+where Q−1
+c (·) denotes the uniform bit-dequantizer. K is input
+into the VQ-VAE decoder, where further error correction is
+performed and the image is reconstructed.
+
+Our proposed OFDM-based feature importance transmission
+(FIT) scheme performs prioritized resource allocation through
+channel conditions, where high-criticality semantic features
+are allocated to time-frequency resources exhibiting superior
+transmission characteristics, while low-importance features are
+mapped to channel disadvantaged resources. This design enhances the protection of critical semantic information, thereby
+improving the overall performance of SemCom.
+
+IV. S IMULATIONS AND N UMERICAL R ESULTS
+
+28
+
+In this section, we verify the effectiveness of the proposed
+OFDM-based digital SemCom system by numerical results.
+
+26
+
+A. Simulation Setup
+
+B. Performance Evaluation
+Fig. 3 and Fig. 4 show the PSNR and SSIM versus SNR for
+different schemes. The performance increases with SNR for all
+schemes, and the proposed scheme consistently outperforms the
+baseline DeepSC scheme. Compared to conventional semantic
+encoder-decoder architectures, VQ-VAE introduces a vector
+quantization process that discretizes continuous features into
+codebook. This discretization improves noise tolerance, leading
+to superior performance compared to DeepSC. Moreover, the
+
+PSNR
+
+24
+Proposed VQ-VAE + FIT
+Proposed VQ-VAE
+VQ-VAE + FIT
+VQ-VAE
+DeepSC
+
+22
+20
+18
+16
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+SNR (dB)
+Fig. 3. The PSNR of the different schemes versus SNR.
+0.9
+
+0.8
+
+0.7
+
+SSIM
+
+1) Dataset: Given our focus on the image reconstruction, we
+have employed the CelebA-HQ dataset [14] containing 30,000
+high-quality celebrity faces and resampled to 128×128 pixels
+for convenience of testing.
+2) OFDM Transceiver: Here, we consider the Rayleigh
+fading channel. The carrier frequency and bandwidth we considered are 2.4 GHz and 20MHz, and can be applied across
+various frequency ranges. For modulation, 16-QAM is applied
+to the bitstream, and the CP length is set to 72. In a CPI,
+the OFDM time-frequency resource grid is composed of 448
+OFDM symbols and 792 subcarriers. The reference signals are
+uniformly spaced with intervals of 4 in the time domain and 6
+in the frequency domain. For simplicity, this works considers a
+single antenna system to focus on the proposed digital SemCom
+system.
+3) VQ-VAE Implementation Details: The VQ-VAE encoder
+consists of two strided convolutional layers with stride 2 and
+window size 4×4, followed by two residual 3×3 blocks. The
+VQ-VAE decoder follows a similar structure. We use the
+ADAM optimiser with learning rate 2e-4 and the codebook size
+is 1024. All models were trained under noiseless conditions,
+using an RTX 3070Ti GPU. The VQ-VAE encoder compresses
+the original image with dimensions 3×128×128 into semantic
+features with dimensions 16×32×32, achieving a compression
+rate of 1/3.
+Peak signal-to-noise ratio (PSNR) and structural similarity
+index measure (SSIM) are used to evaluate the quality of
+the reconstructed images. We compare the performance of the
+following methods:
+• Proposed VQ-VAE + FIT: The proposed VQ-VAE with
+importance-aware transmission method.
+• Proposed VQ-VAE: The proposed VQ-VAE without distinguishing importance-aware transmission.
+• VQ-VAE + FIT: The VQ-VAE does not rematch the codebook at the receiver, with importance-aware transmission
+method.
+• VQ-VAE: The VQ-VAE does not rematch the codebook
+at the receiver, without distinguishing importance-aware
+transmission.
+• DeepSC: The modiﬁed deep source coding scheme [3].
+
+0.6
+
+0.5
+Proposed VQ-VAE + FIT
+Proposed VQ-VAE
+VQ-VAE + FIT
+VQ-VAE
+DeepSC
+
+0.4
+
+0.3
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+SNR (dB)
+
+Fig. 4. The SSIM of the different schemes versus SNR.
+
+proposed VQ-VAE corrects semantic errors caused by transmission noise at the receiver by rematching with the codebook,
+further improving the performance of semantic transmission.
+Additionally, the OFDM transmission method based on semantic importance further enhances the performance of SemCom.
+This not only implies that SemCom is compatible with conventional communication frameworks, but also utilizes semantic
+characteristics to improve communication system performance.
+Our proposed scheme demonstrates greater effectiveness
+under low SNR region. For example, at 15 dB, the proposed
+VQ-VAE + FIT scheme achieves a 10.5% performance gain
+over the VQ-VAE scheme, and this gain further increases to
+34.1% at 5 dB, as shown in Fig. 4. In addition, the performance
+
+SNR = 20dB
+
+SNR = 15dB
+
+SNR = 10dB
+
+Source image
+
+Proposed VQ-VAE +
+FIT
+
+Proposed VQ-VAE
+
+VQ-VAE + FIT
+
+VQ-VAE
+
+DeepSC
+
+Fig. 5. Visual reconstruction results under different semantic transmission schemes versus SNR.
+
+gains provided by the proposed VQ-VAE are more signiﬁcant
+than semantic importance transmission method.
+Fig. 5 presents the visual reconstruction results under different semantic transmission schemes versus SNR. The proposed VQ-VAE schemes clearly outperform the DeepSC, primarily due to the noise robustness provided by discretized
+semantic features. Moreover, our proposed VQ-VAE scheme
+demonstrates substantial improvements in image reconstruction
+quality, particularly under low SNR region. By reducing the
+transmission error in important semantic features, the key
+details and textures of the image are signiﬁcantly improved.
+V. C ONCLUSION
+In this paper, we presented a novel VQ-VAE based digital
+SemCom system with importance-aware OFDM transmission.
+Firstly, a discrete codebook was generated by VQ-VAE and
+shared between the transmitter and receiver. The VQ-VAE
+encoder extracted the latent features and then matched with
+the shared codebook to produce discrete features for digital
+transmission. Then, to protect the semantic information, an
+importance-aware OFDM transmission strategy was proposed,
+which allocated the critical semantic signals near the reference symbols in the OFDM time-frequency grid based on the
+feature importance derived from the gradient-based method.
+Finally, experimental results demonstrated the superiority of
+our proposed SemCom system over the conventional DeepSC
+in reconstruction performance, with particularly notable improvements under low SNR region and strong compatibility
+with practical digital system. Future work will concentrate on
+end-to-end optimization of semantic transmission efﬁciency and
+resource allocation strategies.
+
+A PPENDIX A
+T HE BILINEAR INTERPOLATION ERROR
+The linear interpolation along the horizontal axis is ﬁrst
+performed S1 using R11 and R21 , which is expressed as
+n − n0
+(R21 − R11 ),
+(15)
+S1 (n, m0 ) ≈ R11 +
+n1 − n0
+= ψn R21 + (1 − ψn )R11 ,
+(16)
+0
+into (15).
+where (16) is obtained by substituting ψn = nn−n
+1 −n0
+Similarly, the horizontal interpolation at S2 using R12 and
+R22 is given by
+n − n0
+S2 (n, m1 ) ≈ R12 +
+(R22 − R12 ),
+(17)
+n1 − n0
+= ψn R22 + (1 − ψn )R12 ,
+(18)
+0
+where (18) is obtained by substituting ψn = nn−n
+into (17).
+1 −n0
+Finally, the vertical interpolation at S using S1 and S2 is
+performed as
+m − m0
+S(n, m) ≈ S1 +
+(S2 − S1 ),
+(19)
+m1 − m0
+= ψm S2 + (1 − ψm )S1 ,
+(20)
+
+m−m0
+into (19).
+where (20) is obtained by substituting ψm = m
+1 −m0
+By substituting (16) and (18) into (20), the result S(n, m)
+of bilinear interpolation is rewritten as
+
+S(n, m) = ψm [ψn R22 + (1 − ψn )R12 ]
++ (1 − ψm )[ψn R21 + (1 − ψn )R11 ],
+
+(21)
+
+= (1 − ψm )(1 − ψn )R11 + ψm (1 − ψn )R12
++ ψn (1 − ψm )R21 + ψm ψn R22 ,
+(22)
+where (22) is obtained by simplifying (21).
+
+The bilinear interpolation error Esd accumulates from the
+remainders of the involved linear interpolations. When the
+S1 (n, m0 ) to be interpolated possesses a second-order derivative, i.e., S1 ∈ C 2 ([n0 , n1 ]), the error of linear interpolation at
+any point n ∈ [n0 , n1 ] is given by
+R1 (n, m0 ) = S1 (n, m0 ) − P1 (n, m0 ),
+(23)
+f ′′ (ξ1 , m0 )
+(n − n0 )(n1 − n),
+(24)
+=
+2
+where (24) is obtained by applying Taylor’s theorem with the
+Lagrange remainder to (23); ξ1 ∈ [n0 , n1 ]; R1 (n, m0 ) is the
+interpolation remainder term; and P1 (n, m0 ) is the interpolation
+polynomial.
+Similarly, the interpolation remainder at S2 (n, m1 ) is expressed as
+R2 (n, m1 ) =
+
+f ′′ (ξ2 , m1 )
+(n − n0 )(n1 − n),
+2
+
+(25)
+
+where ξ2 ∈ [n0 , n1 ].
+The ﬁnal bilinear interpolation error is obtained by accumulating the remainders from the two horizontal linear interpolation steps with the vertical interpolation remainder. According
+to (20), the interpolation remainder at S(n, m) is expressed as
+¯ η)
+f ′′ (ξ,
+R(n, m) =
+(m − m0 )(m1 − m)
+2
++ ψm R2 + (1 − ψm )R1 ,
+(26)
+¯ η)
+f ′′ (ξ,
+(m − m0 )(m1 − m)
+=
+2
+′′
+f (ξ2 , m1 ) (m − m0 )(n − n0 )(n1 − n)
++
+2
+m1 − m0
+f ′′ (ξ1 , m0 ) (m1 − m)(n − n0 )(n1 − n)
++
+, (27)
+2
+m1 − m0
+where (27) is obtained by substituting (24) and (25) into (26);
+η ∈ [m0 , m1 ]; and ξ¯ ∈ [n0 , n1 ].
+Since ξ1 , ξ2 and η are unknown, the interpolation error is
+typically assessed via upper bounds on the remainder term.
+To derive such bounds, we consider that the second-order
+partial derivatives of the interpolated function are bounded
+within the interpolation region; that is, there exist constants
+M0 , M1 , M2 > 0 such that
+¯ η)| ≤ M0 ,
+|f ′′ (ξ,
+
+(28)
+
+′′
+
+(29)
+
+′′
+
+(30)
+
+|f (ξ1 , m0 )| ≤ M1 ,
+|f (ξ2 , m1 )| ≤ M2 .
+
+By substituting (28)-(30) into (27), the bilinear interpolation
+error Esd is expressed as
+M0
+(m − m0 )(m1 − m)
+2
+[M1 (m1 − m) + M2 (m − m0 )](n − n0 )(n1 − n)
++
+. (31)
+2(m1 − m0 )
+
+Esd = R(n, m) ≤
+
+R EFERENCES
+[1] Z. Lu, R. Li, K. Lu, X. Chen, E. Hossain, Z. Zhao, and
+H. Zhang, “Semantics-Empowered Communications: A Tutorial-Cum-
+
+Survey,” IEEE Commun. Surv. Tutor., vol. 26, no. 1, pp. 41–79, Firstquarter 2024.
+[2] Y. Sun, H. Chen, X. Xu, P. Zhang, and S. Cui, “Semantic Knowledge
+Base-Enabled Zero-Shot Multi-Level Feature Transmission Optimization,” IEEE Trans. Wirel. Commun., vol. 23, no. 5, pp. 4904–4917, May
+2024.
+[3] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep Joint SourceChannel Coding for Wireless Image Transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[4] Q. Sun, C. Guo, Y. Yang, J. Chen, R. Tang, and C. Liu, “Deep Joint
+Source-Channel Coding for Wireless Image Transmission with Semantic
+Importance,” in IEEE Veh Technol Conf, London, United kingdom, Sep.
+2022, pp. 1–7.
+[5] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep Learning Enabled
+Semantic Communication Systems,” IEEE Trans. Signal Process., vol. 69,
+no. 1, pp. 2663–2675, Apr. 2021.
+[6] J. Huang, K. Yuan, C. Huang, and K. Huang, “D2 -JSCC: Digital Deep
+Joint Source-Channel Coding for Semantic Communications,” IEEE J.
+Sel. Areas Commun., vol. 43, no. 4, pp. 1246–1261, Apr. 2025.
+[7] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust
+Semantic Communications With Masked VQ-VAE Enabled Codebook,”
+IEEE Trans. Wirel. Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+[8] P. Ye, Y. Sun, S. Yao, H. Chen, X. Xu, and S. Cui, “CodebookEnabled Generative End-to-End Semantic Communication Powered by
+Transformer,” in IEEE INFOCOM - IEEE Conf. Comput. Commun.
+Workshops, INFOCOM WKSHPS, BC, Canada, May 2024, pp. 1–6.
+[9] S. Ma, W. Qiao, Y. Wu, H. Li, G. Shi, D. Gao, Y. Shi, S. Li, and N. AlDhahir, “Task-Oriented Explainable Semantic Communications,” IEEE
+Trans. Wirel. Commun., vol. 22, no. 12, pp. 9248–9262, Dec. 2023.
+[10] K. Zhou, G. Zhang, Y. Cai, Q. Hu, G. Yu, and A. L.
+Swindlehurst, “Feature Allocation for Semantic Communication with
+Space-Time Importance Awareness,” Jan. 2024. [Online]. Available:
+http://arxiv.org/abs/2401.14614
+[11] A. van den Oord, O. Vinyals, and k. kavukcuoglu, “Neural Discrete
+Representation Learning,” in Adv. neural inf. proces. syst., CA, United
+states, Dec. 2017, pp. 6307–6316.
+[12] M. Lyu, H. Chen, D. Wang, G. Feng, C. Qiu, and X. Xu, “Reference
+Signal-Based Waveform Design for Integrated Sensing and Communications System,” in IEEE Int Conf Commun, QC, Canada, Jun 2025, pp.
+6621–6626.
+[13] H. Zhang, S. Shao, M. Tao, X. Bi, and K. B. Letaief, “Deep LearningEnabled Semantic Communication Systems With Task-Unaware Transmitter and Dynamic Data,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+pp. 170–185, Jan. 2023.
+[14] T. Karras, T. Aila, S. Laine, and J. Lehtinen, “Progressive growing of
+GANs for improved quality, stability, and variation,” in Int. Conf. Learn.
+Represent., ICLR - Conf. Track Proc., BC, Canada, May 2018, pp. 1–26.
+
+

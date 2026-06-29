@@ -1,0 +1,1815 @@
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+28259
+
+Semantic-Oriented Modulation for
+Wireless Communication
+Yangfan Wang , Xuefei Zhang , Senior Member, IEEE, Yao Sun , Senior Member, IEEE,
+Qimei Cui , Senior Member, IEEE, and Xiaofeng Tao , Senior Member, IEEE
+
+Abstract—In semantic communication (SemCom), the gain of
+deep learning (DL)-based joint source and channel coding (JSCC)
+has been proved to partly come from the analog transmission
+of semantic features extracted directly from the source signal.
+While the current mainstream digital communication system
+design results in the gains almost vanishing when bit-oriented
+modulation (e.g., QPSK) is employed. To tackle this problem,
+we propose a semantic-oriented modulation (SOM) method that
+enables direct mapping from an analog value of a semantic
+feature to a sequence of discrete values without bit conversion.
+SOM employs a hierarchical design to mitigate discretization
+loss and optimizes resource allocation by exploiting the varying
+significance of semantic features, reducing the data volume by
+29.17%. We provide an analysis that reveals the impact of modulation orders and hierarchical layers, guiding the SOM’s design.
+Simulations in four tasks show that SOM outperforms JSCC with
+bit-oriented modulation, and the implementation of the softwaredefined radio (SDR) platform confirms its compatibility with
+existing systems and its potential for latency reduction.
+Index
+Terms—Hierarchical
+modulation,
+communication (SemCom), semantic error.
+
+semantic
+
+I. I NTRODUCTION
+EMANTIC communication (SemCom) is a new paradigm
+that exploits deep learning (DL) models to enable endto-end communications by only transmitting the meaning of
+the messages rather than the whole raw data [1]. This enables
+the transceiver to identify the most valuable information,
+namely, the information required to reconstruct the meaning
+
+S
+
+Received 12 February 2025; revised 22 April 2025; accepted 24 April
+2025. Date of publication 29 April 2025; date of current version 9 July 2025.
+This work was supported in part by the National Key Research and
+Development Program of China under Grant 2022YFB2902900, and in part
+by the National Natural Science Foundation of China under Grant 62271073.
+(Corresponding author: Xuefei Zhang.)
+Yangfan Wang and Xuefei Zhang are with the School of
+Information and Communication Engineering, Beijing University
+of
+Posts
+and
+Telecommunications,
+Beijing
+100876,
+China
+(e-mail: wangyangfan@bupt.edu.cn; zhangxuefei@bupt.edu.cn).
+Yao Sun is with the James Watt School of Engineering, The University of
+Glasgow, G12 8QQ Glasgow, U.K. (e-mail: yao.sun@glasgow.ac.uk).
+Qimei Cui is with the Department of Information and Communication
+Engineering, Beijing University of Posts and Telecommunications, Beijing
+100876, China, and also with the Department of Broadband Communication,
+Peng Cheng Laboratory, Shenzhen 518055, China (e-mail: cuiqimei@
+bupt.edu.cn).
+Xiaofeng Tao is with the National Engineering Research Center of Mobile
+Network Technologies, Beijing University of Posts and Telecommunications,
+Beijing 100876, China, and also with the Department of Broadband
+Communication, Peng Cheng Laboratory, Shenzhen 518055, China (e-mail:
+taoxf@bupt.edu.cn).
+Digital Object Identifier 10.1109/JIOT.2025.3565017
+
+intended by the transmitter [2], [3]. It is a promising way to
+achieve robust transmission performance with less bandwidth
+consumption.
+Nowadays, most studies on SemCom pay great effort to
+semantic extraction or joint source channel coding (JSCC).
+Literature [4], [5], [6], [7], [8], [9], [10], [11], [12], [13],
+[14], [15] provides some promising DL models to tackle
+the various tasks, respectively. For example, a convolutional
+neural network (CNN) is exploited in image transmission [4],
+and a recurrent neural network (RNN) performs well in
+audio and text transmission [16], [17]. Recently, some new
+emerging DL models, e.g., transformer, autoencoder, and
+generative adversarial network (GAN), have shown their
+strength on various tasks. Even generative AI has been
+extensively exploited [18], [19]. More inspiringly, some studies have shown that DL-based SemCom can achieve better
+noise resiliency compared with the traditional communication
+schemes in the low signal-to-noise (SNR) regime [4].
+JSCC can output features via DL, but these often diverge
+from traditional constellations and are incompatible with
+existing systems. To ensure compatibility, traditional modulation methods first quantize semantic features into discrete
+bits (e.g., 8-bit or 16-bit representations) and then map bits
+to standardized symbols [20], but at the cost of semantic
+deviation introduced by quantization. However, based on
+extensive studies, a recognized result about the gain of DLbased SemCom is mainly from the analog transmission of
+semantic features directly from the source signal. The gains
+almost vanish when the coded symbols are limited to the bitoriented modulation [21], [22], e.g., QPSK, 16QAM, etc. The
+reason is that the bit error may happen in some significant bits,
+leading to a big value discrepancy [23]. Fig. 1 takes a 16-bit
+floating-point representation of 1.2 as an example. A single-bit
+error in the sign bit, e.g., a single “0” is turned into a “1,” gives
+rise to the wrong value of −1.2 (i.e., around −1 times); while
+a single-bit error in the first exponent bit, e.g., a single “0”
+is turned into “1,” results in the wrong value of 90 112 (i.e.,
+around 75 093 times); while a single-bit error in last fraction
+bit, e.g., a single “0” is turned into a “1,” brings the wrong
+value of 1.35 (i.e., around 1.14 times). It is obvious that errors
+in the sign, exponent, and fraction bit result in different levels
+of value discrepancies that possibly reach up to several orders
+of magnitude.
+On the contrary, the big discrepancy is almost absent in the
+analog transmission [23]. For example, the resulting deviation
+is typically bounded between −1.5 and 3.5 times the original
+
+c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+2327-4662 
+and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28260
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+4) The simulation results demonstrate the benefits of
+SOM in four different tasks (e.g., image transmission,
+audio classification, text transmission, and image classification), compared with the JSCC with bit-oriented
+modulation. In addition, another byproduct of SOM is
+latency reduction, validated by the experimental results.
+II. R ELATED W ORK
+
+Fig. 1. Two deviations are caused by the digital and analog transmission of
+semantic feature.
+
+value when the output feature is normalized and the noises
+follow a Gaussian distribution N (0, 1) [24]. This discrepancy
+is far less than the error that possibly happens in the exponent
+bit. The reason is that the noises or interferences are directly
+added to the analog value, leading to the discrepancy in a
+limited range. Despite the benefits of analog transmission of
+semantic features, it is incompatible with the current digital
+communication system. Thus, how to transmit the analog value
+of the semantic features in the current digital communication
+system is a matter of concern.
+Motivated by the above observations and the need to
+preserve semantic fidelity in SemCom systems, this article
+proposes a semantic-oriented modulation (SOM) method to
+leverage the gains of transmitting the analog value of the
+semantic features. The contribution of this article can be
+summarized as follows.
+1) The SOM method directly maps the analog value of the
+semantic features to the discrete points in the constellation by adopting a multilayer local amplification. Unlike
+traditional modulation, which first quantizes semantic
+features into discrete bits (e.g., 8-bit or 16-bit representations) and then maps bits to symbols, SOM bypasses
+the explicit quantization step. In this way, the proposed
+modulation preserves the gains achieved by transmitting
+the analog value of the semantic features in SemCom,
+while employing a discrete modulation scheme to remain
+compatible with current digital communication systems.
+2) A key lies in the resource allocation mechanism: by
+prioritizing significant features (e.g., those with higher
+impact on the model) and allocating fewer resources to
+less significant ones, this method ensures that critical
+features occupy higher resolution regions of the constellation. By this way, SOM can achieve a tradeoff,
+further reducing the volume of data to be transmitted
+while enhancing task-specific performance.
+3) An analytical result on semantic error, involving the
+feature quantization error and decision error, in SOM is
+provided. It unveils the relationship between the number
+of layers and orders and the semantic transmission
+performance. On this basis, the number of layers and
+order for the feature transmission rely on their relative
+semantic significance, thereby guiding the design of
+SOM specifically for SemCom.
+
+SemCom has been proven a promising technology in
+low bandwidth or low SNR [20], [25]. Inspired by the
+gains brought by SemCom, it has been extended to various data modalities, such as texts [5], [6], [7], speech
+signals [8], [9], [10], images [4], [11], [12], videos [13], [14],
+and multimodal data [15]. For example, Xie et al. [5]
+proposed a transformer-based JSCC framework to achieve
+improvements in text semantic similarity scores under low
+SNR conditions. Weng and Qin [8] introduced an attentionbased JSCC system that extracts the most fundamental
+speech semantic features to balance the accuracy of signal
+reconstruction and the transmitted data volume. Similarly,
+Gu et al. [15] proposed an attention-based SemCom system
+for multimodal data transmission, which leverages the shared
+semantic information to represent the semantic correlation
+between the data in different modalities. In this way, the
+data volume is further reduced while ensuring high-quality
+reconstruction. Recent studies have explored the integration
+of generative AI into SemCom to enhance content generation and communication efficiency [18], [19]. Recent studies
+have explored advanced modulation techniques to improve
+communication performance and compatibility with existing
+digital communication systems, which is in line with the
+SemCom goals of achieving reliable and efficient transmission [26], [27].
+One recognized opinion about the cause of gains in
+SemCom is the analog transmission for the semantic features extracted by the deep joint source channel coding
+(DeepJSCC) [4]. While the gains almost vanish when the
+coded symbols are limited to the bit-oriented modulation, e.g.,
+QPSK, 16-QAM, etc. The reason is that the bit error may
+happen in some significant bits that leads to big semantic
+discrepancies. Some analog transmission studies have shown
+their potential on low SNR regime, if adding the channel
+noises directly to the analog value of the semantic features
+values [12], [21], [28]. As such, the cliff effect that causes
+decoding failure in binary digital communication systems does
+not appear. In contrast, the gains in binary coded feature values
+are lost, especially in strong noisy channels [29], [30], [31],
+[32]. On this basis, [22] explores the degree-of-freedom limit
+of a discrete transmission. The result is that the performance
+loss is almost missing if the degree of freedom reaches 4096,
+i.e., 4096-QAM.
+We propose the SOM to mitigate the performance loss
+caused by feature discretization and be compatible with existing communication systems. This training-free and rule-based
+method directly maps the analog value of the semantic features
+to discrete symbol sequences (instead of a bit sequence).
+Below, we provide the comparisons between SOM and the
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+28261
+
+A. Transmitter
+
+Fig. 2.
+
+Wireless SemCom system with SOM.
+
+existing modulation methods in SemComs (e.g., bit-oriented
+modulation, DNN-based modulation, etc.).
+1) Comparison With Bit-Oriented Modulation: Bit-oriented
+modulation is widely adopted in the current digital
+communication systems [6], [7], [23]. The goal of the
+bit-oriented modulation is to transform every M-bit
+sequence into a symbol, where the bit sequences are
+the results of the binary quantization on the semantic
+features. Unfortunately, the quantization errors in the
+semantic features appear. That leads to a consequence
+that the gains from the DNN-based semantic representation almost vanish when the coded symbols are
+limited to the bit-oriented modulation [21]. Compared
+with the bit-oriented modulation, our proposed SOM is
+to transform an analog value of a semantic feature into
+L symbols, which increases the degree of freedom of
+modulation to compensate for the gain loss caused by
+binary quantization.
+2) Comparison With DNN-Based Modulation: DNN-based
+modulation is the most common modulation method
+in SemCom. The goal of DNN-based modulation is
+to directly map the semantic features extracted from
+the DNNs into the symbols, relying on the end-toend joint training [22], [29], [33], [34], [35], [36]. A
+defect of end-to-end joint training, especially involving
+the time-varying channels and random noises, is the
+high training cost. In addition, modulation is commonly
+integrated with source or channel coding as a whole
+in [35] and [36], to further improve the performance.
+In this way, the transmission module (e.g., channel
+coding and modulation) cannot be separated from the
+source coding module, which is incompatible with
+the current digital communication system. Compared
+with the DNN-based modulation, our proposed SOM
+is separated from the source coding (i.e., semantic
+representation), which is friendly to the current digital
+communication system. Moreover, simulation results in
+Section V-B confirm that our proposed SOM achieves
+better task performance compared with the DNN-based
+joint modulation-coding methods.
+
+III. S YSTEM M ODEL
+The wireless SemCom system aims to efficiently transmit
+and recover critical semantic features for various tasks. In this
+section, we describe the system model of SOM for wireless
+SemCom, as illustrated in Fig. 2.
+
+As shown in Fig. 2, the transmitter consists of two parts:
+the semantic encoder and the semantic-oriented modulator.
+The semantic encoder is implemented using an independent
+deep neural network (DNN). The input source data, D, is
+transformed into the features, f = [f1 , f2 , . . . , fN ] ∈ RN , by
+the semantic encoder, where fn denotes the nth feature and
+n ∈ [1, 2, . . . , N]. The extracted features f are expressed as
+
+
+f = gTc D; φ T
+(1)
+where gTc (·) denotes the semantic encoder with the parameters φ T . In order to normalize the features, the output layer
+of the DNN in the semantic encoder commonly adopts a
+batch normalization (BN) layer [37], thereby resulting in the
+output with the mean of zero and the variance of one, i.e.,
+a standard Gaussian distribution. According to the empirical
+rule, known as the 3σ rule, nearly 99.7% falls within three
+standard deviations [24]. Thus, 99.73% of the data in a
+standard Gaussian distribution lies within the range [−3, 3],
+i.e., most extracted features are clipped to this range [32].
+The semantic-oriented modulator consists of two mappers,
+i.e., complex number mapper and multilayer I/Q mapper.
+The goal of the complex number mapper is transforming the
+N-element feature vector f to (N/2)-element complex number
+vector s = [s1 , s2 , . . . , s(N/2) ] ∈ C(N/2) . As such, the mapping
+is given by
+
+
+N
+(2)
+si = f2i−1 + j · f2i , i ∈ 1, 2, . . . ,
+2
+where j denotes the imaginary unit (j2 = −1).
+In the multilayer I/Q mapper, the modulated symbols x are
+given by
+x = gTm (s; L, M)
+
+(3)
+
+where gTm (·) denotes the multilayer I/Q mapper with parameters L and M, L is the number of modulation layers and
+M is the modulation order of each layer. Here, we adopt
+M-QAM as the modulation pattern in each layer. Specifically,
+the (N/2)-element complex number vector s is modulated to
+(NL/2) symbols in the L-layer constellation, respectively, i.e.,
+L modulated symbols [xi,1 , xi,2 , . . . , xi,L ] are from si for i ∈
+[1, 2, . . . , (N/2)].
+B. Wireless Channel
+The whole transceiver in Fig. 2 is designed for a single communication link, in which the wireless channel, represented
+by ph (y | x), produces the output as received symbols y.
+Denote the coefficients of a linear channel as h, and then
+the transmission from the transmitter to the receiver can be
+modeled as
+y=h∗x+n
+
+(4)
+
+where n ∼ CN (0, σ 2 ) indicates independent and identically
+distributed (i.i.d.) additive white Gaussian noise, σ 2 is noise
+variance for channel.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28262
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+Then, we use minimum Euclidean distance (MED) estimation for deciding, given by
+x̂ = arg miny − c2
+c∈C
+
+(5)
+
+where y − c2 denotes the Euclidean distance between the
+received symbols y and the candidate symbol c. Here, C
+denotes the set of constellation symbols in an M-QAM.
+C. Receiver
+The receiver also consists of two parts: 1) the semanticoriented demodulator and 2) the semantic decoder.
+Specifically, the semantic-oriented demodulator consists
+of two de-mappers, i.e., multilayer I/Q de-mapper and
+complex number de-mapper. In the multilayer I/Q de-mapper,
+the (NL/2)-element symbol vector x̂ are demodulated to
+(N/2)-element quantization complex number vector ŝ =
+[ŝ1 , ŝ2 , . . . , ŝ(N/2) ] ∈ C(N/2) , given by
+
+
+(6)
+ŝ = gRm x̂; L, M
+where gRm (·) denotes the multilayer demodulator with parameters L and M.
+The goal of the complex number de-mapper is transforming
+the received (N/2)-element complex number vector ŝ to the Nelement feature vector f̂ = [f̂1 , f̂2 , . . . , f̂N ] ∈ RN . Specifically,
+the features f̂2i−1 and f̂2i are obtained from the complex value
+ŝi are expressed as follows:
+ 
+ 
+(7)
+f̂2i−1 =  ŝi , f̂2i =  ŝi
+where (·) and (·) denote the real and imaginary parts,
+respectively.
+Then, the recovered feature vector f̂ are decoded into the
+source data, D̂, by the semantic decoder, expressed as
+
+
+D̂ = gRc f̂ ; φ R
+(8)
+where gRc (·) denotes the semantic decoder with the parameters φ R .
+D. Performance Metrics
+In order to evaluate the semantic transmission performance,
+we use cosine similarity (CosSim), Kullback–Leibler divergence (KL divergence), and Earth mover’s distance (EMD)
+as the performance metrics, i.e., measuring the semantic
+transmission performance between the extracted feature vector
+f at the transmitter and the recovered feature vector f̂ at the
+receiver. The CosSim is given by [38], [39]
+CosSim =
+
+f · f̂
+f f̂ 
+
+(9)
+
+where (·) denotes the inner product of two vectors. Note that
+the value of CosSim is within the range [−1, 1], where the
+value closer to 1 indicates a higher similarity between the
+extracted feature vector f and the recovered feature vector f̂ .
+KL divergence is a measure of the difference between
+two probability distributions. In feature transmission, the KL
+divergence can be used to measure the difference between
+the distribution of the recovered feature vector and that of
+
+the extracted feature vector, thereby assessing the transmission
+quality. Specifically, if we treat the extracted feature distribution as P and the recovered feature distribution as Q, then
+a smaller DKL (P||Q) indicates that the two distributions are
+more similar, meaning less information is lost during recovery. Conversely, a larger KL divergence suggests significant
+distributional discrepancies and greater information loss. The
+KL divergence, denoted as DKL (P||Q), reflects the degree of
+inconsistency between the two distributions, which is defined
+as [40]
+DKL (P||Q) =
+
+
+
+P(i) log
+
+i
+
+P(i)
+Q(i)
+
+(10)
+
+where P and Q are normalized probability distributions of
+the extracted and recovered features, respectively, with Pi =
+xi / j xj and Qi = yi / j yj .
+The EMD is a distance measure between two sets of distributions. To measure the distributional discrepancy between
+the recovered feature vector and the extracted feature vector,
+the 1-D EMD is defined as [41]
+EMD(P||Q) =
+
+i
+
+i
+
+j=1
+
+P(j) −
+
+i
+
+
+Q(j)) .
+
+(11)
+
+j=1
+
+IV. S EMANTIC -O RIENTED M ODULATION : F ROM
+S EMANTIC F EATURE VALUES TO M ODULATED S YMBOLS
+The primary goal of modulation is to embed the information
+into the carrier signals in a way that allows it to be efficiently
+transmitted over a communication channel. Meanwhile, it
+ought to be resistant to noises, interferences, and deviations
+to enhance transmission reliability. In digital modulation, the
+information signal is discrete and represented in the form
+of binary digits (bits). The carrier signal is manipulated to
+represent these bits, allowing for the transmission of digital
+data. Despite the SOM rather than the bit-oriented modulation,
+the information must be represented in a discrete form to be
+compatible with the current digital system. Our proposed SOM
+is separated from the source coding (i.e., semantic representation), which is friendly to the current digital communication
+system. A benefit of separation is that it supports separate
+optimization and evaluation of transmission performance (e.g.,
+CosSim) and task performance (e.g., PSNR, SSIM, accuracy,
+and BLEU). This makes it practical for real-world scenarios
+where semantic extraction models and baseband processing
+modules (i.e., the transmission module) may be updated or
+replaced independently. In the simulations in Section V,
+we demonstrate the applicability of SOM in four different
+semantic models.
+SOM aims to directly map a pair of semantic feature into a
+point that is represented by the high-precision discrete-value
+in the constellation. The point is the nearest modulate point
+in the constellation to the position whose coordinates are the
+two analog values of the semantic feature values. Despite
+keeping the gains through the high-precision representation of
+the transmitted semantic information, it meanwhile leads to
+a transmission reliability decrease. As such, the challenge is
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+28263
+
+the distance between si and the accumulative quantization
+value, is given by
+xi,l = arg min
+
+cl,m ∈CM,l
+
+(a)
+
+(b)
+Fig. 3. Illustration of a 3-layer, √
+4-order SOM. (a) Local amplification way
+(the amplification coefficient is M = 2). (b) Mapping from a complex
+number si to the modulated symbols [x̂i,1 , x̂i,2 , x̂i,3 ].
+
+how to guarantee the transmission reliability under the highprecision representation of the modulated point.
+The proposed SOM depends on an L-layer M-order constellation, where L = 3 and M = 4 in Fig. 3. Each
+layer constellation is partitioned into M regions, where the
+modulated points are in the center of each region. To support
+a high-precision representation of the transmitted symbol, the
+modulation follows a local amplification rule, i.e., the (l +
+1)th layer constellation is a local amplification region of
+the selected subregion in the lth layer. The physical region
+area of each layer is the same, thereby resulting in the
+same distance between the neighboring points in the arbitrary
+layer. The√amplification coefficient between the neighboring
+layers is M, as is shown in Fig. 3(a). In this way, we
+achieve the same transmission reliability under the highprecision representation of the modulated point but at the
+cost of L times the symbols to be transmitted. The symbols
+generated by the SOM are QAM constellation symbols, which
+can be modulated onto subcarriers via orthogonal frequencydivision multiplexing (OFDM) and transmitted through the RF,
+ensuring compatibility with existing wireless standards. In the
+following, we give a detailed description of multilayer I/Q
+mapping and de-mapping.
+A. Multilayer IQ Mapping and De-Mapping
+In the modulation, L modulated symbols [xi,1 , xi,2 , . . . , xi,L ]
+to represent the complex number si are generated through a
+L-layer mapping process. Up to the lth layer, the residual
+between si and the accumulative quantization value is calcu√ k−1
+l−1
+(xi,k / M ), where the kth layer
+lated by the term si − k=1
+√ k−1
+coefficient (1/ M ) is used to diminish the residual caused
+by the local amplification between the layers. As such, the
+modulated symbol in the lth layer, depending on minimizing
+
+si −
+
+l−1
+
+
+√ l−1
+xi,k
+(12)
+√ k−1 − cl,m × M
+M
+k=1
+
+where cl,m denotes the mth constellation symbol in CM,l . Here,
+CM,l denotes the set of constellation symbols in the lth layer,
+which √
+is scaled from the symbols in the (l−1)th layer by factor
+M). Specifically, CM,l is defined as CM,l = {cl,m =
+of (1/ √
+(cl−1,m / M) | cl−1,m ∈ CM,l−1 , m = 1, 2, . . . , M}, where
+CM,1 is the initial set of constellation symbols.
+At the multilayer I/Q de-mapper, the de-mapping process
+reconstructs the received complex number ŝi by the received
+symbols [xi,1 , xi,2 , . . . , xi,L ]. The recovered complex number
+ŝi is given by
+ŝi =
+
+L
+
+l=1
+
+√
+
+x̂i,l
+M
+
+l−1
+
+, l ∈ [1, 2, . . . , L].
+
+(13)
+
+Finally, the recovered feature f̂2i and f̂2i+1 for i =
+1, 2, . . . , (N/2) are given by (7), thereby yielding f̂ =
+[f̂1 , f̂2 , . . . , f̂N ] as the received feature vector.
+Now, we transmit the features f2i = 1.876 and f2i+1 =
+1.124 as an example. The exemplified modulation process can
+be generalized to other configurations with different numbers
+of layers and modulation orders. First, the two features are
+represented by a complex number si = 1.876+j·1.124, whose
+position in the constellation plane is (1.876, 1.124), where
+the constellation plane is bounded by the range of [−3, 3]
+as mentioned in Section III-A. Fig. 3(b) illustrates how to
+modulate si = 1.876 + j · 1.124 into three symbols through the
+3-layer 4-order SOM. A detailed description of the modulation
+is provided in the following.
+1) First Layer: There are M = 4 possible symbols divide the plane into four equal regions, and
+we refer to CM,1 as the constellation in the first
+layer, denoted by CM,1 = {c1,1 , c1,2 , c1,3 , c1,4 } =
+{(1.5, 1.5), (1.5, −1.5), (−1.5, −1.5), (−1.5, 1.5)}. The
+nearest constellation symbol to si = (1.876, 1.145) is
+c1,1 = (1.5, 1.5), so the symbol xi,1 = c1,1 = (1.5, 1.5).
+The residual of si in the first layer is calculated as:
+si −xi,1 = (1.876, 1.124)−(1.5, 1.5) = (0.376, −0.374).
+The subregion centered at c1,1 is then amplified by a
+factor of M = 4 in the next layer, doubling the range in
+each dimension to refine the representation.
+2) Second Layer: In the second layer, there are M = 4 possible symbols equally subdivide the region selected in
+the previous layer into four subregions, and the constellation CM,2 is denoted as C2 = {c2,1 , c2,2 , c2,3 , c2,4 } =
+{(0.75, 0.75), (0.75, −0.75), (−0.75, −0.75), (−0.75,
+0.75)}. The nearest constellation symbol to the
+residual (0.376, −0.374) from the first layer
+√ is c2,4 =
+Mc2,4 =
+(−0.75, −0.75), so the symbol xi,2 =
+(1.5, −1.5). The amplification ensures that the physical
+distance
+√ between neighboring symbols is scaled by the
+factor M = 2, increasing from 1.5 to 3. In this way, the
+physical distance in the second layer is the same as that
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28264
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+in the first layer. This local amplification way ensures
+the same interference-resistance capability with the first
+layer, meanwhile, to improve the quantization accuracy.
+The updated residual is calculated as: si −xi,1 −(xi,2 /2) =
+(0.376, −0.374) − [(1.5, −1.5)/2] = (−0.374, 0.376),
+which will be mapped to the next layer. The region
+centered at c2,4 is then amplified by a coefficient of
+M = 4 in the next layer, similarly doubling the range.
+3) Third Layer: In the third layer, there are M = 4 possible
+symbols equally subdivide the region selected in the
+previous layer into four subregions, and the constellation
+CM,3 is denoted as C3 = {c3,1 , c3,2 , c3,3 , c3,4 } =
+{(0.375, 0.375), (0.375, −0.375), (−0.375, −0.375),
+(−0.375, 0.375)}. The nearest constellation symbols to
+the residual (−0.374, 0.376) is c3,2 = (−0.375, 0.375),
+√ 2
+so the symbol xi,3 = M c3,2 = (−1.5, 1.5). Similarly,
+it amplifies the physical distance between neighboring
+√ 2
+symbols from 0.75 to 3 by the factor M = 4,
+preserving the same interference-resistance capability
+with the previous layers, but with higher quantization
+accuracy.
+Thus, the complex number si = (1.876, 1.124) is
+modulated as three symbols, i.e., [xi,1 , xi,2 , xi,3 ]
+=
+[(1.5, 1.5), (1.5, −1.5), (−1.5, 1.5)]. At the receiver, the
+received symbols polluted by the noises are expressed as
+x̂i,1 , x̂i,2 , x̂i,3 = [(1.5, 1.5), (1.5, −1.5), (−1.5, 1.5)]
++ [(0.1, −0.05), (−0.15, −0.1), (−0.05, 0.1)]
+= [(1.6, 1.45), (1.35, −1.6), (−1.55, 1.6)]
+
+(14)
+
+where [(0.1, −0.05), (−0.15, −0.1), (−0.05, 0.1)] denotes an
+example of noise amplitude values. Then, the received complex number ŝi is recovered as
+ŝi =
+
+3
+
+x̂i,l
+l=1
+
+2l−1
+
+(1.35, −1.6) (−1.55, 1.6)
++
+2
+4
+= (1.8875, 1.05).
+
+= (1.6, 1.45) +
+
+(15)
+
+Then, the features are obtained as f̂2i = (ŝi ) = 1.8875 and
+f̂2i+1 = (ŝi ) = 1.05. The error between the transmitted and
+recovered features is calculated as 1.876 − 1.8875 = −0.0115
+and 1.124 − 1.05 = 0.074, respectively.
+
+1) Quantization Errors: The quantization error arises from
+the error introduced when mapping analog values of semantic
+features to L symbols. For a given L and M, the quantization
+√ L
+range [−3, 3] is divided into M uniform intervals, as shown
+in Fig. 4. Any analog value in the kth interval is represented
+by the quantization value vk , where vk is the midpoint of
+√ L
+the kth interval,
+i.e.,
+v
+=
+−3
++
+([6k
+−
+3]/
+M ) for k ∈
+k
+√ L
+{1, 2, . . . , M }.
+The quantization error arises during the mapping process at
+the transmitter, as the analog values of the semantic features
+are approximated by discrete values. For a given fn , the
+mapping result vk is the midpoint of the kth interval. The
+quantization error n of the nth feature is the gap between the
+analog value of the semantic feature value fn and the discrete
+mapping result vk , i.e.,
+
+√ L
+n = fn − vk , k ∈ 1, 2, . . . , M .
+(17)
+As given in Section III-A, the features fn approximately
+follow a standard Gaussian distribution, where the probability
+density function (PDF) of fn is given by
+ 2
+1
+f
+(18)
+Pf (fn ) = √ exp − n .
+2
+2π
+Critically, the same n can occur in any interval where fn
+deviates from vk by n . For example, n = 0.1 may result
+from n = 0.1 lying at vk + 0.1 in the first interval or v2 + 0.1
+in the second interval. The PDF of n , denoted P (n ), is
+obtained by summing the Gaussian probability densities of
+all fn values that generate the same n in their respective
+intervals, is given by
+√
+
+P (n ) =
+
+=
+
+B. Semantic Errors in L-Layer M-Order SOM
+To measure the performance of SOM, we define a concept—
+semantic error—to describe the discrepancy between the
+extracted semantic feature fn and the recovered counterparts f̂n
+at the receiver. The semantic error of the nth feature is denoted
+by εn and is calculated as
+εn = fn − f̂n .
+
+Fig. 4. Illustration of the quantization over the range [−3, 3], divided into
+√ L
+M uniform intervals.
+
+(16)
+
+The semantic error originates from two primary sources:
+quantization error and decision error. The following quantitative analysis evaluates these two kinds of errors individually
+and assesses their impacts on the performance of the proposed
+method.
+
+L
+
+M
+
+
+k=1
+√ L
+M
+
+
+Pf (fn )
+
+∂n + vk
+∂n
+
+Pf (n + vk )
+
+k=1
+
+√ L
+
+
+M
+1 
+(n + vk )2
+= √
+exp −
+2
+2π k=1
+⎛ 
+2 ⎞
+√
+
+L
+n + 6k−3
+√ L
+M
+⎜
+1 
+M
+⎜
+= √
+exp ⎜−
+⎝
+2
+2π k=1
+
+⎟
+⎟
+⎟
+⎠
+
+(19)
+
+√ L
+√ L
+for n ∈ [−(3/ M ), (3/ M )].
+Based on (19), we can find that the quantization error is
+negatively correlated with L and M. That means higher L and
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+Fig. 5.
+
+PDFs of the quantization error n with different L and M.
+
+28265
+
+maps them to only two discrete values at ±1.5. This mismatch
+between the feature distribution and the coarse quantization
+forces the errors to aggregate at the extremes, resulting in a
+bimodal PDF. The distinct bimodal issue can be resolved by
+increasing either L or M. Combined with Fig. 6 that shows
+the relationship between CosSim and L and M, we can see
+the quantization error reduction and CosSim promotion with
+larger M under low L while the slight impact of M under
+high L condition. The reason is that the quantization error
+√ L
+√ L
+range [−(3/ M ), (3/ M )] decreases exponentially with
+increasing L. Consequently, the error is sufficiently low for
+larger L, thereby diminishing in the impact of M on CosSim.
+2) Decision Error: Decision errors in demodulation (due to
+noise-corrupted signals) result in incorrect symbol detection,
+which in turn leads to deviating semantic features. The decision error of the nth feature, denoted as δn of n ∈ [1, 2, . . . , N],
+is given by
+δn =
+
+L
+
+
+δn,l
+
+(20)
+
+l=1
+
+where δn,l denotes the decision error of the nth feature in the
+lth layer
+
+
+
+⎧ 
+ x n ,l − x̂ n ,l
+⎪
+⎪
+2
+2
+⎨
+, n ≡ 1 (mod 2)
+√ l−1
+M 
+
+
+δn,l =
+(21)
+ x n ,l − x̂ n ,l
+⎪
+⎪
+2
+2
+⎩
+, n ≡ 0 (mod 2).
+√ l−1
+M
+
+Fig. 6.
+
+Performance comparison of CosSim for different L and M.
+
+M bring lower quantization errors. Fig. 5 shows that the PDFs
+of the quantization error f (n ) exhibit a progressively sharper
+peak centered at zero as L and M increase. This concentration
+of PDF near zero implies that the majority of quantization
+errors diminish in magnitude, reflecting enhanced quantization
+precision. An exception happens in L = 1 and M = 4
+where the quantization error distribution exhibits a distinct
+bimodal peak at n = ±1.5, deviating from the unimodal peak
+observed in others. The reason is that the majority of feature
+values are concentrated near zero, yet the quantization process
+
+For square QAM constellations, M-QAM is written as the
+Cartesian
+product of pulse√amplitude modulation M − QAM =
+√
+( M − PAM)2 [42]. The M-level amplitudes are modulated
+independently
+which
+√ can take the√amplitude values
+√ of either
+√
+−( M − 1)d, −( M − 3)d, . . . , ( M − 3)d, and ( M − 1)d.
+The value el,k denotes the possible deviation of amplitude
+in either the I or Q channel in the lth layer, which can
+√
+√ l−1
+take discrete
+√ values of ([2(kl − M)d]/ M ), where kl =
+1, 2, . . . , 2 M − 1. Here, d is the half minimum distance of
+the neighboring symbol, which can be computed as follows:
+
+3Es
+(22)
+d=
+2(M − 1)
+
+√ l−1
+
+√ l−1
+
+
+P δn,l = el,k = P M · el,k − d < n < M · el,k + d
+⎞
+⎛√
+⎞⎤
+⎡
+⎛√
+l−1
+l−1
+M
+·
+e
+−
+d
+M
+·
+e
++
+d
+1⎣
+l,k
+l,k
+⎠ − erfc⎝
+⎠⎦
+!
+!
+=
+erfc⎝
+2
+N0
+N0
+2
+2
+ ⎞
+ ⎞⎤
+⎛
+⎡
+⎛
+√
+√
+2k
+−
+2
+M
+−
+1
+d
+−
+2
+M
++
+1
+d
+2k
+l
+l
+1
+⎠ − erfc⎝
+⎠⎦
+!
+!
+= ⎣erfc⎝
+2
+N0
+N0
+2
+2
+
+
+
+
+%
+$
+
+
+
+
+
+√
+√
+1
+3 Es
+3 Es
+=
+− erfc 2kl − 2 M + 1
+erfc 2kl − 2 M − 1
+2
+M − 1 N0
+M − 1 N0
+
+
+%
+$
+
+&
+&
+
+
+
+
+√
+√
+3
+3
+1
+SNR − erfc 2kl − 2 M + 1
+SNR .
+=
+erfc 2kl − 2 M − 1
+2
+M−1
+M−1
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+(23)
+
+28266
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+Fig. 8.
+Fig. 7.
+
+Performance comparison of CosSim for different SNR.
+
+PMFs of the decision error δn with different M and SNR.
+
+where Es denotes the symbol energy. In the presence of noise,
+the received amplitude value deviates from its original value
+due to the noise, which is zero-mean AWGN with a two-sided
+power spectral density of (N0 /2).
+The probability P(δn,l = el,k ) is the probability distribution
+of the error δn,l in the lth layer, which is given by (23),
+shown at the bottom of the previous page, where erfc(·) is
+the complementary
+' ∞error2 function traditionally defined by [43]
+erfc(x) = (2/π ) x e−u du.
+To obtain the probability mass function (PMF) of δn , we
+assume that the errors δn,l in each layer are statistically
+independent. Based on this, we express the probability that
+the decision error δn takes a specific value e as the product
+of individual probabilities from each layer, which is defined
+as P(δn = e). Considering overall possible combinations of
+{e1,k , e2,k , . . . , eL,k } that satisfy the condition e = Ll=1 el,k ,
+the P(δn = e) is given by
+
+
+P(δn = e) =
+e=
+
+L
+(
+
+
+P δn,l = el,k .
+
+(24)
+
+L
+l=1
+l=1 el,k
+
+The decision error is the sum of the decision errors in all L
+layers, where the decision error in each layer is independent.
+So the decision error increases with the growth of L. Fig. 7
+shows that the PMFs of the decision error P(δn = e) become
+flatter and more dispersed as M increases. In addition, the decision error in every layer is determined by the order M, similar
+to the classic one-layer M-QAM. A higher M is less robust to
+the poor transmission environment (e.g., noises, interference
+in the wireless channel), resulting in higher decision error.
+That means the decision error is more sensitive to noise with
+a higher M, which is consistent with our intuition. As SNR
+increases, the PMFs are more concentrated around zero with
+a narrower spread, indicating fewer decision errors. As shown
+in Fig. 8, we may find that M plays a more dominant role in
+CosSim than L in the low SNR, indicating the consequence
+that the decision error overwhelms the quantization error under
+low SNR. Therefore, we may reduce M to alleviate noiseinduced decision errors and, in the meantime, increase L to
+preserve the quantization precision at low SNR.
+Both quantization errors and decision errors affect the
+overall semantic error in SOM. This dual influence reveals
+
+a nuanced interplay between the number of layers L, modulation order M, and SNR. Increasing L and M can reduce
+the quantization errors by dividing the analog value range
+of the semantic features into finer intervals, thereby improving the precision of feature representation. However, this
+improvement is at the cost of higher sensitivity to noise, as
+larger M makes the system more prone to decision errors
+due to the reduced distance between neighboring constellation
+symbols. Decision errors dominate semantic errors at low
+SNR, making noise resilience a critical factor for maintaining
+reliable semantic recovery under noisy conditions. Conversely,
+quantization errors become the primary concern at high SNR,
+as noise has a minimal impact on symbol detection. This
+dual influence highlights the need for a balance between the
+quantization error and decision error in designing SOM. This
+tradeoff suggests that experimental simulations can prioritize
+higher L for precision and lower M for noise resilience to
+reduce semantic error.
+V. S IMULATION R ESULTS
+In this section, simulations are performed to evaluate the
+proposed system. The details of the simulation settings are
+introduced. Then, the proposed SOM is compared with other
+baselines.
+A. Implementation Details
+1) Datasets and Training Settings: We choose four popular
+datasets commonly adopted for evaluating performance in
+four different tasks, including image transmission, text transmission, audio classification, and image classification. The
+CIFAR-10 [44] dataset, adopted for the image transmission
+task, consists of 60 000 32 × 32 color images, with 50 000
+images used for training and 10 000 remaining for testing. The
+MNIST [45] dataset, adopted for the image classification task,
+consists of 70 000 28 × 28 grayscale images of handwritten
+digits, with 60 000 images used for training and 10 000 for
+testing. The European Parliament proceedings corpus [46],
+adopted for the text transmission task, includes approximately
+2.0 million sentences and 53 million words. After preprocessing, the sentence lengths are limited to 4–30 words, and the
+dataset is split into a training set and a testing set. The speech
+dataset [47] from Edinburgh DataShare, adopted for the audio
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+28267
+
+TABLE I
+T RAINING PARAMETERS
+
+classification task, comprises more than 10 000 .wav files for
+the training set and 800 .wav files for the testing set, with a
+sampling rate of 16 kHz.
+The semantic encoder and decoder models adopted in this
+work were implemented by the PyTorch DL framework.
+These models are designed to support the four tasks. The
+design of the models is inspired by prior works on SemCom,
+including [5], [21], [48], and [49]. The detailed training
+parameters for each task are summarized in Table I.
+2) Benchmarks and Performance Metrics: To evaluate the
+performance of the proposed method, we compare it with two
+benchmark methods under an AWGN channel. In the image
+transmission task, we also include joint coding–modulation
+(JCM) methods as benchmarks for comparison. The methods
+are described as follows.
+1) JSCC With Direct Transmission (JSCC-DT) [4], [12]:
+Semantic features are transmitted directly over the channel. The analog value of the semantic features extracted
+from the DNNs is directly mapped to the symbol, relying
+on the end-to-end joint training. This method is used to
+investigate the impact of noise on semantic transmission
+performance.
+2) JSCC With Bit-Oriented Modulation (JSCC-BOM): The
+analog value of semantic features is first quantified using
+a fixed-bit quantizer into bits. The quantized bits are
+then encoded using low-density parity check (LDPC)
+codes for error correction and quadrature amplitude
+modulation (QAM) for modulation. This method is used
+to investigate the impact of discretization on semantic
+transmission performance.
+3) JCM [35]: The JCM framework adopts a variational
+autoencoder to jointly optimize coding and modulation,
+for the adaptive symbol generation in a data-driven and
+channel-adaptive way. This method learns the transition
+probability from source data to discrete constellation
+symbols to generate the adaptive symbol, maximizing
+the mutual information.
+
+Here, the proposed SOM adopts an 8-layer, 4-order structure
+(L = 8, M = 4). In this way, two features are represented as
+the real and imaginary parts of a complex number, respectively.
+Then, the complex number is transformed into eight symbols,
+equivalent to four symbols to represent one feature. To ensure
+the same quantization precision as SOM, the JSCC-BOM
+method employs a 9-bit quantizer to represent the semantic
+features into bits. The JSCC-BOM method employs a 9bit quantizer to transform the semantic features into bits.
+The LDPC codes are configured with a coding rate of
+4/7. 16-QAM is adopted in JSCC-BOM to ensure the same
+channel utilization with SOM (resulting in four symbols to
+represent one feature, same as SOM). Thus, two methods
+allocate four symbols to represent one semantic feature,
+ensuring identical transmission overhead and fair comparison in channel resource utilization. The comparison between
+the proposed JSCC-DT, JSCC-BOM, and SOM focuses on
+semantic transmission, not the model itself, as all methods
+share identical semantic encoders and decoders, ensuring
+a fair evaluation of semantic feature transmission over the
+channel.
+The performance is evaluated using task-specific metrics
+in the four tasks, and CosSim, as defined in Section III-D,
+is adopted to evaluate the performance of semantic feature
+transmission. For the image reconstruction task, we adopt the
+peak SNR ratio (PSNR) [4], [15] to measure reconstruction
+quality. PSNR is defined as
+⎛
+
+
+PSNR D, D̂ = 10 · log10 ⎝
+
+⎞
+MAX2 ⎠
+
+ dB
+MSE D, D̂
+
+(25)
+
+where MSE represents the mean-squared error between the
+source image D and the recovered image D̂, and the maximum
+pixel value for 8-bit RGB images is denoted by MAX = 255.
+Another image quality metric is the structural similarity index
+(SSIM) [50], which assesses the perceived similarity between
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28268
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+(b)
+
+(a)
+
+(d)
+
+(c)
+
+(e)
+
+Fig. 9. Performance comparison in four different tasks. (a) PSNR (image transmission). (b) SSIM (image transmission). (c) ACC (image classification).
+(d) BLEU (text transmission). (e) ACC (audio classification).
+
+the source image bmD and the recovered image D̂. The SSIM
+is defined as
+
+
+
+
+
+2μD μD̂ + C1 2σDD̂ + C2
+
+ (26)
+SSIM D, D̂ = 
+μ2D + μ2 + C1 σD2 + σ 2 + C2
+D̂
+
+D̂
+
+where μD and μD̂ are the average values of the original and
+recovered images, σD and σD̂ are their standard deviations,
+σDD̂ is the covariance between the original and recovered
+image, and C1 and C2 are constants to stabilize the division.
+The bi-lingual evaluation understudy (BLEU) [46] score is
+adopted for the text transmission task to evaluate the similarity
+between the recovered sentence and the reference sentence.
+BLEU measures the precision of word matches between the
+two sentences. The BLEU is defined as
+
+
+
+r
++ log p1
+(27)
+BLEU = exp min 0, 1 −
+r̂
+where r and r̂ denote the lengths of the source and recovered
+sentences, respectively, and p1 represents the proportion of
+matched words in the recovered sentence relative to the
+reference. This metric provides a straightforward evaluation of
+text reconstruction quality by focusing solely on word-level
+similarity.
+For both the audio classification and image classification
+tasks, Accuracy (ACC) is adopted as the evaluation metric. It
+measures the proportion of correctly classified samples relative
+to the total number of samples in the test set.
+B. Performance Analysis
+Fig. 9(a) and (b) compares the task performance of SOM,
+JSCC-DT, JSCC-BOM, and JCM for image transmission. The
+results demonstrate that SOM provides a gradual degradation as the SNR decreases, which is similar to the trend
+observed in JSCC-DT. Such behavior is akin to that of an
+analog scheme [23], [28] and JSCC-DT [4], [12]. In contrast,
+JSCC-BOM fails to reach the performance of JSCC-DT. The
+performance gap between JSCC-BOM and SOM arises even in
+
+the same quantization precision because JSCC-BOM is highly
+sensitive to errors in some specific bits. This may lead to substantial numerical deviations in the recovered feature values.
+JCM performs better than JSCC-BOM in a low SNR regime
+due to the joint training between coding and modulation.
+However, its performance is much lower than that of JSCC and
+our proposed SOM. The reason is that the symbols extracted
+from the DNN-based JCM are still limited to the low degree
+of freedom of one-layer QAM, much lower than that of analog
+symbols in JSCC and that of multilayer QAM in SOM. SOM
+effectively mitigates this problem by mapping the discrete
+features directly to the transmitted symbols. In this way, the
+error range in each layer is constrained and the impact of errors
+progressively diminishes across subsequent layers. Therefore,
+SOM compensates for the gain loss caused by the discrete
+transmission of features. Fig. 9(c)–(e) shows the performance
+comparisons of the other three tasks (e.g., image classification,
+text transmission, and audio classification). These results
+exhibit a similar trend in image transmission tasks, i.e., SOM
+showing a smooth degradation in task-specific metrics (e.g.,
+ACC for classification and BLEU for text transmission) as
+SNR decreases.
+Although JSCC learns to denoise at the receiver through
+end-to-end joint training, it cannot prevent semantic features
+from being corrupted by channel noise during transmission.
+The reason is that JSCC directly maps semantic features
+to noise-sensitive symbols, e.g., [21], making these features
+susceptible to noise interference during transmission. Our
+proposed SOM method uses low-order symbols to represent
+semantic features and can resist noise interference during
+transmission. Compared with JSCC, the features input to the
+semantic decoder by our proposed SOM have less deviation
+during transmission. As shown in Fig. 10, it confirms that
+SOM outperforms JSCC in semantic feature transmission
+performance (e.g., CosSim, KL, and EMD). Naturally, as
+shown in Fig. 9(a) and (b), for the same semantic codec, better
+semantic feature transmission performance indicates better
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+28269
+
+(a)
+
+(b)
+
+(c)
+
+(d)
+
+Fig. 10. CosSim, KL divergence, and EMD comparison in four different tasks. (a) Image transmission. (b) Image classification. (c) Text transmission.
+(d) Audio classification.
+
+task performance. Another observation is that the performance
+loss of JSCC mainly comes from the decision error due to
+poor transmission, while the loss of SOM is caused by both
+the decision error and quantization error. At SNR = 0 dB,
+the decision errors in JSCC and SOM are both serious.
+Additionally, SOM has the quantization error. Therefore, JSCC
+performs better than SOM at SNR=0 dB. With increased
+SNR, the gain from the high degree of freedom in multilayer
+modulation in the proposed SOM compensates for the loss
+caused by extra quantization errors. Thus, SOM achieves
+comparable or even better performance than JSCC as SNR
+increases, as shown in Fig. 9.
+Fig. 10 shows the CosSim, KL divergence, and EMD comparison of SOM, JSCC-DT, and JSCC-BOM. SOM achieves
+higher CosSim and lower KL divergence and EMD values
+than JSCC-BOM in four different tasks, indicating its superior
+capability in transmitting features. This performance gain
+stems from SOM’s multilayer modulation, which progressively
+refines semantic feature representations and uses low-order
+constellations to promote transmission reliability. It minimizes
+quantization errors caused by directly mapping semantics to
+discrete symbols, thereby preserving similarity (reflected in
+higher CosSim) and distribution fidelity (lower KL divergence
+and EMD).
+C. Prioritized Semantic Feature Transmission
+In this section, our objective is to investigate the conjecture
+that prioritizing the reliable transmission of important semantic
+
+features can improve overall performance while reducing
+unnecessary resource consumption. The determination of feature significance is inspired by a well-established observation
+in DNNs: not all features have a significant impact on task
+performance [51], [52], [53]. Fig. 11 provides a visual evidence of feature significance in image transmission. To assess
+feature significance, each feature is occluded by replacing
+its value with zero, and then the effect on task performance
+is measured. A greater loss in task performance indicates a
+higher significance of the occluded feature. On this basis,
+the top X% significant features, defined as X% of features
+that contribute most significantly to performance loss when
+occluded, are transmitted with more transmission resources.
+The remaining features are transmitted with fewer transmission
+resources. The features in the darker red regions will result in
+more performance loss once they are occluded, which means
+they are of higher significance.
+To validate this conjecture, the baseline method adopts SOM
+configured with L = 6 and M = 64 to transmit all features,
+i.e., a nonprioritized transmission. For prioritized transmission,
+the top X% significant features are transmitted with more
+transmission resources (i.e., transmitted adopting SOM with
+L = 8 and M = 4). To maintain or reduce the overall
+transmission cost, the remaining features are transmitted with
+fewer resources, i.e., adopting SOM with L = 2 and M = 64.
+In this simulation, we define the top 37.5%, top 50%, and
+top 62.5% features as significant features in the prioritized
+transmission method, respectively.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28270
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+TABLE II
+C OMPARISON OF T RANSMISSION E FFICIENCY
+
+Fig. 11. Visualization of feature significance in image transmission. The
+features in the darker red regions will result in more performance loss once
+they are occluded, which means they are of higher significance.
+
+Fig. 12 shows the impact of prioritized semantic features on
+the performance of image transmission. The results indicate
+that allocating more communication resources to the top
+37.5%, 50%, and 62.5% most significant features improves
+both PSNR and SSIM. The reason is that more significant
+features have a greater impact on task performance, while the
+others have a smaller effect. The transmission overhead of
+the four cases, i.e., nonprioritized transmission and prioritized
+transmission for the top 37.5%, 50%, and 62.5% significant
+features, is shown in Table II. Here, the semantic rate per
+symbol r is defined as the ratio of the number of features to the
+transmitted symbols, which denotes the efficiency of symbol
+transmission. The prioritized transmission method achieves
+a higher r, indicating that more features are represented
+per transmitted symbol, suggesting a more efficient use of
+transmission resources. The result shows that prioritized transmission for significant features, by allocating more resources
+to them and fewer resources to less significant ones, highlights
+the effectiveness of improving reliable transmission while
+minimizing resource consumption.
+
+(a)
+
+(b)
+Fig. 12. Impact of prioritized semantic feature transmission on performance
+under different SNR, evaluated by (a) PSNR and (b) SSIM.
+
+D. Wireless Transmission Experiment in Real Channel
+To validate the proposed SOM in the real scenario,
+we implemented a wireless SemCom system based on the
+software-defined radio (SDR) platform for the experiment in
+a real wireless channel. As shown in Fig. 13, we conducted
+a wireless transmission experiment using two computers and
+two SDR devices equipped with a single omnidirectional
+antenna: one for transmission and the other for reception.
+Both computers run the Windows 10 operating system and are
+connected to their respective SDR devices via PCI Express
+
+Fig. 13.
+Demonstration of SemCom on an SDR-based communication
+platform in a crowded indoor environment (Shenzhen, China).
+
+(x4) interfaces. The SOM introduced in Section IV is implemented on both the transmitter (Tx) and the receiver (Rx).
+Regarding parameters, we set the signal bandwidth to 200 kHz
+and the center frequency to 900 MHz. The experiments were
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+Fig. 14.
+
+Complex number plots si obtained from an image transmission. (a) SOM. (b) JSCC-DT. (c) JSCC-BOM.
+
+Fig. 15.
+
+Examples of original images (a) and transmitted images using proposed SOM (b), JSCC-DT (c), and JSCC-BOM (d).
+
+performed in a line-of-sight (LOS) environment, as depicted
+in Fig. 13. Multipath propagation, caused by the dense signal
+reflections from walls and furniture, is serious in the indoor
+wireless channels.
+In this experiment, we randomly selected 6432 × 32 color
+images from the CIFA-10 dataset as shown in Fig. 15(a).
+These images are transformed into semantic features via
+the semantic encoder described in Section V-A, which is
+specifically designed for image transmission. The semantic
+features are then transmitted by SDR1 at the transmitter using
+three different methods: 1) SOM; 2) JSCC-DT; and 3) JSCCBOM. At the receiver, SDR2 captures the wireless signal to
+recover the semantic features according to the corresponding
+method (i.e., SOM, JSCC-DT, or JSCC-BOM). Subsequently,
+the semantic decoder, also described in Section V-A, is
+employed to recover the original images.
+Fig. 14 shows the complex number plots si of an image
+transmission, where the red dots represent the transmitted
+symbols and the blue circles represent the received symbols.
+The quality of transmission is evaluated by the proximity of the
+received symbols to their corresponding transmitted symbols.
+The higher proximity indicates greater consistency between
+transmitted and received signals, thus reflecting better CosSim
+between the original and the recovered semantic features.
+SOM achieves the best proximities among the three methods,
+highlighting its superior capability in enhancing semantic
+transmission performance.
+As shown in Fig. 15, SOM, which employs discrete constellations for transmission, achieves outstanding performance
+in terms of visual quality, transmission metrics (CosSim), and
+task metrics (PSNR and SSIM). This further demonstrates
+
+28271
+
+Fig. 16. Latency comparison of transmitter and receiver processes for SOM,
+JSCC-DT, and JSCC-BOM under different N.
+
+that SOM effectively compensates for the gain loss caused
+by the discretization of analog values during transmission,
+in the meanwhile, being compatible with existing digital
+communication systems.
+Moreover, we are surprised to find out that a good byproduct
+of SOM is latency reduction compared to JSCC-BOM in
+Fig. 16. Specifically, we provide the computation complexity
+of SOM and JSCC-BOM in the baseband processing part.
+The computation complexity of SOM is O(N · L · log M),
+while the JSCC-BOM benchmark suffers from O(N · log N)
+complexity, where N is the number of features in the feature
+vector, M is the order of modulation, and L is the number
+of modulation layers. The complexity of JSCC-BOM in the
+baseband processing part mainly comes from the iterative
+channel decoding (e.g., LDPC belief propagation). Since M
+and L are far smaller than N, log N grows asymptotically
+faster than L · log M, demonstrating that the computation
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+28272
+
+IEEE INTERNET OF THINGS JOURNAL, VOL. 12, NO. 14, 15 JULY 2025
+
+complexity of SOM is always lower than that of JSCC-BOM.
+Then, we measured the baseband processing latency on an
+SDR platform. As shown in Fig. 16, the baseband processing
+latency of JSCC-BOM grows significantly faster than that of
+SOM with the increase of N. For example, both methods
+exhibit similar latency at N = 128, while the latency of JSCCBOM grows nearly double in that of SOM at N = 512. This
+makes it more suitable for real-time applications, e.g., AR/VR
+communication and autonomous driving.
+VI. C ONCLUSION
+In this article, we proposed an SOM method to enable
+direct mapping from an analog value of a semantic feature
+to a sequence of discrete values to compensate for the
+gain loss caused by the discretization of analog values. We
+analyzed the semantic errors in SOM, including feature quantization errors and decision errors, revealing the relationship
+between the number of layers, the modulation order, and the
+performance of the semantic transmission. To validate the
+performance of SOM, we conducted the simulation and realworld experiments for four different tasks, demonstrating its
+applicability and superior performance in four different tasks.
+The experiments also showed that allocating more resources
+to significant features and fewer to less significant ones can
+improve transmission efficiency while maintaining a high
+performance. Furthermore, another good byproduct of SOM
+is the lower latency compared to JSCC-BOM. In the future,
+we will further explore the feasibility and performance of the
+SOM method in more complex scenarios.
+R EFERENCES
+[1] Q. Cui et al., “Overview of AI and communication for 6G network:
+Fundamentals, challenges, and future research opportunities,” Sci. China
+Inf. Sci., vol. 68, no. 7, 2025, Art. no. 171301.
+[2] S. Li, Y. Wang, S. Guo, and C. Feng, “Task-oriented communication for graph data: A graph information bottleneck approach,” IEEE
+Trans. Cogn. Commun. Netw., early access, Sep. 23, 2024,
+doi: 10.1109/TCCN.2024.3465651.
+[3] S. Guo, A. Zhang, Y. Wang, C. Feng, and T. Q. S. Quek,
+“Semantic-enabled 6G communication: A task-oriented and privacypreserving perspective,” IEEE Netw., early access, Mar. 4, 2025,
+doi: 10.1109/MNET.2025.3547760.
+[4] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[5] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+pp. 2663–2675, Apr. 2021.
+[6] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[7] H. Xie and Z. Qin, “A lite distributed semantic communication system
+for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+pp. 142–153, Jan. 2021.
+[8] Z. Weng and Z. Qin, “Semantic communication systems for speech
+transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+pp. 2434–2444, Aug. 2021.
+[9] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-preserved
+communication system for highly efficient speech transmission,” IEEE
+J. Sel. Areas Commun., vol. 41, no. 1, pp. 245–259, Jan. 2023.
+[10] Z. Weng, Z. Qin, and G. Y. Li, “Semantic communications for speech
+recognition,” in Proc. IEEE Glob. Commun. Conf. (GLOBECOM), 2021,
+pp. 1–6.
+[11] E. Erdemir, T.-Y. Tung, P. L. Dragotti, and D. Gündüz, “Generative joint
+source-channel coding for semantic image transmission,” IEEE J. Sel.
+Areas Commun., vol. 41, no. 8, pp. 2645–2657, Aug. 2023.
+
+[12] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, May 2020.
+[13] T.-Y. Tung and D. Gündüz, “DeepWiVe: Deep-learning-aided wireless
+video transmission,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+pp. 2570–2583, Sep. 2022.
+[14] Y. Zhu et al., “A semantic-aware transmission with adaptive control
+scheme for volumetric video service,” IEEE Trans. Multimedia, vol. 25,
+pp. 7160–7172, 2023.
+[15] J. Gu, X. Zhang, Q. Cui, and X. Tao, “Semantic communication for
+multi-modal data transmission,” in Proc. Int. Conf. Wireless Commun.
+Signal Process. (WCSP), 2023, pp. 208–213.
+[16] M. Schuster and K. K. Paliwal, “Bidirectional recurrent neural
+networks,” IEEE Trans. Signal Process., vol. 45, no. 11, pp. 2673–2681,
+Nov. 1997.
+[17] E. Arisoy, A. Sethy, B. Ramabhadran, and S. Chen, “Bidirectional
+recurrent neural network language models for automatic speech recognition,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process.
+(ICASSP), 2015, pp. 5421–5425.
+[18] C. Liang et al., “Generative AI-driven semantic communication networks: Architecture, technologies and applications,” 2024,
+arXiv:2401.00124.
+[19] R. Cheng, Y. Sun, D. Niyato, L. Zhang, L. Zhang, and M. Imran, “A
+wireless AI-generated content (AIGC) provisioning framework empowered by semantic communication,” IEEE Trans. Mobile Comput., vol. 24,
+no. 3, pp. 2137–2150, Mar. 2025.
+[20] J. Dai, P. Zhang, K. Niu, S. Wang, Z. Si, and X. Qin, “Communication
+beyond transmitting bits: Semantics-guided source and channel coding,” IEEE Wireless Commun., vol. 30, no. 4, pp. 170–177, Aug. 2023.
+[21] Y. Shao and D. Gunduz, “Semantic communications with discrete-time
+analog transmission: A PAPR perspective,” IEEE Wireless Commun.
+Lett., vol. 12, no. 3, pp. 510–514, Mar. 2023.
+[22] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+Channel input constrained deep joint source-channel coding,” in Proc.
+IEEE Int. Conf. Commun. (ICC), 2022, pp. 3880–3885.
+[23] T.-Y. Tung and D. Gündüz, “SparseCast: Hybrid digital-analog wireless image transmission exploiting frequency-domain sparsity,” IEEE
+Commun. Lett., vol. 22, no. 12, pp. 2451–2454, Dec. 2018.
+[24] D. C. Montgomery and G. C. Runger, Applied Statistics and Probability
+for Engineers. Hoboken, NJ, USA: Wiley, 2010.
+[25] X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,
+open issues, and future research directions,” IEEE Wireless Commun.,
+vol. 29, no. 1, pp. 210–219, Feb. 2022.
+[26] E. E. Elsayed and B. B. Yousif, “Performance enhancement of M-ary
+pulse-position modulation for a wavelength division multiplexing free
+space optical systems impaired by interchannel crosstalk, pointing error,
+and ASE noise,” Opt. Commun., vol. 475, Nov. 2020, Art. no. 126219.
+[27] E. E. Elsayed et al., “Coding techniques for diversity enhancement
+of dense wavelength division multiplexing MIMO-FSO fault protection protocols systems over atmospheric turbulence channels,” IET
+Optoelectron., vol. 18, nos. 1–2, pp. 11–31, 2024.
+[28] T. Goblick, “Theoretical limitations on the transmission of data from
+analog sources,” IEEE Trans. Inf. Theory, vol. 11, no. 4, pp. 558–567,
+Oct. 1965.
+[29] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCCQ: Constellation constrained deep joint source-channel coding,” IEEE J.
+Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+[30] E. Agustsson et al., “Soft-to-hard vector quantization for end-to-end
+learning compressible representations,” in Proc. 31st Adv. Neural Inf.
+Process. Syst., 2017, pp. 1–11.
+[31] A. V. Makkuva, X. Liu, M. V. Jamali, H. Mahdavifar, S. Oh, and
+P. Viswanath, “Ko codes: Inventing nonlinear encoding and decoding
+for reliable wireless communication via deep-learning,” in Proc. 38th
+Int. Conf. Mach. Learn., 2021, pp. 7368–7378.
+[32] H. Yoo, L. Dai, S. Kim, and C.-B. Chae, “On the role of ViT and CNN
+in semantic communications: Analysis and prototype validation,” IEEE
+Access, vol. 11, pp. 71528–71541, 2023.
+[33] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep
+joint source-channel coding,” IEEE Signal Process. Lett., vol. 29,
+pp. 1442–1446, Jun. 2022.
+[34] H. Xiao, Y. Hua, Q. Chen, and L. Zhou, “Constellation mapping design
+using K-means clustering for analog joint source-channel coding based
+on Shannon-Kotel’nikov mappings,” in Proc. 2nd Int. Joint Conf. Inf.
+Commun. Eng. (JCICE), 2023, pp. 6–10.
+[35] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding–modulation for
+digital semantic communications via variational autoencoder,” IEEE
+Trans. Commun., vol. 72, no. 9, pp. 5626–5640, Sep. 2024.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+WANG et al.: SEMANTIC-ORIENTED MODULATION FOR WIRELESS COMMUNICATION
+
+[36] L. Teng, W. An, C. Dong, and X. Xu, “sDMCM—Semantic digital
+modulation constellation mapping scheme for semantic communication,” IEEE Internet Things J., early access, Feb. 25, 2025,
+doi: 10.1109/JIOT.2025.3545667.
+[37] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating
+deep network training by reducing internal covariate shift,” 2015,
+arXiv:1502.03167.
+[38] I. Chung, D. Kim, and N. Kwak, “Maximizing cosine similarity
+between spatial features for unsupervised domain adaptation in semantic
+segmentation,” in Proc. IEEE/CVF Winter Conf. Appl. Comput. Vis.,
+2022, pp. 1351–1360.
+[39] F. Rahutomo, T. Kitasuka, and M. Aritsugi, “Semantic cosine similarity,” in Proc. 7th Int. Student Conf. Adv. Sci. Technol. (ICAST), 2012,
+p. 1.
+[40] S. Ji, Z. Zhang, S. Ying, L. Wang, X. Zhao, and Y. Gao, “Kullback–
+Leibler divergence metric learning,” IEEE Trans. Cybern., vol. 52, no. 4,
+pp. 2047–2058, Apr. 2022.
+[41] Y. Rubner, C. Tomasi, and L. J. Guibas, “The earth Mover’s distance as
+a metric for image retrieval,” Int. J. Comput. Vis., vol. 40, pp. 99–121,
+Nov. 2000.
+[42] F. Kharrat-Kammoun, S. Fontenelle, and J. J. Boutros, “Accurate
+approximation of QAM error probability on quasi-static MIMO channels
+and its application to adaptive modulation,” IEEE Trans. Inf. Theory,
+vol. 53, no. 3, pp. 1151–1160, Mar. 2007.
+[43] D. Zwillinger and A. Jeffrey, Table of Integrals, Series, and Products.
+Cambridge, MA, USA: Academic, 2000.
+[44] A. Krizhevsky and G. Hinton, Learning Multiple Layers of Features
+from Tiny Images, Univ. Toronto, Toronto, ON, Canada, 2009.
+[45] L. Deng, “The MNIST database of handwritten digit images for machine
+learning research [best of the web],” IEEE Signal Process. Mag., vol. 29,
+no. 6, pp. 141–142, Nov. 2012.
+[46] K. Papineni, S. Roukos, T. Ward, and W.-J. Zhu, “Bleu: A method
+for automatic evaluation of machine translation,” in Proc. 40th Annu.
+Meeting Assoc. Comput. Linguist., 2002, pp. 311–318.
+[47] C. Valentini-Botinhao et al., “Noisy speech database for training speech
+enhancement algorithms and TTS models,” School Inform. Centre
+Speech Technol. Res., Univ. Edinburgh., Edinburgh, U.K., 2017.
+[48] H. Wang, S. Zheng, Y. Chen, L. Cheng, and Q. Chen, “CAM++: A
+fast and efficient network for speaker verification using context-aware
+masking,” 2023, arXiv:2303.00332.
+[49] H. Zhang, S. Shao, M. Tao, X. Bi, and K. B. Letaief, “Deep learningenabled semantic communication systems with task-unaware transmitter
+and dynamic data,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+pp. 170–185, Jan. 2023.
+[50] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image
+quality assessment: From error visibility to structural similarity,” IEEE
+Trans. Image Process., vol. 13, pp. 600–612, 2004.
+[51] M. D. Zeiler and R. Fergus, “Visualizing and understanding convolutional networks,” in Proc. 13th Eur. Conf. Comput. Vis. (ECCV), 2014,
+pp. 818–833.
+[52] L. Breiman, “Random forests,” Mach. Learn., vol. 45, pp. 5–32,
+Oct. 2001.
+[53] A. Fisher, C. Rudin, and F. Dominici, “All models are wrong, but many
+are useful: Learning a variable’s importance by studying an entire class
+of prediction models simultaneously,” J. Mach. Learn. Res., vol. 20,
+no. 177, pp. 1–81, 2019.
+
+Yangfan Wang is currently pursuing the master’s degree in information and communication
+engineering with Beijing University of Posts and
+Telecommunications, Beijing, China.
+His current research interests include semantic
+communication and wireless communication.
+
+28273
+
+Xuefei Zhang (Senior Member, IEEE) received
+the B.S. and Ph.D. degrees in telecommunications
+engineering from Beijing University of Posts and
+Telecommunications (BUPT), Beijing, China, in
+2010 and 2015, respectively.
+From 2013 to 2014, she visited the School of
+Electrical and Information Engineering, University
+of Sydney, Sydney, NSW, Australia. She is currently an Associate Professor with the School
+of Information and Communication Engineering,
+BUPT. Her research interests include semantic
+communication and satellite–terrestrial integrated network.
+Yao Sun (Senior Member, IEEE) received the
+Ph.D. degree in communication and information
+systems from the University of Electronic Science
+and Technology of China, Chengdu, China.
+He is currently a Lecturer with the James Watt
+School of Engineering, The University of Glasgow,
+Glasgow, U.K. He has extensive research experience in wireless communication area. His research
+interests include intelligent wireless networking,
+semantic communication, blockchain system, and
+resource management in next-generation mobile
+networks.
+Dr. Sun has won the IEEE Communication Society of TAOS Best Paper
+Award in 2019 ICC. He has been the guest editor for Special Issues of several
+international journals. He has served as the TPC Chair for UCET 2021, and
+the TPC Member for a number of international flagship conferences, including
+ICC 2022, VTC spring 2022, GLOBECOM 2020, WCNC 2019, and ICCT
+2019.
+Qimei Cui (Senior Member, IEEE) received the
+B.E. and M.S. degrees in electronic engineering
+from Hunan University, Changsha, China, in 2000
+and 2003, respectively, and the Ph.D. degree in
+information and communications engineering from
+Beijing University of Posts and Telecommunications
+(BUPT), Beijing, China, in 2006.
+Since 2014, she has been a Full Professor with
+the School of Information and Communication
+Engineering, BUPT. She is currently a Professor of
+the Department of Broadband Communication, Peng
+Cheng Laboratory, Shenzhen, China. In 2016, she was a Visiting Professor
+with the Department of Electronic Engineering, University of Notre Dame,
+Notre Dame, IN, USA. Her research interests include B5G/6G wireless
+communications, mobile computing, and IoT.
+Prof. Cui was a recipient of the Best Paper Award from the IEEE ISCIT
+2012, the IEEE WCNC 2014, and the WCSP 2019, the Honorable Mention
+Demo Award from the ACM MobiCom 2009, and the Young Scientist Award
+from the URSI GASS 2014. She serves as a Technical Program Committee
+Member for several international conferences, such as the IEEE ICC, the
+IEEE WCNC, the IEEE PIMRC, the IEEE ICCC, the WCSP 2013, and the
+IEEE ISCIT 2012. She serves as an Editor for Science China Information
+Science, a Guest Editor for the EURASIP Journal on Wireless Communications
+and Networking, International Journal of Distributed Sensor Networks, and
+Journal of Computer Networks and Communications, the Technical Program
+Chair for the APCC 2018, the Track Chair for IEEE/CIC ICCC 2018, and
+the Workshop Chair for WPMC 2016.
+Xiaofeng Tao (Senior Member, IEEE) received the
+B.S. degree in electrical engineering from Xi’an
+Jiaotong University, Xi’an, China, in 1993, and
+the M.S. and Ph.D. degrees in telecommunication
+engineering from Beijing University of Posts and
+Telecommunications (BUPT), Beijing, China, in
+1999 and 2002, respectively.
+He is currently a Professor with BUPT and
+the Department of Broadband Communication,
+Peng Cheng Laboratory, Shenzhen, China. He has
+authored or co-authored over 200 papers and three
+books in wireless communication areas. His research interests include 5G/B5G
+networks.
+Prof. Tao is a Fellow of the Institution of Engineering and Technology and
+the Chair of the IEEE ComSoc Beijing Chapter.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 01:32:40 UTC from IEEE Xplore. Restrictions apply.
+
+
