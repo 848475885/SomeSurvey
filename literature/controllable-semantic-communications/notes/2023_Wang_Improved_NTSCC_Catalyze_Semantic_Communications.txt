@@ -1,0 +1,1474 @@
+                                                                                                                                                                                          1
+
+
+
+
+                                                  Improved Nonlinear Transform Source-Channel
+                                                   Coding to Catalyze Semantic Communications
+                                                Sixian Wang, Graduate Student Member, IEEE, Jincheng Dai, Member, IEEE, Xiaoqi Qin, Member, IEEE,
+                                                         Zhongwei Si, Member, IEEE, Kai Niu, Member, IEEE, and Ping Zhang, Fellow, IEEE
+
+
+                                               Abstract—Recent deep learning methods have led to increased                 challenges to the traditional separate development routes of
+                                           interest in solving high-efficiency end-to-end transmission prob-               source compression and channel transmission domains. In the
+                                           lems. These methods, we call nonlinear transform source-channel                 face of very big data transmission and massive emerging
+arXiv:2303.14637v3 [eess.SP] 18 Aug 2023
+
+
+
+
+                                           coding (NTSCC), extract the semantic latent features of source
+                                           signal, and learn entropy model to guide the joint source-channel               applications, on the one hand, current wireless transmission
+                                           coding with variable rate to transmit latent features over wireless             systems suffer from time-varying channel conditions, in which
+                                           channels. In this paper, we propose a comprehensive framework                   case the mismatch between communication rate and channel
+                                           for improving NTSCC, thereby higher system coding gain, better                  capacity results in obvious cliff-effect, i.e., the performance
+                                           model compatibility, more flexible adaptation strategy aligned                  breaks down when the channel capacity goes below com-
+                                           with semantic guidance are all achieved. This new sophisticated
+                                           NTSCC model is now ready to support large-size data interaction                 munication rate. On the other hand, the widely-used entropy
+                                           in emerging XR, which catalyzes the application of semantic com-                coding, which compresses the source representation into bit
+                                           munications. Specifically, we propose three useful improvement                  sequences, is quite sensitive to the channel decoded results,
+                                           approaches. First, we introduce a contextual entropy model to                   any left bit error can lead to catastrophic error propagation in
+                                           better capture the spatial correlations among the semantic latent               entropy decoding. Moreover, the original source compression
+                                           features, thereby more accurate rate allocation and contextual
+                                           joint source-channel coding method are developed accordingly                    paradigm based on pixel/voxel signal processing cannot align
+                                           to enable higher coding gain. On that basis, we further propose                 with the requirements of low-level human perception and high-
+                                           a response network architecture to formulate compatible NTSCC,                  level semantic analysis. It is the very time to develop new
+                                           i.e., once-learned model supports various bandwidth ratios and                  coded transmission paradigms to support real-time broadband
+                                           channel states that benefits practical deployment greatly. Follow-              communications (RTBC) toward emerging media end-to-end
+                                           ing this, we propose an online latent feature editing mechanism
+                                           to enable more flexible coding rate allocation aligned with some                transmission tasks.
+                                           specific semantic guidance. By comprehensively applying the                        In this context, semantic coded transmission (SCT) [4]–
+                                           above three improvement methods for NTSCC, a deployment-                        [6], has emerged to bridge an extent separate research do-
+                                           friendly semantic coded transmission system stands out finally.                 mains of representation learning, source compression, and
+                                           Our improved NTSCC system has been experimentally verified                      channel transmission, and attempts to optimize compactness,
+                                           to achieve a better rate-distortion efficiency versus the state-
+                                           of-the-art engineered VTM + 5G LDPC coded transmission                          efficiency, and robustness jointly from a unified perspective
+                                           system with lower processing latency. Our code is available at                  of end-to-end rate-distortion (RD) tradeoff. Particularly, the
+                                           https://semcomm.github.io/ntscc plus/.                                          initial line of work [7]–[9] using deep neural networks (DNNs)
+                                              Index Terms—Semantic communications, rate-distortion trade-                  to realize joint source-channel coding (deep JSCC) has led to
+                                           off, context model, variable-rate coded transmission, feature                   steady progress of end-to-end transmission performance over
+                                           editing.                                                                        past years, reaching or even surpassing state-of-the-art (SOTA)
+                                                                                                                           source codecs combined with channel codecs on small-size
+                                                                                                                           images (e.g., CIFAR dataset, 32 × 32 images). Later, inspired
+                                                                     I. I NTRODUCTION
+                                                                                                                           by the landmark work of Ballé et al. on nonlinear transform
+                                           A. Related Work and Motivation                                                  coding (NTC) based source compression [10]–[12], nonlinear
+                                                                                                                           transform source-channel coding (NTSCC) [13] was proposed
+                                           I   N recent years, the rapid emergence and prosperity of im-
+                                               mersive applications, such as ultra-large scale image/video
+                                           interaction in extended reality (XR) [1]–[3], will have higher
+                                                                                                                           as one of the technical foundations of SCT. Codecs based on
+                                                                                                                           NTSCC divide the task of end-to-end data transmission into
+                                           demand on end-to-end communications. They are raising the                       three modularized components: transform, entropy modeling,
+                                                                                                                           and JSCC. All three components are formulated by deep neural
+                                              This work was supported in part by the National Natural Science Foundation   networks using its nonlinear processing property: autoencoder-
+                                           of China under Grant 62293481, Grant 92067202, Grant 62001049, and              like networks are adopted as flexible nonlinear transforms
+                                           Grant 62071058, the BUPT Excellent Ph.D. Students Foundation under Grant
+                                           CX2022146, the Fundamental Research Funds for the Central Universities,         to extract the semantic latent features of the source signal,
+                                           and the Natural Science Foundation of Beijing Municipality under Grant          deep generative models are leveraged as powerful learnable
+                                           4222012. Corresponding author: Jincheng Dai.                                    entropy models performed on the latent features, and powerful
+                                              Sixian Wang, Jincheng Dai, Zhongwei Si, and Kai Niu are with the Key
+                                           Laboratory of Universal Wireless Communications, Ministry of Education,         learned JSCC codecs with dynamic rates are used to transport
+                                           Beijing University of Posts and Telecommunications, Beijing 100876, China       latent features. Since the entropy model will guide to allocate
+                                           (e-mail: daijincheng@bupt.edu.cn).                                              more channel bandwidth in JSCC codec to the more important
+                                              Xiaoqi Qin and Ping Zhang are with the State Key Laboratory of Network-
+                                           ing and Switching Technology, Beijing University of Posts and Telecommu-        contents which are crucial for the reconstruction of the source
+                                           nications, Beijing 100876, China.                                               signal. This kind of content-adaptive mechanism enables the
+                                                                                                                                       2
+
+
+
+superior system coding gain over the plain deep JSCC. In            RD metric cannot be smoothly adapted to other RD targets
+addition, NTSCC has shown on-par or better transmission RD          when incorporating some additional semantic guidance, e.g.,
+performance than SOTA engineered source and channel codecs          human perceptual metric or region-of-interest (ROI) guidance.
+in high-resolution image/video sources (e.g., CLIC21 dataset,       Consequently, it is essential to develop a mechanism for online
+2K images [14], etc.) [15].                                         editing of semantic latent features that can adapt to a variety
+   Though it seems promising, there are still many problems to      of RD targets and semantic guidance requirements.
+solve before those NTSCC models can be deployed in practice,
+which are analyzed as the following aspects.                        B. Summary of Contributions
+   1) Correlation Modeling: Spatial and temporal redundancy            To tackle the aforementioned problems, we propose a series
+is an important basis of image and video compression, which         of improvement methods to formulate a deployment-friendly
+is also utilized in NTSCC. Strong self-correlation exists in the    NTSCC system to catalyze semantic communications. Specif-
+raw source data, for example, adjacent image pixels are likely      ically, the contributions are summarized as follows.
+to have a stronger causal relationship. Empirically, the more          1) Contextual Modeling for Higher Coding Gain: We in-
+abstract semantic latent features output by nonlinear analysis      troduce the novel checkerboard context model (CCM) [17] to
+transform still keep such redundancy because of locality, even      better exploit the correlative probabilistic structure in the latent
+when using means-scale Gaussian hyperprior to obtain more           features. It is parallelization-friendly thus avoiding the horribly
+accurate entropy model in the original NTSCC.                       low computational efficiency in the traditional autoregressive
+   Motivated by the success of autoregressive priors in proba-      context modeling [16]. Accordingly, we develop the contextual
+bilistic generative models [16], it is expected to introduce con-   JSCC codec architecture to collaborate with the two-stage
+text model to predict the probability of unknown latent features    CCM. Our contextual NTSCC achieves clearly better end-to-
+conditioned on features that have been already decoded. These       end RD performance with good computational efficiency.
+context models are more powerful to capture the correlations           2) Response Network Enabled NTSCC Framework for Bet-
+in the semantic latent features, which can guide more accurate      ter Compatibility: We propose a response network architecture
+rate allocation in variable-rate JSCC. Accordingly, a contextual    to build a computationally efficient compatible NTSCC frame-
+JSCC codec is also needed to leverage the explicitly modeled        work for learning optimal parameters corresponding to various
+correlations among latents to improve performance.                  hyperparameters in a single training run. By this means, once-
+   2) Model Compatibility: Given a model that can provide an        trained NTSCC model can support a very wide range of
+accurate entropy estimate of a latent feature map, the previous     RD performance and different wireless channel conditions
+NTSCC frameworks optimize their networks by minimizing              during deployment. The key idea is to explicitly build response
+the weighted sum of the RD pairs by using the method of             functions that embed the rate-control hyperparameter λ to
+Lagrange multipliers. The Lagrange multiplier λ introduced          the optimal parameters of the semantic analysis/synthesis
+in the Lagrangian is treated as a hyperparameter to train a         transform modules, and embed the channel state information
+network for a desired tradeoff between the channel bandwidth        to the optimal variable-rate JSCC codec parameters directly.
+cost and the quality of transmitted source signal. In addition,     We justify that under various channel states, our compatible
+the scaling factor η that controls the relation between the esti-   NTSCC architecture can construct the end-to-end RD curve
+mated entropy of each latent feature and its JSCC code length       without additional training and can be deployed with signifi-
+is another term to affect the NTSCC model performance. This         cantly less hyperparameter tuning.
+implies that one needs to train and deploy various separate            3) Online Latent Feature and JSCC Codec Editing Mecha-
+NTSCC models for rate adaptation. One way is to re-train a          nism for More Flexible Adaptability: Based on the above two
+network while varying λ or η. However, this is impractical          improvements, we further propose an online semantic feature
+when we operate at a broad range of the RD curve and the            editing and JSCC codec updating mechanism. It indeed lever-
+size of networks is large. It is necessary to develop compatible    ages the deep learning model’s overfitting property, thereby the
+NTSCC to support a large range of rate adjustments with             latent feature and the JSCC codec can for instance be updated
+only one well trained model, which can greatly facilitate the       after deployment, which further lead to substantial gains in
+practical deployment greatly. Moreover, once-trained NTSCC          terms of any target RD performance. It is so flexible that we
+model needs to be adapted to various channel conditions.            do not even need to know what the exact RD target functions
+   3) Model Adaptability: Although the existing optimized           are during training. Therefore, a flexible SCT framework is es-
+NTSCC models have proven to be very successful in mini-             tablished to accommodate new introduced semantic guidance
+mizing the end-to-end expected RD cost over a full source           in XR, e.g., ROI map, human perceptual metric, etc.
+dataset and ergodic wireless channel responses, they are yet           By comprehensively applying the above three improvement
+unlikely to be optimal for every test instance due to the limited   methods for NTSCC, a deployment-friendly semantic coded
+model capacity. Existing models only pay attention to an            transmission system stands out finally. Extensive experimental
+average low RD cost on the training set. For a given input          results verify the effectiveness and efficiency of our proposed
+data sample and wireless channel response, such a learned           methods. Through these experiments, we show the potential of
+codec may not effectively capture the data’s semantic features      improved NTSCC supporting the communication requirements
+and the channel state at that specific instance, resulting in       of the emerging XR.
+suboptimal transform and coding during the model inference             The remainder of this paper is organized as follows. In Sec-
+stage. Moreover, once trained model targeted to a given             tion II, we review the architecture and properties of NTSCC
+                                                                                                                                                                                                                                                 3
+
+
+
+
+                                          Checkerboard Context                 Rate                                                                                                                           ķ Markers of improvement methods
+                                     ķ       Entropy Model                  Allocation                                    Contextual                                      Legends      Online update terms
+                                                                                                                                                                                                             ĸ Ĺ proposed in this paper
+                                                                                                                         JSCC Codec
+                                                                   Ĺ                                                          ķ
+ Semantic Feature Space
+
+
+
+
+                                      ÷                                           ÷                                                                                                   ×                                       ×
+
+
+
+
+                                                                                                                                                  JSCC Rate De-matching
+                                                                                                    JSCC Rate Matching
+                                                 Ĺ               Anchor Context                                          Primary Link                                                                  Anchor
+                                      ĸ                                           ĸ                                                                                                   ĸ                Context                ĸ
+                                                 Ĺ
+
+
+
+
+                                                                                                                            Communication
+                                                                   Ĺ
+
+
+
+
+                                                                                                                               Channel
+                                      ÷                                           ÷                                                                                                   ×                                       ×
+                          Semantic Analysis                                                                                                                                                                               Semantic Synthesis
+ Source Space
+
+
+
+
+                             Transform                 CQI mapped to:                                                                       Side Information Link                   SQI mapped to:                           Transform
+                                                                                         Tx SQI and rate set
+                                                                                                                                                                                          Rate set:
+                                                                                             Feedback Link
+                                                                                                                                             CQI measured at Rx
+
+Fig. 1. The whole NTSCC++ system architecture for semantic communications, which includes the semantic analysis transform ga∗ , the contextual JSCC
+encoder fe∗ , the contextual JSCC decoder fd∗ , the semantic synthesis transform gs∗ , and the checkerboard context entropy model. Compared to the original
+NTSCC system, three improvement methods are marked with circled numbers. ⃝      1 denotes the contextual modeling and contextual JSCC toward higher system
+coding gain (NTSCC+); ⃝    2 denotes the rate compatible and channel adaptive strategy to enable compatible NTSCC+; ⃝     3 denotes the online latent feature
+and JSCC codec editing methods to enable more flexible adaptability for NTSCC++.
+
+
+
+based semantic communication system. In Section III, we                                                                         less communication systems, the above source compressive
+present the CCM and its corresponding contextual JSCC codec                                                                     coding paradigm relies heavily on advanced channel coding
+architecture. In Section IV, we present some important insights                                                                 and signal processing techniques to ensure the transmitted
+about how the hyperparameter λ and the channel state change                                                                     bit sequence to be losslessly recovered. This separation-based
+the NTSCC model parameters, then the response networks to                                                                       approach has been employed in many current communication
+realize the bandwidth compatible NTSCC are given. On that                                                                       systems, as the binary representations of various source data
+basis, Section V presents the flexible NTSCC architecture via                                                                   can be seamlessly transmitted over arbitrary wireless channels
+the online semantic latent feature editing and JSCC codec                                                                       by changing the underlying channel code.
+updating. Section VI shows experimental results to quantify                                                                        However, with increasing demands on low-latency wireless
+our performance gain, and some valuable discussions are also                                                                    data delivery applications such as extended reality (XR), the
+given. Finally, Section VII concludes this paper.                                                                               limits of the separation-based design begin to emerge. Current
+   Notational Conventions: Throughout this paper, lowercase                                                                     wireless data transmission systems suffer from time-varying
+letters (e.g., x) denote scalars, bold lowercase letters (e.g., x)                                                              channel conditions, in which case the separation-based design
+denote vectors. In some cases, xi denotes the elements of x,                                                                    leads to significant cliff-effect when the channel condition is
+which may also represent a subvector of x as described in the                                                                   below the level anticipated by the channel code [7]. Further-
+context. Bold uppercase letters (e.g., X) denote matrices, and                                                                  more, the widely-used entropy coding is quite sensitive to the
+Im denotes an m-dimensional identity matrix. ln(·) denotes                                                                      variational estimate of the marginal distribution of the source
+the natural logarithm, and log(·) denotes the logarithm to base                                                                 latent representation. Small perturbations on this marginal can
+2. px denotes a probability density function (pdf) with respect                                                                 lead to the catastrophic error propagation in entropy decoding
+to the random variable x. In addition, E(·) denotes the sta-                                                                    [19]. As a result, this non-determinism issue in transmitter vs.
+tistical expectation operation, and R denotes the real number                                                                   receiver will lead to severe performance degradation.
+set. Finally, N (x|µ, σ 2 ) ≜ (2πσ 2 )−1/2 exp(−(x−µ)2 /(2σ 2 ))
+denotes a Gaussian function, and U(a − u, a + u) stands for a                                                                      To address the above issues, the idea in NTSCC [13] is
+uniform distribution centered on a with the range from a − u                                                                    to replace entropy coding and channel coding with a trained
+to a + u.                                                                                                                       DNN for joint source channel coding. In particular, a variable-
+                                                                                                                                rate JSCC is proposed to transmit the nonlinear transform code
+                                                                                                                                y directly. This approach results in better end-to-end transmis-
+II. NTSCC BASED S EMANTIC C OMMUNICATION S YSTEM                                                                                sion performance and maintains system robustness to unpre-
+   The idea of NTSCC stems from the landmark work of Ballé                                                                     dictive wireless channels. The whole procedure of NTSCC
+et al. on nonlinear transform coding (NTC) [10]–[12]. Given                                                                     is depicted in (1), where the latent code y is fed into both
+the pristine data sample x, e.g., an image x modeled as a                                                                       the hyper-prior path (ha and hs ) and the variable-rate JSCC
+vector of pixel intensities x ∈ Rm , it is first transformed into                                                               encoder fe . On the one hand, ha summarizes the distribution
+semantic latent representation y using a DNN-based nonlinear                                                                    of mean values and standard deviations of y in the hyperprior
+analysis transform ga . In data compression tasks, y will be                                                                    z. The transmitter utilizes z to estimate both the mean vector
+quantized as discrete-valued latent representation ȳ, followed                                                                 µ and the standard deviation vector σ, which will be further
+by entropy encoding [18] to convert ȳ into bit sequence. This                                                                  used to determine the required bandwidth for transmitting the
+bit sequence will be fed into entropy decoding to losslessly                                                                    latent representation. On the other hand, fe encodes y as the
+reconstruct ȳ, and another nonlinear synthesis transform DNN                                                                   channel-input sequence s ∈ Rk , and the received sequence is
+module gs uses ȳ to reconstruct the decoded data x̂. The ga                                                                    ŝ = W (s), with a transition probability of pŝ|s (ŝ|s). In this
+and gs are jointly optimized under the RD constraint. In wire-                                                                  paper, we consider the general fading channel model such that
+                                                                                                                                                  4
+
+
+
+the transfer function is ŝ = W (s|h) = h ⊙ s + n where ⊙                          where the Lagrange multiplier λ on the end-to-end distortion
+is the element-wise product, h is the channel gain vector, and                     term determines the tradeoff between the transmission rate
+each component of the noise n is independently sampled from                        R and the end-to-end distortion D. The bandwidth scaling
+a Gaussian distribution, i.e., n ∼ pn ≜ N (0, σn2 I), where σn2                    factors ηy and ηz are from the estimated entropy to the
+is the noise power. At the receiver, ŝ is further fed into the                    channel bandwidth cost and tied with the source-channel
+JSCC decoder fd to reconstruct the latent representation ŷ,                       codec capability and the wireless channel state. A larger ηy
+which is further used by the nonlinear synthesis transform gs                      indicates a better performance on JSCC codec fe and fd ,
+to recover the source data x̂. The whole procedure of NTSCC                        but incurs more channel bandwidth cost. Accordingly, ηy can
+system is                                                                          also be adjusted as a hyperparameter to control the system
+     ga (·;ϕg )   fe (·;ϕf )     W (·|h)        fd (·;θf )     gs (·;θg )          RD tradeoff. ηz cannot be adjusted manually since explicit
+  x −−−−−→ y −−−−−→ s −−−−→ ŝ −−−−−→ ŷ −−−−−→ x̂                                 entropy coding [18] and LDPC coding [20] are selected to
+                               ha (·;ϕh )       hs (·;θh )                         transmit the side information z reliably. Notably, different
+  with the latent prior y −−−−−→ z −−−−−→ {µ, σ} ,
+                                                                (1)                from that in the data compression settings which use the
+where (ϕ, θ) = (ϕg , ϕh , ϕf , θg , θh , θf ) encapsulate learnable                codebook-based arithmetic coding, the side information z in
+network parameters of each function. The system efficiency is                      NTSCC is not necessary for the receiver as analyzed in [13].
+measured by the channel bandwidth ratio (CBR) ρ = k/m.                             If z is not transmitted, the decoding performance shows some
+   The key of NTSCC lies in the variable-rate JSCC guided                          degradation while the bandwidth cost is also reduced. Overall,
+by the latent prior on the semantic feature space. The latent                      the end-to-end RD performance is comparable. Therefore, in
+prior py|z (y|z) is obtained as                                                    the subsequent context, we do not transmit the side information
+                    Y                                                            z for simplicity, thereby the bandwidth cost term of size
+                                      2          1 1
+      py|z (y|z) =       N (yi |µi , σi ) ∗ U(− , ) (yi )                          information in (4) is omitted, and the only bandwidth scaling
+                     i |
+                                                 2 2                               factor ηy is abbreviated as η.
+                                        {z             }        (2)
+                                            pyi |z                                    In practice, each embedding yi is a C-dimensional feature
+                     with (µ, σ) = hs (z; θh ),                                    vector. The learned entropy model − log pyi |z (yi |z) indicates
+                                                                                   the summation of entropy along C channels of yi , thus, the
+where the convolutional operation “∗” with a standard uniform
+                                                                                   information density distribution of y is captured. Accordingly,
+distribution is used to match the prior to the marginal such that
+                                                                                   the bandwidth cost, such as the number of OFDM subcarriers,
+the estimated rate − log py|z (y|z) is non-negative. Different
+                                                                                   k̄i for transmitting yi can be determined as
+from the data compression where the uniformly-noised proxy
+                                                                                                                                     
+ỹi is applied in (2), we do not need the quantization operation                                k̄i = Q(ki ) = Q −η log pyi |z (yi |z) ,        (5)
+such that the raw yi can be used. The hyperprior z is usually
+transmitted over the digital link as side information due to its                   where the learned entropy model pyi |z follows (2), Q denotes
+small cost, where the quantization ⌊·⌉ (rounding to integers) is                   a scalar quantization whose range includes 2q (q = 1, 2, . . . )
+needed. A uniformly-noised proxy z̃ = z+o is used to replace                       integers, and the quantization set is related to the bandwidth
+the quantized representation ȳ = ⌊y⌉ during model training                        scaling factor η and the Lagrange multiplier λ. Hence, the
+[12], where oj is sampled from U(− 12 , 12 ). The probability                      predetermined q bits is transmitted as extra side information
+of hyperprior
+        Q        z̃ is calculated on the fully factorized density                  to inform the receiver which bandwidth is allocated to every
+pz = j pzj as                                                                      embedding yi . To adaptively map yi to a k̄i -dimensional
+                Y                                1 1
+                                                                                  channel-input vector si , the dynamic neural network structure
+      pz (z̃) =       pzj |ψ(j) (zj |ψ (j) ) ∗ U(− , ) (z̃j ), (3)                 is introduced into Transformers [21] to realize the variable-
+                 j |
+                                                  2 2
+                                       {z             }                            rate JSCC codec fe and fd [13]. This variable-rate JSCC
+                                      pzj
+                                                                                   coding mechanism applied to each latent feature yi is indeed
+where ψ (j) encapsulates all the parameters of pzj |ψ(j) .                         the main source of NTSCC performance gain versus the plain
+   The optimizing problem of NTSCC is formulated following                         deep JSCC, which constructs an explicit match between the
+the variational inference context [12], the posterior distribution                 coded transmission resource allocation and the source content
+pŝ,z̃|x is approximated using the variational density qŝ,z̃|x by                 complexity.
+minimizing their Kullback-Leibler (KL) divergence over the
+data distribution px and the channel gain distribution ph as the                       III. C ONTEXTUAL NTSCC: M ORE E FFICIENT SCT
+equation (11) in [13]. Accordingly, the optimization of NTSCC
+system can be converted to the minimization of the expected                           As analyzed in Section I, there are still many problems to
+channel bandwidth cost, as well as the expected distortion of                      solve before NTSCC models can be deployed in practice. From
+the reconstructed data versus the original, which leads to the                     this section, we propose a comprehensive framework including
+optimization of the following end-to-end RD tradeoff,                              three improvements to derive the improved NTSCC. The whole
+                                                                                   improved NTSCC system is illustrated in Fig. 1.
+LRD (ϕ, θ, ψ) = Ex∼px Eh∼ph DKL (qŝ,z̃|x ∥pŝ,z̃|x ) ⇔ Ex∼px
+                                                                                    From the above descriptions of NTSCC, we can find that
+Eh∼ph −ηy log py|z (y|z) − ηz log pz (z̃) +λ · d(x, x̂) ,                          the RD performance is determined partially by the entropy
+                                                  | {z }
+                                                                                   model, a more accurate distribution estimation of latent code
+        |             {z                }
+                  channel bandwidth cost: R                  distortion: D
+                                                                             (4)   y will definitely lead to more accurate bandwidth allocation
+                                                                                                                                               5
+
+
+
+                                                                             An intuitive implementation of gcm (y<i ) is the autoregres-
+                                                                          sive manner [16], where y<i denotes the set of all latents with
+                                                                          indices smaller than i, i.e., y<i = (y1 , y2 , . . . , yi−1 ). Despite
+                                                                          its good performance, this serial context model has a severe
+                                                                          limitation on its computational efficiency which cannot be em-
+              Anchor Parameters      Raw Non-Anchor Parameters
+                                                                          ployed in practice. Therefore, in this paper, we follow the idea
+                                                                          of [17] to build the context model in a checkerboard manner,
+                                                                          it is helpful to building a computationally efficient parallel
+                                                                          context model without introducing apparent performance loss
+                                          Context Features                compared with the serial context model.
+                                                                             Following the checkerboard shaped context [17], we only
+                                                                          encode/decode half of the latents, using checkerboard-shaped
+                                                                          context and hyperprior. The coding of the other half of latents,
+                                                                          which we call anchors, only depends on the hyperprior. To
+          Final Entropy Parameters     Non-Anchor Parameters              implement the two types of context rules, the context feature
+                                                                          of all anchors are set to zero, and the calculation of entropy
+                                                                          parameters Ψi in (6) to a spatial location conditioned form:
+                                                                                   (
+                                                                                      hs (z), for i ∈ A,
+                                                                             Ψi =                        ′                                   (9)
+                                                                                      gep (hs (z), gcm (yA ; M ⊙ W ))i , for i ∈ Ac ,
+Fig. 2. Illustration of the checkerboard context model using the 5 × 5
+convolutional kernel masked by the checkerboard-shaped binary mask. All
+                                                                          where A denotes the set of anchor indices, its complementary
+colored blocks denote the effective positions.                            set Ac denotes the non-anchor indices, thereby yA denotes the
+                                                                          set of latent codes whose indices belong to A. A special note
+                                                                          here, since the transmitter does not know the reconstructed
+ki for each latent feature yi , thereby a more efficient variable-        ŷA by JSCC decoder at the receiver, y ′A in (9) is an estimate
+rate JSCC can be formed. In the initial work of NTSCC [13],               of ŷA based on the statistics of the channel. We assume the
+the correlations among latents {yi } is modeled to some extent            transmitter has a local copy of the decoder parameters. In order
+using the hierarchical prior, i.e., the parameterized entropy             to generate y ′A , the transmitter simulates locally independent
+model of y is built with the hyperprior z = ha (y) as (2).                realizations of the channel and the decoder models, obtaining
+Recent frameworks based on the context model are emerging to                                                  n
+capture the correlations among the latents {yi } more efficiently                                         1   X    (i)
+                                                                                                   y ′A =         ỹA ,                    (10)
+[16], [22]–[24]. It intuitively provides an idea to further boost                                         n i=1
+the end-to-end RD performance in NTSCC.                                            (i)
+   Accordingly, to estimate the location and scale parameters             where ỹA denotes is the i-th realization of the simulation of
+Ψ = (µ, σ) of the entropy model for latent y in (2), we can               the transmitter’s semantic latent feature reconstruction given
+further introduce a parameter inference function gep . Let hs (z)         yA as the input of variable-rate JSCC codec in the NTSCC
+denote the hyperprior feature and gcm (y<i ) denote the context           pipeline in (1), and n is the total number of independent
+feature, the entropy model parameter prediction for i-th latent           channel realizations used to estimate the receiver’s output. In
+code yi is formulated as                                                  addition, gcm in (9) denotes the masked convolution operation
+                                                                          conditioned on a checkerboard-shaped mask, defined as
+            Ψi = (µi , σi ) = gep (hs (z), gcm (y<i )),            (6)
+                                                                                            gcm (x) = (M ⊙ W )x + b,                       (11)
+where y<i means the causal context, i.e., some visible decoded
+latents of the latent yi . Let ω = (ωcm , ωep ) encapsulate the           where W denotes the l × l convolutional weights, M is the
+learnable network parameters of functions gcm and gep . Under             l × l binary mask describing the context modeling pattern, b
+this context setting, the optimization goal of NTSCC system               is a learned bias term. In this paper, we employ the 5 × 5
+is reformulated as                                                        convolutional kernel W masked by the checkerboard-shaped
+       LRD (ϕ, θ, ψ, ω) =                                                 binary mask M . Under this setting, the resulted entropy model
+                                                          (7)           parameters belonging to the anchor branch ΨA and the non-
+       Ex∼px Eh∼ph − η log py|z (y|z) + λ · d(x, x̂) ,                    anchor branch ΨAc are obtained as shown in Fig. 2.
+                                                                             During encoding, all latents in y are visible, we thus can
+the context entropy model py|z (y|z) is built as                          calculate all entropy model parameters Ψ = (ΨA , ΨAc ) with
+                   Y                         1 1
+                                                  
+                                                                          only one pass of context model. Finally, the variable-rate JSCC
+                                     2
+      py|z (y|z) =      N (yi |µi , σi ) ∗ U(− , ) (yi )                  encodes anchor latents yA and non-anchor latents yAc into
+                    i |
+                                              2 2                  (8)
+                                      {z          }                       the channel-input symbol stream s as that in the original
+                                           pyi |z
+                                                                          NTSCC [13], [15]. The i-th component si of s is a symbol
+where each parameter tuple Ψi = (µi , σi ) is obtained from               vector whose length is determined as k̄i in (5), where the
+(6). In this way, the context and hierarchical priors are com-            context entropy model pyi |z follows (8). During the contextual
+bined to estimate the distribution of y.                                  JSCC encoding, its pipeline includes two streams, i.e., anchor
+                                                                                                                                                                                                                                                         6
+
+
+
+and non-anchor parts, as demonstrated in Fig. 1 (here some                                                                                                  1.0                                                                                        1.0
+
+
+
+notations will be discussed in the next Section IV which              Hrate, HSNR     1.00             0.99             0.81               0.84                   Hrate, HSNR    1.00             0.90                0.57            0.54
+                                                                                                                                                                                                                                                       0.9
+
+serves for building the bandwidth compatible codec), their                                                                                                  0.9
+                                                                       Hrate, LSNR    0.99             1.00             0.75               0.80                   Hrate, LSNR    0.90             1.00                0.58            0.57
+corresponding sub-encoders fea and fena are parameterized                                                                                                                                                                                              0.8
+
+
+
+
+by ϕfa and ϕfna , respectively. The estimated anchor context           Lrate, HSNR    0.81             0.75             1.00               0.98                   Lrate, HSNR    0.57             0.58                1.00            0.86
+                                                                                                                                                                                                                                                       0.7
+
+
+               ′                                                                                                                                            0.8
+
+latent codes yA   are employed as the conditional input to the
+                                                                                                                                                                                                                                                       0.6
+
+
+JSCC encoding of the non-anchor branch yAc . These two                 Lrate, LSNR    0.84             0.80             0.98               1.00                   Lrate, LSNR    0.54             0.57                0.86            1.00
+
+
+encoding pipelines are carried out in one pass.                                               H SN
+                                                                                                  R
+                                                                                                               L SN
+                                                                                                                   R
+                                                                                                                                H SN
+                                                                                                                                       R
+                                                                                                                                                    L SN
+                                                                                                                                                        R
+                                                                                                                                                            0.7
+
+
+                                                                                                                                                                                         H SN
+                                                                                                                                                                                             R
+                                                                                                                                                                                                          L SN
+                                                                                                                                                                                                                 R
+                                                                                                                                                                                                                              H SN
+                                                                                                                                                                                                                                  R
+                                                                                                                                                                                                                                               L SN
+                                                                                                                                                                                                                                                   R
+                                                                                                                                                                                                                                                       0.5
+
+
+                                                                                          ,                ,                ,                   ,                                    ,                ,                   ,                ,
+                                                                                     H rate           H rate           L rate              L rate                               H rate           H rate              L rate           L rate
+   In the receiver, two decoding passes are needed to obtain
+the whole ŷ as depicted in Fig. 1. The JSCC sub-decoder fda                           (a)                                    (b)
+(parameterized by θfa ) will be first executed for the anchor         Fig. 3. Averaged cosine similarity matrix on Kodak image dataset for (a) ẏ
+branch to obtain ŷA . Then the decoded anchor latent codes           and (b) v̇. In implementation, we finetuned the (Hrate , HSNR ) model to the
+                                                                      other three models by varying the distortion weight λ or the channel SNR ν.
+ŷA are visible in the next decoding pass, which are fed as the
+conditional input to aid the decoding of the non-anchor branch
+in fdna (parameterized by θfna ). Overall, the JSCC decoding
+                                                                         As marked in Fig. 1, with some notation abuse, we monitor
+is a two pass procedure, we thus build the new variable-
+                                                                      the change rule of ẏ = ga (x) (latent features output from the
+rate contextual JSCC codec aligned with the checkerboard
+                                                                      semantic analysis transform) and v̇ = fe (y) (JSCC codewords
+context entropy model. The whole contextual NTSCC system
+                                                                      before rate-matched to the channel-input sequence s) when
+is dubbed “NTSCC+” in this paper.
+                                                                      we change the model learning hyperparameters λ and ν. The
+                                                                      results are provided in Fig. 3, where we calculate the average
+  IV. C OMPATIBLE NTSCC: S INGLE M ODEL , W IDE U SE                  of cosine similarity among 4 individually trained models using
+   In this section, we consider a curial issue related to the prac-   the combination of two different distortion weights and two
+tical deployment of NTSCC based end-to-end communication              different channel SNRs. Hrate and Lrate denote NTSCC models
+system. No matter for the standard or the contextual NTSCC            trained under λ = 0.72 and λ = 0.18, respectively. HSNR
+models, the end-to-end RD tradeoff is typically parameterized         and LSNR mark NTSCC models trained under ν = 10dB and
+by the hyperparameter λ on the distortion term as (4) and (7)         ν = 0dB, respectively. For brevity, we use the combination
+(named as distortion weight). The distortion weight λ plays an        of two hyperparameters to represent each model. Specifically,
+important role in training NTSCC models and requires careful          Fig. 3(a) shows the cosine similarity between latent feature
+tuning for various applications. Moreover, the learning proce-        maps ẏ, Fig. 3(b) shows the cosine similarity between JSCC
+dure of NTSCC is tied with channel conditions, which enables          unrate-matched codewords v̇. From the results, we can draw
+the model to be compatible for channel fading, noise, etc. By         the following insights.
+training multiple models with different values of distortion            1) Overall, when varying the model training hyperparame-
+weight λ and channel SNR ν, we can obtain different points                 ters λ and ν, the feature map ẏ and the JSCC codeword
+on a rate-SNR-distortion surface. Unfortunately, as rate-SNR-              v̇ are both clearly correlated (cosine similarity > 0.54).
+distortion surfaces depend on the dataset, channel conditions,          2) According to Fig. 3(a), NTSCC models learned under the
+and architecture, practitioners need to tune λ and ν for each in-          same rate (i.e., the CBR ρ) but the different channel SNR
+dividual semantic communication task, which will bring large               produce the extremely strong correlated latent features ẏ
+training cost and model storage burden. Such shortcoming                   (cosine similarity 0.99 or 0.98). That means the latent
+calls for a mechanism supporting neural transformation and                 codes output by the analysis transform ga are almost
+JSCC codec to achieve wide rate range and channel SNRs                     invariant when we change the transmission channel con-
+in a single model. In this work, we introduce an improved                  dition. In other words, the parameters of ga can be shared
+NTSCC framework that does not require hyperparameters                      among models applied to different channel SNRs with
+tuning on λ and ν, and can learn to support different rates                negligible performance loss.
+and channel SNRs in a single training run. Our approach is              3) According to Fig. 3(b), NTSCC models learned under the
+named compatible NTSCC.                                                    same rate (i.e., the CBR ρ) but the different channel SNR
+                                                                           produce the reasonably high correlated JSCC codewords
+                                                                           v̇ (cosine similarity 0.90 or 0.86). That means the outputs
+A. Key Insights to Motivate Our Divide-and-Conquer Design                  of JSCC encoder fe under different SNRs could be
+   Our problem is inherently equivalent to formulate response              transformed among each other.
+functions [25] ϕ∗ (λ, ν) and θ ∗ (λ, ν), which map the distortion       4) Jointly considering the results in Fig. 3(a) and 3(b), we
+weight λ and the channel SNR ν to the optimal transformation               can justify that it will be much more efficient to implement
+and JSCC codec parameters trained with such λ and ν. Next,                 the rate adjustment by introducing the transformation on
+through some key experimental observations, we justify that                the latent codes ẏ than on the JSCC codewords v̇. When
+the response function ϕ∗ (λ, ν) in NTSCC can be decoupled                  comparing the models learned under different rates but
+as the ϕ∗g (λ) operated on the analysis transform and the ϕ∗f (ν)          the same channel SNR in Fig. 3(a) and 3(b), we find that
+operated on the JSCC encoder. Similarly, θ ∗ (λ, ν) can be                 the correlation between the JSCC codewords v̇ (cosine
+decoupled as θg∗ (λ), and θf∗ (ν).                                         similarity 0.57) is apparently weaker than that of the
+                                                                                                                                                                                                                                         7
+
+
+
+      latent features ẏ (cosine similarity 0.80 or 0.81). This                     37
+                                                                                                              Kodak dataset
+                                                                                                                                                                      34
+                                                                                                                                                                                       Kodak dataset
+                                                                                                                                          λ = 0.72
+      observation supports the above insight.                                       36                                      λ = 0.36
+                                                                                                                                                                      33
+                                                                                                                λ = 0.18
+                                                                                    35
+   In a comprehensive manner, we can justify that the response                      34
+                                                                                                                                                                      32
+                                                                                                 λ = 0.0483
+function ϕ∗ (λ, ν) in NTSCC can be decoupled as ϕ∗g (λ) and                                                                                                           31
+
+
+
+
+                                                                        PSNR (dB)
+
+
+
+
+                                                                                                                                                          PSNR (dB)
+                                                                                    33
+                                                                                                                                                                      30
+ϕ∗f (ν), and the similar way for decoupling θ ∗ (λ, ν). This                        32
+                                                                                                                                                                      29
+                                                                                    31                             Multi-model, single λ, η = 0.2
+interesting insight aligns well with the design philosophy of                       30
+                                                                                         λ = 0.013                 Single model, λ ∈ Λ, η = 0.15
+                                                                                                                   Single model, λ ∈ Λ, η = 0.2                       28                NTSCC+ (0dB model)
+                                                                                                                                                                                        NTSCC+ (10dB model)
+                                                                                                                   Single model, λ ∈ Λ, η = 0.3
+our traditional separated source and channel codecs, where                          29                             Single model, λ ∈ Λ, η ∈ [0.15, 0.3]               27
+                                                                                                                                                                                        Compatible NTSCC+ (w/o channel attention)
+                                                                                                                                                                                        Compatible NTSCC+ (w/ channel attention)
+
+the linear transform coding (LTC) of source codec varies the                         0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09                                          0   2   4    6       8           10        12            14
+                                                                                                   channel bandwidth ratio                                                             channel SNR
+
+quantization step size for the rate adjustment, and the channel                           (a)                                    (b)
+coded modulation adapts to different channel SNRs via the              Fig. 4. Useful insights to guide the design of response networks. (a) Rate-
+adaptive modulation coding (AMC) mechanism. Similarly, in              distortion (RD) curve of compatible NTSCC+ over the additive white Gaussian
+our compatible NTSCC based SCT system, the rate adaptation             noise (AWGN) channel at SNR = 10dB. Specifically, the “multi-model”
+                                                                       scheme consists of 5 contextual NTSCC models, which are trained individu-
+is also carried out by the nonlinear transformation modules            ally using the labelled λ values. The “single-model” schemes are trained using
+while the channel adaptation is performed on the JSCC codec.           the discrete λ within the set Λ = {0.013, 0.0483, 0.18, 0.36, 0.72}. Besides,
+As marked in Fig. 1, we can employ the distortion weight               the bandwidth scaling factor η used in training is provided in the legend, where
+                                                                       the revised line denotes the model trained by using mixed η values uniformly
+λ as the source quality indicator (SQI) in the transmitter to          sampled from 0.15 to 0.3. (b) SNR-distortion curve of compatible NTSCC+
+adjust the average channel bandwidth cost, and the average             over the AWGN channel under the CBR constraint ρ = 0.04.
+SNR ν as the channel quality indicator (CQI) to match the
+average channel SNR estimated at the receiver. Both SQI
+and CQI are 16bit floating-point numbers which are shared              same rglobal,λ , it brings a coarse rate adjustment effect. Moti-
+in the transceiver via side information link and feedback link,        vated by the channel attention mechanism [27], λ-independent
+respectively. Next, we discuss how to leverage SQI and CQI to          additional scaling vectors ra and rna are learned to scale ẏ
+build the response functions ϕ∗g (λ), ϕ∗f (ν), θg∗ (λ), and θf∗ (ν).   at different channels to match finely with their channel-wise
+                                                                       semantic importance differences. Under this setting, we build
+                                                                       a new response network for the semantic analysis transform
+B. Response Networks for Compatible NTSCC+                             ga∗ that is parameterized by the response function ϕ∗g (λ). As
+   In this part, based on the contextual NTSCC (NTSCC+)                marked in Fig. 1, ga∗ (x) is formulated as
+framework proposed in Section III, we design the approaches                                               (
+for explicitly modeling the response functions with the dual-              ∗
+                                                                                        n
+                                                                                                 (i)
+                                                                                                     o      ẏi ⊘ qa,rate , for i ∈ A,
+                                                                         ga (x) = y = ẏi ⊘ qrate =
+granularity code scaling mechanism. The whole architecture                                                  ẏi ⊘ qna,rate , for i ∈ Ac ,
+is abbreviated as “compatible NTSCC+”.                                                                                                 (13)
+   1) Rate Adjustment in Compatible NTSCC+: As analyzed                herein, i marks the spatial position, ⊘ denotes the element-
+before, to adjust the overall rate, the response function ϕ∗g (λ)      wise division, and with some notation abuse, ẏi represents the
+can be built by directly manipulating the latent feature ẏ output     C-dimensional vector along the channels at the i-th spatial
+from the well-trained semantic analysis transform ga which is          position of the tensor ẏ. In such a way, the final latents output
+parameterized with ϕg,λ0 ,ν0 . Herein, ϕg,λ0 ,ν0 encapsulates the      from the new response semantic analysis transform y = ga∗ (x)
+network parameters learned under the default hyperparameters           is controlled by the SQI λ.
+λ0 and ν0 . In general, due to the highly-correlated latent codes         Correspondingly, as depicted in Fig. 1, in the receiver, we
+ẏ given by models under different rates, we can apply a well-         also build the response semantic synthesis transform gs∗ (ŷ)
+learned affine transform to transfer from one baseline latent          using the response function θg∗ (λ) = (θg,λ0 ,ν0 , qrate ), we thus
+code to the other target latent codes [10]. This affine transform      write the reconstructed version of ẏ as
+is controlled by the hyperparameter λ. For brevity, we con-                                        (
+struct a compact approximation of the affine transform to build
+                                                                                 n
+                                                                                           (i)
+                                                                                               o     ŷi ⊙ qa,rate , for i ∈ A,
+                                                                             ˆ = ŷi ⊙ qrate =
+                                                                             ẏ                                                        (14)
+the response function ϕ∗g (λ) as ϕ∗g (λ) = (ϕg,λ0 ,ν0 , qrate ),                                     ŷi ⊙ qna,rate , for i ∈ Ac .
+                                              (i)
+where the channel-wise scaling vector qrate (C dimensions)
+                                                                                                                             ˆ where
+                                                                       The final reconstructed signal is x̂ = gs∗ (ŷ) = gs (ẏ),
+applied to the C-dimensional latent vector ẏi output from the
+ϕg,λ0 ,ν0 parameterized ga is written as                               gs is parameterized by θg,λ0 ,ν0 .
+              (                                                           We further investigate the capability of our new response
+       (i)      qa,rate = rglobal,λ · ra , for i ∈ A,                  nonlinear transform functions ga∗ and gs∗ by checking their
+      qrate =                                                 (12)     adaptation range of the SQI λ in a single model. As shown in
+                qna,rate = rglobal,λ · rna , for i ∈ Ac ,
+                                                                       Fig. 4(a), each single model with fixed η can very closely ap-
+which is aligned with the operations in [24] and [26]. From            proach the multi-model RD curve with only slight performance
+(12), we find that our dual-granularity approach involves two          loss, which verifies the effectiveness of our response networks.
+different kinds of scaling operations on both the anchor and the       But we also find that their CBR covering range with one single
+non-anchor branches: the global scaling scalar rglobal,λ , and         model is somewhat limited. To further extend the compatible
+the channel-wise scaling vectors ra and rna . The rglobal,λ is         NTSCC coverage to the whole RD curve, we need to adjust
+only a single value and is set from the SQI λ for controlling the      the bandwidth scaling factor η on each estimated entropy term
+overall target rate. As all elements of ẏ are manipulated by the      − log pyi |z (yi ). Compared to the SQI λ for the fine channel
+                                                                                                                                          8
+
+
+
+bandwidth cost controlling, the bandwidth scaling factor η is                In Fig. 4(b), we justify the effectiveness of our channel
+leveraged to coarsely manipulating the bandwidth cost range.              attention method to generate the scaling vectors qa,SNR and
+Based on this insight, we suggest training the response network           qna,SNR . If we simplify the channel attention mechanism as
+with cooperative use of λ and η values. As plotted with the               that adopted in the rate adjustment, ca and cna are degraded
+revised line in Fig. 4, it covers a broad range of the RD curve           to be learned and shared spatially along the checkerboard
+and aligns well with the multi-model scheme except for the                (without (w/o) channel attention) which are independent with
+very high rate region, which is due to the insufficient capacity          v̇. Our channel attention method enables ca and cna tied with
+in a single model.                                                        the JSCC codeword instance v̇. Apparently, our codeword-
+   2) SNR Adaptation for Compatible NTSCC+: Similar to                    dependent attention method (marked as w/ channel attention)
+the approach in the rate adjustment, we also construct the                compensates for the performance loss in Fig. 4(b).
+response function ϕ∗f (ν) = (ϕfa ,λ0 ,ν0 , ϕfna ,λ0 ,ν0 , qSNR ) to
+adapt a well-trained NTSCC+ model to various channel states,                 V. O NLINE E DITABLE NTSCC: M ORE F LEXIBLE SCT
+                                             (i)
+where the channel-wise scaling vector qSNR applied to the                    Based on the above two improvements, we have built the
+JSCC codeword vector v̇i is written as                                    NTSCC+ and compatible NTSCC+ system. Although it can be
+              (                                                           very successful in minimizing the given end-to-end expected
+      (i)       qa,SNR = cglobal,ν · ca , for i ∈ A,
+     qSNR =                                                    (15)       RD cost over a full source dataset and ergodic channel
+                qna,SNR = cglobal,ν · cna , for i ∈ Ac .                  responses, existing NTSCC models yet only pay attention to
+where the cglobal,ν is the global scaling scalar associated with          optimizing an average low RD cost on the training set and
+the CQI (usually adopted as the average channel SNR ν), ca                the predetermined distortion metric. For a given data/channel
+and cna are the channel-wise scaling vectors corresponding to             sample, or when we introduce new semantic guidance, e.g., the
+the anchor and non-anchor positions, respectively. A special              human perceptual metric [28], the region-of-interest (ROI) [29]
+note, the CQI ν is preferred to be embedded as the channel                guidance in XR, etc., whose corresponding RD loss function
+                     (i)         (i)
+attention vectors qa,SNR and qna,SNR related to the JSCC code             has not been seen during the model training, such a learned
+vector v̇i , which enhances the capacity of our new response              semantic codec may not be good at capturing the specific data
+networks for the contextual JSCC codec. Accordingly, the                  semantic feature and channel state at this instance, resulting in
+modulation from v̇i to ca and cna is a fully-connected network            suboptimal transform and coding during the model inference
+(FCN) including two linear layers and a rectied linear unit               stage.
+(ReLU) for non-linearity. The mapping procedures from ν and                  To tackle this, we further introduce a class of enhancement
+v̇ to qSNR are written as                                                 methods to the NTSCC+ system by online optimizing the
+             ( (i)                                                        semantic latent code and the variable-length JSCC codec
+     (i)       qa,SNR = cglobal,ν · FCNa (v̇i ), for i ∈ A,               individually, on a per data sample and channel response basis,
+   qSNR =       (i)                                                       during the model inference stage. In other words, we turn
+               qna,SNR = cglobal,ν · FCNna (v̇i ), for i ∈ Ac .
+                                                             (16)         to minimize the end-to-end instant RD cost for substantial
+   Under this setting, we can build the new response network              gains on every data and target instance. This instance-adaptive
+for the JSCC encoder fe∗ (including fe∗a and fe∗na ) that is              system is dubbed “NTSCC++”. The key idea leverages the
+parameterized by the response function ϕ∗f (ν). As marked in              overfitting property of neural networks [30]–[35]. With the
+Fig. 1, the unrate-matched JSCC codeword v given by the                   online semantic latent code editing and JSCC codec updating,
+encoder fe∗ (y) is formulated as                                          we can empower SCT with more flexible coded transmission
+                                                                          capabilities. In addition, new semantic guidance can extend
+                                     (i)
+                           (
+          n
+                   (i)
+                        o    v̇i ⊘ qa,SNR , for i ∈ A,                    the optimization target for NTSCC+, we can thus achieve
+     v = v̇i ⊘ qrate =               (i)
+                                                             (17)         different coded transmission requirements. Motivated by [34],
+                             v̇i ⊘ qna,SNR , for i ∈ Ac ,
+                                                                          as two examples, we explore the potential of online adapta-
+                                                         ′
+where v̇A = fea (yA ) and v̇Ac = fena (yAc , yA            ), i denotes   tion in ROI-based NTSCC++ and multi-distortion optimized
+the spatial position. Finally, according to the estimate entropy          NTSCC++.
+term − log pyi |z (yi |z) and the bandwidth scaling factor η,
+each codeword vector vi is rate-matched to the k̄i -dimensional           A. Online Adaptation for Standard NTSCC++
+channel-input symbol vector si as (5). In such way, the final                Based on the amortized model (ϕ, θ, ψ, ω) learned on the
+variable-rate JSCC codeword output from the new response                  entire dataset and ergodic channel states, given any specific
+JSCC encoder s = fe∗ (y) is adjusted by the CQI ν.                        source sample x, we further optimize the goal (19) by online
+   Correspondingly, as depicted in Fig. 1, in the receiver, we            updating the semantic latent codes (yA , yAc ) and the contex-
+also build the response JSCC decoder fd∗ (ŝ) using the response          tual JSCC encoder parameters (ϕfa , ϕfna ), which are marked
+function θf∗ (ν) = (θfa ,λ0 ,ν0 , θfna ,λ0 ,ν0 , qSNR ), we thus write    as the gradient descent updating terms “□” in Fig. 1,
+the reconstructed version of v̇ as
+                           (           (i)                                          LRD (yA , yAc , ϕfa , ϕfna ) =
+         n
+                  (i)
+                       o      v̂i ⊙ qa,SNR , for i ∈ A,                                                                              (19)
+    ˆ = v̂i ⊙ q
+    v̇                   =                                         (18)             Eh∼ph − η log py|z (y|z) + λ · d(x, x̂) ,
+                  SNR                  (i)
+                              v̂i ⊙ qna,SNR , for i ∈ Ac .
+                                                                          the other parameters (ϕg , ϕh , θg , θf , θf ) are amortized over
+Hence, the reconstructed semantic latent features are ŷA =               the baseline contextual NTSCC model trained under the ob-
+                          ˆAc , ŷA ).
+     ˆA ) and ŷA = fdna (ẏ
+fda (ẏ                                                                   jective function in (7). A special note is that the expectation
+                                                                                                                                                       9
+
+
+
+over the channel response in (19) can be omitted if the instant                        where the hyperparameters λo and λs control the tradeoff
+channel response h can be known by the transmitter.                                    between the objective loss and the subjective loss. As marked
+                                                                                       in (21), in this paper, these two types of loss are typically set
+                                                                                       as MSE and LPIPS, respectively, but we do not restrict other
+B. Online Adaptation for ROI-based NTSCC++                                             choices of objective and subjective distortions.
+   The variational estimate entropy on the latent codes repre-
+sents the source content complexity, which guides the resource                                        VI. E XPERIMENTAL R ESULTS
+allocation in variable-rate JSCC. Apart from the entropy, the
+need of ROI-based coding stems from the fact that different                            A. Network Architecture
+pixels in an image have different levels of importance for hu-                            The modular implementation details of our improved
+man perception or machine tasks. It can be viewed as an extra                          NTSCC are depicted in Fig. 5, where (a)(b)(c) present the
+semantic guidance to derive a new end-to-end RD loss function                          structure of basic building blocks, and (d) shows the network
+so that the spatially different channel bandwidth cost should                          architecture of the transmitter side.
+be assigned according to ROI during coded transmission. Take                              1) Nonlinear Transform and Entropy Model: Build upon
+the image source as example, when performing ROI-based                                 our previous work of NTSCC [13], we first modify the
+NTSCC++, a quality map m ∈ RH×W is assigned to the                                     architecture of nonlinear transform modules ga∗ and gs∗ to
+source image x ∈ RH×W ×3 , which indicates the semantic                                build more expressive transforms. In particular, we replace
+importance of each pixel. The ROI quality map m is bounded                             the Transformer block using the residual Transformer Block
+within [0, 1], where 0 and 1 represent the least and the most                          (ResTB) [40], and incorporate a stride 2 convolution (transpose
+important pixel respectively. Guided by the ROI map m and                              convolution) layer for downsampling (upsampling). Addition-
+its corresponding unbalanced bandwidth scaling factors {ηi }                           ally, we utilize the checkerboard entropy model for more
+which are tied with the requirements from the low-level human                          precise entropy estimation as shown at the top of Fig. 5(d). In
+vision or the high-level machine vision tasks [36], we extend                          this model, the information density of each patch is estimated
+the objective function in (7) for obtaining the instance-adaptive                      using a parametric Gaussian density model.
+target LROI
+         RD (yA , yAc , ϕfa , ϕfna ) as                                                   In practice, by encapsulating a down-sampling layer and
+                                                                                       the following ResTBs as one stage, the analysis transform ga∗
+   LROI
+    RD (yA , yAc , ϕfa , ϕfna ) =                                                      consists of 4 stages. We adopt N = 192 feature channels for
+          X
+                                                                                       the first 3 stages and M = 320 channels for the last stage. The
+                                                                  
+   Eh∼ph       −ηi log pyi |z (yi |z) +λ · (m ⊙ d(x, x̂)) .
+             i
+                                           |       {z         }                        numbers of ResTBs in four stages are set to (1, 2, 6, 2). On
+                                          ROI weighted distortion
+                                                                                       the other hand, the synthesis transform, gs∗ , has a symmetrical
+          |           {z            }
+                  channel bandwidth cost
+                                                        (20)                           structure, with M channels for the first stage, N channels for
+Since our online instance-adaptive approach imposes no prior                           the following 3 stages. The number of ResTBs in each stage is
+on the shape of ROI during model training, and thus our ROI                            (2, 6, 2, 1). The multi-head self-attention (MHSA) within the
+control is quite flexible.                                                             ResTB employs a windows-based attention mechanism [41],
+                                                                                       with a 7 × 7 sliding window for ga∗ and gs∗ , and a 3 × 3
+                                                                                       window for the entropy model. The number of heads in the
+C. Online Adaptation for Multi-Type Distortions                                        MHSA increases by one for every 16 channels, and the channel
+   For end-to-end wireless data transmission systems, some-                            expansion ratio of the multi-layer perceptron (MLP) is 2.
+times we want to optimize the objective distortion (such as the                           2) Contextual JSCC Codec: The contextual JSCC codec
+mean-square-error (MSE)), sometimes we want to optimize the                            fe∗ consists of two sub-encoders: the anchor branch fea and
+subjective perceptual loss (such as LPIPS [37]), and sometimes                         the non-anchor branch fena , which are designed to exploit the
+we are more inclined to a balanced tradeoff between them [38].                         contextual dependencies within JSCC codewords. To achieve
+Since different distortion metrics are in odds to each other                           this, we build a powerful contextual vision Transformer (ViT)
+[39], an intuitive solution is adding multiple-type distortions                        block by conditioning y Ac on already decoded (simulated
+to (7) to optimize NTSCC++ parameters for a specific weights                           locally in the transmitter) semantic latent features y ′A . This
+between rate, and various distortions. However, multi-type                             block (see Fig. 5(c)) alternates between self-attention layers
+distortion tradeoff requires multiple, or even infinite number                         and cross-attention layers. In the cross-attention layers, the
+of decoders to achieve, and a switch among different distortion                        anchor JSCC codewords y ′A are used to generate keys (K) and
+weights may also need model retraining.                                                values (V), which will be queried by the latent representations
+   Again, we employ the online latent feature editing and JSCC                         in the non-anchor branch. We use N1 = 4 contextual ViT
+encoder updating strategy to achieve the multi-distortion (MD)                         blocks, and N2 = 4 ViT blocks.
+tradeoff by extending the NTSCC+ objective function in (7),                               The JSCC rate matching process in the JSCC encoder fe∗
+we thus obtain the instance-adaptive target                                            maps the latent features y into variable-length channel-input
+                                                                                       vectors s. The length of each channel-input vector si is deter-
+LMD
+ RD (yA , yAc , ϕfa , ϕfna ) = Eh∼ph                                                   mined by a scalar quantization function Q, which is formulated
+                                                                               
+ −η log py|z (y|z) +λo · dMSE (x, x̂) +λs · dLPIPS (x, x̂)                         ,   as a piecewise linear function. Specifically, when ki ≤ 32, the
+                                                                                       quantization is computed as Q(ki ) = min (1, ⌊ki /4⌋), whereas
+ |      {z       }       | {z }             |    {z      }
+  channel bandwidth cost        objective distortion   subjective distortion
+                                                                         (21)          for ki > 32, the quantization is given by Q(ki ) = ⌊ki /16⌋.
+                                                                                                                                                                                                                                                                                                                                        10
+
+
+
+                     ViT Block                                                               Checkerboard Context Entropy Model
+
+
+
+
+                                                                                                                                                                                                                               Masked Conv 5×5×2M
+                              Q
+
+
+
+
+                                                                                                                                                                                        ResTB | 5×5×2M, ↑2
+                                  Self-Attention
+
+
+
+
+                                                                                                        ResTB | 5×5×N, ↓2
+
+
+                                                                                                                            ResTB | 5×5×N, ↓2
+
+
+
+
+                                                                                                                                                                    ResTB | 5×5×N, ↑2
+
+
+
+
+                                                                                                                                                                                                                                                                  Conv 1×1×4M
+
+
+
+
+                                                                                                                                                                                                                                                                                        Conv 1×1×3M
+
+
+
+
+                                                                                                                                                                                                                                                                                                              Conv 1×1×2M
+                                                                                                                                                Entropy Modeling
+                                   Multi-Head
+
+
+
+
+                                                                                                                                                                                                                                                    Concatenate
+                                                                                                                                                 Quantization &
+
+
+
+
+                                                                                                                                                                                                                                                                                 GELU
+
+
+
+
+                                                                                                                                                                                                                                                                                                       GELU
+                              K
+                       Norm
+
+
+
+
+                                                                  Norm
+
+                                                                                 MLP
+                                                    Add
+
+
+
+
+                                                                                       Add
+  (a)
+                              V
+
+
+
+
+        Residual Transformer
+                                                     Conv 5×5×C
+           Block (ResTB)
+
+
+
+                                                                         ViT Block
+  (b)                                                                                                                                                                                                                                                                                                 Rate Allocation
+
+
+
+
+                                                                                       Add
+
+
+
+
+                                                                                                                                                                                                               Contextual
+                                                                                                                                                                                                               ViT Block
+                                                                                                                                         ÷                                                                                     ÷                                                                                   FC
+
+                                                                                                                                                                                                                                                                                                                   FC
+
+
+
+
+                                                                                                                                                                                                                                                                                                                            PowerNorm
+         Contextual ViT Block                                                                                                                                                                                                                                                                                      FC
+
+
+
+
+                                                                                                                                                                                                                                                                                                      ...
+  (c)                         Q                                                                                                                                                                                                                                                                                    FC
+                                  Cross-Attention
+                                    Multi-Head
+         ViT Block
+
+
+
+
+                                                                                                                                                                                                                   ViT Block
+                                                                                                                                                                                                                                                                                                                   FC
+                              K
+                       Norm
+
+
+
+
+                                                                  Norm
+
+                                                                                 MLP
+                                                    Add
+
+
+
+
+                                                                                       Add
+
+
+
+                                                                                                                                         ÷                                                                                     ÷                                                                                   FC
+                              V
+
+                                                                                             Semantic Analysis Transform                                                                                                                                                        Contextual JSCC Encoder
+                                                                                                                                                                                                             (d)
+
+Fig. 5. The employed network architecture of the transmitter side of improved NTSCC for image sources. (a) shows the adopted vision Transformer (ViT)
+architecture. By integrating the ViT block, (b) shows the residual Transformer block (ResTB), (c) shows the contextual ViT block. Based on these blocks, we
+construct the transmitter of compatible NTSCC+ system in the subfigure (d), and the receiver is dual to this architecture. Convolution parameters are denoted
+as: “the number of filters × kernel height × kernel width, up-sampling or down-sampling stride”, where ↑ / ↓ indicates up- and down-sampling, respectively.
+
+The resulting quantized rate allocation map is then reliably                                                                                                       contents and resolutions: Kodak [43] at the size of 512 × 768,
+transmitted to the receiver as additional side information via                                                                                                     and CLIC21 testset [14] with approximate 2K resolution
+a digital link using the portable network graphics (PNG) for                                                                                                       (2560 × 1440) images. These datasets are widely used for
+source coding and LDPC codes for channel coding. Empirical                                                                                                         image processing evaluation. We mainly consider the mean
+results show that the cost of this side information ranges from                                                                                                    square error (MSE) for distortion measurement calculated
+1% ∼ 7% of the total bandwidth, depending on the specific                                                                                                          in RGB color space, which is aligned with the optimiza-
+CQI and SQI.                                                                                                                                                       tion target of the classical image codec. We compare our
+                                                                                                                                                                   method with a broad collection of prominent image codecs
+                                                                                                                                                                   combined with 5G LDPC channel coding [20] and digital
+B. Experimental Setup                                                                                                                                              modulation following the 3GPP standard. In particular, the
+   1) Training Details: DIV2K dataset [42] is adopted as the                                                                                                       considered conventional transform-based image codecs include
+training dataset. During training, images are randomly cropped                                                                                                     BPG (compliant with the intra-frame coding scheme of the
+into 256 × 256 patches. We use the Adam optimizer with                                                                                                             HEVC standard) and VTM-20.0 (intra-frame coding scheme
+default parameters. The training process includes a total of                                                                                                       of the VVC standard, SOTA engineered image codec). We also
+610,000 iterations with the batchsize 8, where the learning                                                                                                        consider the emerging end-to-end learned image compression
+rate is set to 10−4 in initial 600,000 iterations and decays to                                                                                                    methods incudes Ballé et al. 2018 [12], Minnen et al. 2018
+10−5 for another 10,000 iterations. For the contextual NTSCC                                                                                                       [16], and He et al. 2021 [17] for comparison. Apart from
+(NTSCC+), we train 5 models using 5 different λ values in                                                                                                          these, we also compare our improved NTSCC with the deep
+the set Λ = {0.013, 0.0483, 0.18, 0.36, 0.72} and η = 0.2,                                                                                                         JSCC scheme [7] and the original NTSCC [13] for end-to-
+over the AWGN channel at SNR= 10dB. For our compatible                                                                                                             end transmission. For fair comparison, all images are cropped
+NTSCC+ scheme, we finetune the λ = 0.72 model for extra                                                                                                            to multiples of 64 to avoid padding for neural codecs. The
+100,000 iterations. In each iteration, we randomly select λ                                                                                                        above simulations are implemented at the top of Sionna [44],
+uniformly from Λ, draw η values from [0.15, 0.3], and sample                                                                                                       which is an open-source library for link-level simulations of
+channel SNR uniformly from [0dB, 14dB]. We set a group                                                                                                             digital communication systems. We use “+” to concatenate the
+of global CQI scaling scalars cglobal,ν with an interval of                                                                                                        source coding and channel coding schemes. Please refer to the
+3dB. Since the learned global scaling scalars only point to                                                                                                        Appendix A for more detailed experiment settings.
+a few discrete λ and ν values, the exponential interpolation is
+adopted between two adjacent scalars to achieve continuous
+rate-SNR adaptation. In the case of online instance-adaptive                                                                                                       C. Results Analysis
+NTSCC++, without additional clarification, we update the                                                                                                              Fig. 6 shows the RD comparison results over the AWGN
+latent codes y and the contextual JSCC encoder parameters                                                                                                          channel at SNR = 10dB. These results indicate that our
+ϕf for Tmax = 20 steps per image sample by default. The                                                                                                            contextual NTSCC model (NTSCC+) can outperform all of the
+learning rate is set to 10−4 for ϕf and 5 × 10−3 for y. The                                                                                                        traditional coded transmission schemes using the standardized
+best updated codes and model parameters based on the RD                                                                                                            image codec (BPG and VTM) or the emerging neural image
+loss is selected for model inference.                                                                                                                              codecs. To the best of our knowledge, this is the first end-
+   2) Evaluation Protocol: We evaluate the image transmis-                                                                                                         to-end transmission system outperforming the SOTA VTM +
+sion systems on two popular datasets that contain diverse                                                                                                          5G LDPC scheme on the classical PSNR metric. Compared to
+                                                                                                                                                                                                                                                                                                                                                                                                11
+
+
+
+
+        37                                                                                                           20                                                                                                                                                                                                        20
+
+
+
+
+                                                                         Ba)d1idth −a0i)g (%) over VTM + 5G LDPC
+
+
+
+
+                                                                                                                                                                                                                                                                                 Ba)d1idth −a0i)g (%) over VTM + 5G LDPC
+                  BPG + 5G LDPC                                                                                                                                                                                      BPG + 5G LDPC
+                  VTM + 5G LDPC                                                                                                                                                                          38          VTM + 5G LDPC
+        36        Minnen et al. 2018 + 5G LDPC                                                                        0                                                                                              Minnen et al. 2018 + 5G LDPC                                                                               0
+                  He et al. 2021 + 5G LDPC                                                                                                                                                               37          He et al. 2021 + 5G LDPC
+        35
+                                                                                                                   −20                                                                                                                                                                                                     −20
+        34                                                                                                                                                                                               36
+
+
+
+
+                                                                                      (larger is better)
+
+
+
+
+                                                                                                                                                                                                                                                                                              (larger is better)
+        33                                                                                                         −40                                                                                                                                                                                                     −40
+PSNR (dB)
+
+
+
+
+                                                                                                                                                                                             PSNR (dB)
+                                                                                                                                                                                                         35
+                                                                                                                                                                                                                                                                                                                                                                        NTSCC
+        32                                                                                                         −60                                                                                                                                                                                                     −60                                          Our NTSCC+
+                                                                                                                                                                                                         34
+        31                                                                                                         −80                                                                                                                                                                                                     −80
+                                                                                                                                                                                                                                                                                                                                                                        Our compatible NTSCC+
+                                                                                                                                                                                                                                                                                                                                                                        Our NTSCC++
+        30                                                                                                                     BPG + 5G LDPC
+                                                                                                                                                                                                         33                                                                                                                              BPG + 5G LDPC
+                                                 Deep JSCC                                                                                                          NTSCC                                                                           Deep JSCC
+        29                                       NTSCC                                                             −100        VTM + 5G LDPC                        Our NTSCC+                           32                                         NTSCC                                                                  −100          VTM + 5G LDPC
+                                                 Our NTSCC+                                                                    Minnen et al. 2018 + 5G LDPC         Our compatible NTSCC+                                                           Our NTSCC+                                                                           Minnen et al. 2018 + 5G LDPC
+        28                                       Our compatible NTSCC+
+                                                 Our NTSCC++
+                                                                                                                   −120        He et al. 2021 + 5G LDPC
+                                                                                                                               Deep JSCC
+                                                                                                                                                                    Our NTSCC++
+                                                                                                                                                                                                         31
+                                                                                                                                                                                                                                                    Our compatible NTSCC+
+                                                                                                                                                                                                                                                    Our NTSCC++
+                                                                                                                                                                                                                                                                                                                           −120          He et al. 2021 + 5G LDPC
+                                                                                                                                                                                                                                                                                                                                         Deep JSCC
+        27
+            0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10                                                             31       32           33      34     35        36      37                           0.01     0.02       0.03    0.04    0.05            0.06    0.07                                                      31       32       33      34     35       36        37
+                           channel bandwidth ratio                                                                                                    PSNR (dB)                                                                  channel bandwidth ratio                                                                                                    PSNR (dB)
+
+             (a) Kodak                              (b) Kodak                         (c) CLIC21                       (d) CLIC21
+Fig. 6. End-to-end rate-distortion comparison over the AWGN channel at SNR = 10dB for (a) Kodak (c) CLIC21. Bandwidth saving against the “VTM +
+5G LDPC” anchor for (b) Kodak (d) CLIC21. Peak signal-to-noise ratio (PSNR) is used to measure reconstruction quality.
+
+
+                                                                                                                                            36
+                                                                                                                                                                                                                                                                 36
+                                                                                                                                            34
+                                                                                                                                                                                                                                                                 34                                                                                             CBR ρ = 0.04
+                                                                                                                                                       SNR ν = 10dB                         SNR ν = 4dB
+                                                                                                                                            32                                                                                                                            CBR ρ = 0.09
+                                                                                                                                    PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                     PSNR (dB)
+                                                                                                                                                                                                                                                                 32
+                                                                                                                                            30
+                                                                                                                                                                                                                                                                 30
+                                                                                                                                            28
+                                                                                                                                                                                            SNR ν = 0dB
+                                                                                                                                            26                                                       BPG + 5G LDPC                                               28                                                                                     BPG + 5G LDPC
+                                                                                                                                                                                                     VTM + 5G LDPC                                                                                                                                      VTM + 5G LDPC
+                                                                                                                                                                                                     Our compatible NTSCC+                                                                                                                              Our compatible NTSCC+
+                                                                                                                                            24                                                                                                                   26
+                                                                                                                                                     0.02     0.03       0.04 0.05 0.06 0.07                              0.08       0.09                             0      2                                             4          6      8                10        12         14
+                                                                                                                                                                          channel bandwidth ratio                                                                                                                                   channel SNR
+
+                       (a)                                         (b)                                              (c)
+Fig. 7. End-to-end rate-SNR-distortion comparison over the AWGN channel on the Kodak dataset. (a) shows the rate-SNR-distortion surface obtained by
+compatible NTSCC+. (b) compares RD curves of different coded transmission schemes at SNR = 0dB, 4dB, and 10dB. (c) compares SNR-distortion curves
+under the CBR constraint ρ = 0.04 and ρ = 0.09.
+
+
+
+the standard NTSCC, our NTSCC+ shows clear performance                                                                                                                                                                        TABLE I
+gain, that verifies the efficiency of checkerboard context model                                                                                                                                 AVERAGED BD- RATE ( SMALLER IS BETTER ) IMPROVEMENT AGAINST THE
+                                                                                                                                                                                                  “VTM + 5G LDPC” ANCHOR FOR DIFFERENT TRANSMISSION SCHEMES
+on exploiting the correlative probabilistic structure among the                                                                                                                                   AND DATASETS . R ED AND BLUE INDICATES THE BEST AND THE SECOND
+semantic latent features. Moreover, through online updating                                                                                                                                                       BEST PERFORMANCE , RESPECTIVELY.
+latents and JSCC encoder, our NTSCC++ achieves further
+performance gain in Fig. 6(a) with some extra encoding                                                                                                                                                    Coded transmission scheme                                                                                                       Kodak                           CLIC21
+complexity and latency cost as discussed later. In Fig. 6(b),                                                                                                                                             JPEG + 5G LDPC                                                                                                                 186.09%                          586.31%
+we present the relative CBR reduction against the “VTM +                                                                                                                                                  JPEG2000 + 5G LDPC                                                                                                              94.24%                          323.11%
+5G LDPC” anchor at a range of PSNR levels. These results                                                                                                                                                  BPG + 5G LDPC                                                                                                                   23.93%                           55.43%
+are derived according to the Bjøntegaard Delta (BD) chart                                                                                                                                                 VTM + 5G LDPC                                                                                                                     0%                               0%
+[45] by plotting the CBR savings as a function of quality,                                                                                                                                                Ballé et al. [12] + 5G LDPC                                                                                                   31.79%                            47.71%
+which verifies that the system coding efficiency gain of our                                                                                                                                              Minnen et al. [16] + 5G LDPC                                                                                                   11.94%                            11.65%
+NTSCC+ and NTSCC++ holds for a wide PSNR range and                                                                                                                                                        He et al. [17] + 5G LDPC                                                                                                       6.86%                             8.90%
+diverse image resolutions. For completeness, we present more                                                                                                                                              Deep JSCC                                                                                                                       74.87%                          158.88%
+RD curves and results tested on Kodak and other datasets in                                                                                                                                               NTSCC                                                                                                                           1.33%                            23.06%
+the Appendix B.                                                                                                                                                                                           Our NTSCC+                                                                                                                     –5.86%                            2.94%
+   In Table I, we summarize the BD-rate (smaller is better) of                                                                                                                                            Our compatible NTSCC+                                                                                                           –1.74%                           20.94%
+                                                                                                                                                                                                          Our NTSCC++                                                                                                                    –14.25%                          –4.70%
+coded transmission schemes across two datasets. Compared
+to the He et al. 2021 [17] + 5G LDPC which also involves
+attention-based transforms and checkerboard context model,
+our NTSCC+ still presents superiority, that justifies the ef-                                                                                                                                    compatible NTSCC+ can achieve fine continuous rate control
+fectiveness of our well-matched nonlinear transform, context                                                                                                                                     and SNR adaptation in a single model, which can effectively
+entropy modeling, and contextual JSCC codec. Compared to                                                                                                                                         reduce computational and storage cost during model training
+the anchor VTM + 5G LDPC, our NTSCC++ achieves a                                                                                                                                                 and deployment. Although compatible NTSCC+ performs
+14.25% channel bandwidth cost saving on Kodak dataset and                                                                                                                                        worse than the multi-model NTSCC+, it is still competitive
+a 4.70% CBR saving on CLIC21 testset.                                                                                                                                                            for better performance than BPG + 5G LDPC and on par
+   In Fig. 7, we show the performance of our bandwidth                                                                                                                                           performance with VTM + 5G LDPC over a broad SNR and
+compatible contextual NTSCC (compatible NTSCC+) over                                                                                                                                             CBR region.
+the AWGN channel with different SNR values and under                                                                                                                                                To further evaluate the flexibility of our compatible
+various CBR constraint. Results in Fig. 7(a) indicate that our                                                                                                                                   NTSCC+, Fig. 9 illustrates a practical fading channel case
+                                                                                                                                                                            12
+
+
+
+              Original image / ROI map                        VTM + 5G LDPC                          Our standard NTSCC++                Our ROI-based NTSCC++
+
+
+
+
+                       ρ / PSNR / PSNRROI                        0.062 / 26.9 / 26.6                     0.062 / 27.0 / 27.5                  0.038 / 21.8 / 27.6
+Fig. 8. Visual examples of online adaptation based on the ROI over the AWGN channel with a SNR of 10dB. The first column shows the original equirectangular
+projection (ERP) image and its corresponding ROI mask, in which 3 viewports with different visual angles are selected and distinguished by different colors.
+The subsequent columns display the reconstructed images generated by three coded transmission schemes. In the implementation of the ROI-based NTSCC++
+scheme, the scaling factor η1 = 0.25 and the quality map value m1 = 1.25 are assigned to the ROI regions, indicated by the white color in the ROI mask,
+while the scaling factor η2 = 0.05 and the quality map value m2 = 0.25 are assigned to the non-ROI regions, indicated by the black color in the ROI mask.
+
+
+                                                                                                                            TABLE II
+              10
+  SNR (dB)
+
+
+
+
+                                                                                                   AVERAGED ENCODING / DECODING LATENCY ON THE KODAK DATASET.
+               5
+                                                                                                                                 BD-ρ     Params    End-to-end latency (s)
+               0                                                                                   Transmission scheme                     (M)
+                   0        100      200        300        400          500      600                                            (%, ↓)              Encoding     Decoding
+              25                            Frame number                           30
+  MCS index
+
+
+
+
+              20                                                                                                                          14.13 †
+                                                                                       QP value
+
+
+
+
+                                                                                   35              Minnen [16] + 5G LDPC        11.94                0.046           1.7
+              15
+              10                                                                   40              He [17] + 5G LDPC            6.86      26.60 †    0.087          0.15
+               5                                                                   45              VTM + 5G LDPC                  0         —         65.8          0.289
+                   0        100      200        300      400            500      600
+                                            Frame number                                           NTSCC [13]                    1.33     32.94 ‡    0.036          0.015
+              32
+                                                                                                   Our NTSCC+                    –5.86    57.36 ‡    0.058          0.023
+  PSNR (dB)
+
+
+
+
+              30                                                                                   Our compatible NTSCC+         –1.74    60.29      0.061          0.027
+                                                                                                   Our NTSCC++ (1 step)          –9.77    57.36 ‡     0.6           0.023
+                                                VTM + 5G LDPC
+              28                                Our compatible NTSCC+                              Our NTSCC++ (5 steps)        –11.30    57.36 ‡     2.5           0.023
+                   0        100      200        300      400            500      600               Our NTSCC++ (10 steps)       –12.80    57.36 ‡     5.2           0.023
+                                            Frame number
+                                                                                                   Our NTSCC++ (20 steps)       –14.25    57.36 ‡     10.9          0.023
+Fig. 9. Comparisons of the image quality between the VTM + 5G LDPC                                 Our NTSCC++ (100 steps)      –16.75    57.36 ‡     52.3          0.023
+and our compatible NTSCC+ under a practical fading channel sampled from                            † The total model size should be N times larger, where N is the number
+COST2100 channel model [46], where the fading coefficient varies with the                                                            λ                     λ
+                                                                                                    of rate points.
+frame number. The top subfigure shows the instant channel SNR, the middle                          ‡ The total model size should be N × N times larger, where N denotes
+                                                                                                                                     λ   ν                     ν
+subfigure shows the adaptive coded modulation scheme and the quantization
+                                                                                                    the number of SNR points.
+parameter (QP) in VTM + 5G LDPC. The bottom subfigure plots the PSNR
+value of each frame under the CBR constraint ρ = 0.04.
+                                                                                                  bandwidth savings. It achieves a 40% bandwidth rate savings
+                                                                                                  over the standard NTSCC++ method, while still preserving
+collected from COST2100 channel model [46]. The results                                           the quality of the images within the ROI. This highlights the
+indicate that, the classical layered design, with finite number                                   potential of the method as a viable solution for 360◦ media
+of QPs in source compression and modulation and coding                                            applications such as viewport-based streaming or saliency-
+schemes (MCS) for error protection, fails to reacts sensitive                                     aware adaptive transmission, as discussed in [2]. For more
+to fluctuations in SNR. Conversely, our compatible NTSCC+                                         visualization results, please refer to Appendix B.
+with response networks is shown to not only provide smooth                                           We evaluate the end-to-end processing latency of these
+performance transition without any cliff and leveling effects                                     coded transmission schemes on the Kodak dataset and show
+but also achieve competitive performance.                                                         the metrics in Table II, including the BD-rate (ρ, “↓” means
+   Fig. 8 shows a visual comparison among VTM + 5G LDPC,                                          smaller is better), single model parameters, and encoding
+our standard instance-adaptive NTSCC++, and our ROI-based                                         (decoding) latency. All experiments are conducted using Py-
+NTSCC++ on a 360◦ image viewed from 3 viewports, a                                                Torch 1.9.0, with the Inter Xeon Gold 6226R CPU (mainly
+typical source in XR. We can clearly see that our NTSCC++                                         for arithmetic coding) and one RTX 3090 GPU (for neural
+maintains more details of high frequency components at the                                        network inference and LDPC codec). Compared to other
+equivalent channel bandwidth rates. In contrast, VTM + 5G                                         neural coded transmission schemes, our compatible NTSCC+
+LDPC exhibits visual artifacts such as blocking, aliasing and                                     is more storage-efficient during deployment as it only requires
+ringing, especially near edges. Additionally, our ROI-based                                       a single model to perform both rate adjustment and channel
+NTSCC++ method offers a significant advantage in terms of                                         state adaptation, whereas multiple models are necessary for
+                                                                                                                                                              13
+
+
+
+other schemes to achieve these functionalities. It can also                        [14] “(2021). Challenge on Learned Image Compression.” [Online]. Avail-
+be observed that our NTSCC based end-to-end transmission                                able: http://www.compression.cc/challenge/, 2021.
+                                                                                   [15] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and P. Zhang,
+schemes run clearly faster than classical layered designed                              “Wireless deep video semantic transmission,” IEEE Journal on Selected
+schemes, attributed to the absence of arithmetic coding and                             Areas in Communications, vol. 41, no. 1, pp. 214–229, 2023.
+LDPC decoding. Compared with the original NTSCC [13],                              [16] D. Minnen, J. Ballé, and G. D. Toderici, “Joint autoregressive and
+                                                                                        hierarchical priors for learned image compression,” in Advances in
+the encoding/decoding time of our improved version increases                            Neural Information Processing Systems, 2018, pp. 10 771–10 780.
+slightly. However, it is valuable since the end-to-end transmis-                   [17] D. He, Y. Zheng, B. Sun, Y. Wang, and H. Qin, “Checkerboard context
+sion efficiency shows clear superiority (surpassing the SOTA                            model for efficient learned image compression,” in Proceedings of the
+VTM + 5G LDPC). In addition, by dedicating extra encoding                               IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+                                                                                        2021, pp. 14 771–14 780.
+time to NTSCC++, even better rate-distortion performance can                       [18] I. H. Witten, R. M. Neal, and J. G. Cleary, “Arithmetic coding for data
+be achieved without increasing decoding time. Our experi-                               compression,” Communications of the ACM, vol. 30, no. 6, pp. 520–540,
+ments indicate that only 20 online updating steps provide a                             1987.
+                                                                                   [19] J. Rissanen and G. Langdon, “Universal modeling and coding,” IEEE
+reasonable trade-off between speed and performance, which                               Transactions on Information Theory, vol. 27, no. 1, pp. 12–23, 1981.
+can facilitate XR applications.                                                    [20] T. Richardson and S. Kudekar, “Design of low-density parity check
+                                                                                        codes for 5G new radio,” IEEE Communications Magazine, vol. 56,
+                      VII. C ONCLUSION                                                  no. 3, pp. 28–34, 2018.
+                                                                                   [21] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai,
+   In this paper, from the perspectives of model accuracy, ver-                         T. Unterthiner, M. Dehghani, M. Minderer, G. Heigold, S. Gelly et al.,
+satility, and adaptability, we have proposed a comprehensive                            “An image is worth 16x16 words: Transformers for image recognition
+framework for improving NTSCC to boost the semantic coded                               at scale,” arXiv preprint arXiv:2010.11929, 2020.
+                                                                                   [22] J. Lee, S. Cho, and S.-K. Beack, “Context-adaptive entropy
+transmission. This new sophisticated improved NTSCC system                              model for end-to-end optimized image compression,” arXiv preprint
+is ready to support low-latency data interaction in XR, which                           arXiv:1809.10452, 2018.
+can catalyze the application of semantic communications.                           [23] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image com-
+                                                                                        pression with discretized gaussian mixture likelihoods and attention
+                                                                                        modules,” in Proceedings of the IEEE/CVF Conference on Computer
+                               R EFERENCES                                              Vision and Pattern Recognition, 2020, pp. 7939–7948.
+ [1] N. Ling, C.-C. J. Kuo, G. J. Sullivan, D. Xu, S. Liu, H.-M. Hang, W.-H.       [24] Y. Choi, M. El-Khamy, and J. Lee, “Variable rate deep image compres-
+     Peng, J. Liu et al., “The future of video coding,” APSIPA Transactions             sion with a conditional autoencoder,” in Proceedings of the IEEE/CVF
+     on Signal and Information Processing, vol. 11, no. 1, 2022.                        International Conference on Computer Vision, 2019, pp. 3146–3154.
+ [2] M. Xu, C. Li, S. Zhang, and P. L. Callet, “State-of-the-art in 360◦           [25] D. Ha, A. Dai, and Q. V. Le, “Hypernetworks,” arXiv preprint
+     video/image processing: Perception, assessment and compression,” IEEE              arXiv:1609.09106, 2016.
+     Journal of Selected Topics in Signal Processing, vol. 14, no. 1, pp. 5–26,    [26] J. Li, B. Li, and Y. Lu, “Hybrid spatial-temporal entropy modelling for
+     2020.                                                                              neural video compression,” in Proceedings of the 30th ACM Interna-
+ [3] Y. Xie, T. Takikawa, S. Saito, et al., “Neural fields in visual computing          tional Conference on Multimedia, 2022.
+     and beyond,” in Computer Graphics Forum, vol. 41, no. 2. Wiley                [27] J. Hu, L. Shen, and G. Sun, “Squeeze-and-excitation networks,” in
+     Online Library, 2022, pp. 641–676.                                                 Proceedings of the IEEE Conference on Computer Vision and Pattern
+ [4] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K.        Recognition, 2018, pp. 7132–7141.
+     Wong, and C.-B. Chae, “Beyond transmitting bits: Context, semantics,          [28] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The
+     and task-oriented communications,” IEEE Journal on Selected Areas in               unreasonable effectiveness of deep features as a perceptual metric,” in
+     Communications, vol. 41, no. 1, pp. 5–41, 2023.                                    Proceedings of the IEEE conference on Computer Vision and Pattern
+ [5] J. Dai, P. Zhang, K. Niu, S. Wang, Z. Si, and X. Qin, “Communication               Recognition, 2018, pp. 586–595.
+     beyond transmitting bits: Semantics-guided source and channel coding,”        [29] C. Cai, L. Chen, X. Zhang, and Z. Gao, “End-to-end optimized ROI
+     IEEE Wireless Communications, early access, 2022.                                  image compression,” IEEE Transactions on Image Processing, vol. 29,
+ [6] P. Zhang, W. Xu, H. Gao, K. Niu, and et al., “Toward wisdom-                       pp. 3442–3457, 2019.
+     evolutionary and primitive-concise 6G: A new paradigm of semantic
+                                                                                   [30] G. Lu, C. Cai, X. Zhang, L. Chen, W. Ouyang, D. Xu, and Z. Gao,
+     communication networks,” Engineering, vol. 8, pp. 60–73, 2022.
+                                                                                        “Content adaptive and error propagation aware deep video compression,”
+ [7] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+                                                                                        in European Conference on Computer Vision. Springer, 2020, pp. 456–
+     channel coding for wireless image transmission,” IEEE Transactions on
+                                                                                        472.
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,
+                                                                                   [31] Y. Yang, R. Bamler, and S. Mandt, “Improving inference for neural im-
+     2019.
+                                                                                        age compression,” Advances in Neural Information Processing Systems,
+ [8] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission
+                                                                                        vol. 33, pp. 573–584, 2020.
+     with deep joint source-channel coding,” IEEE Transactions on Wireless
+     Communications, vol. 20, no. 12, pp. 8081–8095, 2021.                         [32] T. Guo, J. Wang, Z. Cui, Y. Feng, Y. Ge, and B. Bai, “Variable rate image
+ [9] Y. M. Saidutta, A. Abdi, and F. Fekri, “Joint source-channel coding                compression with content adaptive optimization,” in Proceedings of the
+     over additive noise analog channels using mixture of variational autoen-           IEEE/CVF Conference on Computer Vision and Pattern Recognition
+     coders,” IEEE Journal on Selected Areas in Communications, vol. 39,                Workshops, 2020, pp. 122–123.
+     no. 7, pp. 2000–2013, 2021.                                                   [33] J. Liu, M. Lu, K. Chen, X. Li, S. Wang, Z. Wang, E. Wu, Y. Chen,
+[10] J. Ballé, P. A. Chou, D. Minnen, S. Singh, N. Johnston, E. Agustsson,             C. Zhang, and M. Wu, “Overfitting the data: Compact neural video
+     S. J. Hwang, and G. Toderici, “Nonlinear transform coding,” IEEE                   delivery via content-aware feature modulation,” in Proceedings of the
+     Journal of Selected Topics in Signal Processing, vol. 15, no. 2, pp.               IEEE/CVF International Conference on Computer Vision, 2021, pp.
+     339–353, 2020.                                                                     4631–4640.
+[11] J. Ballé, V. Laparra, and E. P. Simoncelli, “End-to-end optimized            [34] C. Gao, T. Xu, D. He, H. Qin, and Y. Wang, “Flexible neural image
+     image compression,” in Proceedings of the International Conference on              compression via code editing,” in Advances in Neural Information
+     Learning Representations, 2016.                                                    Processing Systems, 2022.
+[12] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational    [35] J. Dai, S. Wang, K. Yang, K. Tan, X. Qin, Z. Si, K. Niu, and P. Zhang,
+     image compression with a scale hyperprior,” in Proceedings of the                  “Adaptive semantic communications: Overfitting the source and channel
+     International Conference on Learning Representations, 2018.                        for profit,” arXiv preprint arXiv:2211.04339, 2022.
+[13] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear      [36] M. Song, J. Choi, and B. Han, “Variable-rate deep image compression
+     transform source-channel coding for semantic communications,” IEEE                 through spatially-adaptive feature transform,” in Proceedings of the
+     Journal on Selected Areas in Communications, vol. 40, no. 8, pp. 2300–             IEEE/CVF International Conference on Computer Vision, 2021, pp.
+     2316, 2022.                                                                        2380–2389.
+                                                                                                                                                              14
+
+
+
+[37] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The                              36
+     unreasonable effectiveness of deep features as a perceptual metric,” in
+     Proceedings of the IEEE Conference on Computer Vision and Pattern
+     Recognition, 2018, pp. 586–595.                                                               34
+[38] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Comparison of full-
+     reference image quality models for optimization of image processing
+                                                                                                   32
+
+
+
+
+                                                                                       PSNR (dB)
+     systems,” International Journal of Computer Vision, vol. 129, no. 4, pp.
+     1258–1281, 2021.
+[39] Y. Blau and T. Michaeli, “Rethinking lossy compression: The rate-
+     distortion-perception tradeoff,” in International Conference on Machine                       30
+     Learning. PMLR, 2019, pp. 675–685.
+[40] J. Liang, J. Cao, G. Sun, K. Zhang, L. Van Gool, and R. Timofte,
+     “Swinir: Image restoration using swin transformer,” in Proceedings of                         28                                   VTM + Capacity
+     the IEEE/CVF International Conference on Computer Vision, 2021, pp.                                                                VTM + 5G LDPC
+     1833–1844.                                                                                                                         BPG + 5G LDPC
+[41] A. Hassani, S. Walton, J. Li, S. Li, and H. Shi, “Neighborhood attention                      26
+                                                                                                        0   2   4   6        8     10   12    14         16
+     transformer,” 2022. [Online]. Available: https://arxiv.org/abs/2204.07143                                          channel SNR
+[42] E. Agustsson and R. Timofte, “Ntire 2017 challenge on single image
+     super-resolution: Dataset and study,” in Proceedings of the IEEE Con-
+     ference on Computer Vision and Pattern Recognition Workshops, 2017,         Fig. 10. The performance of LDPC codes used in this paper. “VTM +
+     pp. 126–135.                                                                Capacity” means VTM combined with a capacity achieving channel code.
+[43] “Kodak PhotoCD dataset,” URL: http://r0k.us/graphics/kodak/, 1993.
+[44] J. Hoydis, S. Cammerer, F. A. Aoudia, A. Vem, N. Binder, G. Marcus,
+     and A. Keller, “Sionna: An open-source library for next-generation          can reconstruct source image in the YUV 4:4:4 format with
+     physical layer research,” arXiv preprint arXiv:2203.11854, 2022.            the command line
+[45] G. Bjøntegaard, “Calculation of average PSNR differences between RD-
+     curves,” VCEG-M33, 2001.
+[46] L. Liu, C. Oestges, J. Poutanen, K. Haneda, P. Vainikainen, F. Quitin,      # VTM decoding
+     F. Tufvesson, and P. De Doncker, “The cost 2100 mimo channel model,”        DecoderAppStatic -d 8 -b [recovered_bitstream]
+     IEEE Wireless Communications, vol. 19, no. 6, pp. 92–99, 2012.              -o [decoded_yuv_file]
+[47] J. Bégaint, F. Racapé, S. Feltman, and A. Pushparaja, “Compressai:
+     a pytorch library and evaluation platform for end-to-end compression
+     research,” arXiv preprint arXiv:2011.03029, 2020.
+[48] N. Asuni and A. Giachetti, “Testimages: A large data archive for display
+                                                                                 where the recovered bitstream is the reconstruction bits from
+     and algorithm testing,” Journal of Graphics Tools, vol. 17, no. 4, pp.      channel decoding. The reconstructed image has the YUV 4:4:4
+     113–125, 2013.                                                              format, and we converted it back to RGB space again using
+                                                                                 OpenCV. The final PSNR is computed between the final RGB
+                     A PPENDIX A                                                 image and the original RGB image.
+S EPARATION - BASED TRANSMISSION SYSTEM EVALUATION
+   In this section, we provide the detailed experiment con-                      B. BPG
+figurations used for separation-based transmission schemes.                        BPG software is obtained from the website2 and the follow-
+The settings of non-neural image codecs and LDPC codes                           ing commands are used for encoding and decoding.
+are listed below in the following subsection. For the neural
+image codecs, we employ the pre-trained models from the                          # BPG encoding
+CompressAI library [47].                                                         bpgenc -e x265 -q [QP] -f 444
+                                                                                 -o [encoded_bitstream] [original_png_file]
+                                                                                 # BPG decoding
+A. VTM
+                                                                                 bpgdec -o [decoded_png_file] [recovered_bitstream]
+  We use the VVC test model software VTM-20.0 which is
+built from the website1 . Since VVC operates on the YUV color
+space by default, but the test dataset we used are RGB format.
+We first convert RGB image to YUV 4:4:4 color space using                        C. LDPC Codes
+OpenCV, and compress the YUV files with the command line                            We employ 5G LDPC codes [20] with length 4096 for error
+                                                                                 correction. The combinations of modulation order and channel
+                                                                                 code rate are selected according the modulation and coding
+# VTM encoding                                                                   scheme (MCS) Table 5.1.3.1-1 for physical downlink shared
+EncoderAppStatic -c encoder_intra_vtm.cfg                                        channel (PDSCH) in 3GPP TS 38.214 version 16.2.03 . For a
+-q [QP] -i [original_yuv_file]                                                   specific MCS index, we use the maximum source coding rate
+-b [encoded_bitstream] -f 1 -fr 1                                                (the minimum QP value) within the CBR target. If the image
+-wdt [width] -hgt [height]                                                       decoding procedure fails due to transmitting errors in the
+--InputChromaFormat=444
+                                                                                 compressed bitstream, we use the mean value for all the pixels
+                                                                                 per color channel as the reconstruction image. We select the
+where encoder intra vtm.cfg is the official intra configuration                  best performing configurations in terms of average distortion
+files by default. With reliable transmission of the bitstream, we                after traversing all possible MCS choices at each channel SNR.
+  1 https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware VTM/-/releases/VTM-           2 https://bellard.org/bpg/
+
+20.0                                                                               3 https://www.etsi.org/deliver/etsi ts/138200 138299/138214/16.02.00 60
+                                                                                                                                                          15
+
+
+
+                                         Kodak dataset                                                         CLIC 2021 testset
+                   37
+                   36                                                              38
+                   35                                                              37
+                   34                                                              36
+                   33
+       PSNR (dB)
+
+
+
+
+                                                                                   35
+                   32
+                   31                                                              34
+                   30                                                              33
+                   29                                                              32
+                   28
+                                                                                   31
+                   27
+                    0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10                   0.01      0.02        0.03 0.04 0.05           0.06       0.07
+                                   channel bandwidth ratio                                                   channel bandwidth ratio
+                           JPEG + 5G LDPC           VTM + 5G LDPC                        He et al. 2021 + 5G LDPC        Our NTSCC+
+                           JPEG2000 + 5G LDPC       Balle et al. 2018 + 5G LDPC          Deep JSCC                       Our compatible NTSCC+
+                           BPG + 5G LDPC            Minnen et al. 2018 + 5G LDPC         NTSCC                           Our NTSCC++
+                                         Tecnick dataset                                                        CLIC 2022 testset
+                   38                                                              37
+                   37                                                              36
+                   36                                                              35
+                   35
+                                                                                   34
+       PSNR (dB)
+
+
+
+
+                   34
+                                                                                   33
+                   33
+                                                                                   32
+                   32
+                   31                                                              31
+
+                   30                                                              30
+                    0.01   0.02   0.03 0.04 0.05 0.06               0.07     0.08 0.01         0.02   0.03     0.04 0.05 0.06 0.07         0.08    0.09
+                                     channel bandwidth ratio                                                 channel bandwidth ratio
+
+Fig. 11. End-to-end rate-distortion comparison over the AWGN channel at SNR = 10dB for Kodak, CLIC21 testset, Tecnick, and CLIC22 testset.
+
+The above simulations are implemented at the top of Sionna4 .                      B. Visual Examples of Online Code Editing
+Fig. 10 presents the SNR-PSNR curve of VTM + 5G LDPC                                  We further show the online editing attributes of the im-
+under AWGN channel with the CBR target ρ = 0.04, where                             proved NTSCC through visual examples. In Fig. 12, we in-
+the capacity achieving bound “VTM + Capacity” also plotted                         vestigate the online adaptation for multiple types of distortions,
+for reference.                                                                     utilizing weighted MSE and LPIPS distortion as an example. It
+                                A PPENDIX B                                        is obvious that as the weight of the subjective loss λs increases,
+                            A DDITIONAL R ESULTS                                   the reconstructions become clearer and exhibit more detailed
+                                                                                   textures. Fig. 13 provides an additional visual demonstration of
+A. More Rate-Distortion Results                                                    the case for ROI-based transmission. It is observable that even
+   In Fig. 11, we offer the rate-distortion curves for an                          when the available CBR diminishes substantially (down to 1/3
+expanded set of datasets to evaluate the robustness of the                         of the baseline), the quality of the ROI remains unchanged.
+proposed method in relation to the distribution of the source                      This implies that our approach can ensure the transmission
+image. The test datasets comprise the Kodak dataset [43] (24                       quality of salient objects even at the expense of the background
+images, 512x768 pixels), CLIC 2021 test set [14] (60 images,                       quality.
+up to 2K resolution), the Tecnick dataset [48] (100 images,
+1200x1200 pixels), and CLIC 2022 test set [14] (30 images,                         C. More Visualization Examples
+1365x2048 pixels). From these figures, we can see that our
+                                                                                     Referring to Fig. 14, we compare the reconstruction results
+learned JSCC codec consistently provide competitive trans-
+                                                                                   of the proposed NTSCC+ and VTM + 5G LDPC.
+mission performance, even compared to the SOTA scheme in
+a wide channel bandwidth range.
+  4 https://github.com/NVlabs/sionna
+                                                                                                                                                           16
+
+
+
+
+    Original image           Original patch                λs = 0                   λs = 102                    λs = 103                   λs = 104
+
+
+
+
+      768 × 768           ρ / PSNR (dB) / LPIPS       0.022 / 29.73 / 0.23      0.022 / 29.70 / 0.21       0.021 / 29.49 / 0.15         0.021 / 29.32 / 0.13
+Fig. 12. Visual examples of online adaptation for multi-type distortions. The first and second column show the original image and its cropped patch. The
+third to the last column show the reconstructed images generated by NTSCC++ for different subjective loss λs over the AWGN channel at SNR = 10dB.
+
+
+
+
+                                                  NTSCC+            m = (0.75, 1.5)       m = (0.5, 1.5)         m = (0.25, 1.5)          m = (0, 1.5)
+   Original image           ROI map               (η = 0.2)         η = (0.15, 0.3)       η = (0.1, 0.3)         η = (0.05, 0.3)          η = (0, 0.3)
+
+
+
+
+      768 × 768         ρ/PSNR/PSNRROI        0.012 / 29.8 / 31.9   0.009 / 28.6 / 31.9   0.007 / 26.7 / 32.1     0.006 / 25.1 / 32.5    0.004 / 16.5 / 32.6
+Fig. 13. Visual examples of online adaptation for ROI map. The first and second column show the original image and its ROI map. The third column show
+the reconstructed image of NTSCC+ over the AWGN channel at SNR = 10dB. The fourth to the seventh column show the reconstructed images by ROI-based
+NTSCC++. Specifically, the first number in parentheses of quality map m and scaling factor η represents the weight for white regions in ROI map, and the
+second number is the weight for black regions. We update the latents and encoder parameters for Tmax = 100 steps.
+
+
+
+
+    Original image           Original patch          BPG + 5G LDPC             VTM + 5G LDPC                    NTSCC+                     NTSCC++
+
+
+
+
+      512 × 768               ρ / PSNR (dB)              0.023 / 25.74              0.023 / 26.58               0.022 / 27.12              0.021 / 27.55
+
+
+
+
+      512 × 768               ρ / PSNR (dB)              0.031 / 24.85              0.031 / 25.97               0.027 / 26.53              0.027 / 26.81
+
+
+
+
+     1394 × 2048              ρ / PSNR (dB)              0.014 / 30.07              0.010 / 30.10               0.009 / 30.68              0.009 / 31.22
+Fig. 14. Examples of visual comparison. The first column shows the original images. The second column shows the cropped patch in original image. The
+contents in third to the last columns are reconstructed by different image transmission schemes over AWGN channel at SNR = 10dB.
+

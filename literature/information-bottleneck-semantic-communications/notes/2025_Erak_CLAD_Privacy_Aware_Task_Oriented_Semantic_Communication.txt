@@ -1,0 +1,2407 @@
+1
+
+Contrastive Learning and Adversarial
+Disentanglement for Privacy-Aware Task-Oriented
+Semantic Communication
+
+arXiv:2410.22784v3 [cs.LG] 2 Jul 2025
+
+Omar Erak, Member, IEEE, Omar Alhussein, Senior Member, IEEE, Wen Tong, Fellow, IEEE
+Abstract—Task-oriented semantic communication systems
+have emerged as a promising approach to achieving efficient
+and intelligent data transmission in next-generation networks,
+where only information relevant to a specific task is communicated. This is particularly important in 6G-enabled Internet of
+Things (6G-IoT) scenarios, where bandwidth constraints, latency
+requirements, and data privacy are critical. However, existing
+methods struggle to fully disentangle task-relevant and taskirrelevant information, leading to privacy concerns and suboptimal performance. To address this, we propose an informationbottleneck inspired method, named CLAD (contrastive learning
+and adversarial disentanglement). CLAD utilizes contrastive
+learning to effectively capture task-relevant features while employing adversarial disentanglement to discard task-irrelevant
+information. Additionally, due to the absence of reliable and
+reproducible methods to quantify the minimality of encoded
+feature vectors, we introduce the Information Retention Index
+(IRI), a comparative metric used as a proxy for the mutual
+information between the encoded features and the input. The
+IRI reflects how minimal and informative the representation is,
+making it highly relevant for privacy-preserving and bandwidthefficient 6G-IoT systems. Extensive experiments demonstrate that
+CLAD outperforms state-of-the-art baselines in terms of semantic
+extraction, task performance, privacy preservation, and IRI,
+making it a promising building block for responsible, efficient
+and trustworthy 6G-IoT services.
+Index Terms—Contrastive learning, disentangled representation learning, information-bottleneck, semantic communication,
+task-oriented communication.
+
+I. I NTRODUCTION
+In conventional communication systems, the primary objective has been to ensure reliable transmission of data, focusing
+on delivering bit sequences across noisy channels without
+considering the meaning, context, or purpose of the data being
+transmitted. Shannon’s mathematical theory of communication
+focuses on optimizing metrics such as data rate, error rate,
+and bandwidth efficiency, whilst being agnostic to the ultimate
+purpose and relevance of the transmitted information [1]. This
+approach has been widely successful and effective for general communication needs thus far. However, next-generation
+communication systems, beginning with 6G, require more
+intelligent and task-aware communication methods to support
+a wide range of real-time and mission-critical Internet of
+Things (IoT) applications [2], [3], such as computer vision
+Omar Erak and Omar Alhussein are with the KU 6G Research Center,
+Department of Computer Science, Khalifa University, Abu Dhabi, UAE (email: omarerak@ieee.org, omar.alhussein@ku.ac.ae).
+Wen Tong is with the Huawei Wireless Research, Wireless Advanced
+System and Competency Centre, Huawei Technologies Co. Ltd., Ottawa, ON
+K2K 3J1, Canada, (e-mail: tongwen@huawei.com).
+
+[4], autonomous driving [5], extended reality (XR) [6], and
+generative artificial intelligence (AI) [7].
+As we move towards these advanced systems, there is a
+growing recognition that communication should not merely
+be about transmitting raw data, but about understanding the
+underlying meaning and purpose of the data. This shift towards
+task-oriented semantic communication represents a fundamental change in the design of communication networks [8],
+[9]. Instead of focusing solely on the accurate and efficient
+transmission of bits, these new approaches aim to ensure that
+the information most relevant to the specific task or decisionmaking process is prioritized and delivered with minimal
+delay and overhead. This is especially critical in 6G-IoT
+settings, where devices operate under tight bandwidth, latency,
+and energy constraints, and where privacy and reliability are
+essential. For example, in a smart city environment [10],
+rather than transmitting all sensor data from traffic cameras,
+task-oriented communication focuses on sending only the
+information necessary to identify and respond to potential
+hazards or optimize traffic flow in real time.
+With the growing success and popularity of deep learning
+(DL) in various wireless communication applications [11],
+[12], many emerging task-oriented communication systems
+have adopted DL approaches to encode task-relevant information to improve task performance and efficiency of the
+communication system [13]–[15]. Nevertheless, most proposed schemes do not focus on quantifying or benchmarking
+the amount of information that the encoded features retain
+about the input, primarily due to the computational difficulty
+of estimating mutual information and the lack of a unified
+methodology that provides fair and reproducible results. This
+omission is critical, particularly in IoT and edge computing
+scenarios, where understanding how much information is kept
+and whether it is necessary or private has direct implications
+on trustworthiness, data security, and system interpretability.
+Furthermore, most current approaches rely on maximizing
+mutual information between the encoded features and the
+target using variational approximations based on the crossentropy loss [13], [15], [16]. However, deriving a maximization for the mutual information between the encoded feature
+vector and the targets based on contrastive learning [17]
+remains unexplored for task-oriented communication systems.
+To address the aforementioned challenges, we develop
+a task-oriented communication system based on contrastive
+learning [17] and disentangled representation learning [18],
+and we devise a new metric to compute comparative values for
+a proxy of mutual information between the encoded features
+and the inputs across different systems, rather than computing
+
+2
+
+the exact mutual information. More specifically, our major
+contributions are as follows:
+• We derive a lower bound for the mutual information
+between the encoded features and the target using contrastive learning principles. We show that the contrastive
+learning based lower bound improves task accuracy and
+performance compared to traditional cross-entropy based
+mutual information approximations;
+• We propose a systematic training methodology based
+on an innovative loss function, designed to extract taskirrelevant information through reconstruction losses while
+disentangling it from task-relevant features using adversarial methods. This enables the system to prioritize the
+transmission of task-relevant features while minimizing
+communication overhead and reducing unnecessary information transmission, thus enhancing privacy;
+• To address the current limitation of lacking a reliable
+and unified approach for estimating the mutual information between the encoded features and input data, we
+introduce a new metric named the Information Retention
+Index (IRI), which serves as a proxy for the mutual
+information. This metric compares the informativeness
+and minimality of the encoded features across various
+task-oriented communication methods, providing deeper
+insights into system behavior and enabling a more rigorous comparison of their performance;
+• We evaluate our proposed task-oriented communication
+system in diverse channel conditions. It is tested against
+several existing task-oriented communication methods,
+demonstrating improved task performance, enhanced privacy awareness, and reduced amount of irrelevant information across a wide range of transmission scenarios.
+II. R ELATED W ORK
+DL-based communication systems have shown success in
+recent years. DeepJSCC (Deep Joint Source-Channel Coding)
+is a recent advancement in the field of wireless communication
+that utilizes deep learning to jointly optimize source and
+channel coding, which are traditionally treated as separate
+tasks [14]. Unlike conventional methods that rely on separate
+compression and error-correction codes, DeepJSCC uses neural networks to directly map source data to channel symbols,
+allowing for an end-to-end optimization of the communication
+system. DeepJSCC can be trained on a classification task
+by minimizing the cross-entropy loss, ensuring task-specific
+performance; however, it does not inherently ensure that only
+task-relevant features are transmitted.
+Building on that, Shao et al. [13] proposed a task-oriented
+communication system for edge inference by leveraging the information bottleneck (IB) theory [19], and variational approximations [16] to balance a trade-off between the minimality of
+the transmitted feature vector and the task performance. Their
+results demonstrate improved latency and classification accuracy. Another work focuses on improving the aforementioned
+IB framework for task-oriented communication systems by
+introducing an information bottleneck framework that ensures
+robustness to varying channel conditions [15].
+
+Wang et al. [20] formulate a privacy-utility trade-off to
+develop an IB-based privacy-preserving task-oriented communication system against model inversion attacks [21]. This is
+achieved by striking a balance between the traditional IBbased loss functions similar to the work discussed above and a
+mean squared error (MSE) based term that aims at maximizing
+reconstruction distortion. Their results demonstrate improved
+privacy with minimal impact to task performance.
+Despite the successful results achieved by the aforementioned task-oriented communication systems, there remain
+several key areas that warrant further investigation and improvement. One significant limitation in the existing literature
+is the lack of results and comprehensive benchmarking on
+the mutual information between the encoded features and the
+input, given a particular task-oriented communication system.
+In task-oriented communication systems, mutual information
+plays a critical role in determining the efficiency of the system,
+particularly regarding the preservation of information during
+transmission.
+Furthermore, while task-specific performance, specifically
+classification accuracy, has been improved by these advancements, there is still room for enhancing performance further.
+Another key challenge in these systems is balancing multiple
+trade-offs, such as task performance, informativeness, minimality and privacy. These trade-offs are typically managed
+through careful tuning of hyperparameters. Reducing the dependency on hyperparameters would make these systems more
+robust and easier to deploy in real-world scenarios.
+Contrastive learning has gained significant attention in recent years, particularly for its success in unsupervised learning
+[17], [22]–[24]. By leveraging the concept of instance discrimination, contrastive learning methods aim to pull together
+positive pairs for example, augmentations of the same image,
+while pushing apart negative pairs for example, different images, thus learning meaningful representations of data without
+the need for labels. More recently, contrastive learning has also
+shown exceptional results in supervised learning scenarios.
+By incorporating label information into the contrastive loss
+function, methods such as supervised contrastive learning
+(SupCon) [25] have improved upon traditional cross-entropy
+loss. Contrastive learning has not been investigated for taskoriented communication systems as an alternative to crossentropy based mutual information approximation techniques.
+Disentangled representation learning has been widely studied in recent years. Prominent examples include the 𝛽-VAE
+[26], that extends the variational autoencoder (VAE) by introducing a regularization term that encourages disentanglement, and FactorVAE [27], that further improves this disentanglement by encouraging the representations’ distribution
+to be factorial and therefore independent across the dimensions. Other works [28]–[30], explored disentangling through
+adversarial-based objectives [31].
+III. S YSTEM M ODEL AND N OTATIONS
+A. Notations
+Throughout this paper, we use the following notational conventions. Random variables are denoted by uppercase letters,
+
+3
+
+such as 𝑋, 𝑌 , and 𝑍. Their corresponding realizations (i.e.,
+specific instances) are denoted by lowercase bold letters, such
+as 𝒙, 𝒚, and 𝒛. The space from which these random variables
+are drawn is represented by calligraphic letters, such as X, Y
+and Z. We denote entropy of a random variable 𝑋 by 𝐻 (𝑋).
+The mutual information between two random variables 𝑋 and
+𝑌 , is denoted by 𝐼 (𝑋; 𝑌 ). We use 𝐼 (𝑍; 𝑋 |𝑌 ) to denote the
+conditional mutual information between 𝑍 and 𝑋 given 𝑌 . We
+use the expectation notation E[·], which refers to the average
+value of a random variable over a distribution. Most of the
+symbols in the article are listed in Table I.
+B. System Model
+We consider a semantic communication system designed
+for next-generation 6G-enabled Internet of Things (6G-IoT)
+networks, where distributed edge devices must transmit taskrelevant information to centralized or cloud-based servers
+under strict constraints on bandwidth, latency, and privacy.
+In such settings, communication should prioritize the efficient
+delivery of minimal yet informative representations, discarding
+irrelevant or sensitive content that is unnecessary for the
+downstream task.
+The transmitter includes a feature extractor and a joint
+source-channel coding (JSCC) encoder. We collectively refer
+to these components as the task-relevant encoder. The taskrelevant encoder encodes an input image 𝒙 ∈ X into a lowerdimensional feature vector 𝒛 ∈ Z. Encoded vector 𝒛 is then
+transmitted to a receiver over a noisy wireless channel. The
+primary objective is to transmit a minimal and informative
+representation, by discarding task-irrelevant information while
+ensuring that 𝒛 contains only the essential information for
+accurate downstream classification at the receiver.
+The overall transmission and decoding process can be
+described by the following Markov chain:
+𝑌 → 𝑋 → 𝑍 → 𝑍ˆ → 𝑌ˆ ,
+
+(1)
+
+where 𝑋 is the random variable representing the input images,
+𝑍 is the random variable representing the encoded feature
+vectors, 𝑍ˆ is the noisy signals received by the receiver, 𝑌 is the
+random variable representing the labels of the input images,
+and 𝑌ˆ is the random variable representing the predicted labels
+at the receiver.
+At the transmitter, the task-relevant encoder encodes input
+image 𝒙 ∈ R 𝑁 , where 𝑁 represents the number of pixels in the
+image (Height × Width × Color Channels). The encoder maps
+this input into a lower-dimensional feature vector 𝒛 ∈ R𝑑 ,
+where 𝑑 is the dimension of the encoded feature vector.
+The encoding function, denoted by 𝑓 𝜃 : R 𝑁 → R𝑑 , is
+parameterized by 𝜃, and the encoding process can be expressed
+as
+𝒛 = 𝑓 𝜃 (𝒙)
+(2)
+Feature vector 𝒛 is then prepared for transmission over the
+wireless channel by being mapped to channel input symbols.
+The role of the task-relevant encoder is twofold: encoding
+the input data into feature representations and preparing them
+as channel symbols suitable for transmission. The encoded
+
+TABLE I. Description of Symbols
+Symbol
+
+Description
+
+𝒚, 𝑌
+𝒙, 𝑋
+𝒛, 𝑍
+ẑ, 𝑍ˆ
+
+Target variable and its realization
+Input variable and its realization
+Encoded feature and its realization
+Received (noisy) encoded feature and its realization
+Task-relevant feature and its realization
+Task-irrelevant feature and its realization
+Predicted label and its realization
+Input, label, and feature spaces
+Entropy function
+Mutual and conditional mutual information
+Expectation operator
+Identity matrix
+Probability distribution
+Statistical Gaussian distribution
+Additive Gaussian noise
+Task-relevant encoder, parameterized by 𝜃
+Task-irrelevant encoder, parameterized by 𝜂
+Reconstructor, parameterized by 𝜔
+Projection head , parameterized by 𝜓
+Classifier, parameterized by 𝜙
+Discriminator, parameterized by 𝜈
+
+𝒛 1 , 𝑍1
+𝒛 2 , 𝑍2
+𝒚ˆ , 𝑌ˆ
+X, Y, Z
+𝐻 (·)
+𝐼 (·; ·) , 𝐼 (·; · | ·)
+E[ · ]
+I
+𝑝 (·)
+N
+n
+𝑓 𝜃 (·)
+𝑔 𝜂 (·)
+𝑟 𝜔 (·)
+ℎ 𝜓 (·)
+𝑞 𝜙 (·)
+𝐷𝜈 (·)
+
+feature vector 𝒛 ∈ R𝑑 is transmitted over a wireless channel, which is modeled as an additive white Gaussian noise
+(AWGN) channel. The channel introduces noise and distortion,
+and the received signal 𝒛ˆ ∈ R𝑑 at the receiver is expressed as
+𝒛ˆ = 𝒛 + 𝒏,
+
+(3)
+
+where 𝒏 ∼ N (0, 𝜎 2 I) is the additive Gaussian noise with
+variance 𝜎 2 . The noise variance 𝜎 2 is related to the channel’s
+signal-to-noise ratio (SNR), which quantifies the channel
+quality. The SNR in decibels (dB) is given by
+
+
+E[∥𝒛∥ 2 ]
+SNRdB = 10 log10
+.
+(4)
+𝜎2
+At the receiver, typically a cloud or edge server, a classifier,
+denoted by 𝑞 𝜙 : R𝑑 → R 𝑀 , where 𝑀 is the number of labels,
+is parameterized by 𝜙. The classifier maps the received noisy
+signal 𝒛ˆ to predicted label 𝑦ˆ ∈ R 𝑀 as
+𝒚ˆ = 𝑞 𝜙 ( 𝒛ˆ ).
+
+(5)
+
+The classifier is trained to minimize the loss between the
+predicted label ( 𝒚ˆ ) and the true label (𝒚). Since true posterior
+distribution 𝑝(𝒚| 𝒛ˆ ) is intractable, 𝑞 𝜙 serves as an approximation based on the received noisy signal.
+IV. P ROBLEM D ESCRIPTION
+In this section, we identify the primary challenges that
+arise when transmitting features over a communication channel
+and utilizing them for a downstream classification task. Our
+goal is to ensure that the transmitted features contain only
+the minimum necessary information required for the downstream task to maximize efficiency whilst being privacy aware.
+Furthermore, we argue that it is necessary to have a fair,
+reproducible, and unified method to obtain comparative values
+that act as a proxy for mutual information between the encoded
+
+4
+
+B. Privacy Concerns and Task-Irrelevant Information
+The second challenge is privacy concerns due to the leakage
+ˆ If 𝑍ˆ retains
+of task-irrelevant information from 𝑋 into 𝑍.
+information about 𝑋 that is not relevant to predicting 𝑌 ,
+this may inadvertently expose sensitive or private data, and
+could make the system more vulnerable to different attacks
+such as attribute inference attacks and model inversion attacks
+[33], [21]. Therefore, disentangling task-irrelevant information
+ensures that 𝑍ˆ does not encode unnecessary or sensitive
+information that is not directly relevant to the downstream
+task, which minimizes privacy risks.
+C. Quantifying Information Retention
+Figure 1. Information diagram for three random variables 𝑋,
+ˆ The union of the blue and pink regions yields 𝐼 ( 𝑍;
+ˆ 𝑋),
+𝑌 , 𝑍.
+ˆ 𝑌 ).
+and the union of the blue and green regions yields 𝐼 ( 𝑍;
+features and the input data to allow effective benchmarking of
+different task-oriented communication systems.
+
+A. Minimum Necessary Information
+Following [32], the Minimum Necessary Information (MNI)
+criterion for an ideal representation 𝑍ˆ under ideal transmission
+conditions must satisfy the following key principles:
+• Informativeness: Representation 𝑍ˆ should contain all
+the necessary information to predict 𝑌 , requiring us to
+ˆ 𝑌 ).
+maximize the mutual information 𝐼 ( 𝑍;
+• Necessity: Representation 𝑍ˆ should contain the necessary
+amount of information in order to perform well in the
+downstream task, any less information would mean that
+𝑍 has discarded task-relevant information. Necessity can
+be defined as
+ˆ
+𝐼 (𝑋; 𝑌 ) ≤ 𝐼 (𝑌 ; 𝑍)
+(6)
+• Minimality: Among all possible representations 𝑍
+
+that
+satisfy the task of predicting 𝑌 , we seek the one that
+encodes the least amount of information about 𝑋 beyond
+what is strictly necessary for the task. This can be
+formulated as
+ˆ 𝑋)
+min 𝐼 ( 𝑍;
+𝑍ˆ
+
+subject to
+
+ˆ 𝑌)
+𝐼 (𝑋; 𝑌 ) = 𝐼 ( 𝑍;
+
+(7)
+
+Any more information than that would result in 𝑍 having
+redundant information about 𝑋 that is unnecessary for
+predicting 𝑌 .
+Given the above we conclude that in an optimal case under
+ideal channel conditions we must have
+ˆ 𝑋) = 𝐼 ( 𝑍;
+ˆ 𝑌 ) = 𝐼 (𝑋; 𝑌 ),
+𝐼 ( 𝑍;
+
+(8)
+
+this implies that 𝑍ˆ contains exactly the amount of information
+necessary to perform the task of predicting 𝑌 from 𝑋, no
+more and no less. At the MNI point, 𝑍ˆ captures all the
+relevant information needed for the task, while discarding any
+irrelevant or redundant information about 𝑋.
+
+In task-oriented communication systems, it is critical to
+ˆ 𝑋)
+have an understanding of the mutual information 𝐼 ( 𝑍;
+as it provides insights into how much of the original input
+information 𝑋 is encoded in 𝑍ˆ and can directly affect latency,
+bandwidth and privacy. However, a significant challenge arises
+ˆ 𝑋) varies drastically depending
+because the estimation of 𝐼 ( 𝑍;
+on the estimation method used. Indeed, multiple works have
+ˆ 𝑋) for the same task-oriented
+reported widely different 𝐼 ( 𝑍;
+approach [16], [29]. This makes it difficult to arrive at reliable
+conclusions about the amount of information being retained in
+ˆ
+𝑍.
+Given these discrepancies, we argue that it is crucial to
+devise a method that yields consistent, reliable and fair comparative estimates of information retention, even if the exact
+ˆ 𝑋) is intractable. Instead of absolute precision, a
+value of 𝐼 ( 𝑍;
+method that provides relative and comparable estimates across
+different systems would greatly enhance the ability to evaluate
+and optimize different task-oriented communication systems.
+D. Limitations of Variational Information Bottleneck (VIB)
+The variational information bottleneck (VIB) has been the
+de facto method for many task-oriented communication systems. VIB tries to minimize the following objective:
+ˆ 𝑋) − 𝐼 ( 𝑍;
+ˆ 𝑌 ),
+LVIB = 𝛽𝐼 ( 𝑍;
+
+(9)
+
+ˆ 𝑋) measures the amount of information retained
+where 𝐼 ( 𝑍;
+ˆ 𝑌 ) represents the informativeness
+from the input 𝑋, and 𝐼 ( 𝑍;
+of 𝑍 for predicting 𝑌 . Hyperparameter 𝛽 controls the trade-off
+between preserving task-relevant information and discarding
+ˆ 𝑌 ), a cross-entropy
+irrelevant information. To maximize 𝐼 ( 𝑍;
+based loss is used, and the Kullback–Leibler divergence is
+ˆ 𝑋) [13], [15], [16].
+used to to minimize 𝐼 ( 𝑍;
+However, VIB-based task-oriented communication systems
+presents several challenges:
+• Limitation of cross-entropy based loss: The majority of
+task-oriented communication systems rely on the crossentropy loss as a vraitaional approximation to maximize
+ˆ 𝑌 ). However, it has been shown recently that super𝐼 ( 𝑍;
+vised contrastive learning based loss [25] outperforms the
+cross-entropy loss in different settings.
+• Conflicting objectives: The VIB objective which maxˆ 𝑋) and minimizes 𝐼 ( 𝑍;
+ˆ 𝑌 ) leads to a conimizes 𝐼 ( 𝑍;
+flicting objective as shown by [32]. If we consider the
+
+5
+
+information diagram [34] presented in Fig. 1, it is evident
+ˆ is a
+that the region shaded in blue, namely 𝐼 (𝑋; 𝑌 ; 𝑍)
+ˆ
+ˆ
+subset of 𝐼 ( 𝑍; 𝑋) and 𝐼 ( 𝑍; 𝑌 ) and is therefore maximized
+and minimized simultaneously.
+• Inadequate disentanglement: VIB does not explicitly
+enforce a separation between the portions of 𝑍 that are
+relevant for predicting 𝑌 and those that capture irrelevant
+or redundant details from 𝑋. This lack of disentanglement can compromise the privacy and efficiency of the
+transmitted representation.
+V. P ROPOSED M ETHOD : CLAD
+The core idea of CLAD is to create an end-to-end communication system that explicitly learns to disentangle taskrelevant information from task-irrelevant content, enabling
+both high task accuracy and improved privacy. CLAD integrates supervised contrastive learning, adversarial training,
+and reconstruction-based supervision into a unified, structured
+framework that aligns with the MNI principle.
+Each component in CLAD is designed to target a specific
+challenge:
+• Contrastive learning maximizes the informativeness of
+the representation with respect to the downstream task.
+• Adversarial disentanglement promotes independence
+between task-relevant and irrelevant features, suppressing
+information leakage.
+• Reconstruction learning ensures that task-irrelevant features are adequately captured.
+To ensure effective optimization, CLAD adopts a threestage training strategy, where each stage isolates and refines a
+different component of the system. This design is intentional
+as it prevents interference between competing objectives, stabilizes training, and encourages modular reuse of the encoders
+across stages.
+CLAD utilizes two key encoders: the task-relevant encoder,
+which maps the input into the task-relevant channel codeword
+𝑍1 , and the task-irrelevant encoder , which maps the input into
+task-irrelevant channel codeword 𝑍2 . The task performance
+is optimized through contrastive learning, which aims to
+maximize the mutual information 𝐼 ( 𝑍ˆ1 ; 𝑌 ), ensuring that 𝑍ˆ1
+captures the most informative features for downstream classification. The disentanglement is achieved through reconstruction
+learning to capture task-irrelevant information in 𝑍ˆ2 , and
+adversarial training is utilized to minimize the mutual information 𝐼 ( 𝑍ˆ1 ; 𝑍ˆ2 ), thus promoting independence between the two
+feature representations. The different components and training
+stages of CLAD are visualized in Fig. 2. These components
+are optimized together to ensure both high task accuracy and
+effective disentanglement of information, corresponding to the
+following maximization objective:
+LCLAD = 𝐼 ( 𝑍ˆ1 ; 𝑌 ) + 𝐼 ( 𝑍ˆ2 ; 𝑋 |𝑌 ) − 𝐼 ( 𝑍ˆ1 ; 𝑍ˆ2 ).
+
+(10)
+
+Here, the objective consists of three key terms:
+• 𝐼 ( 𝑍ˆ1 ; 𝑌 ) maximizes the mutual information between taskrelevant features 𝑍ˆ1 and the label 𝑌 using contrastive
+learning;
+
+Figure 2. Three stages for training CLAD
+𝐼 ( 𝑍ˆ2 ; 𝑋 |𝑌 ) ensures that 𝑍ˆ2 captures the residual information in 𝑋 that is not covered by 𝑌 by utilizing a
+reconstruction loss;
+• 𝐼 ( 𝑍ˆ1 ; 𝑍ˆ2 ) minimizes the information overlap between 𝑍ˆ1
+and 𝑍ˆ2 , encouraging disentanglement via an adversarial
+loss.
+
+•
+
+Reflecting back on Fig. 1, we can see that our new objective
+maximizes the blue region (task-relevant information) and
+minimizes the pink region (task-irrelevant information) and
+avoids the conflicting objectives of VIB. We explain each of
+the components of our loss function in detail below, accompanied by their mathematical formulations, implementation
+details, and training strategy.
+Algorithm 1 Stage 1: Train Task-Irrelevant Encoder with
+Reconstructor
+Input: X𝑡𝑟 𝑎𝑖𝑛 (Training dataset), 𝜅 (SNR), 𝜆 (Learning rate)
+Output: Frozen task-irrelevant encoder 𝑔 𝜂
+1: Initialize 𝜂, 𝜔
+2: while not converged do
+3:
+Sample (𝒙, 𝒚) ∼ X𝑡𝑟 𝑎𝑖𝑛
+4:
+𝒛 2 ← 𝑔 𝜂 (𝒙)
+2
+5:
+𝒏 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 2𝜅∥ ]
+10 10
+6:
+𝒛ˆ 2 ← 𝒛2 + 𝒏
+7:
+𝒙ˆ ← 𝑟 𝜔 ( 𝒛ˆ 2 , 𝒚)
+8:
+Lrecon ← ∥𝒙 − 𝒙ˆ ∥ 2
+9:
+𝜂 ← 𝜂 − 𝜆∇ 𝜂 Lrecon
+10:
+𝜔 ← 𝜔 − 𝜆∇ 𝜔 Lrecon
+11: end while
+12: Discard 𝑟 𝜔
+13: Freeze 𝜂
+
+6
+
+(a)
+
+(b)
+
+(c)
+
+Figure 3. (a): Self-supervised contrastive learning: The model works only on augmentations of the same image; (b): Supervised
+contrastive learning: Label information is used to align similar classes in vector space; and (c) Both self-supervised and
+supervised contrastive learning push apart different images in the vector space.
+
+A. Contrastive Loss for Task-Relevant Features
+To maximize 𝐼 ( 𝑍ˆ 1 ; 𝑌 ), we adopt a supervised contrastive
+learning framework similar to [25]. First, we apply an augmentation function, which applies different augmentations such as
+cropping, rotating and reflecting, Aug(·) to the input image
+𝒙 to generate two different views 𝒙˜ 1 = Aug(𝒙) and 𝒙˜ 2 =
+Aug(𝒙). These augmented samples are then passed through
+the TRE, denoted by 𝑓 𝜃 (·), resulting in two representations,
+𝒛 1 = 𝑓 𝜃 ( 𝒙˜ 1 ) and 𝒛2 = 𝑓 𝜃 ( 𝒙˜ 2 ), where 𝒛 ∈ R𝑑 .
+Following that, these representations are transmitted over
+the physical channel and projected into a lower-dimensional
+space through a projection head, ℎ 𝜓 (·) parameterized by 𝜓,
+yielding 𝒉1 = ℎ 𝜓 ( 𝒛ˆ1 ) and 𝒉2 = ℎ 𝜓 ( 𝒛ˆ2 ), where 𝒉 ∈ R𝑑 𝑝 , and
+𝑑 𝑝 represents the dimensionality of the projection space.
+A contrastive loss, Lcontrast , is designed to maximize the
+agreement between representations of similar class samples
+while minimizing the similarity between representations of different class samples. Considering a batch of intermediate features [𝒛 1 , . . . , 𝒛 𝐵 ] and their corresponding labels [𝒚 1 , . . . , 𝒚 𝐵 ],
+the loss function is defined as
+
+exp 𝒉⊤
+𝑖 𝒉 𝑗 /𝜏
+(11)
+𝑆𝑖 𝑗 = Í 𝐵
+,
+⊤
+𝑘=1 1𝑖≠𝑘 exp 𝒉𝑖 𝒉 𝑘 /𝜏
+∑︁
+1
+1 𝑦𝑖 =𝑦 𝑗 log 𝑆𝑖 𝑗 ,
+𝑖≠ 𝑗 1 𝑦𝑖 =𝑦 𝑗 𝑖≠ 𝑗
+
+Lcontrast = − Í
+
+(12)
+
+where 𝑆𝑖 𝑗 represents the similarity score between the projected
+representations 𝒉𝑖 and 𝒉 𝑗 , 𝜏 is a temperature scaling factor,
+and 1 𝑦𝑖 =𝑦 𝑗 is an indicator function that equals 1 if 𝑦 𝑖 = 𝑦 𝑗
+(positive pairs) and 0 otherwise (negative pairs). This loss encourages encoder 𝑓 𝜃 (·) to learn class-discriminative features,
+ensuring that the latent representation 𝒛 captures the necessary
+information for the downstream classification task. Supervised
+contrastive learning is presented visually in Fig 3.
+Next, we prove that minimizing the contrastive loss, defined above, maximizes a lower bound on the task-relevant
+ˆ 𝑌 ). We begin by considering a simplified
+information 𝐼 ( 𝑍;
+situation where we have a query sample 𝒉+ together with a
+set 𝑯 = {𝒉1 , . . . , 𝒉 𝐵 } consisting of 𝐵 samples. In this set,
+one sample 𝒉 𝑝 is a positive sample from the same class as
+𝒉+ , while the other negative samples are randomly sampled.
+Namely, 𝑯 = {𝒉 𝑝 } ∪ 𝑯 neg . The expectation of the contrastive
+loss is given by
+
+"
+
+#
+
+exp(𝒉+ ⊤ 𝒉 𝑝 /𝜏)
+
+E[Lcontrast ] = E𝒉+ ,𝑯 − log Í 𝐵
+
+𝑖=1 exp(𝒉
+
++⊤
+
+(13)
+
+.
+𝒉𝑖 /𝜏)
+
+Equation (13) can be viewed as a categorical cross-entropy
+loss for recognizing the positive sample 𝒉 𝑝 . We define the
+optimal probability of identifying the positive sample as
+𝑝 (𝒉 𝑖 | 𝑦)
+Î
+𝑝(𝒉𝑖 |𝑦) 𝑙≠𝑖 𝑝(𝒉𝑙 )
+𝑝 (𝒉 𝑖 )
+𝑃(𝒉𝑖 |𝑯) = Í 𝐵
+=Í
+. (14)
+Î
+𝐵 𝑝 (𝒉 𝑗 | 𝑦)
+𝑝(𝒉
+|𝑦)
+𝑝(𝒉
+)
+𝑗
+𝑙
+𝑙≠ 𝑗
+𝑗=1
+𝑗=1
+𝑝 (𝒉 𝑗 )
+
+𝑝
+
+This shows that the optimal value of exp(𝒉+ ⊤ 𝒉 𝑝 /𝜏) is 𝑝𝑝(𝒉(𝒉 𝑝| 𝑦)
+) .
+Assuming that 𝒉+ is uniformly sampled from all classes, we
+derive the following bound,
+optimal
+
+E[Lcontrast ] ≥ E[Lcontrast ]
+
+
+𝑝 (𝒉 𝑝 | 𝑦)
+
+
+𝑝 (𝒉 𝑝 )
+
+
+(15)
+= E 𝑦,𝑯 − log Í
+𝑝 (𝒉 𝑗 | 𝑦) 
+𝐵
+
+
+𝑗=1
+𝑝
+(𝒉
+)
+𝑗
+
+
+
+
+𝑝 (𝒉 𝑝 | 𝑦)
+
+
+𝑝 (𝒉 𝑝 )
+
+
+= E 𝑦,𝑯 − log
+𝑝
+Í
+𝑝 (𝒉 𝑗 | 𝑦) 
+𝑝 (𝒉 | 𝑦)
+
++
+𝑝
+𝒉 𝑗 ∈𝑯 neg 𝑝 (𝒉 𝑗 ) 
+𝑝 (𝒉 )
+
+
+
+
+
+
+
+
+
+
+𝑝(𝒉 𝑝 ) ∑︁ 𝑝(𝒉 𝑗 |𝑦)  
+= E 𝑦,𝑯 log 1 +
+.
+𝑝
+
+
+𝑝(𝒉 |𝑦)
+𝑝(𝒉 𝑗 )  
+
+
+
+𝒉
+∈𝑯
+𝑗
+neg
+
+
+
+(16)
+For large 𝐵, from the law of large numbers, we can approximate the sum of negative samples by its expected value as
+follows,
+
+≈ E 𝑦,𝑯
+
+
+
+𝑝(𝒉 𝑗 |𝑦)
+𝑝(𝒉 𝑝 )
+log 1 +
+(𝐵 − 1)E𝒉 𝑗 ∼ 𝑝 (𝒉 𝑗 )
+𝑝
+𝑝(𝒉 |𝑦)
+𝑝(𝒉 𝑗 )
+
+
+.
+(17)
+
+Since the negative samples are class-neutral (i.e., independent
+of 𝑦), the inner expectation over negative samples 𝒉 𝑗 simplifies to a constant value. This allows us to focus the outer
+expectation on 𝑦 and 𝒉 𝑝 , concentrating on the probability of
+correctly identifying the positive sample among the negatives
+as follows,
+
+7
+
+
+
+
+
+𝑝
+
+
+
+𝑝(𝒉 )
+= E 𝑦,𝒉 𝑝 log 1 +
+(𝐵 − 1)
+𝑝(𝒉 𝑝 |𝑦)
+
+
+
+𝑝(𝒉 𝑝 )
+≥ E 𝑦,𝒉 𝑝 log
+(𝐵 − 1)
+𝑝(𝒉 𝑝 |𝑦)
+
+
+
+
+𝑝(𝒉 𝑝 |𝑦)
+𝑝
++ log(𝐵 − 1)
+= E 𝑦,𝒉 − log
+𝑝(𝒉 𝑝 )
+= −𝐼 (𝒉 𝑝 ; 𝑦) + log(𝐵 − 1) ≥ −𝐼 ( 𝒛ˆ; 𝑦) + log(𝐵 − 1).
+(18)
+From the above, the last inequality in (18) follows from the
+data processing inequality [19]. Finally, we conclude that
+ˆ 𝑌 ),
+E[Lcontrast ] ≥ log(𝐵 − 1) − 𝐼 ( 𝑍;
+
+(19)
+
+and thus minimizing Lcontrast maximizes a lower bound of
+ˆ 𝑌 ). Increasing 𝐵 raises log(𝐵 − 1), thereby strengthening
+𝐼 ( 𝑍,
+this lower bound and enhancing performance by preserving
+more task-relevant information. Although the derived bound
+can be loose with a small number of negative samples [17],
+we mitigate this by sampling large batches (2048) during
+contrastive training.
+
+The first term, E 𝑝 ( 𝒙,𝒚 )𝑞 ( 𝒛ˆ 2 | 𝒙) [log 𝑝(𝒙| 𝒚, 𝒛ˆ 2 ), represents the
+expected log-likelihood of reconstructing 𝒙 given both 𝒚
+and 𝒛ˆ 2 . The second term, E 𝑝 ( 𝒙,𝒚 ) [log 𝑝(𝒙| 𝒚)], represents the
+expected log-likelihood of reconstructing 𝒙 based solely on 𝒚,
+independent of the task-irrelevant features.
+Minimizing the reconstruction loss Lrecon effectively approximates the maximization of the first term in the mutual
+information expression, thereby increasing 𝐼 ( 𝑍ˆ 2 ; 𝑋 |𝑌 ). By
+optimizing both the encoder 𝑔 𝜂 and the reconstructor 𝑟 𝜔 ,
+we ensure that 𝒛ˆ 2 captures task-irrelevant information while
+leveraging 𝒚 for the reconstruction of task-relevant features in
+𝒙.
+C. Adversarial Disentanglement
+To approximate the minimization of the mutual information
+𝐼 ( 𝑍ˆ 1 ; 𝑍ˆ 2 ), we employ adversarial training, following the approach in [28]. This ensures that task-relevant features in 𝑍ˆ 1
+and task-irrelevant features in 𝑍ˆ 2 are disentangled. The mutual
+information 𝐼 ( 𝑍ˆ 1 ; 𝑍ˆ 2 ) quantifies the dependence between 𝑍ˆ 1
+and 𝑍ˆ 2 . It is formally defined as
+𝐼 ( 𝑍ˆ 1 ; 𝑍ˆ 2 ) =
+
+B. Reconstruction for Task-Irrelevant Features
+To maximize 𝐼 ( 𝑍ˆ 2 ; 𝑋 |𝑌 ), we use a reconstruction-based
+objective that ensures 𝑋 is reconstructed from both 𝑌 and 𝑍ˆ 2 ,
+where 𝑍ˆ 2 captures the information in 𝑋 that is not already
+captured by 𝑌 . Let 𝑔 𝜂 : R 𝑁 → R𝑑 represent the task-irrelevant
+encoder, parameterized by 𝜂, which maps input 𝒙 ∈ R 𝑁 to
+encoded task-irrelevant representation 𝒛ˆ 2 ∈ R𝑑 . The encoder
+approximates the posterior distribution of the latent variable
+𝒛ˆ 2 given 𝒙, which we denote by 𝑞( 𝒛ˆ 2 |𝒙). This encoder is
+responsible for capturing features unrelated to the task, i.e., the
+features not directly useful for predicting 𝒚. Mathematically,
+the encoded task-irrelevant representation is given by
+𝒛2 = 𝑔 𝜂 (𝒙),
+
+(20)
+
+where 𝑑 represents the dimensionality of the task-irrelevant
+feature space.
+Next, we introduce the reconstructor 𝑟 𝜔 : R𝑑 × R 𝑀 → R 𝑁 ,
+parameterized by 𝜔. The reconstructor 𝑟 𝜔 takes as input both
+noisy task-irrelevant features 𝒛ˆ 2 and task-relevant label 𝒚 and
+attempts to reconstruct the original input 𝒙. The objective is
+to minimize the reconstruction error, ensuring that 𝒛ˆ 2 focuses
+solely on task-irrelevant information. The reconstruction loss
+is defined as
+
+
+Lrecon = E 𝑝 ( 𝒙,𝒚 ) ∥𝑟 𝜔 ( 𝒛ˆ 2 , 𝒚) − 𝒙∥ 2 .
+(21)
+To justify this approach, we show how this reconstructionbased loss provides an approximation for the mutual information 𝐼 ( 𝑍ˆ 2 ; 𝑋 |𝑌 ). Using a variational encoder and reconstruction
+model 𝑟 𝜔 (𝒙| 𝒛ˆ 2 , 𝒚), we can approximate 𝐼 ( 𝑍ˆ 2 ; 𝑋 |𝑌 ) as follows,
+𝐼 ( 𝑍ˆ 2 ; 𝑋 |𝑌 ) ≥ E 𝑝 ( 𝒙,𝒚 )𝑞 ( 𝒛ˆ 2 | 𝒙) [log 𝑝(𝒙| 𝒚, 𝒛ˆ 2 )]
+− E 𝑝 ( 𝒙,𝒚 ) [log 𝑝(𝒙| 𝒚)] .
+
+(22)
+
+
+
+∫ ∫
+𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 ) log
+𝒛ˆ 1
+
+𝒛ˆ 2
+
+
+𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 )
+𝑑 𝒛ˆ 1 𝑑 𝒛ˆ 2 . (23)
+𝑝( 𝒛ˆ 1 ) 𝑝( 𝒛ˆ 2 )
+
+Minimizing it promotes independence between these two
+representations. However, directly computing 𝐼 ( 𝑍ˆ 1 ; 𝑍ˆ 2 ) is intractable since it requires access to the underlying joint distribution 𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 ) and the product of the marginals 𝑝( 𝒛ˆ 1 ) 𝑝( 𝒛ˆ 2 ).
+To circumvent this, we approximate the minimization using
+a discriminator to distinguish between samples drawn from
+the joint distribution 𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 ) and samples drawn from the
+product of the marginals 𝑝( 𝒛ˆ 1 ) 𝑝( 𝒛ˆ 2 ).
+To approximate the joint distribution, we sample pairs
+( 𝒛ˆ 1 , 𝒛ˆ 2 ) from the encoder’s output for the same input data
+point, which represents samples from 𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 ). For the
+marginal distribution, we shuffle 𝒛ˆ 2 across the batch, generating ( 𝒛ˆ 1 , 𝒛ˆ 2′ ), where 𝒛ˆ 2′ is a shuffled version of 𝒛ˆ 2 from a
+different data point. This ensures that 𝒛ˆ 1 and 𝒛ˆ 2′ are independent, approximating the product of the marginals 𝑝( 𝒛ˆ 1 ) 𝑝( 𝒛ˆ 2 ).
+Let 𝐷 𝜈 represent the discriminator parameterized by 𝜈, trained
+to distinguish between joint samples ( 𝒛ˆ 1 , 𝒛ˆ 2 ) and marginal
+samples ( 𝒛ˆ 1 , 𝒛ˆ 2′ ). The adversarial loss is defined as
+Ladv = E 𝑝 ( 𝒛ˆ 1 , 𝒛ˆ 2 ) [log 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2 )]
+
+
++ E 𝑝 ( 𝒛ˆ 1 ) 𝑝 ( 𝒛ˆ 2 ) log 1 − 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2′ ) .
+
+(24)
+
+This loss encourages 𝐷 𝜈 to assign high probabilities to true
+joint samples ( 𝒛ˆ 1 , 𝒛ˆ 2 ) and low probabilities to independent
+(shuffled) samples ( 𝒛ˆ 1 , 𝒛ˆ 2′ ).
+To promote disentanglement in the encoder, we add an
+adversarial penalty to the encoder’s loss. The encoder is trained
+to fool the discriminator by making the joint distribution
+𝑝( 𝒛ˆ 1 , 𝒛ˆ 2 ) indistinguishable from the product of the marginals
+𝑝( 𝒛ˆ 1 ) 𝑝( 𝒛ˆ 2 ). The encoder’s loss for disentanglement is defined
+as
+Lenc = E 𝑝 ( 𝒛ˆ 1 , 𝒛ˆ 2 ) [log(1 − 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2 ))] .
+
+(25)
+
+8
+
+Minimizing Lenc encourages the encoder to make 𝒛ˆ 1 and 𝒛ˆ 2 as
+independent as possible, thereby minimizing the mutual information 𝐼 ( 𝑍ˆ 1 ; 𝑍ˆ 2 ). This ensures that the latent representations
+𝒛ˆ 1 and 𝒛ˆ 2 are disentangled, with 𝒛ˆ 1 capturing task-relevant
+information and 𝒛ˆ 2 capturing task-irrelevant information.
+Algorithm 2 Stage 2: Train Task-Relevant Encoder with
+Contrastive Loss and Discriminator
+Input: X𝑡𝑟 𝑎𝑖𝑛 (Training dataset), 𝑔 𝜂 (Task-irrelevant encoder),
+𝜆 (Learning rate), 𝜆adv (Discrimnator learning rate), 𝜅
+(SNR), 𝜏 (Temperature)
+Output: 𝑓 𝜃
+1: Initialize 𝜃, 𝜓, 𝜈
+2: while not converged do
+3:
+(𝒙, 𝒚) ∼ X𝑡𝑟 𝑎𝑖𝑛
+4:
+𝒙˜ 1 ← Augment(𝒙), 𝒙˜ 2 ← Augment(𝒙)
+5:
+𝒛1(1) ← 𝑓 𝜃 ( 𝒙˜ 1 ), 𝒛 1(2) ← 𝑓 𝜃 ( 𝒙˜ 2 )
+2
+6:
+𝒏1 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 1𝜅∥ ]
+10 10
+
+7:
+8:
+9:
+10:
+
+2
+
+𝒏2 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 2𝜅∥ ]
+
+10 10
+𝒛ˆ 1(1) ← 𝒛1(1) + 𝒏1 , 𝒛ˆ 1(2) ← 𝒛 1(2) + 𝒏1
+𝒉1 ← ℎ 𝜓 ( 𝒛ˆ 1(1) ), 𝒉2 ← ℎ 𝜓 ( 𝒛ˆ 1(2) )
+Lcontrast ← Contrastive Loss(𝒉1 , 𝒉2 , 𝜏)
+
+𝜃 ← 𝜃 − 𝜆∇ 𝜃 Lcontrast
+𝜓 ← 𝜓 − 𝜆∇ 𝜓 Lcontrast
+𝒛1 ← 𝑓 𝜃 (𝒙), 𝒛 2 ← 𝑔 𝜂 (𝒙)
+𝒛ˆ 1 ← 𝒛1 + 𝒏1 , 𝒛ˆ 2 ← 𝒛2 + 𝒏2
+𝒛ˆ 2′ ← Shuffle 𝒛ˆ 2 across the batch
+Ladv ← log 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2 ) + log(1 − 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2′ ))
+𝜈 ← 𝜈 − 𝜆adv ∇𝜈 Ladv
+18:
+Lenc ← log(1 − 𝐷 𝜈 ( 𝒛ˆ 1 , 𝒛ˆ 2 ))
+19:
+𝜃 ← 𝜃 − 𝜆∇ 𝜃 Lenc
+20: end while
+21: Discard ℎ 𝜓 , 𝐷 𝜈 𝑔 𝜂
+22: Freeze 𝜃
+11:
+12:
+13:
+14:
+15:
+16:
+17:
+
+D. Classification Task
+The final downstream task is classification, where the goal
+is to predict the label 𝑌 from the encoded features 𝑍ˆ 1 . We
+use a simple feed-forward neural network classifier 𝑞 𝜙 (𝒚| 𝒛ˆ 1 ),
+parameterized by 𝜙, and trained with a cross-entropy loss. The
+classifier takes as input the task-relevant features 𝒛ˆ 1 and is
+optimized to minimize the following cross-entropy loss:
+"𝐶
+#
+∑︁
+Lclass = −E 𝑝 ( 𝒙,𝒚 )
+𝑦 𝑐 log 𝑞 𝜙 (𝑦 𝑐 | 𝒛ˆ 1 ) ,
+(26)
+
+Algorithm 3 Stage 3: Train Classifier on Frozen Task-Relevant
+Encoder
+Input: X𝑡𝑟 𝑎𝑖𝑛 (Training dataset), 𝑓 𝜃 (Task relevant encoder),
+learning rate 𝜆, 𝜅 (SNR)
+Output: Trained classifier 𝑞 𝜙
+1: Initialize 𝜙
+2: while not converged do
+3:
+Sample (𝒙, 𝒚) ∼ X𝑡𝑟 𝑎𝑖𝑛
+4:
+𝒛 1 ← 𝑓 𝜃 (𝒙)
+2
+5:
+𝒏 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 1𝜅∥ ]
+10 10
+6:
+𝒛ˆ 1 ← 𝒛1 + 𝒏
+7:
+𝒚ˆ ← 𝑞 𝜙 ( 𝒛ˆ 1 )
+Í
+ˆ𝑖
+8:
+Lclass ← − 𝐶
+𝑖=1 𝒚 𝑖 log 𝒚
+9:
+𝜙 ← 𝜙 − 𝜆∇ 𝜙 Lclass
+10: end while
+the system. Below, we outline the step-by-step procedure used
+to train our model and the associated algorithms.
+Stage 1: Training the Task-Irrelevant Encoder: In the first
+stage, we train the task-irrelevant encoder 𝑔 𝜂 by pairing
+it with a reconstructor 𝑟 𝜔 . The reconstructor 𝑟 𝜔 , learns to
+reconstruct an image by using the encoded representations
+from 𝑔 𝜂 as well as the label information𝒚. This encourages
+𝑔 𝜂 to focus on capturing the parts of the input that are not
+necessary for the downstream classification task by minimizing
+the reconstruction loss. The reconstructor is discarded, and the
+parameters of 𝑔 𝜂 are frozen after training to preserve the taskirrelevant features for later use. This procedure is outlined in
+Algorithm 1.
+Stage 2: Training the Task-Relevant Encoder with Contrastive
+Loss and Discriminator: After freezing 𝑔 𝜂 , the task-relevant
+encoder 𝑓 𝜃 is trained in this stage. We use both a contrastive
+loss to ensure that 𝑓 𝜃 captures class-discriminative features
+and an adversarial loss to enforce disentanglement between the
+task-relevant encoder 𝑓 𝜃 feature vector and the task-irrelevant
+encoder 𝑔 𝜂 feature vector. The task-relevant encoder is trained
+using augmented views of the input for contrastive learning
+and through adversarial training with the discriminator 𝐷 𝜈 .
+The training process alternates between updating the contrastive loss and updating the discriminator and encoder to
+ensure disentanglement. The details of this stage are described
+in Algorithm 2.
+
+E. Training Procedure
+
+Stage 3: Training the Classifier on the Frozen Task-Relevant
+Encoder: Once disentanglement is achieved, we discard the
+projection head ℎ 𝜓 , the discriminator 𝐷 𝜈 , and the taskirrelevant encoder 𝑔 𝜂 , leaving only the frozen task-relevant
+encoder 𝑓 𝜃 . In this final stage, we train the classifier 𝑞 𝜙 on top
+of 𝑓 𝜃 for the downstream classification task. The classifier is
+trained with the cross-entropy loss, ensuring that it can utilize
+the task-relevant features 𝑓 𝜃 for accurate classification. The
+classifier training procedure is outlined in Algorithm 3.
+
+Training a complex system with many different components
+and loss function must be performed carefully to ensure that
+each stage achieves its goal without interfering with other objectives and that the gradients flow appropriately. The training
+is done in multiple stages, each targeting a different part of
+
+The separation of training stages is for stability, and also
+reflects a modular decomposition of the CLAD objective.
+Each stage isolates the gradient flow to the component most
+relevant for that term, making the multi-stage training strategy
+a practical approximation to optimizing LCLAD holistically.
+
+𝑐=1
+
+where 𝐶 is the number of classes, and 𝑦 𝑐 is the ground truth
+one-hot encoded label for class 𝑐.
+
+9
+
+ˆ 𝑋) = 𝐻 (𝑋) − 𝐻 (𝑋 | 𝑍)
+ˆ ≥ 𝐻 (𝑋) − E 𝑝 ( 𝒙, 𝒛ˆ ) [Lrecon (𝒙| 𝒛ˆ )] ,
+𝐼 ( 𝑍;
+(27)
+where 𝐻 (𝑋) represents the entropy of the input, and
+Lrecon (𝒙| 𝒛ˆ ) is the reconstruction loss. Therefore, one can
+ˆ 𝑋) by minimizing the reconstruction error as
+compute 𝐼 ( 𝑍;
+follows:
+𝛾
+ˆ 𝑋) ≥ 𝐻 (𝑋) − min Lrecon
+𝐼 ( 𝑍;
+(𝒙| 𝒛ˆ ).
+(28)
+𝛾
+
+In practice, for each task-oriented communication method
+we evaluate, the corresponding encoder parameters are frozen,
+and a reconstructor 𝑟 𝛾 is trained to minimize the reconstruction
+loss 𝐿 recon (𝒙| 𝒛ˆ ). The reconstructor is trained using mean
+squared error (MSE) as the loss function, and we evaluate
+the quality of the reconstructions using the structural similarity index measure (SSIM) [36]. SSIM serves as a proxy
+for the total mutual information between the input and the
+representation and can indicate the amount of encoded pixellevel information. It has been shown empirically that SSIM
+correlated with mutual information [35]. We drop 𝐻 (𝑋) from
+our calculations as it is a constant.
+Unlike MSE, which only measures pixel-wise differences,
+SSIM accounts for luminance, contrast, and structural information, providing a better perceptual measure of image quality.
+This makes SSIM a suitable proxy to indicate how much useful
+ˆ The SSIM between two
+information from 𝑋 is retained in 𝑍.
+images 𝑥 and 𝑥ˆ is given by
+SSIM(𝑥, 𝑥)
+ˆ =
+
+(2𝜇 𝑥 𝜇 𝑥ˆ + 𝑐 1 ) (2𝜎𝑥 𝑥ˆ + 𝑐 2 )
+,
+(𝜇2𝑥 + 𝜇2𝑥ˆ + 𝑐 1 ) (𝜎𝑥2 + 𝜎𝑥2ˆ + 𝑐 2 )
+
+(29)
+
+where 𝜇 𝑥 and 𝜇 𝑥ˆ are the mean intensities of the original
+and reconstructed images, 𝜎𝑥2 and 𝜎𝑥2ˆ are their variances, and
+𝜎𝑥 𝑥ˆ is the covariance between them. The constants 𝑐 1 and 𝑐 2
+stabilize the division to avoid near-zero values.
+The SSIM has a range from -1 and 1, with values closer
+to 1 indicating higher structural similarity. By focusing on
+perceptual quality rather than pixel-wise differences, we find
+that SSIM provides a more accurate measure of the retained
+information in the latent representation. Formally, we define
+the IRI for a given task-oriented communication system 𝑖 as
+IRI𝑖 = SSIM(𝒙, 𝑟 𝛾𝑖 ( 𝒛ˆ )),
+
+(30)
+
+where 𝑟 𝛾𝑖 refers to the reconstructor specifically trained for
+system 𝑖.
+To compare the different systems fairly, we ensure the
+following conditions:
+
+1.0
+12
+
+Mutual Information (MINE)
+
+IRI
+MINE
+
+0.8
+
+10
+8
+
+0.6
+
+IRI
+
+F. Information Retention Index Across Different Methods
+To assess how much information 𝑍ˆ retains about input 𝑋, we
+ˆ 𝑋), which quantifies the informativeness of the
+estimate 𝐼 ( 𝑍;
+latent representation 𝑍ˆ for reconstructing the original input 𝑋.
+Since direct computation of mutual information is intractable,
+we adopt a reconstruction-based proxy [35] to compute the
+IRI across different methods.
+Assume that the reconstruction loss Lrecon (𝒙| 𝒛ˆ ), parameterized by a reconstructor 𝑟 𝛾 (·) with parameters 𝛾, denotes the
+expected error for reconstructing 𝒙 from the latent represenˆ 𝑋) can be bounded as
+tation 𝒛ˆ . The mutual information 𝐼 ( 𝑍;
+follows:
+
+6
+
+0.4
+
+4
+0.2
+0.0
+
+2
+10 5
+
+10 4
+
+10 3
+
+10 2
+
+10 1
+
+100
+
+0
+
+Figure 4. Comparison of IRI and MINE estimates across
+different values of 𝛽 in the VIB objective. Both metrics
+exhibit similar trends in retained information, but MINE shows
+significantly higher variance. Shaded regions represent the
+standard deviation over multiple runs.
+• The same decoder architecture is used for each system,
+
+ensuring consistency across the experiments.
+• All reconstructors are trained with the same settings and
+
+hyperparameters for the same number of epochs.
+• We train all reconstructors on the same training set and to
+
+ensure a valid comparison, we assess the reconstruction
+performance on the same testing set.
+By comparing the IRI scores on the reconstructed images, we
+can capture the information retention across different methods.
+The higher the IRI, the more information 𝑍 retains about 𝑋,
+allowing us to quantify the informativeness and minimality of
+the learned representations. Algorithm 4 provides a detailed
+procedure to compute the IRI by leveraging the correlation
+between reconstructed and original inputs to approximate
+informativeness and minimality.
+Although Mutual Information Neural Estimation (MINE) is
+a widely-used method for estimating the mutual information
+[37], it suffers from several well-documented drawbacks that
+limit its effectiveness for benchmarking in semantic communication systems [38]. MINE is prone to high variance,
+requires careful tuning of many different hyperparameters, and
+scales poorly in high-dimensional latent spaces all of which
+can lead to unstable or misleading estimates. These issues
+are especially problematic when comparing different models
+or compression levels under consistent settings. In contrast,
+IRI allows for consistent, fair benchmarking with minimal
+assumptions and training overhead. We view IRI as a relative
+measure, similar to a diagnostic tool, that enables empirical
+analysis of minimality and informativeness in task-oriented
+systems. As illustrated in Figure 4, IRI follows the same
+general trend as MINE but with substantially reduced variance,
+providing a more stable and reliable metric for evaluating
+privacy-relevant information retention in 6G-IoT task-oriented
+communication systems.
+We note that while SSIM is effective in image-based
+applications, it is inherently limited to image data. For
+non-visual modalities such as text or tabular data, alternative reconstruction-based metrics (e.g., BLEU score) can be
+adopted to extend the IRI framework to broader task domains.
+
+10
+
+Algorithm 4 Computing IRI
+𝑀 , learning rate 𝜆,
+Input: X𝑡𝑟 𝑎𝑖𝑛 , X𝑡𝑒𝑠𝑡 frozen encoders { 𝑓 𝜃𝑖 }𝑖=1
+𝜅 (SNR)
+Output: IRI for each system 𝑖
+𝑀
+1: Initialize reconstructors {𝑟 𝛾𝑖 } 𝑖=1
+2: for 𝑖 = 1 to 𝑀 do
+3:
+Freeze 𝜃 𝑖
+4:
+while not converged do
+5:
+Sample (𝒙, 𝒚) ∼ X𝑡𝑟 𝑎𝑖𝑛
+6:
+𝒛 ← 𝑓 𝜃𝑖 (𝒙)
+2
+7:
+𝒏 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 1𝜅∥ ]
+10 10
+8:
+𝒛ˆ 1 ← 𝒛 1 + 𝒏
+9:
+𝒙ˆ ← 𝑟 𝛾𝑖 ( 𝒛ˆ1 )
+10:
+Lrecon ← ∥𝒙 − 𝒙ˆ ∥ 2
+11:
+𝛾𝑖 ← 𝛾𝑖 − 𝜆 rec ∇𝛾𝑖 Lrecon
+12:
+end while
+13: end for
+14: for 𝑖 = 1 to 𝑀 do
+15:
+Sample (𝒙, 𝒚) ∼ X𝑡𝑒𝑠𝑡
+16:
+𝒛 ← 𝑓 𝜃𝑖 (𝒙)
+2
+17:
+𝒏 ∼ N (0, 𝜎 2 I), 𝜎 2 ← E[ ∥𝒛 1𝜅∥ ]
+10 10
+18:
+𝒛ˆ 1 ← 𝒛 1 + 𝒏
+19:
+𝒙ˆ ← 𝑟 𝛾𝑖 ( 𝒛ˆ1 )
+20:
+IRI𝑖 ← SSIM(𝒙, 𝒙ˆ )
+21: end for
+
+VI. E XPERIMENTAL E VALUATIONS AND D ISCUSSION
+In this section, we present the experimental setup used
+to evaluate CLAD. We use image classification as a representative task to illustrate the core concept of the proposed
+methods, developing an end-to-end learning framework that
+extracts low-dimensional, task-relevant, privacy-preserving,
+and channel-robust latent representations for trustworthy 6GIoT applications. Importantly, the proposed framework is not
+limited to image classification alone. We start by describing the
+datasets used in our experiments, followed by a discussion of
+the baseline methods, neural architectures, and the experimental setup. Finally, we present detailed evaluations and analysis
+of the results.1 .
+A. Experimental Setup
+1) Datasets: The Colored MNIST and Colored FashionMNIST datasets are extensions of the standard MNIST [39] and
+FashionMNIST [40] datasets, each consisting of 60,000 28x28
+grayscale images. In Colored MNIST, handwritten digits (0-9)
+are overlaid on colored backgrounds, while in Colored FashionMNIST, clothing items from 10 categories (e.g., T-shirts,
+coats, shoes) are similarly displayed on colored backgrounds.
+The introduction of background colors adds additional taskirrelevant information, creating a more challenging setup for
+the model to disentangle task-relevant features relevant to
+classifying digits or clothing items from background-related
+attributes. Furthermore, incorporating background color labels
+enables the evaluation of attribute inference attacks, where an
+1 The
+source code, models
+https://github.com/OmarErak/CLAD
+
+and
+
+results
+
+are
+
+available
+
+at
+
+adversary is trained to predict background color. This setup
+provides insight into the model’s ability to protect against
+such attacks while maintaining disentanglement between taskrelevant and task-irrelevant features. To further evaluate the
+scalability and robustness of the proposed method on more
+complex and natural datasets, we also incorporate CIFAR-10
+[41]. CIFAR-10 consists of 60,000 32x32 color images in 10
+classes, including airplanes, cars, birds, cats, and other natural objects. Compared to MNIST-based datasets, CIFAR-10
+introduces significantly more visual variability and semantic
+richness, making it a more challenging benchmark.
+2) Neural Network Architectures: To simulate realistic 6GIoT scenarios, we adopt deep neural network (DNN) architectures for both the task-relevant encoder at the transmitter
+and the downstream classifier at the receiver. These networks consist of convolutional and fully connected layers,
+structured around a latent dimension 𝑑. The encoder and
+classifier architectures, outlined in Table II and Table IV,
+are used consistently across all evaluated methods to ensure
+fair and reproducible comparisons. To compute the IRI, we
+additionally employ reconstructor networks that attempt to
+recover the original input 𝒙 from the latent representation
+𝒛ˆ . The architectures for these reconstructors are provided in
+Table III and Table V, and are applied uniformly across all
+methods during IRI evaluation.
+3) Channel Conditions: We evaluate the performance of
+CLAD compared to baseline methods using an AWGN channel model due to its widespread adoption. Specifically, we
+consider training and testing the models at identical SNRs,
+ranging from -6 dB to 12 dB. This setting allows us to assess
+the robustness of each method across different noise levels
+in a controlled manner. For each SNR value, we train the
+models over multiple runs and average the results to mitigate
+any randomness introduced during training. In the following
+experiments, we simulate a constrained wireless edge scenario
+by setting the channel bandwidth to 12.5kHz and the symbol
+rate to 9,600 baud, reflecting practical limitations in edge
+communication environments.
+B. Baselines
+In our experiments, we compare the proposed method
+CLAD against three baselines: DeepJSCC [14], VIB and
+[13], [16] and information bottleneck and adversarial learning
+(IBAL) [20]. These methods provide a benchmark for taskoriented communication systems, helping to evaluate the effectiveness of our approach in terms of privacy and downstream
+task performance.
+1) DeepJSCC: DeepJSCC is a neural network-based approach that optimizes the encoding of data for transmission
+over noisy channels. For our task-oriented scenario, DeepJSCC
+is trained with cross-entropy loss for classification rather
+than reconstruction, and it does not explicitly discard taskirrelevant information. As a result, it serves as a baseline for
+how well the encoded representation performs without feature
+disentanglement.
+2) Variational Information Bottleneck (VIB): The VIB
+framework aims to compress the input 𝑋 into latent representation 𝑍 while retaining sufficient information for predicting
+
+11
+
+𝑌 . VIB balances 𝐼 (𝑍; 𝑋) and 𝐼 (𝑍; 𝑌 ) via hyperparameter 𝛽.
+In our experiments, we provide results for different values of
+𝛽 to illustrate how varying the trade-off between compression
+and task relevance impacts task performance, IRI, and privacy.
+The Variational Feature Encoding (VFE) method in [13] is
+based on VIB, and therefore the VIB results presented are
+synonymous to VFE.
+3) Information Bottleneck and Adversarial Learning
+(IBAL): IBAL is a task-oriented semantic communication
+approach that modifies the traditional VIB objective by
+incorporating an additional distortion constraint. Specifically,
+IBAL optimizes a composite loss function that balances the
+original variational information bottleneck objective with
+an MSE term that is maximized, which encourages poor
+reconstructions and thereby enhances resistance to model
+inversion attacks.
+By benchmarking against these three baselines, we show
+that CLAD more effectively extracts task-relevant features,
+suppresses task-irrelevant information, enhances downstream
+classification performance, and offers stronger privacy guarantees.
+TABLE II. DNN Structure for the transmitter (encoder) and
+the receiver (classifier) used for Colored MNIST and FashionMNIST
+Layer
+
+Output
+dimensions
+
+Transmitter
+
+Conv Layer+ReLU
+
+32 × 28 × 28
+
+MaxPool Layer
+
+32 × 14 × 14
+
+Conv Layer+ReLU
+
+64 × 14 × 14
+
+MaxPool Layer
+
+64 × 7 × 7
+
+Fully Connected (Flatten)
+
+𝑑
+
+Fully Connected (FC)
+
+512
+
+Fully Connected (FC)
+
+256
+
+Fully Connected + Softmax
+
+10
+
+TABLE IV. DNN structure for the transmitter (encoder) and
+the receiver (classifier) used for CIFAR-10
+Output
+
+Layer
+
+Dimensions
+
+Transmitter
+
+Receiver
+
+Conv + ReLU × 2
+
+128 × 32 × 32
+
+ResNet Block
+
+128 × 16 × 16
+
+Conv + ReLU × 2
+
+4×4×4
+
+Reshape + FC + Tanh
+
+𝑑
+
+FC + ReLU + Reshape
+
+64 × 4 × 4
+
+Conv + ReLU × 2
+
+512 × 4 × 4
+
+ResNet Block
+
+512 × 4 × 4
+
+Pooling Layer
+
+512
+
+FC + Softmax
+
+10
+
+TABLE V. Architecture settings for the reconstructors used
+with CIFAR-10 to evaluate IRI
+Output
+
+Layer name
+
+dimensions
+
+Reconstructor
+
+Fully Connected (FC) + ReLU
+
+512 × 4 × 4
+
+Deconv (512→256) + ReLU
+
+256 × 8 × 8
+
+Deconv (256→128) + ReLU
+
+128 × 16 × 16
+
+Deconv (128→64) + ReLU
+
+64 × 32 × 32
+
+Conv (64→3) + Sigmoid
+
+3 × 32 × 32
+
+1) Task Performance (Accuracy): The primary evaluation
+metric for task performance is classification accuracy. It measures the ability of classifier to predict the label 𝒚 from
+𝒛ˆ. Accuracy is calculated as the ratio of correctly classified
+instances to the total number of instances:
+𝑁
+
+Receiver
+
+TABLE III. Architecture settings for the reconstructors used
+with Colored MNIST and FashionMNIST to evaluate IRI
+Layer name
+
+Output
+dimensions
+
+Reconstructor
+
+Fully Connected (FC)
+
+128 × 7 × 7
+
+Deconv Layer + ReLU
+
+64 × 14 × 14
+
+Deconv Layer + ReLU
+
+32 × 28 × 28
+
+Deconv Layer + ReLU
+
+16 × 28 × 28
+
+Deconv Layer + Sigmoid
+
+3 × 28 × 28
+
+C. Evaluation Metrics
+To assess the effectiveness of CLAD, we employ four
+key evaluation metrics: classification accuracy for task performance, IRI, attribute inference attack accuracy, and model
+inversion attacks for privacy assessment. Furthermore, all
+methods are evaluated across a range of channel SNRs to examine their robustness under dynamic transmission conditions.
+
+Accuracy =
+
+1 ∑︁
+1( 𝑦ˆ 𝑖 = 𝑦 𝑖 ),
+𝑁 𝑖=1
+
+(31)
+
+where 𝑁 is the total number of samples, 𝑦ˆ 𝑖 is the predicted
+label, and 𝑦 𝑖 is the ground truth label.
+2) Information Retention Index (IRI): To quantify the
+amount of information retained in the encoded representaˆ we use our proposed method to compute the IRI.
+tion 𝑍,
+This measures how much information from the input 𝑋 is
+ˆ which helps assess
+present in the encoded representation 𝑍,
+the compression of the representation. By comparing IRI
+across different methods, we can evaluate how effectively each
+method discards task-irrelevant information.
+3) Attribute Inference Attack: In addition to task performance and information retention, we also evaluate privacy by
+comparing the vulnerability of different methods to attribute
+inference attacks. An attribute inference attack aims to recover
+sensitive or irrelevant information about the input, such as
+background color, from the encoded representation 𝒛ˆ .
+Given the encoded representation 𝒛ˆ , the adversary seeks
+to predict the background color of the image. If 𝒛ˆ contains
+significant task-irrelevant information, the adversary will be
+able to classify the background color with high accuracy. To
+evaluate this, we train a background color classifier (with the
+same architecture as the task relevant classifier in Table II)
+on the encoded representation 𝒛ˆ and report its classification
+
+12
+
+99
+
+92
+
+98
+
+94
+93
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+92
+91
+6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+6
+
+SNR/dB
+
+8
+
+10
+
+88
+86
+84
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+82
+80
+
+12
+
+6
+
+4
+
+2
+
+0
+
+(a)
+
+2
+
+4
+
+SNR/dB
+
+6
+
+8
+
+10
+
+Accuracy (%)
+
+95
+
+Accuracy (%)
+
+Accuracy (%)
+
+96
+
+90
+
+92
+
+90
+
+97
+
+90
+88
+86
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+84
+
+12
+
+6
+
+4
+
+2
+
+0
+
+(b)
+
+2
+
+4
+
+6
+
+SNR/dB
+
+8
+
+10
+
+12
+
+(c)
+
+Figure 5. Accuracy at different SNRs for (a) the Colored MNIST dataset, (b) the Colored FashionMNIST dataset and (c) the
+CIFAR-10 dataset .
+
+0.030
+0.025
+0.020
+
+0.12
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+0.11
+0.10
+0.09
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+0.11
+
+Error Rate(%)
+
+0.035
+
+Error Rate(%)
+
+Error Rate(%)
+
+0.12
+
+CLAD
+VIB ( = 0.001)
+DeepJSCC
+IBAL
+
+0.040
+
+0.10
+0.09
+0.08
+
+0.015
+
+0.08
+2
+
+4
+
+6
+
+8
+
+Latency (ms)
+
+(a)
+
+10
+
+12
+
+2
+
+4
+
+6
+
+8
+
+Latency (ms)
+
+10
+
+12
+
+2
+
+(b)
+
+4
+
+6
+
+8
+
+Latency (ms)
+
+10
+
+12
+
+(c)
+
+Figure 6. Rate-distortion curves for (a) the Colored MNIST dataset, (b) the Colored FashionMNIST dataset and (c) the CIFAR10 dataset. SNR is set to 12dB.
+
+accuracy. A higher accuracy in the attribute inference attack
+implies more task-irrelevant information is retained in 𝒛ˆ ,
+indicating weaker privacy guarantees.
+4) Model Inversion Attack: To further evaluate privacy
+leakage, we consider model inversion attacks, which aim
+to reconstruct the original input data 𝒙 from the encoded
+representation 𝒛ˆ . This type of attack simulates an adversary
+that gains access to the transmitted latent representation and
+trains a decoder to recover the input image. In our setup,
+we follow a black-box attack scenario, where the adversary
+does not have access to the encoder or its training data.
+Specifically, we split the dataset such that 4/5 of the data is
+used to train and test the encoder and classifier models, while
+the remaining 1/5 is reserved for training the adversary. The
+adversary learns a mapping from 𝒛ˆ to the corresponding input
+image using only this held-out subset. A visually accurate
+reconstruction indicates that 𝒛ˆ still encodes significant lowlevel input features, implying weaker privacy preservation.
+Similar to [20], we use SSIM as a performance measure for
+the model inversion attacks.
+D. Results and Analysis
+In this subsection we thoroughly analyze and discuss the
+performance of the proposed method CLAD against the three
+baselines, DeepJSCC, VIB, and IBAL on all three aforementioned datasets.
+1) Task-Oriented Classification Performance: We begin by
+evaluating the classification accuracy of each method at a
+fixed SNR of 12 dB under a latency constraint of 𝑡 ≤ 6.67
+
+TABLE VI. Evaluation of different methods on Colored
+MNIST dataset at SNR = 12 dB, under a latency constraint of
+𝑡 ≤ 6.67 ms.
+Classification
+Method
+
+Adversarial
+IRI
+
+Accuracy (%)
+
+Accuracy (%)
+
+DeepJSCC
+
+97.96
+
+0.608
+
+79.16
+
+VIB (Beta=0.0001)
+
+98.01
+
+0.3931
+
+52.12
+
+VIB (Beta=0.001)
+
+97.90
+
+0.1931
+
+34.09
+
+VIB (Beta=0.01)
+
+96.93
+
+0.0608
+
+22.96
+
+VIB (Beta=0.1)
+
+93.29
+
+0.0342
+
+17.56
+
+VIB (Beta=1)
+
+11.36
+
+0.0123
+
+13.52
+
+IBAL
+
+97.63
+
+0.1762
+
+29.86
+
+CLAD (Ours)
+
+98.42
+
+0.039
+
+19.83
+
+ms. The latency constraint can also be seen as an encoded
+feature vector with a maximum of 64 dimension. Tables VI,
+VII, and VIII summarize the results for Colored MNIST,
+Colored FashionMNIST, and CIFAR-10, respectively. CLAD
+consistently achieves the highest accuracy across all datasets,
+outperforming DeepJSCC, VIB (across various 𝛽 values), and
+IBAL.
+For instance, on Colored MNIST, CLAD achieves 98.42%
+accuracy, surpassing DeepJSCC (97.96%) and the bestperforming VIB configuration (98.01%) with better privacy
+metrics. On Colred FashionMNIST, CLAD outperforms all
+
+13
+
+IRI
+Accuracy (%)
+
+DeepJSCC
+
+89.28
+
+Accuracy (%)
+0.5958
+
+79.52
+
+VIB (Beta=0.0001)
+
+90.02
+
+0.3172
+
+58.03
+
+VIB (Beta=0.001)
+
+89.30
+
+0.2562
+
+47.00
+
+VIB (Beta=0.01)
+
+86.98
+
+0.0707
+
+23.55
+
+VIB (Beta=0.1)
+
+81.82
+
+0.0497
+
+17.06
+
+VIB (Beta=1)
+
+11.28
+
+0.0101
+
+12.82
+
+IBAL
+
+89.15
+
+0.1842
+
+32.06
+
+CLAD (Ours)
+
+91.74
+
+0.0587
+
+19.33
+
+TABLE VIII. Evaluation of different methods on CIFAR10
+dataset at SNR = 12 dB, under a latency constraint of 𝑡 ≤ 6.67
+ms.
+Classification
+Method
+
+IRI
+Accuracy (%)
+
+0.6
+
+0.5
+
+0.5
+
+0.4
+
+0.4
+
+91.21
+
+0.2043
+
+VIB (Beta=0.0001)
+
+91.78
+
+0.1843
+
+VIB (Beta=0.001)
+
+91.49
+
+0.1132
+
+VIB (Beta=0.01)
+
+86.42
+
+0.0456
+
+VIB (Beta=0.1)
+
+78.31
+
+0.0321
+
+VIB (Beta=1)
+
+9.67
+
+0.0092
+
+IBAL
+
+91.32
+
+0.0876
+
+CLAD (Ours)
+
+92.33
+
+0.0471
+
+other baselines by 1.50-3.00%. On the more complex CIFAR10 dataset, CLAD achieves 92.33%, outperforming DeepJSCC
+by 1.12% and VIB (𝛽 = 0.001) by 0.84%.
+We further evaluate classification robustness under dynamic
+transmission scenarios. As shown in Fig. 5, CLAD maintains
+higher accuracy across all SNR levels from -6 dB to 12 dB.
+This robustness is particularly crucial in 6G-IoT environments,
+where channel conditions fluctuate and low-latency, on-device
+inference is essential.
+2) Rate-Distortion Tradeoff under Latency Constraints: In
+real-time 6G-IoT systems, minimizing latency while maintaining high task performance is critical. Since communication
+latency in our setup is determined by the dimension of the
+ˆ which is fixed across methods,
+transmitted feature vector 𝑍,
+we assess how efficiently each method encodes task-relevant
+information within that constraint.
+Fig. 6 shows the rate-distortion curves, where distortion
+corresponds to classification error and rate is reflected by the
+latency budget. Despite identical feature vector sizes, CLAD
+consistently achieves lower distortion. This indicates that
+CLAD produces more compact and informative semantic representations by focusing on preserving task-relevant features,
+
+0.3
+
+0.3
+
+0.2
+
+0.2
+
+0.0
+
+CLAD
+VIB
+IBAL
+DeepJSCC
+CLAD
+VIB
+IBAL
+DeepJSCC
+
+0.1
+
+0.1
+6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+SNR (dB)
+
+6
+
+8
+
+10
+
+12
+
+0.0
+
+(a) Model inversion and attribute inference attacks at varying
+SNR.
+0.7
+
+0.8
+
+0.6
+
+0.7
+0.6
+
+0.5
+
+0.5
+
+0.4
+
+0.4
+
+0.3
+
+0.3
+
+0.2
+
+0.2
+
+CLAD
+VIB
+IBAL
+DeepJSCC
+CLAD
+VIB
+IBAL
+DeepJSCC
+
+0.1
+
+0.1
+0.0
+
+DeepJSCC
+
+Model Inversion Attack SSIM
+
+Method
+
+0.6
+
+0.7
+
+Model Inversion Attack SSIM
+
+Adversarial
+
+Attribute Inference Attack Accuracy
+
+Classification
+
+0.8
+
+Attribute Inference Attack Accuracy
+
+TABLE VII. Evaluation of different methods on Colored
+FashionMNIST dataset at SNR = 12 dB, under a latency
+constraint of 𝑡 ≤ 6.67 ms.
+
+2
+
+4
+
+6
+
+8
+
+Latency (ms)
+
+10
+
+12
+
+0.0
+
+(b) Model inversion and attribute inference attacks under
+varying latencies with SNR = 12dB.
+
+Figure 7. Privacy evaluation comparing CLAD, VIB, IBAL,
+and DeepJSCC across different settings on the Colored
+MNIST dataset.
+as a result, CLAD achieves superior downstream accuracy
+under the same latency constraints, yielding a more favorable
+rate-distortion tradeoff. This makes it particularly well-suited
+for efficient, privacy-aware communication in latency-sensitive
+6G-IoT applications.
+3) Privacy Evaluation: Information Retention, Attribute Inference, and Model Inversion: Privacy is critical for trustworthy communication in 6G-IoT systems, particularly when
+transmitting semantically rich representations over shared or
+noisy channels. To assess this, we evaluate how well each
+method limits task-irrelevant information leakage under varying conditions and attacks.
+IRI and Attribute Inference. From Tables VI , VII and
+VIII, CLAD achieves the lowest IRI and attribute inference
+accuracy across all methods and datasets. On Colored MNIST,
+CLAD reaches an IRI of 0.039 and adversarial accuracy of
+19.83%, significantly outperforming DeepJSCC (IRI of 0.608,
+adversarial accuracy 79.16%) and VIB (ranging from 0.3931
+to 0.0123 in IRI as 𝛽 increases). While higher 𝛽 values in
+VIB reduce information retention and adversarial success, they
+also degrade task accuracy dropping to 93.29% at 𝛽 = 0.1 and
+11.36% at 𝛽 = 1. In contrast, CLAD maintains both privacy
+and classification accuracy (98.42%). IBAL provides a lower
+IRI (0.1762) and adversarial accuracy compared to the best
+performing VIB results, however CLAD outperforms it in both
+privacy and task performance.
+
+14
+
+(a) Colored MNIST Reconstructions
+(a) t-SNE embedding for DeepJSCC
+
+(b) Colored Fashion MNIST Reconstructions
+(b) t-SNE embedding for CLAD
+
+Figure 8. 2-dimensional t-SNE embeddings of the received
+feature representations for the Colored FashionMNIST classification task at SNR = 12 dB.
+Similarly, on Colored FashionMNIST, CLAD achieves an
+IRI of 0.0587 and attribute inference accuracy of 19.33%,
+outperforming VIB (0.2562 IRI and 47.00% inference accuracy at 𝛽 = 0.001) and DeepJSCC (0.5958 IRI, 79.52%
+attribute inference accuracy). IBAL shows a decent privacy
+tradeoff (IRI 0.1762, inference 29.86% on MNIST), but CLAD
+surpasses it in both privacy and task performance. On the more
+complex dataset, CIFAR10, a similar trend is seen, as CLAD
+provides the best task accuracy and lowest IRI compared to
+all other baselines.
+Privacy vs. SNR and Latency. The impact of varying SNR
+and latency on privacy is illustrated in Fig. 7. In Fig. 7a,
+attribute inference success increases with SNR for all methods, as better channel conditions enhance signal fidelity, but
+CLAD consistently maintains the lowest inference accuracy
+and model inversion SSIM. For instance, at 12 dB, DeepJSCC
+shows attribute inference accuracy above 75% and SSIM
+exceeding 0.6, while CLAD remains below attribute inference
+
+Figure 9. Reconstructed images from the received feature
+representations under different methods.
+accuracy 25% and under 0.05 SSIM. IBAL and VIB offer
+intermediate privacy performance, but are sitll outperformed
+by CLAD. Fig. 7b presents a comparison of privacy across
+different latency levels at a fixed SNR of 12 dB. Across all latency settings, CLAD consistently achieves the lowest attribute
+inference accuracy and SSIM, indicating strong resistance to
+both attacks.
+4) Visual Analysis and Qualitative Comparisons: In addition to numerical metrics, Fig. 9 presents reconstructed images
+under each method. CLAD effectively removes stylistic and
+task-irrelevant details (e.g., color, background texture), focusing on shape and structure relevant for classification. VIB and
+IBAL reconstructions are blurrier, while DeepJSCC retains
+vivid background and texture details, making it vulnerable
+to inference attacks. These visual insights further support
+the quantitative findings. Furthermore, Fig. 8 shows a 2D tSNE visualization of the encoded features for the Colored
+FashionMNIST dataset. The embeddings produced by CLAD
+result in more compact and clearly separated class clusters
+compared to DeepJSCC, indicating better task relevance and
+intra-class consistency. In contrast, DeepJSCC features show
+more overlap and spread.
+
+15
+
+VII. C ONCLUSIONS
+We proposed CLAD, a task-oriented communication framework that combines contrastive learning and adversarial disentanglement to extract compact, task-relevant features while improving privacy. By reducing task-irrelevant information in the
+latent space, CLAD enhances downstream performance and
+strengthens resistance to attribute inference and model inversion attacks. We also introduced the IRI, a practical and reproducible metric for comparing information preservation across
+methods. Extensive experiments across multiple datasets and
+channel conditions demonstrate that CLAD outperforms stateof-the-art baselines in terms of task accuracy, privacy, and
+minimality of representation, making it a suitable solution for
+semantic communication in 6G-IoT systems. Future work may
+explore extending CLAD to more complex input modalities
+and dynamically adaptive scenarios where task relevance can
+shift over time.
+R EFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” The Bell
+Syst. Tech. J., vol. 27, no. 3, pp. 379–423, 1948.
+[2] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+Applications, trends, technologies, and open research problems,” IEEE
+Netw., vol. 34, no. 3, pp. 134–142, 2020.
+[3] M. Giordani, M. Polese, M. Mezzavilla, S. Rangan, and M. Zorzi,
+“Toward 6G networks: Use cases and technologies,” IEEE Commun.
+Mag, vol. 58, no. 3, pp. 55–61, 2020.
+[4] A. Voulodimos, N. Doulamis, A. Doulamis, and E. Protopapadakis,
+“Deep learning for computer vision: A brief review,” Comput. Intell.
+Neuroscience, vol. 2018, no. 1, p. 7068349, 2018.
+[5] I. Yaqoob, L. U. Khan, S. A. Kazmi, M. Imran, N. Guizani, and
+C. S. Hong, “Autonomous driving cars in smart cities: Recent advances,
+requirements, and challenges,” IEEE Netw., vol. 34, no. 1, pp. 174–181,
+2019.
+[6] T. Andrade and D. Bastos, “Extended reality in iot scenarios: Concepts,
+applications and future trends,” in 2019 5th Experiment Int. Conf. (exp.
+at’19). IEEE, 2019, pp. 107–112.
+[7] L. Bariah, Q. Zhao, H. Zou, Y. Tian, F. Bader, and M. Debbah, “Large
+generative AI models for telecom: The next big thing?” IEEE Commun.
+Mag., pp. 1–7, 2024.
+[8] D. Gündüz, Z. Qin, I. Estella Aguerri, H. S. Dhillon, Z. Yang, A. Yener,
+K. K. Wong, and C.-B. Chae, “Guest editorial special issue on beyond
+transmitting bits: Context, semantics, and task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41, no. 1, pp. 1–4, 2023.
+[9] Y. Shi, Y. Zhou, D. Wen, Y. Wu, C. Jiang, and K. B. Letaief, “Taskoriented communications for 6G: Vision, principles, and technologies,”
+IEEE Wireless Commun., vol. 30, no. 3, pp. 78–85, 2023.
+[10] Y. Mehmood, F. Ahmad, I. Yaqoob, A. Adnane, M. Imran, and
+S. Guizani, “Internet-of-things-based smart cities: Recent advances and
+challenges,” IEEE Commun. Mag., vol. 55, no. 9, pp. 16–24, 2017.
+[11] Q. Mao, F. Hu, and Q. Hao, “Deep learning for intelligent wireless
+networks: A comprehensive survey,” IEEE Commun. Surv. Tut., vol. 20,
+no. 4, pp. 2595–2621, 2018.
+[12] O. Erak and H. Abou-Zeid, “Accelerating and compressing deep neural
+networks for massive mimo csi feedback,” in Proc. IEEE Int. Conf.
+Commun. (ICC), 2023, pp. 1029–1035.
+[13] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, 2021.
+[14] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw, vol. 5, no. 3, pp. 567–579, 2019.
+[15] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+bottleneck for task-oriented communication with digital modulation,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, 2023.
+[16] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” in Proc. Int. Conf. Learn. Represent., 2017.
+[17] A. v. d. Oord, Y. Li, and O. Vinyals, “Representation learning with
+contrastive predictive coding,” arXiv preprint arXiv:1807.03748, 2018.
+
+[18] B. Paige, J.-W. Van De Meent, A. Desmaison, N. Goodman, P. Kohli,
+F. Wood, P. Torr et al., “Learning disentangled representations with semisupervised deep generative models,” Proc. Adv. Neural Inf. Process.
+Syst., vol. 30, 2017.
+[19] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” arXiv preprint physics/0004057, 2000.
+[20] Y. Wang, S. Guo, Y. Deng, H. Zhang, and Y. Fang, “Privacy-preserving
+task-oriented semantic communications against model inversion attacks,”
+IEEE Trans. Wireless Commun., 2024.
+[21] M. Fredrikson, S. Jha, and T. Ristenpart, “Model inversion attacks that
+exploit confidence information and basic countermeasures,” in Proc.
+ACM SIGSAC Conf. Comput. Commun. Secur., 2015, pp. 1322–1333.
+[22] T. Chen, S. Kornblith, M. Norouzi, and G. Hinton, “A simple framework
+for contrastive learning of visual representations,” in Proc of the 37th
+Int. Conf. Mach. Learn., 2020.
+[23] Y. Tian, C. Sun, B. Poole, D. Krishnan, C. Schmid, and P. Isola, “What
+makes for good views for contrastive learning?” Proc. Adv. Neural Inf.
+Process. Syst., vol. 33, pp. 6827–6839, 2020.
+[24] T. Chen, S. Kornblith, K. Swersky, M. Norouzi, and G. E. Hinton, “Big
+self-supervised models are strong semi-supervised learners,” Proc. Adv.
+Neural Inf. Process. Syst., vol. 33, pp. 22 243–22 255, 2020.
+[25] P. Khosla, P. Teterwak, C. Wang, A. Sarna, Y. Tian, P. Isola,
+A. Maschinot, C. Liu, and D. Krishnan, “Supervised contrastive learning,” Proc. Adv. Neural Inf. Process. Syst., vol. 33, pp. 18 661–18 673,
+2020.
+[26] I. Higgins, L. Matthey, A. Pal, C. P. Burgess, X. Glorot, M. M.
+Botvinick, S. Mohamed, and A. Lerchner, “beta-vae: Learning basic
+visual concepts with a constrained variational framework.” Proc. Int.
+Conf. Learn. Representations (Poster), vol. 3, 2017.
+[27] H. Kim and A. Mnih, “Disentangling by factorising,” in Proc. Int. Conf.
+Mach. Learn., 2018, pp. 2649–2658.
+[28] E. H. Sanchez, M. Serrurier, and M. Ortner, “Learning disentangled
+representations via mutual information estimation,” in Proc. ECCV.
+Springer, 2020, pp. 205–221.
+[29] Z. Pan, L. Niu, J. Zhang, and L. Zhang, “Disentangled information
+bottleneck,” in Proc. AAAI, vol. 35, no. 10, 2021, pp. 9285–9293.
+[30] L. Sun, Y. Yang, M. Chen, and C. Guo, “Disentangled information
+bottleneck guided privacy-protective joint source and channel coding
+for image transmission,” IEEE Trans. Commun., pp. 1–1, 2024.
+[31] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,
+S. Ozair, A. Courville, and Y. Bengio, “Generative adversarial nets,”
+Proc. Adv. Neural Inf. Process. Syst., vol. 27, 2014.
+[32] I. Fischer, “The conditional entropy bottleneck,” Entropy, vol. 22, no. 9,
+p. 999, 2020.
+[33] R. Shokri, M. Stronati, C. Song, and V. Shmatikov, “Membership
+inference attacks against machine learning models,” in Proc. IEEE Symp.
+Secur. Privacy (SP). IEEE, 2017, pp. 3–18.
+[34] R. Yeung, “A new outlook on shannon’s information measures,” IEEE
+Trans. Inf. Theory, vol. 37, no. 3, pp. 466–474, 1991.
+[35] R. D. Hjelm, A. Fedorov, S. Lavoie-Marchildon, K. Grewal, P. Bachman,
+A. Trischler, and Y. Bengio, “Learning deep representations by mutual
+information estimation and maximization,” in Proc. Int. Conf. Learn.
+Represent., 2019.
+[36] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image
+quality assessment: from error visibility to structural similarity,” IEEE
+Trans. Image Process., vol. 13, no. 4, pp. 600–612, 2004.
+[37] M. I. Belghazi, A. Baratin, S. Rajeswar, S. Ozair, Y. Bengio,
+A. Courville, and R. D. Hjelm, “Mine: mutual information neural
+estimation,” arXiv preprint arXiv:1801.04062, 2018.
+[38] J. Song and S. Ermon, “Understanding the limitations of variational
+mutual information estimators,” arXiv preprint arXiv:1910.06222, 2019.
+[39] L. Deng, “The MNIST database of handwritten digit images for machine
+learning research [best of the web],” IEEE Signal Process. Mag., vol. 29,
+no. 6, pp. 141–142, 2012.
+[40] H. Xiao, K. Rasul, and R. Vollgraf, “Fashion-MNIST: a novel image
+dataset for benchmarking machine learning algorithms,” 2017.
+[41] A. Krizhevsky, G. Hinton et al., “Learning multiple layers of features
+from tiny images,” 2009.
+
+

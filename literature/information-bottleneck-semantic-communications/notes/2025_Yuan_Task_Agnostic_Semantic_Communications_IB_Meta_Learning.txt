@@ -1,0 +1,3631 @@
+1
+
+Task-Agnostic Semantic Communications Relying on
+Information Bottleneck and Federated Meta-Learning
+
+arXiv:2504.21723v2 [eess.SP] 1 May 2025
+
+Hao Wei, Wen Wang, Wanli Ni, Wenjun Xu, Senior Member, IEEE, Yongming Huang, Fellow, IEEE,
+Dusit Niyato, Fellow, IEEE, and Ping Zhang, Fellow, IEEE
+
+Abstract—As a paradigm shift towards pervasive intelligence,
+semantic communication (SemCom) has shown great potentials to improve communication efficiency and provide usercentric services by delivering task-oriented semantic meanings.
+However, the exponential growth in connected devices, data
+volumes, and communication demands presents significant challenges for practical SemCom design, particularly in resourceconstrained wireless networks. In this work, we first propose
+a task-agnostic SemCom (TASC) framework that can handle
+diverse tasks with multiple modalities. Aiming to explore the
+interplay between communications and intelligent tasks from
+the information-theoretical perspective, we leverage information
+bottleneck (IB) theory and propose a distributed multimodal
+IB (DMIB) principle to learn minimal and sufficient unimodal
+and multimodal information effectively by discarding redundancy
+while preserving task-related information. To further reduce
+the communication overhead, we develop an adaptive semantic
+feature transmission method under dynamic channel conditions.
+Then, TASC is trained based on federated meta-learning (FML)
+for rapid adaptation and generalization in wireless networks.
+To gain deep insights, we rigorously conduct theoretical analysis
+and devise resource management to accelerate convergence while
+minimizing the training latency and energy consumption. Moreover, we develop a joint user selection and resource allocation
+algorithm to address the non-convex problem with theoretical
+guarantees. Extensive simulation results validate the effectiveness
+and superiority of the proposed TASC compared to baselines.
+Index Terms—Task-agnostic semantic communication, distributed multimodal information bottleneck, federated metalearning, theoretical analysis, resource management.
+
+I. I NTRODUCTION
+With the prosperous advancements of artificial intelligence
+(AI), semantic communication (SemCom) has emerged as
+a new promising candidate for next-generation communications [1]. This innovative paradigm focuses on extracting and
+transmitting the underlying meaning of source data behind
+digital bits, enhancing communication efficiency and intelligence. As we enter the era of “Internet of Everything”,
+H. Wei, W. Xu, and P. Zhang are with the State Key Laboratory of
+Networking and Switching Technology, Beijing University of Posts and
+Telecommunications, Beijing 100876, China. W. Xu and P. Zhang are also
+with the Department of Mathematics and Theories, Peng Cheng Laboratory,
+Shenzhen 518066, China (e-mail: hao.wei@bupt.edu.cn; wjxu@bupt.edu.cn;
+pzhang@bupt.edu.cn). (Corresponding author: Wenjun Xu).
+W. Wang and Y. Huang are with the School of Information Science and
+Engineering, and the National Mobile Communications Research Laboratory,
+Southeast University, Nanjing 210096, China, and also with the Pervasive
+Communications Center, Purple Mountain Laboratories, Nanjing 211111,
+China (e-mail: wangwen@pmlabs.com.cn; huangym@seu.edu.cn).
+W. Ni is with the Department of Electronic Engineering, Tsinghua University, Beijing 100084, China (e-mail: niwanli@tsinghua.edu.cn).
+D. Niyato is with School of Computer Science and Engineering, Nanyang
+Technological University, Singapore 117583 (e-mail: dniyato@ntu.edu.sg).
+
+wireless networks are evolving vigorously to accommodate
+various kinds of intelligent interactive applications, such as
+virtual reality, automatic driving, and digital twining [2], [3].
+However, the rapid development of emerging technologies has
+led to escalating demands for increasingly complex, diverse,
+and intelligent transmission. Concurrently, the proliferation
+of connected devices has resulted in a substantial surge in
+wireless traffic and imposes significant pressure on network
+capacity, presenting critical challenges for SemCom [4].
+On the one hand, deep learning (DL)-based SemCom predominantly relies on manually designs that adopt state-ofthe-art deep neural networks (DNNs). Less efforts have been
+focused on the interplay between wireless communication and
+intelligent tasks, hindering further improvement in SemCom
+[5]. On the other hand, when the communication environment
+changes, resulting in variations of tasks and data distributions, the semantic transceiver typically requires redesigning,
+updating, and performing switching, which in turn leads to
+substantial storage and computational inefficiency. This process limits its ability to seamlessly adapt to diverse tasks and
+brand-new data, highlighting its restricted generalization and
+self-adaptation capabilities [6]. Moreover, transmitting usercollected data to a centralized server for semantic learning is
+commonly infeasible due to constrained communication resources and privacy concerns [7]. Although the local semantic
+training presents a potential alternative, it is impractical as
+SemCom inherently depends on the coordinated deployment
+of transceiver networks at both the transmitter and receiver
+[8]. Therefore, it is imperative to develop a universal SemCom
+framework that can effectively address the above challenges.
+To support large-scale connectivity, multiuser SemCom has
+been investigated recently. For example, Wang et al. [9]
+proposed a distributed DL-based joint source-channel coding
+(JSCC) scheme for wireless image transmission. Zhang et al.
+[10] developed a cooperative multiuser SemCom to curtail the
+data traffic in Internet of Vehicles. Then, Weng et al. [11]
+presented a semantic multiple-input multiple-output (MIMO)
+system for speech-to-text transmission. Although the aforementioned SemCom systems have demonstrated satisfactory
+performance in specific scenarios, they are limited to handling
+a single unimodal task. Afterwards, Wang et al. [12] proposed
+a multi-task learning network for JSCC to handle the image
+detection and segmentation tasks. Xie et al. [13], [14] proposed
+multiuser SemCom systems for transmitting and integrating
+text and image data to accomplish visual question answering
+(VQA) task. Zhang et al. [15] investigated a unified multi-task
+SemCom system for multimodal data. However, these studies
+
+2
+
+[9]–[15] rely on stacking advanced DNNs to enhance performance, lacking a systematic and comprehensive theoretical
+framework to exploit the interaction between communication
+and intelligent task. Moreover, models have to be updated
+once the task/data distributions change, which leads to massive
+gradient transmission to adapt to new environments. Besides,
+they adopt centralized learning by default and ignore the
+practical training and deployment in wireless networks.
+Emerged as an effective approach to deployment, federated
+learning (FL) has been exploited to collaboratively train a
+model using locally available data while leveraging a centralized server for global aggregation [16]. Specifically, Chen
+et al. [17] proposed a joint learning and communication
+framework based on FL. By introducing FL into SemCom,
+Tong et al. [18] considered an FL-based SemCom system
+for audio transmission and recovery. Then, Wei et al. [19]
+presented a novel federated semantic learning framework for
+knowledge graph generation. Wang et al. [20] designed a
+federated contrastive learning system to support personalized
+SemCom. Xu et al. [21] leveraged group feature distillation
+to train edge models and enhanced global image SemCom
+performance. Nevertheless, FL usually suffers from statistical
+challenges (i.e., personalized and heterogeneous characteristics) and systematic challenges (i.e., limitation of storage,
+computation, and communication capacities), resulting in poor
+adaptation and generalization [22].
+As a synergy of FL and meta-learning (also known as learning to learn), federated meta-learning (FML) has stimulated
+significant interest [6]. In FML, users collaboratively learn an
+initial shared model under the coordination of a central server,
+enabling both existing and new users to efficiently adapt the
+learned model to their local datasets with only one or a few
+gradient descent steps. Notably, FML retains the advantages
+of FL, while providing a more personalized model for each
+device to quickly accommodate task and data heterogeneity
+(namely task/model agnostic) [23]. Consequently, FML is a
+promising solution to address the statistical and systematic
+challenges with fast adaptation and good generalization [24].
+Despite the auspicious benefits of FML, we still encounter
+the following challenges. Firstly, distributed coding is an
+important problem in information theory and communication.
+An optimal semantic representation should retain sufficient
+information for accurate inference while keeping minimal
+information without redundancy and semantic noise [25].
+There lacks a systematic way to deal with such a tradeoff
+between the informativeness of distributed multimodal features
+and their impact on tasks, especially under dynamic channel conditions. Secondly, rather than retraining task-specific
+models separately, it is crucial to develop a task-agnostic
+semantic transceiver network capable of supporting diverse
+tasks. A key problem lies in effectively exploring unimodal
+and multimodal representations while ensuring consistency
+and complementarity across modalities. Thirdly, a reasonable
+multiuser SemCom requires the transceiver networks to be
+deployed at the semantic users (SUs) and the base station (BS),
+respectively [19]. In this case, integrating FML into SemCom
+to enable rapid adaptation to new environments with brandnew users and data remains an open problem. Meanwhile, rig-
+
+orous performance analysis and efficient resource management
+are essential for ensuring the sustainability and stability of the
+system [26].
+To overcome the above challenges, we propose a taskagnostic semantic communication (TASC) framework that can
+handle various intelligent tasks. The primary contributions of
+this paper are summarized as follows:
+• We propose a novel TASC framework, where multiple
+task-oriented semantic transmitter networks at SUs extract and transmit unimodal semantic information, which
+is then processed by a shared task-agnostic semantic
+receiver network at the BS to generate multimodal representation for multiple diverse tasks.
+• We introduce the information bottleneck (IB) principle
+into TASC to facilitate unimodal and multimodal semantic coding. Two variants of distributed multimodal IB
+(DMIB) are proposed: 1) univocal DMIB, which learns
+minimal sufficient unimodal representations without redundancy while reserving task-relevant information, and
+2) syncretic DMIB, which ensures task-related multimodal representations by filtering out semantic noise.
+Furthermore, to reduce the communication overhead, we
+develop an adaptive semantic feature transmission scheme
+by dynamically adjusting the transmission dimensions
+under varying channel conditions.
+• Then, we use the FML to train TASC to achieve rapid
+adaptation and generalization. To gain deep insights, we
+conduct convergence analysis of TASC under non-convex
+settings. We then perform resource allocation to capture
+the tradeoff among convergence speed, training latency,
+and energy cost. Finally, a joint optimization algorithm
+is proposed to effectively solve the non-convex problem.
+• Through extensive experiments, TASC obtains satisfactory performance under dynamic channel conditions compared to the task-specific SemCom. By introducing the IB
+principle, TASC achieves a better rate-distortion tradeoff.
+We also validate the superiority of TASC over baselines in
+terms of convergence speed, training latency, and energy
+efficiency. Furthermore, leveraging the benefits of metalearning, TASC demonstrates rapid adaptation capabilities by achieving about a 59% decrease in terms of test
+loss than FL through few gradient descent iterations.
+II. TASC S YSTEM D ESIGN
+In this section, we first introduce the TASC system driven
+by the DMIB principle Then, we propose an adaptive semantic feature transmission scheme under dynamic channel
+conditions. Finally, the task-agnostic semantic-channel coding
+structure is depicted.
+A. Semantic Communication Model
+As illustrated in Fig. 1, we consider a wireless multimodal multiuser SemCom network, where three modalities
+are considered, i.e., visual (v), linguistic (l), and acoustic
+(a) modalities. Each modality m ∈ {v, l, a} comprises a set
+Km = {1, . . . , K m } of K m SUs. These SUs employ SemCom
+techniques to transmit the semantic meaning behind the source
+
+3
+
+Uplink for Inner Update
+Downlink for Inner Update
+Uplink for Outer Update
+Downlink for Outer Update
+
+Transformer … Transformer
+Encoder Layer Encoder Layer
+l
+Transformer … Transformer
+Encoder
+Layer Encoder Layer
+a
+
+Task-Agnostic Semantic Decoder
+
+Feature Fusion Network
+
+Task-Agnostic
+Channel Decoder
+
+MLP
+Layers
+
+…
+
+BS
+
+Fast
+Adaptation
+for New SUs
+
+MLP
+Layers
+
+
+
+Task-Agnostic
+Semantic Decoder
+
+Semantic MetaModel Transfer
+
+Dynamic
+Channel Encoder
+
+Transformer
+Encoder Layer
+
+Feed-Forward
+Network
+
+Multi-Head
+Self Attention
+
+Transformer Encoder
+
+
+
+Server
+
+Dynamic
+Channel Encoder
+
+Task-Oriented Semantic Encoder
+
+v
+
+Task-Agnostic
+Channel Decoder
+
+MLP
+Layers
+
+Semantic
+Encoder
+
+BS
+
+Feed-Forward
+Network
+
+Multi-Head
+Cross Attention
+Multi-Head
+Self Attention
+Unified Transformer
+Decoder
+Semantic Filter Network
+
+…
+
+Transformer
+Decoder Layer
+
+Dynamic
+Channel Encoder
+
+Data
+
+Transformer
+Decoder Layer
+
+Semantic
+Encoder
+
+SU
+
+Task-Agnostic Semantic Receiver
+
+MLP
+Layers
+
+Acoustic
+SUs
+
+Dynamic
+Channel Encoder
+
+MLP
+Layers
+
+Linguistic
+SUs
+
+Semantic
+Encoder
+
+Wireless Channel
+
+Visual
+SUs
+
+Federated Meta-Learning
+
+Meta Update
+
+MLP
+Layers
+
+Unimodal and Multimodal Tasks
+
+Task-Oriented Semantic Transmitter
+
+Fig. 1: The diagram of the proposed TASC framework over wireless networks.
+m
+
+datas to a BS in a task-oriented manner. Each SU is connected
+to the BS equipped with an edge server. The local dataset of
+the k-th SU with modality m is defined as Dkm with size
+Dkm , and S
+thus the whole dataset for modality m is denoted
+as Dm = k∈Km Dkm . Let (xm
+k , yk ) denote the sample points
+which follow an underlying distribution Pkm for modality m,
+m
+qk
+where xm
+represents the input data samples with qkm
+k ∈ R
+being the dimension of modality m for SU k, and yk denotes
+the true label. As shown in Fig. 1, each SU is deployed with
+a semantic transmitter including a semantic encoder and a
+channel encoder, both of which are represented by DNNs.
+Then, the encoding process is formulated as
+
+ck
+[27]. Afterwards, the transmitted signal z m
+with signal
+k ∈C
+m
+length ck passes a wireless channel. The received noisecorrupted signal from the k-th SU at the BS is given by
+
+m
+m
+m
+zm
+(1)
+k = ST m (xk ; θ k ), ∀k ∈ K , m ∈ {v, l, a},
+m
+where ST m (·; θ k ) denotes the semantic transmitter parameterized by θ m
+k of the k-th SU for processing modality m.
+
+where SR(·; θ B ) indicates the shared BS-side semantic receiver parameterized by θ B .
+
+It is worth noting that the orthogonal frequency division
+multiplexing (OFDM) signal processing is utilized in this
+work to convert semantic data into transmitted signals. As
+this operation can be formulated as a series of linear transformations (i.e., matrix vector multiplications), it is seamlessly
+integrated into the channel coding process within the DNNs
+
+m m
+m
+m
+ẑ m
+k = hk z k + nk , ∀k ∈ K , m ∈ {v, l, a},
+
+hm
+k
+2
+
+(2)
+nm
+k
+
+where
+∈ C denotes the channel gain, and
+∼
+CN (0, σ I) represents the independent and identically distributed Gaussian noise with zero mean and variance σ 2 .
+Subsequently, the received signal can be recovered by the
+channel decoder and then fed into the semantic decoder to
+directly produce the inference results ŷ, expressed as
+ŷ = SR(ẑ v1 , ẑ v2 , . . . , ẑ lk , . . . , ẑ aK a ; θ B ),
+
+(3)
+
+B. Distributed Multimodal Information Bottleneck
+Given the defined SemCom model, the variables are characterized by the following Markov chain [28]:
+Yk ↔ Xkm ↔ Zkm ↔ Zk ↔ Sk , ∀k ∈ Km , m ∈ {v, l, a}, (4)
+m
+m
+which satisfies p(sk , z k , z m
+k , xk |y k ) = p(sk |z k )p(z k |z k )
+m m
+m
+m
+m
+p(z k |xk )p(xk |y k ). Note that Yk , Xk , Zk , Zk , Sk are ranm
+dom variables, and y k , xm
+k , z k , z k , sk are multiple instances
+
+4
+
+of corresponding random variables. Firstly, we revisit the
+traditional IB and assume the Markov chain Yk ↔ Xk ↔ Zk .
+To achieve efficient task-oriented SemCom, the semantic feature Zk should be extracted and compressed in a concise
+representation by discarding the task-irrelevant information
+from the observation Xk , and preserved only informative
+task-related information about the target variable Yk . The IB
+principle aims to minimize the mutual information between Zk
+and Xk while maximizing the mutual information between Zk
+and Yk [25]. The objective of IB is formulated by
+LIB
+k = ζ I(Xk ; Zk ) −I(Yk ; Zk ) ≡ ζI(Xk ; Zk )+H(Yk |Zk ), (5)
+| {z } | {z }
+Rate
+
+Distortion
+
+where ζ is a weight factor and H(Yk ) is a constant that can
+be eliminated as I(Yk ; Zk ) = H(Yk ) − H(Yk |Zk ).
+1) Univocal DMIB: Unlike the traditional IB, our system
+processes the input comprising multiple unimodal representations X v , X l , and X a , which may contain disturbed taskunrelated information, hindering the effective exploration of
+complementary information among modalities. Moreover, the
+extracted features should retain minimal information by dislodging redundant elements to achieve efficient transmission.
+Therefore, we propose a new univocal DMIB (U-DMIB),
+which focuses on discriminative unimodal semantic features
+with minimal and sufficient representations to eliminate taskirrelevant information prior to fusion and align their encoded
+distributions by independently applying the IB principle to
+each modality. The objective function is formulated as
+X
+LU-DMIB
+=
+[ζI(Xkm ; Zkm ) + H(Yk |Zkm )].
+(6)
+k
+m
+
+For the rate term in (6), it is expressed as
+m
+m
+I(Xkm ; Zkm ) = DKL (pθm
+(z m
+k |xk )||p(z k )).
+k
+
+(7)
+
+Given the joint distribution p(xm
+k , y k ) and the Markov chain
+m
+in (4), p(z m
+)
+depends
+on
+the
+p
+(z m
+θm
+k
+k |xk ), expressed as
+k
+m
+m
+m
+p(z m
+(z m
+(8)
+k ) = ∫ p (xk ) pθ m
+k |xk ) dxk .
+k
+However, this distribution is intractable due to the highdimensional integral. To overcome this issue, we introduce
+variational distribution q(z m
+k ) to approximate distribution
+p(z m
+k ) [29]. Due to the non-negativity of the Kullback-Leibler
+m
+(KL) divergence, it is obtained that DKL (p(z m
+k )||q(z k )), and
+thus the variational upper bound is given by
+m
+m
+I(Xkm ; Zkm ) ≤ DKL (pθm
+(z m
+k |xk )||q(z k )).
+k
+
+(9)
+
+For the distortion term in (6), p(y k |z m
+k ) is typically impossible
+to compute due to the high dimensionality, denoted as
+R
+m m
+m
+m
+p (xm
+k , y k ) pθ k (z k |xk ) dxk
+m
+.
+(10)
+p(y k |z k ) =
+m
+p(z k )
+Similarly, we introduce qθB (y k |z m
+k ) as the variational distribution to approximate the true distribution p(y k |z m
+k ).
+Therefore, the objective function of variational U-DMIB (UVDMIB) in (6) is recast as
+X
+m
+m
+LU-VDMIB
+=
+[Ep(xm
+{ζDKL (pθm
+(z m
+k
+k |xk )||q(z k ))
+k
+k ,y k )
+m
+
+(11)
++ Ep (zm |xm ) [− log qθB (y k |z m
+k )]}].
+θk
+k
+k
+Leveraging the capabilities of deep learning, the distribum
+m
+tions pθm
+(z m
+k |xk ) and qθ B (y k |z k ) can be parameterized
+k
+m
+through DNNs with θ k and θ B . Generally, the multivari-
+
+ate Gaussian distribution is commonly used to characterize
+m
+m
+m m
+m m
+m
+pθ m
+(z m
+k |xk ), i.e., pθ k (z k |xk ) = N (z k |µk , Σk ), where
+k
+m
+m
+µk and Σk are the mean vector and the covariance mam
+m
+m
+m
+trix learned by the DNNs µzkm (xm
+k ; θ k ) and Σzk (xk ; θ k ),
+respectively. Besides, the approximated marginal distribution
+q(z m
+k ) can be treated as a standard centered isotropic Gaussian
+distribution N (z m
+k |0, I). To optimize the objective in (11) via
+the stochastic gradient descent (SGD), the reparameterization
+m m
+m
+m
+trick is adopted to sample z m
+k from pθ k (z k |xk ), i.e., z k =
+m
+m
+m
+m
+µk + Σk ⊙ ιk , where ιk ∼ N (0, I). Then, by employing
+Monte Carlo sampling, we can attain an unbiased estimate of
+the gradient, enabling the optimization in (11). Given a minii
+B
+batch of data {(xm,i
+k , y k )}i=1 at SU k for modality m, the
+empirical estimation of the U-VDMIB is expressed as
+
+
+1 XB X
+[ζDKL N (µm,i
+, Σm,i
+)||N (0, I)
+LU-VDMIB
+≃
+k
+k
+k
+i=1
+m
+B
+− log qθB (y ik |z m,i
+(12)
+k )].
+2) Syncretic DMIB: Different from the above U-DMIB, a
+key challenge is to ensure that the learned multimodal representation retains sufficient task-related information without
+semantic noise from different unimodal semantic representations. One intuitive approach is to first integrate these unimodal representations into a multimodal fusion representation
+and subsequently regularize it using the IB principle. We refer
+this approach as syncretic DMIB (S-DMIB), denoted by
+LS-DMIB
+= ζI(Zk ; Sk ) + H(Yk |Sk ),
+k
+
+(13)
+
+where Sk is the filtered multimodal representation by the
+feature filter in the task-agnostic semantic decoder, and Zk =
+v
+l
+a
+Ẑ k ⊕ Ẑ k ⊕ Ẑ k is the concatenated features. Afterwards,
+we apply IB to reduce redundancy and filter out semantic
+noisy information from the complex and high-dimensional
+multimodal representation while preserving sufficient taskrelevant information. Based on the deduction of U-VDMIB,
+the objective of variational S-DMIB is given by
+
+1 XB
+LS-VDMIB
+≃
+[ζDKL N (µik , Σik )||N (0, I)
+k
+i=1
+B
+− log qθB (y ik |sik )],
+(14)
+where µk = µs (z k ; θ µB ) and Σk = Σs (z k ; θ Σ
+B ) are learned
+by the DNNs θ µB and θ Σ
+B , respectively.
+3) Confluent DMIB: By combining the advantages of UDMIB and S-DMIB, we develop the confluent DMIB (CDMIB), expressed by
+LC-DMIB
+=ζI(Zk ; Sk ) + H(Yk |Sk )
+k
+X
++
+[ζI(Xkm ; Zkm ) + H(Yk |Zkm )].
+m
+
+(15)
+
+is given by
+The variational empirical estimation of LC-DMIB
+k
+XB
+X
+1
+[LSk +
+LU
+(16)
+LC-VDMIB
+≃
+k ],
+k
+i=1
+m
+B
+
+where
+
+LSk =ζDKL N (µik , Σik )||N (0, I) − log qθB (y ik |sik ),
+(17)
+
+m,i
+m,i
+m,i
+U
+i
+Lk =ζDKL N (µk , Σk )||N (0, I) −log qθB (y k |z k ). (18)
+Particularly, the mean absolute error and cross-entropy loss
+are commonly employed to minimize the conditional entropy
+between the target and the extracted semantic representation
+for regression and classification tasks, respectively [19].
+
+5
+
+C. Adaptive Semantic Feature Transmission
+Although the chosen variational approximation encourages
+sparsity in the transmitted semantic features to reduce communication overhead, an effective approach is still required
+to identify which transmission dimensions can be selected to
+be pruned. More importantly, transmitting a larger number of
+features can enhance robustness against channel noise while
+increasing communication overhead. Therefore, we propose a
+novel adaptive semantic feature transmission method to cope
+with dynamic channel conditions. Given a fully-connected
+(FC) layer, the computation operation is defined as
+FC(a) = W a + b,
+
+(19)
+
+where a, b, and W indicate the input, bias, and weight matrix,
+respectively. Define W̄ = [W , b] as an augmented weight
+matrix with W̄ j being the j-th row of W̄ . Let ϕj denote
+the j-th dimension of ϕ, which is the scaling factor for each
+row in W̄ . Then, the proposed adaptive transmission approach
+establishes the mapping from the input xm
+k to the encoded
+semantic feature z m
+based
+on
+the
+following
+formula:
+k
+
+
+W̄ j
+2
+m
+T
+m
+ϕj (σ ) ,
+(20)
+z k,j = Tanh S (xk )
+∥W̄ j ∥2
+where S T (·) is the function of the semantic encoder, Tanh(·)
+denotes the activation function, z m
+k,j is the j-th dimension
+2
+of z m
+,
+and
+ϕ
+(σ
+)
+(the
+j-th
+item
+of ϕ(σ 2 )) is the semantic
+j
+k
+feature importance determined by the channel noise variance
+σ 2 . Under poor channel conditions, we obtain a large ϕj (σ 2 )
+and z m
+k,j approaches 1, necessitating the transmission of a
+large number of semantic features to mitigate the impact of
+channel noise. Conversely, when channel conditions are favorable, transmitting a smaller number of semantic features is
+sufficient. More importantly, to further reduce the transmission
+overhead, the activated dimensions are sequentially assigned
+starting from the first dimension, eliminating the need for
+additional communication resources to transmit their indices
+or mask elements like in the existing works [15], [30]. The
+improved semantic dimension importance ϕj (σ 2 ) is given by
+Xd
+ϕj (σ 2 ) =
+ψr (σ 2 ),
+(21)
+r=j
+
+where d is the dimension of the encoded semantic vector,
+and ψr (·) is the r-th output dimension of the function ψ(·)
+parameterized by a multi-layer perceptron (MLP). By restricting the parameter range of MLP, ψr (σ 2 ) is ensured to
+be a non-negative increasing function, naturally leading to
+ϕj (σ 2 ) ≤ ϕr (σ 2 ), ∀j > r and ϕj (σ12 ) ≤ ϕj (σ22 ), ∀σ12 ≤ σ22 ,
+Hence, given a threshold ϕth , the proposed adaptive transmission method can flexibly adjust the dimensions of the
+transmitted semantic features in a successive manner under
+dynamic channel conditions.
+D. Task-Agnostic Semantic Transceiver Structure
+As shown in Fig. 1, each semantic transmitter is comprised
+of a task-oriented semantic encoder and a dynamic channel
+encoder, and the semantic receiver includes a task-agnostic
+channel decoder and a task-agnostic semantic decoder.
+1) Task-Oriented Semantic Transmitter: Thanks to the powerful semantic modeling and representation extraction capabil-
+
+ities, we primarily employ the Transformer [31] encoder as the
+backbone network to construct the semantic encoder for visual,
+linguistic, and acoustic modalities. Specifically, each Transformer encoder layer is composed of two components: selfattention network (SAN) and feed-forward network (FFN).
+The core is the attention mechanism of SAN that is calculated
+by adopting the dot-product similarity function. To clarify,
+SAN first projects the input sequence X m
+in of the modality
+m to query, key, and value space, respectively, i.e.,
+Q = W qXm
+in ,
+
+K = W kXm
+in ,
+
+V = W vXm
+in ,
+
+(22)
+
+where W q , W k , and W v are learnable parameters. Then, the
+output of self-attention can be attained by
+p
+⊤
+(23)
+SA(X m
+in ) = Softmax(Q K/ Nd )V .
+where Nd is the hidden size. In SAN, multi-head self attention
+(MSA) is adopted to promote the capacity, where multiple
+parallel attention heads are employed individually on the input
+sequence. The output of each head is concatenated and linearly
+transformed into the final output. Thus we have
+MSA(X m
+in ) =
+m
+m
+m
+Xm
+in + (SA(X in ) ⊕ SA(X in ) ⊕ · · · ⊕ SA(X in ))W H , (24)
+
+where W H is learnable parameters. Afterwards, MSA(X m
+in )
+is fed into FFN, and it can be obtained that
+m
+m
+Xm
+out = MSA(X in ) + FFN(MSA(X in )).
+
+(25)
+
+To handle multiple tasks with a single set of parameters, the
+encoder of TASC must identify the current task to perform
+targeted feature extraction effectively. Therefore, the task embedding vector ϖ m
+k is introduced and trained across the whole
+network. By concatenating X m
+in , the input of the semantic
+encoder layer is denoted as
+m
+f = X m ⊕ ϖm .
+(26)
+X
+in
+
+in
+
+k
+
+To facilitate the transmission and resist the dynamic channel
+conditions, an adaptive channel encoder composed of multiple
+MLP layers is developed for flexible semantic feature transmission w.r.t. Z m
+k as discussed in Section II.C.
+2) Task-Agnostic Semantic Receiver: At the semantic rem
+ceiver, the received noise-corrupted features Ẑ k are firstly
+fed into a task-agnostic channel decoder, consisting of multiple MLP layers, to mitigate the impact of channel noise.
+Subsequently, the task-agnostic semantic decoder processes
+the output of the channel decoder to generate task-specific
+multimodal representations, which are then utilized for inference. The task-agnostic semantic decoder is built upon the unified Transformer [32] decoder structure, which is comprised
+of three components: SAN, cross-attention network (CAN),
+and FFN. Unlike SAN, CAN is designed to learn essential
+information among various modalities. Given the input Z 1in
+and Z 2in , it can be obtained that
+Q1 = W q Z 1in ,
+
+K 2 = W k Z 2in ,
+
+V 2 = W v Z 2in .
+
+(27)
+
+Then the operation of CAN is denoted as
+CA(Z 1in , Z 2in ) = Softmax(βQ⊤
+1 K 2 )V 2 .
+
+(28)
+
+Similar to MSA, multi-head cross attention (MCA) performs
+MCA(Z 1in , Z 2in ) =Z 1in + (CA(Z 1in , Z 2in ) ⊕ CA(Z 1in , Z 2in )
+⊕ · · · ⊕ CA(Z 1in , Z 2in ))W H .
+
+(29)
+
+6
+
+The output of a Transformer decoder layer is given by
+Z out = MSA(Z 1in ) + FFN(MCA(MSA(Z 1in ), Z 2in )).
+
+(30)
+
+Specifically, the decoded features by the channel decoder are
+v
+l
+a
+first processed by the fusion network Z k = Ẑ k ⊕ Ẑ k ⊕ Ẑ k .
+Then, a semantic filter network including multiple Unified
+Transformer decoder processes Z k to filter out redundant
+task-irrelevant information with semantic noise caused by
+multimodal feature fusion, and produces S k . Finally, S k are
+directly fed into the universal decoder network that consists of
+multiple Unified Transformer decoder layers to infer the final
+prediction. Notably, the first Transformer decoder layer takes
+Z k and learnable task-specific query embedding matrix T K
+as the input, i.e., Z 1in = T K and Z 2in = Z k in (30), given by
+Z 1out = MSA(T K ) + FFN(MCA(MSA(T K ), Z k )).
+
+(31)
+
+The task-specific query matrix T K functions as an identifier
+for the task assigned to the semantic decoder, analogous to the
+conventional input utilized by the Transformer decoder. For the
+subsequent decoder layers, the output of the i-th decoder layer
+Z iout can be iteratively represented as
+i−1
+Z iout = MSA(Z i−1
+out ) + FFN(MCA(MSA(Z out ), Z k )). (32)
+
+III. TASC T RAINING BASED ON FML
+In this section, we present a novel distributed learning
+framework for TASC by exploiting the advantageous FML.
+
+the BS updates the global model by aggregating the received
+models to obtain θ(t + 1), which is given by
+X
+θ(t + 1) =
+ωk θ k (t).
+(37)
+k∈K
+
+It is worth noting that FL can be deemed as a special case
+of FML when α in (34) is set to 0. On the one hand, FML
+provides a personalized solution that effectively accounts for
+the heterogeneity among SUs. On the other hand, instead of
+locally updating the model directly as in FL, FML targets to
+learn a well-initialized model θ which can quickly adapt to
+new users and data with only a small number of samples.
+
+B. TASC Training Framework
+A reasonable multiuser SemCom model is inherently partitioned into multiple semantic transmitters at the SUs and
+a shared receiver network at the BS. Inspired by this, we
+present our novel distributed learning architecture for TASC by
+leveraging FML. The detailed learning procedure is outlined in
+Algorithm 1. For each training round t ∈ T = {0, 1, . . . , C −
+1}, the process consists of the following inner learning, outer
+learning, and federated aggregation stages.
+1) Inner Learning Stage: The first inner learning stage of
+TASC is to facilitate the inner update for multiuser SermCom
+systems, involving the following steps.
+•
+
+A. FML Problem
+Our goal is to collaboratively meta-train the TASC system
+based on data distributed among SUs, such that the models
+can perform well for brand-new users and data via a few quick
+gradient descent steps. For simplicity, we omit the modality
+m and redefine the loss function of the k-th SU w.r.t. the
+parameter θ as lk (θ). In FML, each local dataset Dk is divided
+into the support set DkS and the query set DkQ , both of which
+contain labeled data samples. The objective of FML is
+X
+X
+min L (θ) =
+ωk Lk (θ k ) =
+ωk lk (φk , DkQ ),(33)
+k∈K
+k∈K
+θ
+P
+where ωk = Dk / k∈K Dk is the weight. Concretely, at the
+beginning of communication round t, the BS selects a set K of
+K SUs and distributes θ(t) to them. For the τ -th meta-learning
+step where 0 ≤ τ ≤ τ0 − 1, the k-th user first performs inner
+update using SGD based on DkS , i.e.,
+
+φk (t, τ ) = θ k (t, τ ) − α∇θ lk θ k (t, τ ), DkS ,
+(34)
+where α is the inner learning rate Then the meta-function
+Lk (θ k ) = lk (φk , DkQ ) is evaluated based on φk and DkQ to
+perform outer update, given by
+˜ k (θ k (t, τ )) ,
+θ k (t, τ + 1) = θ k (t, τ ) − β ∇L
+(35)
+where β > 0 is the meta-learning rate. Note that θ(t) =
+˜ k (θ) is a biased
+θ k (t, 0) when τ = 0 at the start, and ∇L
+estimate of ∇Lk (θ), expressed as
+
+
+
+
+˜ k θ = I −α∇
+˜ 2 lk θ; Dk′′ ∇l
+˜ k θ−α∇l
+˜ k θ; Dk ; Dk′ , (36)
+∇L
+˜ k (θ) and
+where Dk , Dk′ , and Dk′′ are independent batches, ∇l
+2
+˜
+∇ lk (θ) are the unbiased estimates of ∇lk (θ) and ∇2 lk (θ),
+respectively. After running τ0 meta-learning steps, each user
+transmits its meta model θ k (t) = θ k (t, τ0 ) to the BS. Then
+
+SU-side Inner Model Forward Propagation (SIMFP): In
+this step, all participating SUs perform the inner FP for
+semantic transmitters in parallel. Specifically, a minibatch data with b samples is randomly drawn from SU
+k, indicated by BkI (t, τ ) ⊆ DkS . Let XIk (t, τ ) ∈ Rb×q and
+yk (t, τ ) ∈ Rb×1 denote the aggregated input data and
+labels of the mini-batch, respectively. Then the input data
+are fed into the SU-side transmitter network to produce
+transmitted signals, denoted as ZIk (t, τ ) ∈ Cb×c , i.e.,
+ZIk (t, τ ) = ST (XIk (t, τ ); θ k (t, τ )).
+
+(38)
+
+Inner Semantic Data Transmission (ISDT): After completing the inner FP process for the SU-side transmitter
+network, each participating user transmits signals and
+labels to the BS. The received signal is then utilized as
+the input of the BS-side receiver network to accomplish
+the remaining part of the inner FP process.
+• BS-side Inner Model Forward and Backward Propagation
+(BIMFBP): Subsequently, the BS collects the transmitted
+signals that are concatenated into matrix ẐI (t, τ ) =
+[ẐI1 (t, τ ); ẐI2 (t, τ ); · · · ; ẐIK (t, τ )] ∈ CKb×c , which is
+then fed into the receiver network θ B (t, τ ). Thus, the
+predicted result is obtained by
+•
+
+ŷI (t, τ ) = SR(ẐI (t, τ ); θ B (t, τ )).
+
+(39)
+
+With the knowledge of (38) and (39), the one-round FP
+process of the inner update is finished. Given the predicted results and the corresponding labels, the average
+gradients of the loss function can be computed to perform
+the BP process of the inner update via SGD:
+φB (t, τ ) = θ B (t, τ ) − αB ∇θ lk (θ B (t, τ )),
+
+(40)
+
+where φB (t, τ ) indicates the parameters of the BS-side
+model for inner update and αB is the inner learning rate.
+
+7
+
+Inner Activations’ Gradients Transmission (IAGT): When
+the inner BP process reaches the first layer of the receiver
+network, the activations’ gradients of a mini-batch data,
+are transmitted to the corresponding SUs.
+• SU-side Inner Model Backward Propagation (SIMBP):
+Then each SU-side transmitter model is updated via SGD:
+
+•
+
+φk (t, τ ) = θ k (t, τ ) − αS ∇θ lk (θ k (t, τ )),
+
+(41)
+
+where φk (t, τ ) is the parameters of the SU-side model
+after inner update, and αS is the inner learning rate.
+2) Outer Learning Stage: Similar to the inner learning
+process, this stage is to evaluate parameter φ on the query set
+by computing the test loss, which reflects the training ability
+of the semantic model. Then, the model parameters are further
+updated by minimizing the test loss, i.e., outer update.
+• SU-side Outer Model Forward Propagation (SOMFP):
+Given the input data XO
+k (t, τ ) and parameter φk (t, τ )),
+the FP process of the outer update is performed as
+O
+ZO
+k (t, τ ) = ST (Xk (t, τ ); φk (t, τ )).
+
+(42)
+
+Outer Semantic Data Transmission (OSDT): Then the
+produced transmitted signals and labels are sent to the
+BS to complete the FP process of the outer update.
+• BS-side Outer Model Forward and Backward Propagation (BOMFBP): With the received signals, the BS
+concatenates them into matrix ẐO (t, τ ) ∈ CKb×c . Then,
+the predicted value is obtained by
+
+•
+
+ŷO (t, τ ) = SR(ẐO (t, τ ); φB (t, τ )).
+
+(43)
+
+Note that the outer learning stage directly updates θ(t, τ )
+rather than φ(t, τ ) via SGD, given by
+θ B (t, τ + 1) = θ B (t, τ ) − βB ∇θ lk (φB (t, τ )),
+
+(44)
+
+where βB denotes the meta-learning rate at the BS.
+Outer Activations’ Gradients Transmission (OAGT): After completing the BS-side outer BP process, the activations’ gradients are sent to SUs for the BP process.
+• SU-side Outer Model Backward Propagation (SOMBP):
+In this step, each SU performs the meta-update for the
+semantic transmitter network based on SGD, given by
+
+Algorithm 1 Training Process of The TASC Framework
+Input: b, αB , αS , βB , βS , τ0 , C;
+1: Initialize model parameters θ k and θ B ;
+2: while communication round t = 0 to C − 1 do
+3:
+BS broadcasts the latest transmitter model to SUs;
+4:
+for meta-learning step τ = 0 to τ0 − 1 do
+5:
+for each SU k ∈ K in parallel do
+6:
+Draw a mini-batch of data samples;
+7:
+Execute SU-side inner model FP based on (38);
+8:
+Send semantic data to the BS;
+9:
+end for
+10:
+BS performs model FP and BP via (39) and (40);
+11:
+BS transmits activations’ gradients to SUs;
+12:
+for each SU k ∈ K in parallel do
+13:
+Update the semantic transmitter model via (41);
+14:
+Execute SU-side outer model FP based on (42);
+15:
+Transmit semantic data to the BS;
+16:
+end for
+17:
+BS executes FP and BP based on (43) and (44);
+18:
+BS sends the outer activations’ gradients to SUs;
+19:
+for each SU k ∈ K in parallel do
+20:
+Update the semantic transmitter model via (45);
+21:
+end for
+22:
+end for
+23:
+for each SU k ∈ K in parallel do
+24:
+Upload the SU-side transmitter models to the BS;
+25:
+BS computes loss divergence δk (t) based on (62);
+26:
+end for
+27:
+BS determines SU selection Kt by solving (76)
+28:
+BS aggregates SU-side transmitter models via (46);
+29: end while
+Output: The converged semantic transceiver model θ.
+
+•
+
+θ k (t, τ + 1) = θ k (t, τ ) − βS ∇θ lk (φk (t, τ )),
+
+(45)
+
+where βS is the SU’s meta-learning rate.
+3) Federated Aggregation Stage: After completing τ0 steps
+of inner and outer learning, SU-side models are uploaded and
+aggregated based on the FedAvg algorithm, expressed by
+P
+Dk θ k (t, τ0 )
+P
+.
+(46)
+θ(t + 1) = k∈K
+k∈K Dk
+Note that θ k (t + 1, 0) = θ(t + 1) when τ = 0 at the beginning
+of the (t + 1)-th communication round.
+IV. T HEORETICAL A NALYSIS
+A. Assumptions
+For a more general case, non-convex settings are considered
+[24]. The aim is to identify an ϵ-approximate first-order
+stationary point (FOSP) in problem (33), defined as follows.
+Definition 1: Define a random vector θ ϵ ∈ Rd as an ϵ2
+FOSP in problem (33) if it satisfies E[∥∇L (θ ϵ )∥ ] ≤ ϵ.
+Then the assumptions are stated without loss of generality.
+
+Assumption 1: For every SU k ∈ K, the expected loss
+function lk is twice continuously differentiable and Hk -smooth,
+which is
+∥∇lk (θ 1 ) − ∇lk (θ 2 )∥ ≤ Hk ∥θ 1 − θ 2 ∥, ∀θ 1 , θ 2 ∈ Rd . (47)
+Besides, its gradient is bounded by a positive constant Φk ,
+i.e., ∥∇lk (θ)∥ ≤ Φk .
+Assumption 2: The Hessian of lk (θ) is λk -Lipschitz continuous, which is
+∇2 lk (θ 1 ) − ∇2 lk (θ 2 ) ≤ λk ∥θ 1 − θ 2 ∥, ∀θ 1 , θ 2 ∈ Rd . (48)
+Assumption 3: For any θ ∈ Rd , the gradient ∇ℓk (θ; x, y)
+and Hessian ∇2 ℓk (θ; x, y) w.r.t. a single point (xik , yki ) ∈
+X × Y, satisfy the following conditions
+2
+E(x,y)∼Pk [||∇ℓk (θ; x, y) − ∇lk (θ)||2 ] ≤ σG
+,
+
+(49)
+
+2
+E(x,y)∼Pk [||∇2 ℓk (θ; x, y) − ∇2 lk (θ)||2 ] ≤ σH
+.
+
+(50)
+
+Assumption 4: For any θ ∈ Rd , the following facts hold
+for gradient and Hessian of lk (θ) and l (θ)
+1 XK
+2
+∥∇lk (θ) − ∇l(θ)∥ ≤ µ2G ,
+(51)
+k=1
+K
+1 XK
+2
+∇2 lk (θ) − ∇2 l(θ) ≤ µ2H ,
+(52)
+k=1
+K
+PK
+where l (θ) = k=1 lk (θ) is the average function of lk (θ).
+
+8
+
+B. Convergence Analysis
+Denote Φ = maxk Φk , H = maxk Hk , λ = maxk λk for
+ease of analysis. Then the following lemmas are provided.
+Lemma 1: If Assumptions 1 and 2 hold, then for any α ∈
+(0, 1/H], the meta-function of SU k, i.e., Lk (θ), is smooth
+with parameter HL = 4H + αλΦ, and the average function
+L(θ) is also smooth with HL .
+Lemma 2: If Assumptions 1, 2, and 3 hold, for any α ∈
+(0, 1/H] and θ ∈ Rd , the following holds
+√
+
+
+˜ k (θ) − ∇Lk (θ) ≤ 2αHσG / Dk ,
+(53)
+E ∇L
+
+2
+2
+˜ k (θ) − ∇Lk (θ)
+≤ σL
+,
+(54)
+E ∇L
+2
+where σL
+is denoted as
+2 
+Dk + Dk′ 
+2 α
+1
++
+σ
+.
+(55)
+H
+Dk Dk′
+4Dk′′
+Lemma 3: Suppose that conditions in Assumptions 1, 2,
+and 4 are satisfied, for any θ ∈ Rd , we have
+1 XK
+2
+∥∇Lk (θ) − ∇L(θ)∥ ≤ µ2L ,
+(56)
+k=1
+K
+where µ2L is defined as
+µ2L = 3Φ2 α2 µ2H + 192µ2G .
+(57)
+With Lemmas 1-3, the expected convergence result of TASC
+framework is obtained below.
+Theorem 1: Suppose that Assumptions 1-4 hold. Given
+independent sampled datasets with Dk = Dk′ = Dk′′ = D, the
+number of communication rounds K, and the optimal global
+loss L (θ ϵ ) , and then for α ∈ (0, 1/H] and β ∈ (0, 1/HL ],
+the following FOSP condition holds
+ 2 i 4 (L (θ 0 )−L (θ ϵ ))
+1 XC−1 Xτ0 −1 h
+≤
+E ∇L θ̄(t)
+t=0
+τ =0
+τ0 C
+βτ0 C
+
+
+2
+2 2 2
+K
+16α H σG
+µL
+2
++ 4βHL 2σL
++
+(
+− 1) +
+, (58)
+(K − 1) K t
+Dk
+PK
+where K t =
+k=1 ak is the number of selected SUs with
+ak ∈ {0, 1} being the binary SU selection variable, and θ̄(t)
+is the average of local updates θ k (t).
+Proof: See Appendix A of the technical report [33].
+Theorem 1 provides a lower bound on the gradient of global
+objective function L. It shows that increases of communication
+rounds and meta-learning steps improve the convergence of
+the proposed TASC framework. Furthermore, it implies that
+how the task similarity and different SU selection impact
+the convergence. While the overall convergence performance
+exhibits weak dependence on the total number of SUs, the
+convergence speed improves as the number of selected SUs
+increases. Therefore, it is critical to quantify the loss contribution of each SU for facilitating the convergence.
+2
+2
+σL
+= 12 Φ2 + σG
+
+C. SU Convergence Contribution
+To improve the convergence, the main result is given below.
+Corollary 1: If Assumptions 1-4 hold, given independent
+sampled datasets with Dk = Dk′ = Dk′′ , and for α ∈ (0, 1/H]
+and β ∈ (0, 1/HL ], we have
+1 X
+β
+˜ k (θ k (t)) ∥2
+(−∥∇L
+E [L (θ(t + 1))−L (θ(t))] ≤ E[
+2 Kt
+k∈Kt
+p
+˜ k (θ k (t)) ∥)], (59)
++ (η1 + η2 / Dk )∥∇L
+
+where η1 and η2 are positive constants, which are
+q
+p
+2 ),
+η1 ≥ 16µG + 4αΦµH + β 140(µ2G + 2σL
+2
+2
+2
+η2 ≥ 24σG
+(4 + α2 σH
+) + 6α2 Φ2 σH
+.
+
+(60)
+(61)
+
+Proof: See Appendix B of the technical report [33].
+From Corollary 1, it suggests that a SU with a large
+gradient inherently accelerates the reduction of global metaloss. However, a small size of the dataset hinders this course
+due to the large variance. Additionally, as SU dissimilarities
+increase, the upper bound in equation (59) becomes less
+restrictive. Inspired by this, the k-th SU loss divergence for
+convergence contribution in the t-th communication round is
+p
+˜ k (θk (t)) ∥−∥∇L
+˜ k (θk (t)) ∥2 . (62)
+δk (t) = (η1 +η2 / Dk )∥∇L
+V. R ESOURCE A LLOCATION FOR TASC OVER
+W IRELESS N ETWORKS
+In this section, we consider the proposed TASC framework over multi-access wireless networks. First, we present
+the wireless transmission and computing model of TASC,
+followed by the analysis of training latency and energy cost.
+We then perform effective resource allocation that jointly optimizes SU selection, power control, and computing capabilities.
+A. Wireless Transmission and Computation Model
+1) Wireless Transmission Model: For uplink transmission,
+the orthogonal frequency division multiple access (OFDMA)
+is considered, whereby each SU occupies one uplink resource
+block (RB) in a round to transmit semantic data and upload
+its meta model. The achievable rate of SU k is given by
+
+
+X
+hk pk
+U
+U
+Rk (ak , pk ) =
+ak,n W log2 1+
+, (63)
+n∈R
+In +W U N0
+where ak = [ak,1 , . . . , ak,R ] indicates an RB allocation
+vector with R being the number of RBs, denoted by R =
+{1, 2, . . . , R}; W U is the bandwidth of each RB; pk is the
+transmit power of SU k; N0 is the power spectral density
+of the Gaussian noise; In is the interference caused by users
+located in other service areas who are utilizing RB n. Each SU
+can occupy at most one RB while each RB can be assigned
+to at most one SU, which is specified as
+X
+X
+ak,n ≤ 1, ∀k ∈ K,
+ak,n ≤ 1, ∀n ∈ R. (64)
+n∈R
+
+k∈K
+
+The downlink rate achieved by the BS to transmit gradients
+and parameters of global meta model to SU k, is denoted as
+
+
+hk pB
+D
+D
+Rk = W log2 1 + D
+,
+(65)
+I + W D N0
+where W D and pB are the bandwidth and transmit power of
+the BS, respectively; I D denotes the inference caused by other
+BSs which are not involved in the FML algorithm.
+2) Computation Model: Let fk be the CPU-cycle frequency
+of SU k. Denote γk as the computation workload (in FLOPs)
+for SU k to execute and update the model with one sample.
+With Dk being the batch size, the computation workload
+required to run one-step local training is γk Dk . Thus, the
+energy consumption of SU k in a global round is given by
+Ekcp (fk ) = ςk τ κk γk Dk fk2 ,
+
+(66)
+
+9
+
+Outer Update
+
+Inner Update
+BS
+
+BOMFBP OAGT
+
+BIMFBP IAGT
+
+SU 1 SIMFP ISDT
+
+SIMBP SOMFPOSDT
+
+SOMBP
+
+SU 2 SIMFP ISDT
+
+SIMBP SOMFPOSDT
+
+SOMBP
+
+SU K SIMFP ISDT
+
+SIMBP SOMFP OSDT
+
+SOMBP
+
+4) Model Transmission and Aggregation Stage (MTA):
+Regarding the MTA latency, each SU uploads its SU-side
+transmitter model to the BS using the allocated radio spectrum.
+Note that the aggregation latency is negligible as the FedAvg
+algorithm has relatively low computational complexity. Then,
+the MTA latency and energy cost are given by
+X
+TkU = ξM /RkU , EkU =
+ak,n TkU pk .
+(73)
+n∈R
+
+Time
+
+MB Stage Meta-Learning Step 1
+
+Meta-Learning Step 0 MTA Stage
+
+C. Problem Formulation
+
+Fig. 2: The procedure of TASC in one communication round.
+where ςk is the effective capacitance coefficient, κk is the
+computing intensity (i.e., the number of CPU cycles required
+to complete one float-point operation) Then, the computation
+time of SU k during the local update phase is calculated as
+Tkcp (fk ) = τ κk γk Dk /fk .
+
+(67)
+
+Note that we set τ = 1 in the following for simplicity.
+
+Without loss of generality, we take into account one round
+analysis. The index m of modality is omitted for brevity.
+As shown in Fig. 2, each round consists of four stages in a
+chronological manner: model broadcast, inner learning, outer
+learning, and model transmission and aggregation. Each round
+involves the communication and computation processes. Given
+the wireless transmission and computation model, the training
+latency and energy consumption of TASC are analyzed below.
+1) Model Broadcast (MB) Stage: Denote ξM as the model
+size of the transmitter network. The communication latency
+and energy consumption of MB are given by
+D
+TBD = ξM /RkD , EB
+= TBD pB .
+(68)
+2) Inner Learning Stage: The computational latency and
+energy cost of SIMFP and SIMBP for SU k are expressed by
+
+Ekcp,I = ςk κk γkI Dk fk2 .
+
+(69)
+
+The computational latency and energy cost of BIMFBP are
+X
+X
+cp,I
+I
+I
+TBcp,I =
+κB γB
+Dk /fB , EB
+=
+ςB κB γB
+Dk fB2 , (70)
+k
+
+k
+
+I
+where γB
+is the computation workload of BS-side model’s FP
+and BP process w.r.t. one data sample, fB is the CPU-cycle
+frequency of the BS. For semantic data uplink transmission,
+the latency and energy cost of ISDT are
+X
+Tkco,I = ξdI /RkU , Ekco,I =
+ak,n Tkco,I pk ,
+(71)
+n∈R
+
+where ξdI is the transmitted semantic data size. For the process
+of IAGT, the transmission latency and energy cost are
+TBco,I = ξgI /RkD ,
+
+co,I
+EB
+= TBco,I pB ,
+
+k∈K
+
+T (a, p, f ) = maxk∈K {Tkcp + TBco + TBD } + TBcp +
+X
+max
+ak,n (Tkco + TkU ).
+n∈R
+
+k∈K
+
+(72)
+
+where ξgI indicates the data size of activations’ gradients.
+3) Outer Learning Stage: Since the model parameters have
+a fixed dimension, the model sizes of semantic transceivers
+can be considered to be constant. Thereby we have γkO =
+O
+I
+γkI , γB
+= γB
+, ξdo = ξdI , ξgO = ξgI . Consequently, it can be found
+cp,I
+that Tk
+= Tkcp,O , TBcp,O = TBcp,I , Tkco,O = Tkco,I , Tgco,O =
+Tgco,I . The same is true for energy consumption, and hence,
+we omit superscripts I and O for simplicity.
+
+(75)
+
+Moreover, to improve the convergence speed, we also need to
+minimize the following total SU contribution divergence as
+X
+X
+Ψ(a) =
+ak,n δk .
+(76)
+k∈K
+
+B. Training Latency and Energy Consumption
+
+Tkcp,I = κk γkI Dk /fk ,
+
+With the analysis of all stages in (68)-(73), the one-round
+energy consumption and training latency are denoted as
+X
+
+cp
+D
+co
+E(a, p, f ) =
+Ekcp +Ekco +EkU +EB
++EB
++EB
+, (74)
+
+n∈R
+
+To address the heterogeneous channel conditions and computing capability of SUs while enhancing model convergence,
+we formulate the following optimization problem:
+P:
+
+min
+
+Ψ(a) + ρ1 E(a, p, f ) + ρ2 T (a, p, f ) (77a)
+
+s. t.
+
+0 ≤ pk ≤ pmax
+, ∀k ∈ K,
+k
+
+(77b)
+
+0 ≤ fk ≤ fkmax ,
+
+(77c)
+
+a,p,f
+
+∀k ∈ K,
+
+ak,n ∈ {0, 1}, ∀k ∈ K, n ∈ R,
+X
+ak,n ≤ 1, ∀k ∈ K,
+Xn∈R
+ak,n ≤ 1, ∀n ∈ R,
+
+(77d)
+(77e)
+(77f)
+
+k∈K
+
+where ρ1 and ρ2 denote the weight coefficients that controls
+the Pareto-optimal tradeoff among convergence, latency, and
+energy cost. Notably, P is a non-convex mixed-integer nonlinear programming (MINLP) problem with a severe straggler
+issue, which is challenging to solve. To overcome this, a joint
+optimization algorithm is provided.
+D. Algorithm Design
+Note that since the BS equipped with a server has sufficient
+transmission and computing power, the computation and communication overhead of the BS is typically negligible. To solve
+problem P, it can be decomposed into two sub-problems:
+X
+κk γk Dk
+(78a)
+SP1 :min Q1 (f )= ρ1
+ςk κk γk Dk fk2+ρ2 max
+f
+k∈K
+fk
+k∈K
+
+s. t. (77c).
+P P
+SP2 : min Q2 (a, p) =
+ak,n δk
+
+(78b)
+
+a,p
+
+k∈K n∈R
++ρ1
+ak,n U (ξd +ξM )phkk pk
+W log2 (1+
+U
+k∈K n∈R
+
+N0
+
+ξd +ξM
++ρ2 max
+ak,n U
+hk pk
+W log2 (1+
+k∈K n∈R
+U
+
+N0
+
+P P
+
+In +W
+
+)
+
+P
+
+In +W
+
+s. t. (77b), (77d), (77e), (77f ).
+
+)
+
+(79a)
+(79b)
+
+1) CPU Frequency Optimization: Problem (78) is determined by the straggler’s latency. Assume that SU l is the
+
+10
+
+straggler user. Then SP1 can be expressed as
+X
+κl γl Dl
+min ρ1
+ςk κk γk Dk fk2 + ρ2
+f
+fl
+
+(80a)
+
+k∈K
+
+κk γk Dk fl
+≤ fk , (77c).
+(80b)
+κl γl Dl
+Lemma 4: The optimal solution to problem (80) is
+q
+
+
+min 3 b1 , min κl γl Dl flmax , if k = l
+b2 k∈K κk γk Dk
+fk∗ =
+(81)
+ κk γk Dk fl∗
+,
+otherwise
+κl γl Dl
+where SU l is the straggler among all SUs operating at optimal
+CPU frequencies f ∗ , and b1 and b2 are constants which are
+given by
+X ςk (κk γk Dk )3
+(82)
+b1 = ρ2 κl γl Dl , b2 = 2ρ1
+2 .
+(κl γl Dl )
+k∈K
+s. t.
+
+Proof: See Appendix C of the technical report [33].
+From Lemma 4, it suggests that if the straggler SU can be
+identified, the optimal CPU-cycle frequencies for all SUs can
+be obtained in closed-form solutions. This insights leads to
+the following Theorem.
+Theorem 2: The global optimal solution to SP1 is
+f ∗ = argminf ∈{fl∗ }l∈K Q1 (f ),
+
+(83)
+
+where fl∗ indicates the optimal solution of problem (80) given
+the straggler SU l.
+With Theorem 2, SP1 can be efficiently addressed with a
+computational complexity of O(n) by evaluating the objective
+values for various potential straggler users.
+2) Transmit Power and RB Allocation: Since SP2 is a
+non-convex MINLP problem which is intractable to solve, we
+present an efficient iterative algorithm in the following. Define
+∗
+the optimal solutions
+|k ∈ K, n ∈ R},
+P of SP2 as a = {ak,n
+∗
+K = {k ∈ K| n∈R ak,n = 1}, and p∗ = {p∗k |k ∈ K},
+respectively. Then the auxiliary variable χ is introduced to
+denote the transmission time, expressed as
+X
+(ξd + ξM )
+,
+(84)
+χ∗ = max
+a∗k,n
+hk p∗
+k
+U
+k∈K
+W log2 (1 + In +W
+UN )
+n∈R
+0
+where it satisfies
+(ξd + ξM )
+χ∗ ≥
+.
+(85)
+hk p∗
+k
+U
+W log2 (1 + In +W
+UN )
+0
+Given a∗ and χ∗ , problem (79) can be transformed to
+X
+ρ1 (ξd + ξM )pk
+min
+a∗k,n
+(86a)
+hk p∗
+p
+k
+U
+W log2 (1 + In +W
+UN )
+n∈R
+0
+X
+(ξd + ξM )
+s. t.
+a∗k,n
+≤ χ∗ , (86b)
+hk p∗
+k
+U
+W log2 (1 + In +W U N0 )
+n∈R
+(77b).
+
+(86c)
+∗
+
+Lemma 5: Given the transmission time χ , the optimal
+solution to problem (86) is given by
+
+!
+M −1
+ I ∗ +W U N  2 ξWd +ξ
+U χ∗
+
+0
+n
+k
+(87)
+p∗k =
+, if k ∈ K∗
+hk
+
+ 0,
+otherwise.
+Proof: See Appendix D of the technical report [33].
+Lemma 5 implies that the optimal solution of transmission
+power is determined in closed-form using (87) with the knowl-
+
+edge of the RB allocation and transmission time. Moreover, it
+states that (87) can yield the optimal transmission power for
+any a∗ and χ∗ , provided that condition (85) is satisfied. Given
+χ∗ , problem (79) is transformed to
+!
+X
+(ξd + ξM )pk
+(88a)
+min
+ak,n δk + ρ1
+h k pk
+a
+W U log2 (1 + In +W
+UN )
+k,n
+0
+s. t.
+
+(79b).
+
+(88b)
+
+Based on Lemma 5, the following result is derived.
+Theorem 3: The optimal RB allocation of problem (88) is
+X
+a∗ = argmin
+ak,n (δk − vk,n ),
+(89)
+a
+
+k,n
+
+where (
+
+ξd +ξM
+U
+−1
+∗ (In +W N0 )
+W U χ∗
+(2
+), if (85) holds (90)
+−ρ
+χ
+1
+h
+vk,n =
+k
+δk − 1,
+otherwise.
+Theorem 3 indicates that given χ∗ , the optimal RB allocation decision can be determined by solving (89). Notably,
+problem (89) is a bipartite graph matching problem with K
+and R being the source set and target set, respectively. The
+objective is to find a matching in the graph that minimizes
+the total sum of weights, i.e., δk − vk,n when δk < vk,n , and
+otherwise, (δk − vk,n ) → ∞. In view of this, Kuhn-Munkres
+algorithm is utilized to solve problem (89) given χ∗ [34].
+Then we assume SU l as the communication straggler. By
+fixing a∗ , problem (79) is characterized as
+X
+(ξd + ξM )pk
+min ρ1
+hk pk
+U
+{pk }k∈K∗
+W log2 (1 + In +W
+UN )
+n∈R
+0
+X
+ξd + ξM
+(91a)
++ρ2
+hk pk
+W U log2 (1 + In +W
+UN )
+n∈R
+0
+
+In∗k + W U N0 hl
+ pl ≤ pk ,
+s. t.
+(91b)
+In∗l + W U N0 hk
+(77b).
+(91c)
+
+Lemma 6: The solution to problem (91) is as follows
+
+
+
+hk pmax
+0
+
+k
+ min min I ∗ +W U N , p̂l , if k = l
+0
+k∈K∗ nk
+p∗k =
+(92)
+(In∗ +W U N0 )hl
+
+∗
+k
+
+p
+,
+otherwise
+U
+l
+∗
+(I +W N0 )hk
+n
+
+l
+
+where p̂0l ∈ (0, c2 ] is the unique zero point of the function
+Q̂(p) = ρ1 c1 ((p + 1) log2 (p + 1) ln 2 − p) − ρ2 , which is
+monotonically increasing for p ≥ 0, and c1 and c2 are
+ r
+n
+o 
+ρ
+X In∗ +W U N0
+1+ max ρ 2c ,1 −1 / ln 2
+k
+1 1
+, c2 = 2
+. (93)
+c1 =
+hk
+∗
+k∈K
+
+Proof: See Appendix E of the technical report [33].
+From Lemma 6, the optimal solution of transmission power
+is derived based on (92), given the optimal RB allocation
+and communication straggler. This differs from Lemma 5,
+which requires the extra corresponding transmission time χ∗ .
+Therefore, with the RB allocation, the optimal transmission
+power can be determined by the following theorem.
+Theorem 4: The optimal transmission power of SP2 is
+p∗ = argmin Q2 (a∗ , p),
+
+(94)
+
+p∈{p∗
+l }l∈K
+
+where p∗l indicates the optimal solution of problem (91) given
+the communication straggler SU l.
+
+11
+
+0.8
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.6
+
+0.4
+
+Accuracy
+
+1.0
+
+Accuracy
+
+1.0
+
+Accuracy
+
+1.0
+
+0.4
+
+0.4
+
+Error-free SC
+
+Error-free SC
+
+Proposed TASC
+
+0.2
+
+Specific SC
+
+Specific SC
+
+Traditional
+
+Traditional
+
+Traditional
+
+0.0
+2
+
+4
+
+6
+
+8
+
+10
+
+Proposed TASC
+
+0.2
+
+Specific SC
+
+0.0
+0
+
+Error-free SC
+
+Proposed TASC
+
+0.2
+
+12
+
+14
+
+16
+
+SNR (dB)
+
+(a) Image classification
+
+0
+
+0.0
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+16
+
+0
+
+2
+
+4
+
+6
+
+SNR (dB)
+
+8
+
+10
+
+12
+
+14
+
+16
+
+SNR (dB)
+
+(b) Visual question answering
+
+(c) Multimodal sentiment analysis
+
+Fig. 3: Accuracy performance versus SNR for various tasks under Rayleigh channels.
+
+0.25
+
+Confluent DMIB
+Univocal DMIB
+0.20
+
+Syncretic DMIB
+w/o DMIB
+
+Error Rate
+
+Algorithm 2 The Joint SU Selection and Resource Allocation
+Algorithm for Solving Problem P
+Input: ρ1 , ρ2 , ξd , ξM , {hk }, {In };
+∗
+1: Calculate f via (83);
+2: Initialize iteration m = 0 and χ0 via (84);
+3: while not done do
+4:
+Calculate RB decision am with χm via (89);
+5:
+Calculate transmission power pm with am via (94);
+6:
+Update χm+1 with am and pm based on (84);
+7: end while
+Output: a∗ , p∗ , f ∗ .
+
+0.15
+
+0.10
+
+0.05
+
+0.00
+2
+
+4
+
+6
+
+8
+
+10
+
+Communication Latency (ms)
+
+With Theorems 3 and 4, SP2 can be solved in an iterative
+manner. Concretely, we first determine the RB allocation am
+by solving (89) using the Kuhn-Munkres algorithm. Then,
+the transmission power pm is computed via am and (94).
+Next, theP
+transmission latency is updated based on χm+1 =
+maxk∈K n∈R ak,n Tkco (am , pm ) before proceeding to the
+next iteration. By incorporating the solutions of SP1 and
+SP2, an efficient joint SU selection and resource allocation
+algorithm is developed to solve P, as shown in Algorithm 2.
+VI. S IMULATION R ESULTS
+A. Experimental Setup
+To evaluate the effectiveness of TASC, we conduct experiments on three widely-used tasks. Specifically, CIFAR10 dataset is used for image classification task. The popular
+CLEVR dataset is selected for the VQA task, and the CMUMOSI dataset is utilized for multimodal sentiment analysis.
+The semantic transmitters for different modalities are initialized by the corresponding pretrained Transformer model, such
+as Vision Transformer, BERT, and Conformer. The Adam
+optimized is used with learning rate 2 × 10−5 , batch size 64,
+and epoch 100. The Rayleigh fading channels are considered.
+In the FML setting, the local dataset of each SU is partitioned
+into a support set and a query set. Half users are selected for
+training while the remaining users are used for testing. The
+following baselines are considered for comparison.
+• Error-free SC: In error-free SemCom system (Error-free
+SC), the inference results are obtained by transmitting
+
+Fig. 4: Rate distortion curve for classification task with 8 dB.
+noise-free semantic features to the receiver based on
+separately trained TASC for a specific task.
+• Specific SC: Specific SemCom system (Specific SC) is
+designed with the same structure as TASC while it is
+trained for specific tasks separately.
+• Traditional: In traditional source and channel coding,
+UTF-8, JPEG, AMR-WB, and H.264 are adopted for
+source coding of text, image, audio, and video, respectively. LDPC is used for channel coding of image, audio,
+and video, and the Turbo coding for text channel coding.
+B. Task Performance
+Fig. 3 depicts the performance of the investigated methods
+for multiple tasks under various signal-to-noise ratio (SNR)
+regimes. Note that TASC and Specific SC are trained at the
+same SNR, i.e., 8 dB. It is observed that both the DL-based
+TASC and Specific SC outperform traditional separate sourcechannel coding methods, which struggle to effectively mitigate channel distortion, particularly in low SNR conditions.
+Besides, the proposed TASC is almost to reach the upper
+bound at high SNR regimes. Moreover, TASC demonstrates
+performance comparable to that of Specific SC across all
+evaluated tasks, indicating that TASC can efficiently perform
+multiple diverse tasks while maintaining performance.
+Fig. 4 illustrates the rate-distortion cures for the image
+classification task at 8 dB. It is seen that the integrated
+
+12
+
+5
+
+500
+
+1000
+
+400
+
+800
+
+Proposed Joint
+Proposed Joint
+
+TASC-Greedy
+
+TASC-Greedy
+
+4
+
+TASC-Random
+
+TASC-Random
+
+Training Loss
+
+RUS-Random
+3
+
+2
+
+1
+
+Energy Cost (J)
+
+Training Latency (s)
+
+RUS-Greedy
+
+RUS-Greedy
+
+300
+
+200
+
+Proposed Joint
+TASC-Greedy
+
+RUS-Random
+
+600
+
+400
+
+TASC-Random
+RUS-Greedy
+
+100
+
+200
+
+RUS-Random
+
+0
+
+0
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+0
+
+0
+20
+
+Communication Round
+
+40
+
+60
+
+80
+
+100
+
+0
+
+20
+
+Communication Round
+
+(a) Training loss vs communication round
+
+40
+
+60
+
+80
+
+100
+
+Communication Round
+
+(b) Training time vs communication round
+
+(c) Energy cost vs communication round
+
+Fig. 5: Comparison of convergence, training time, and energy cost under image classification task.
+
+1.0
+
+5
+
+0.8
+
+4
+
+Proposed TASC
+Vanilla FML
+FedAvg
+
+Test Loss
+
+Test Accuracy
+
+CL
+
+0.6
+
+0.4
+
+3
+
+2
+
+Proposed TASC
+Vanilla FML
+
+0.2
+
+1
+
+FedAvg
+CL
+
+0.0
+0
+
+0
+20
+
+40
+
+60
+
+80
+
+100
+
+Communication Round
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+Gradient Steps for Adaptation
+
+Fig. 6: Test accuracy versus number of communication rounds.
+
+Fig. 7: Adaptation performance on image classification task.
+
+confluent DMIB demonstrates superior performance compared
+to solely applying either univocal DMIB or syncretic DMIB.
+Specifically, for a given latency constraint, it maintains higher
+classification accuracy, and conversely, for a required accuracy
+level, it achieves lower latency. This advantage stems from
+the ability of the proposed DMIB principle to eliminate
+redundant dimensions in the encoded unimodal features while
+simultaneously filtering out semantic noise of multimodal representations and preserving task-relevant information, thereby
+enhancing task-oriented communication efficiency.
+
+for extra parameter aggregation that may introduce aggregating
+errors, thereby facilitating stable model convergence.
+
+C. Convergence Performance
+Fig. 6 shows the convergence performance of TASC by
+evaluating the image classification task. Denote τ0 = 1 and
+C = 100. As shown in Fig. 6, it is observed that both
+the proposed TASC and the vanilla FML achieve better test
+accuracy than FedAvg with relatively fewer communication
+rounds. This is due to the fact that FML can learn a more
+adaptable initialization that enables faster convergence on
+tasks. Moreover, TASC significantly improves the convergence
+speed with high accuracy in contrast to the vanilla FML
+method. This result clearly demonstrates the effectiveness of
+our proposed TASC, which minimizes the upper bound of
+one-round SU loss divergence. Additionally, TASC employs a
+shared receiver network at the BS, which eliminates the need
+
+D. Effect of Joint Optimization Algorithm
+For the wireless system settings, we set K = 100, R = 20,
+N0 = −174 dBm/Hz, W U = 1 MHz, W D = 20 MHz,
+κB = 1/16 cycles/FLOPs, fB = 10 GHz, pB = 1 W. The
+parameter fk follows uniform distribution [0, 2] GHz, and
+let pk = [0, 0.2] W, ςk = [0, 5] × 10−28 , κk = [0, 1/32]
+cycles/FLOPs. The inner learning rate α and the meta-learning
+rate β are set to 0.001. The following baselines are considered:
+TASC-Greedy, TASC-Random, RUS-Greedy, RUS-Random.
+TASC is the proposed SU selection strategy by solving (76)
+and RUS is to select SUs uniformly at random. Greedy and
+Random are strategies to decide CPU-cycle frequencies, RB
+allocation, and transmission power. From Fig. 5, it shows that
+the proposed joint optimization algorithm significantly reduces
+both energy cost and training latency in contrast to baselines.
+It is also observed that the Greedy algorithm does not always
+outperform the Random. This is because that the weight
+parameters ρ1 and ρ2 influence the energy cost and training
+latency. When ρ1 = ρ2 , the Greedy algorithm prioritizes minimizing training latency over energy cost. Besides, both Greedy
+and Random are lack of effective joint optimization, leading
+to performance degradation. However, the proposed algorithm
+
+13
+
+outperforms baselines by minimizing the objective P, which
+mitigates the aforementioned limitations, resulting in improved
+performance in resource-constrained wireless systems.
+E. Performance of Rapid Adaptation
+To demonstrate the adaptation performance of TASC for
+brand-new users/data, we present results by varying the number of gradient steps. As illustrated in Fig. 7, it can be
+observed that TASC obtains significantly better adaptation
+performance by achieving about 51% and 59% decreases in
+terms of test loss respectively compared to the vanilla FML
+and FedAvg. This performance gap becomes more pronounced
+as the number of gradient steps increases. Moreover, it is
+indicated that FedAvg and CL suffer from over-fitting issues,
+whereas the FML methods continue to improve with the
+increasing gradient steps without over-fitting. Therefore, the
+proposed TASC can adapt to new environments through one
+or a few gradient descent steps without requiring retraining.
+VII. C ONCLUSION
+In this paper, we proposed a task-agnostic SemCom framework named TASC over wireless networks. Guided by the
+IB theory, we developed a novel DMIB principle to capture
+minimal sufficient unimodal and multimodal semantic representations by removing redundancy and semantic noise while
+retaining task-related information. Moreover, we proposed
+an adaptive semantic transmission approach to adjust the
+transmission dimensions under dynamic channel conditions.
+Then, TASC is trained based on FML for quick adaptation
+and generalization. We also conducted convergence analysis,
+implying the importance of SU selection to convergence.
+Based on the results, we formulated a resource management
+problem to optimize the tradeoff among convergence, training
+latency, and energy cost, and developed a joint optimization
+algorithm to solve it. Extensive simulation results verified that
+the proposed TASC outperforms the task-specific SemCom
+and achieves a better rate-distortion tradeoff. We also evaluated
+the superiority of TASC over baselines in terms of convergence
+speed, training latency, and energy cost. Benefited from FML,
+TASC achieves rapid adaptation over only a few SGD steps.
+R EFERENCES
+[1] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 1, pp. 5-41, Jan. 2023.
+[2] P. Zhang et al., “Toward wisdom-evolutionary and primitive-concise 6G:
+A new paradigm of semantic communication networks,” Engineering,
+vol. 8, pp. 60-73, Jan. 2022.
+[3] X. You et al., “When AI meets sustainable 6G,” Sci. China Inf. Sci.,
+vol. 68, no. 1, p. 110301, 2025.
+[4] P. Zhang et al., “Intellicise wireless networks from semantic communications: A survey, research issues, and challenges,” IEEE Commun.
+Surveys Tuts., 2024, early access, doi: 10.1109/COMST.2024.3443193.
+[5] S. Ma et al., “Task-oriented explainable semantic communications,”
+IEEE Trans. Wireless Commun., vol. 22, no. 12, pp. 9248-9262, Dec.
+2023.
+[6] X. Liu, Y. Deng, A. Nallanathan, and M. Bennis, “Federated learning
+and meta learning: Approaches, applications, and directions,” IEEE
+Commun. Surveys Tuts., vol. 26, no. 1, pp. 571-618, 1st Quart. 2024.
+[7] B. Zhao et al., “On forecasting-oriented time series transmission: A federated semantic communication system,” IEEE Trans. Mobile Comput.,
+vol. 23, no. 12, pp. 13728-13744, Dec. 2024.
+
+[8] L. X. Nguyen et al., “An efficient federated learning framework for
+training semantic communication systems,” IEEE Trans. Veh. Technol.,
+vol. 73, no. 10, pp. 15872-15877, Oct. 2024.
+[9] S. Wang et al., “Distributed image transmission using deep joint sourcechannel coding,” Proc. IEEE Int. Conf. Acoust., Speech, Signal Process.,
+Singapore, Singapore, May, 2022, pp. 5208-5212.
+[10] W. Xu et al., “Semantic communication for the internet of vehicles: A
+multiuser cooperative approach,” IEEE Veh. Technol. Mag., vol. 18, no.
+1, pp. 100-109, Mar. 2023.
+[11] Z. Weng, Z. Qin, H. Xie, X. Tao, and K. B. Letaief, “Semantic
+MIMO systems for speech-to-text transmission,” IEEE Trans. Wireless
+Commun., vol. 23, no. 12, pp. 18697-18710, Dec. 2024.
+[12] M. Wang, Z. Zhang, J. Li, M. Ma, and X. Fan, “Deep joint sourcechannel coding for multi-task network,” IEEE Signal Process. Lett., vol.
+28, pp. 1973-1977, Sep. 2021.
+[13] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+communications for VQA,” IEEE Wireless Commun. Lett., vol. 11, no.
+3, pp. 553-557, Mar. 2022.
+[14] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no.
+9, pp. 2584-2597, Sept. 2022.
+[15] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified multitask semantic communication system for multimodal data,” IEEE Trans.
+Wireless Commun., vol. 72, no. 7, pp. 4101-4116, Jul. 2024.
+[16] C. Qiao et al., “Transitioning from federated learning to quantum
+federated learning in internet of things: A comprehensive survey,” IEEE
+Commun. Surveys Tuts., vol. 27, no. 1, pp. 509-545, Feb. 2025.
+[17] M. Chen et al., “A joint learning and communications framework
+for federated learning over wireless networks,” IEEE Trans. Wireless
+Commun., vol. 20, no. 1, pp. 269-283, Jan. 2021.
+[18] H. Tong, Z. Yang, S. Wang, Y. Hu, W. Saad, and C. Yin, “Federated
+learning based audio semantic communication over wireless networks,”
+in Proc. IEEE Global Comm. Conf., Madrid, Spain, Dec. 2021, pp. 1-6.
+[19] H. Wei et al., “Federated semantic learning driven by information
+bottleneck for task-oriented communications,” IEEE Commun. Lett., vol.
+27, no. 10, pp. 2652-2656, Oct. 2023.
+[20] Y. Wang, W. Ni, W. Yi, X. Xu, P. Zhang, and A. Nallanathan, “Federated
+contrastive learning for personalized semantic communication,” IEEE
+Commun. Lett., vol. 28, no. 8, pp. 1875-1879, Aug. 2024.
+[21] X. Xu et al., “Federated knowledge distillation enabled image semantic
+communication,” in Proc. IEEE Global Comm. Conf., Cape Town, South
+Africa, Dec. 2024, pp. 3152-3157.
+[22] F. Chen et al., “Federated meta-learning with fast convergence and
+efficient communication,” arxiv:1802.07876.
+[23] C. Finn, P. Abbeel, and S. Levine, “Model-agnostic meta-learning for
+fast adaptation of deep networks,” in Proc. Int. Conf. Learn. Represent.,
+2017, pp. 1126-1135.
+[24] A. Fallah, A. Mokhtari, and A. Ozdaglar, “Personalized federated
+learning with theoretical guarantees: A model-agnostic meta-learning
+approach,” in Proc. Adv. Neural Inf. Process. Syst., 2020, pp. 1-12.
+[25] Z. Goldfeld and Y. Polyanskiy, “The information bottleneck problem and
+its applications in machine learning,” IEEE J. Sel. Areas Inf. Theory, vol.
+1, no. 1, pp. 19-38, May 2020.
+[26] R. Chen, L. Li, K. Xue, C. Zhang, M. Pan, and Y. Fang, “Energy efficient
+federated learning over heterogeneous mobile devices via joint design
+of weight quantization and wireless Transmission,” IEEE Trans. Mobile
+Comput., vol. 22, no. 12, pp. 7451-7465, Dec. 2023.
+[27] M. Yang, C. Bian, and H. -S. Kim, “OFDM-guided deep joint source
+channel coding for wireless multipath fading channels,” IEEE Trans.
+Cogn. Commun. Netw., vol. 8, no. 2, pp. 584-599, Jun. 2022.
+[28] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for multidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+vol. 22, no. 1, pp. 73-87, Jan. 2023.
+[29] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” in Proc. Int. Conf. Learn. Represent., Toulon,
+France, Apr. 2017, pp. 1-19.
+[30] H. Xie, Z. Qin, and G. Y. Li, “Semantic communication with memory,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2658-2669, Aug. 2023.
+[31] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+Process. Syst., Long Beach, CA, USA, Dec. 2017, pp. 6000-6010.
+[32] R. Hu and A. Singh, “UniT: Multimodal multitask learning with a unified
+transformer,” in Proc. IEEE/CVF Int. Conf. Comput. Vis., Oct. 2021, pp.
+1419-1429.
+[33] H. Wei et al., “Task-agnostic semantic communications relying on
+information bottleneck and federated meta-learning,” arxiv: 2504.21723.
+[34] E. W. Weisstein. (2011). Hungarian Maximum Matching Algorithm.
+[Online]. Available: https://mathworld.wolfram.com/
+
+14
+
+A PPENDIX A
+P ROOF OF T HEOREM 1
+
+PK
+PK t
+For brevity, let θ kt,τ = θ k (t, τ ). We denote that θ t,τ = 1/K k=1 θ kt,τ , and θ̄ t,τ = 1/K t k=1 θ kt,τ . Based on Lemma 1,
+L(·) is smooth with Lipschitz parameter HL , and thus, we have
+
+L θ̄ t+1,τ +1
+
+⊤
+ HL
+2
+≤ L θ̄ t+1,τ + ∇L θ̄ t+1,τ
+θ̄ t+1,τ +1 − θ̄ t+1,τ
+θ̄ t+1,τ +1 − θ̄ t+1,τ +
+2
+!
+
+ 2
+
+
+
+⊤
+HL 2 1 X ˜
+1 X ˜
+k
+k
+,
+(95)
+∇Lk θ̄ t+1,τ
++
+∇Lk θ̄ t+1,τ
+≤ L θ̄ t+1,τ − β∇L θ̄ t+1,τ
+β
+Kt
+2
+Kt
+K∈Kt
+
+k∈Kt
+
+t
+
+t
+
+where K is the set of selected SUs with size K in the t-th round. By taking expectation, we have
+"
+!#
+
+
+
+
+
+
+⊤
+1 X ˜
+k
+E L θ̄ t+1,τ +1 ≤E L θ̄ t+1,τ − βE ∇L θ̄ t+1,τ
+∇Lk θ t+1,τ
+Kt
+k∈Kt
+
+
+
+ 2
+HL 2  1 X ˜
+.
+β E
+∇Lk θ kt+1,τ
++
+2
+Kt
+t
+
+(96)
+
+k∈K
+
+Next, note that
+
+
+
+1 X ˜
+1 X
+∇Lk θ kt+1,τ = C1 + C2 + C3 + t
+∇Lk θ̄ t+1,τ ,
+t
+K
+K
+t
+t
+k∈K
+
+(97)
+
+k∈K
+
+where
+
+
+
+
+1 X ˜
+∇Lk θ kt+1,τ − ∇Lk θ kt+1,τ ,
+t
+K
+k∈Kt
+
+
+
+1 X 
+∇Lk θ kt+1,τ − ∇Lk (θ t+1,τ ) ,
+C2 = t
+K
+k∈Kt
+
+1 X
+C3 = t
+∇Lk (θ t+1,τ ) − ∇Lk θ̄ t+1,τ .
+K
+t
+C1 =
+
+(98)
+(99)
+(100)
+
+k∈K
+
+By bounding the moments of C1 , C2 , and C3 , we can obtain
+
+
+2
+E ∥C1 ∥2 ≤ σL
+.
+#
+"
+K
+2
+
+
+1 X k
+k
+2
+2
+E ∥C2 ∥ ≤ HL E
+θ t,τ − θ t,τ
+K
+
+k=1
+
+2
+≤ 35β 2 HL2 τ0 (τ0 − 1) 2σL
++ µ2L .
+"
+#
+X
+
+1
+2
+E∥C3 ∥2 ≤ t E
+∇Lk (θ t+1,τ ) − ∇Lk θ̄ t+1,τ
+K
+k∈Kt
+
+t
+2 2
+2
+2
+35(1 − K
+K )β HL τ (τ − 1) 2σL + µL
+≤
+.
+t
+Kt − K
+K
+Next, we manage to lower bound the second term in (96), and we have
+"
+!#
+
+
+⊤
+1 X ˜
+k
+E ∇L θ̄ t+1,τ
+∇Lk θ t+1,τ
+Kt
+k∈Kt
+"
+!#
+⊤
+
+1 X
+∇Lk θ̄ t+1,τ
+= E ∇L θ̄ t+1,τ
+C1 + C2 + C3 + t
+K
+k∈Kt
+"
+!#
+h
+⊤
+
+⊤ ii
+1 X
+≥ E ∇L θ̄ t+1,τ
+∇L
+θ̄
+−
+E
+∇L
+θ̄
+C1
+t+1,τ
+t+1,τ
+k
+Kt
+k∈Kt
+
+
+ 2i
+1 h
+− E ∇L θ̄ t+1,τ
+− E ∥C2 + C3 ∥2
+4
+2
+ 2i
+ 4α2 H 2 σG
+1 h
+2
+≥ E ∇L θ̄ t+1,τ
+− 140β 2 HL2 τ0 (τ0 − 1) 2σL
++ µ2L −
+.
+2
+D
+
+(101)
+
+(102)
+
+(103)
+
+(104)
+
+15
+
+Then, we represent the upper bound for the third term in (96):
+
+
+ 2
+
+X
+1
+k
+˜ k θ t+1,τ
+
+E
+∇L
+Kt
+t
+k∈K
+
+
+2
+X
+
+
+1
+2
+2
+ + 4σL
+≤ 2E 
+∇Lk θ̄ t+1,τ
++ 560β 2 HL2 τ0 (τ0 − 1) 2σL
++ µ2L
+t
+K
+t
+k∈K
+
+t
+
+≤ 2E
+
+h
+
+∇L θ̄ t+1,τ
+
+ 2i
+
++
+
+2µ2L (1 − K
+K )
+t
+Kt − K
+K
+
+
+2
+2
++ 4σL
++ 560β 2 HL2 τ0 (τ0 − 1) 2σL
++ µ2L .
+
+By substituting (104) and (105) in (96), we have
+
+
+
+ β h
+ 2i
+E L θ̄ t+1,τ +1 ≤ E L θ̄ t+1,τ − E ∇L θ̄ t+1,τ
++ βσT2 ,
+4
+where
+!
+t
+2
+
+)
+µ2L (1 − K
+4α2 H 2 σG
+2
+2
+2
+2
+2
+K
++
+.
+σT = 280 (βHL ) τ0 (τ0 − 1) 2σL + µL + βHL 2σL +
+t
+K
+D
+Kt − K
+Finally, summarizing (106) from τ = 0, . . . , τ0 − 1 and t = 0, . . . , C − 1, we can obtain
+!
+C−1 τ0 −1
+h
+ 2i
+βτ0 C
+1 X X
++ βτ0 CσT2 .
+E [L (θ C )] ≤ L (θ 0 ) −
+E ∇L θ̄ t+1,τ
+4
+τ0 C t=0 τ =0
+
+(105)
+
+(106)
+
+(107)
+
+(108)
+
+Hence, we have
+C−1 τ −1
+
+0
+h
+
+ 2i
+1 X X
+4
+L (θ 0 ) − E [L (θ C )] + βτ0 CσT2
+E ∇L θ̄ t+1,τ
+≤
+τ0 C t=0 t=0
+βτ0 C
+
+≤
+
+4 (L (θ 0 ) − L (θ ϵ ))
++ 4σT2
+βτ0 C
+
+(109)
+
+If we set τ0 = 1, we obtain the desired result.
+
+A PPENDIX B
+P ROOF OF C OROLLARY 1
+Based on Lemma 1, for any θ 1 , θ 2 , we have
+⊤
+
+L (θ 2 ) ≤ L (θ 1 ) + ∇L (θ 1 ) (θ 2 − θ 1 ) +
+
+HL
+2
+∥θ 2 − θ 1 ∥ .
+2
+
+(110)
+
+Combining (110) with (35), we have
+⊤
+
+HL
+2
+∥θ t,τ +1 − θ t,τ ∥
+2
+!
+2
+1 X ˜
+HL β 2 1 X ˜
+∇Lk (θ t,τ ) +
+∇Lk (θ t,τ ) .
+Kt
+2
+Kt
+t
+t
+
+L (θ t,τ +1 ) ≤ L (θ t,τ ) + ∇L (θ t,τ ) (θ t,τ +1 − θ t,τ ) +
+⊤
+
+= L (θ t,τ ) − β∇L (θ t,τ )
+
+k∈K
+
+(111)
+
+k∈K
+
+We denote
+Gt,τ = β∇L (θ t,τ )
+
+⊤
+
+!
+HL β 2
+1 X ˜
+∇L
+(θ
+)
+−
+k
+t,τ
+Kt
+2
+t
+k∈K
+
+1 X ˜
+∇Lk (θ t,τ )
+Kt
+t
+
+2
+
+.
+
+(112)
+
+k∈K
+
+∇L (θ t,τ ) can be rewritten as
+
+
+
+
+
+
+
+
+
+
+
+
+˜ k θ kt,τ +∇L
+˜ k θ kt,τ ,
+∇L (θ t,τ ) = ∇L (θ t,τ ) − ∇L θ kt,τ + ∇L θ kt,τ − ∇Lk θ kt,τ + ∇Lk θ kt,τ − ∇L
+|
+{z
+} |
+{z
+} |
+{z
+}
+E1
+E2
+E3
+h
+i h
+i
+h
+i
+2
+2
+2
+where E ∥E1 ∥ , E ∥E2 ∥ , and E ∥E3 ∥ are bounded by
+h
+i
+2
+E ∥E1 ∥ ≤ 35β 2 τ02 (µ2G + 2σF2 ),
+h
+i
+2
+E ∥E2 ∥ ≤ (1 + αH)2 µG + αΦµH ,
+h
+i
+2
+2
+E ∥E3 ∥ ≤ σL
+.
+
+(113)
+
+(114)
+(115)
+(116)
+
+16
+
+Then E [Gt,τ ] can be bounds as
+
+
+2
+1 X
+HL β
+˜ k (θ t,τ )
+E [Gt,τ ] ≥βE[ t
+1−
+∇L
+K
+2
+k∈Kt
+
+r h
+q
+i
+p
+2)
+¯ k (θ t,τ ) 2 | Kt ].
+−
+(1 + αH)2 µG + αΦµH + σL + β 35β 2 τ02 (µ2G + 2σL
+E ∇L
+
+(117)
+
+Hence we have
+E [L (θ t+1 ) − L (θ t )] = E
+
+"τ −1
+0
+X
+
+≤−
+
+#
+L (θ t,τ +1 ) − L (θ t,τ )
+
+τ =0
+τX
+0 −1
+
+E [Gt,τ ]
+
+τ =0
+
+#
+"
+η2
+β
+1 X
+2
+˜ k (θ k (t)) ∥ − ∥∇L
+˜ k (θ k (t)) ∥ ) ,
+((η1 + √ )∥∇L
+≤ E
+2
+Kt
+Dk
+t
+
+(118)
+
+k∈K
+
+where
+η1 ≥
+
+q
+p
+2 ),
+16µG + 4αΦµH + β 140(µ2G + 2σL
+
+2
+2
+2
+(4 + α2 σH
+) + 6α2 Φ2 σH
+.
+η2 ≥ 24σG
+
+(119)
+(120)
+
+A PPENDIX C
+P ROOF OF L EMMA 4
+
+Since l is the straggler among SUs, SP1 can be represented as
+X
+κl γl Dl
+min ρ1
+ςk κk γk Dk fk2 + ρ2
+f
+fl
+
+(121a)
+
+k∈K
+
+s. t.
+
+κk γk Dk fl
+≤ fk ,
+κl γl Dl
+(77c).
+
+∀k ∈ K/l,
+
+(121b)
+(121c)
+
+By fixing fl , the optimal CPU frequency fk∗ of the problem (121) can be obtained by solving the following decomposed convex
+optimization problem
+X
+
+min ρ1
+f
+
+ςk κk γk Dk fk2
+
+(122a)
+
+k∈K
+
+s. t.
+
+κk γk Dk fl
+≤ fk ,
+κl γl Dl
+(77c).
+
+(122b)
+(122c)
+
+κ γ Dk fkmax
+If fl ≤ k κkl γl D
+, the optimal solution of problem (122) is denoted by
+l
+
+κk γk Dk fl
+κl γl Dl
+
+fk∗ =
+
+(123)
+
+Then we substitute fk = fk∗ in problem (121) and we have
+
+
+X ςk (κk γk Dk )3
+g1 (fl ) = ρ1 
++ ςl κl γl Dl  fl2 + ρ2 κl γl Dl f1l
+min
+2
+| {z }
+fl
+(κ
+γ
+D
+)
+l
+l
+l
+k∈K/l
+b1
+|
+{z
+}
+
+(124a)
+
+b2 /2
+
+s.t.
+
+0 ≤ fl ≤
+
+κl γl Dl fkmax
+κk γk Dk ,
+
+∀k ∈ K.
+
+(124b)
+
+Note that g1 (fl ) can be characterized as g1 (fl ) = b2 /2fl2 + b1 /fl . The minimum value of g1 (fl ) is obtained at its stationary
+point. Thus, the optimal solution of problem (124) is
+fl∗ = min
+
+(r
+3
+
+Combining (123) and (125), we obtain the desired result.
+
+b1
+κl γl Dl flmax
+, min
+b2 k∈K κk γk Dk
+
+)
+(125)
+
+17
+
+A PPENDIX D
+P ROOF OF L EMMA 5
+Given a∗ and χ∗ , problem (79) can be transformed to
+X
+ρ1 (ξd + ξM )pk
+min
+a∗k,n
+hk p∗
+p
+k
+W U log2 (1 + In +W
+UN )
+n∈R
+0
+X
+(ξ
++
+ξ
+)
+d
+M
+s. t.
+a∗k,n
+≤ χ∗ ,
+hk p∗
+k
+U log (1 +
+W
+)
+U
+2
+n∈R
+In +W N0
+
+(126a)
+(126b)
+
+(77b).
+If
+
+(126c)
+
+∗
+∗
+n∈R ak,n = 0, then pk = 0. If the constraints in (126) are mutually contradictory, i.e.
+
+P
+
+
+ ξ +ξ
+M
+d
+U χ∗ −1
+W
+In∗k + W N0 2
+U
+
+pmax
+<
+k
+
+
+
+,
+hk
+hk pk
+which gives (85). By eliminating ρ1 , ξd , ξM , and W U , and denoting p̂k = I ∗ +W
+U N , (126) is transformed to
+0
+n
+
+k
+
+p̂k
+min g2 (p̂k ) =
+p̂k
+log2 (1 + p̂k )
+hk pmax
+k
+s. t. 0 ≤ p̂k ≤
+,
+In∗k + W U N0
+ξd +ξM
+−1
+
+2 W U χ∗
+
+(127)
+
+(128a)
+(128b)
+
+− 1 ≤ p̂k .
+
+(128c)
+
+Thus we have
+g2′ (p̂k ) =
+
+log2 (1 + p̂k ) − p̂k / ((1 + p̂k ) ln 2)
+
+.
+2
+(log2 (1 + p̂k ))
+Then we can find that g2 (p̂k ) is monotonically increasing for p̂k > 0. Thus, it can be obtained that
+ ξ +ξ
+
+
+M −1
+d
+In∗k + W U N0 2 W U χ∗
+p∗k =
+,
+hk
+which completes the proof.
+
+(129)
+
+(130)
+
+A PPENDIX E
+P ROOF OF L EMMA 6
+Let l denote the straggler among all SUs. By fixing a∗ and eliminating ξd and ξM , problem (79) is characterized as
+X
+X
+pk
+1
+min
+ρ1
++
+ρ
+2
+h
+p
+h k pk
+k k
+U log (1 +
+U log (1 +
+{pk }k∈K∗
+W
+)
+W
+)
+2
+2
+In +W U N0
+In +W U N0
+n∈R
+n∈R
+
+In∗k + W U N0 hl
+ pl ≤ pk , ∀k ∈ K∗ /l,
+s. t.
+(131a)
+In∗l + W U N0 hk
+∗
+0 ≤ pk ≤ pmax
+(131b)
+k , ∀k ∈ K .
+Then we can obtain the optimal solution p∗k of (131) via solving the following decomposed problem
+p̂k
+min g2 (p̂k ) =
+p̂k
+log2 (1 + p̂k )
+hk pmax
+k
+s. t. 0 ≤ p̂k ≤
+,
+In∗k + W U N0
+hl
+pl ≤ p̂k .
+∗
+Inl + W U N0
+
+
+hk pmax
+In∗ +W U N0
+k
+
+(132a)
+(132b)
+(132c)
+
+
+
+l
+
+ , we can obtain
+Note that g2 (p̂k ) is monotonically increasing for p̂k > 0. Thus, if pl ≤
+hl ln∗ +W U N0
+k
+
+hl In∗k + W U N0
+∗
+ pl , ∀k ∈ K∗ /l.
+pk =
+hk In∗l + W U N0
+
+(133)
+
+18
+
+
+hl pl
+Similar to (132), let p̂l = I ∗ +W
+UN
+0
+n
+
+problem regarding p̂l
+
+and institute pk = p∗k in (131) where pk =
+
+l
+
+min g3 (p̂l ) = ρ1
+p̂l
+
+X In∗ + W U N0
+k
+
+hk
+
+k∈K∗
+
+|
+s. t.
+
+0 ≤ p̂l ≤
+
+{z
+
+
+In∗ +W U N0 p̂l
+k
+
+hk
+
+p̂l
+ρ2
++
+log2 (1 + p̂l ) log2 (1 + p̂l )
+
+), we obtain the following
+
+(134a)
+
+}
+
+c1
+
+hk pmax
+k
+, ∀k ∈ K∗ .
+In∗k + W U N0
+
+(134b)
+
+c1 p̂l
+ρ2
+Note that g3 (p̂l ) can be rewritten as g3 (p̂l ) = logρ1(1+
+p̂l ) + log (1+p̂l ) . Thus we can find that g3 (p̂l ) has a unique minimum
+
+
+point p̂0l ∈ (0, c2 ] where c2 = 2
+
+1+
+
+r
+n
+o 2 
+ρ
+max ρ 2c ,1 −1 / ln 2
+1 1
+
+2
+
+
+such that g3′ p̂0l = 0. Hence, the optimal solution of the problem
+
+(134) can be expressed as
+p̂∗l = min
+
+
+
+By combining (133) and (135), we complete the proof.
+
+
+hk pmax
+0
+k
+,
+p̂
+.
+l
+k∈K In∗ + W U N0
+k
+min∗
+
+(135)
+
+

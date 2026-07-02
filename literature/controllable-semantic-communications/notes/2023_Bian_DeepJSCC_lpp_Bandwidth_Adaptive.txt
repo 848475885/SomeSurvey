@@ -1,0 +1,588 @@
+                                                                                                                                                                                  1
+
+
+
+
+                                           DeepJSCC-l++: Robust and Bandwidth-Adaptive
+                                                  Wireless Image Transmission
+                                                               Chenghong Bian, Yulin Shao, Member, IEEE, Deniz Gündüz, Fellow, IEEE
+
+
+
+
+                                         Abstract—This paper presents a novel vision transformer (ViT)              be used in different channel conditions, imposing significant
+                                      based deep joint source channel coding (DeepJSCC) scheme,                     memory requirements. In [3], [7], it has been shown that
+                                      dubbed DeepJSCC-l++, which can adapt to different target                      a single DeepJSCC network can adapt to different channel
+                                      bandwidth ratios as well as channel signal-to-noise ratios (SNRs)
+                                      using a single model. To achieve this, we treat the bandwidth ratio           SNRs. In this work, we will show that a single DeepJSCC
+                                      and the SNR as channel state information available to the encoder             encoder/decoder pair can be trained to be used in any available
+                                      and decoder, which are fed to the model as side information, and              channel bandwidth and SNR. This not only shows the flexibility
+arXiv:2305.13161v2 [eess.SP] 30 Nov 2023
+
+
+
+
+                                      train the proposed DeepJSCC-l++ model with different bandwidth                of DeepJSCC, but significantly increases its potential to be
+                                      ratios and SNRs. The reconstruction losses corresponding to                   applied in practice.
+                                      different bandwidth ratios are calculated, and a novel training
+                                      methodology, which dynamically assigns different weights to the                  DeepJSCC with a varying bandwidth is also studied in [8];
+                                      losses of different bandwidth ratios according to their individual            however, [8] considers a successive refinement scenario, where
+                                      reconstruction qualities, is introduced. Shifted window (Swin)                transmission takes place over several channel blocks, and the
+                                      transformer is adopted as the backbone for our DeepJSCC-l++
+                                      model, and it is shown through extensive simulations that the
+                                                                                                                    image should be recovered from any number of first l channel
+                                      proposed DeepJSCC-l++ can adapt to different bandwidth ratios                 blocks (Fig. 1a). This scenario is applicable when broadcasting
+                                      and channel SNRs with marginal performance loss compared                      an image to several receivers, where each receiver can receive
+                                      to the separately trained models. We also observe the proposed                a different number of channel blocks. Instead, we consider a
+                                      schemes can outperform the digital baseline, which concatenates               single receiver, where the available channel bandwidth can vary
+                                      the BPG compression with capacity-achieving channel code. We
+                                      believe this is an important step towards the implementation of
+                                                                                                                    from image to image, but is known for each image prior to
+                                      DeepJSCC in practice as a single pre-trained model is sufficient              transmission, dictated, for example, by the latency constraint
+                                      to serve the user in a wide range of channel conditions.                      of the underlying application. Alternatively, variable-length
+                                        Index Terms—Semantic communication, DeepJSCC, Swin                          transmission is studied in [9]–[11], where the encoder decides
+                                      Transformer, bandwidth adaptive, dynamic weight assignment.                   how much channel bandwidth to use based on the content of
+                                                                                                                    the input image.
+                                                                                                                       In this paper, we propose a novel bandwidth and channel
+                                                                I. I NTRODUCTION                                    quality adaptive scheme, named DeepJSCC-l++, which can
+                                         Thanks to recent advances in machine learning, there has                   map each input image to a desired channel bandwidth - see Fig.
+                                      been a growing interest in developing data-driven joint source-               1b. The DeepJSCC-l++ encoder takes the image as well as the
+                                      channel coding (JSCC) systems. Focusing on the wireless                       bandwidth ratio and the channel SNR as side information to
+                                      transmission of images, the DeepJSCC scheme proposed in                       produce the codeword. We introduce a novel code architecture
+                                      [1] is shown to achieve better performance and enhanced                       using the Swin transformer [12] as the backbone. To balance
+                                      robustness against channel variations compared to conventional                the reconstruction qualities for different bandwidth ratios, a
+                                      separation-based baselines. Over the last several years, Deep-                novel training methodology, called dynamic weight assignment
+                                      JSCC approach has been successfully extended to many new                      (DWA), is introduced, which assigns different weights to the
+                                      scenarios, exhibiting its potential as a viable technology, from              losses corresponding to different bandwidth ratios. Simulation
+                                      multi-path fading channel [2], [3] to multi-input multi-output                results show the effectiveness of the proposed DeepJSCC-l++
+                                      (MIMO) [4], [5] and multi-user scenarios [6].                                 scheme, which can be adaptive to both the bandwidth ratio and
+                                         On the other hand, in most existing works, the DeepJSCC                    the channel SNR with negligible gap from the reconstruction
+                                      encoder/decoder pairs are designed and trained for specific                   performance obtained with separately trained models. This
+                                      channel conditions, i.e., channel bandwidth and signal-to-noise               shows that the proposed architecture is capable of acquiring
+                                      ratio (SNR). This is a limitation for the adoption of DeepJSCC                and prioritising the input image features, and sending only the
+                                      in practical systems, as it requires storing a large number of                most important features depending on the available bandwidth,
+                                      DeepJSCC encoder/decoder parameters on mobile devices to                      while employing the necessary amount of redundancy against
+                                                                                                                    channel noise depending on the channel SNR.
+                                         C. Bian and D. Gündüz are with the Department of Electrical and Elec-       We highlight that the proposed DeepJSCC-l++ architecture
+                                      tronic Engineering, Imperial College London, London SW7 2AZ, U.K. (e-
+                                      mail: {c.bian22, d.gunduz}@imperial.ac.uk). Y. Shao is with the State Key     can also be applied to the successive refinement problem. Our
+                                      Laboratory of Internet of Things for Smart City, University of Macau, Macau   results show that DeepJSCC-l++ provides a significant per-
+                                      S.A.R. (e-mail: ylshao@um.edu.mo).                                            formance improvement compared to the CNN-based solution
+                                         This work was supported in part by UKRI for the project AIR (ERC-
+                                      CoG, EP/X030806/1), and in part by the IOTSC-UM Conference Grant SKL-         in [8] in this scenario. Finally, DeepJSCC-l++ outperforms
+                                      IoTSC(UM)-2021-2023 and the start-up grant SRG2023-00038-IOTSC.               the separation-based baseline that combines BPG compression
+                                                                                                                                               2
+
+
+
+algorithm with a capacity-achieving channel code. This result
+shows the potential of the transformer architecture in designing
+                                                                               "#$
+state-of-the-art DeepJSCC solutions.                                                    !
+                                                                                                                     Power
+                                                                               %                                     Norm
+
+
+                     II. S YSTEM M ODEL
+                                                                                              ! " #$% &                         ! " #$%&
+   We consider the wireless transmission of images over the
+AWGN channel. Let S ∈ RC×H×W denote the input image,               (a) Successive refinement: Each image is transmitted using the full
+where C, H, W denote the number of color channels, height,                                    ! " #$from
+                                                                   bandwidth, but can be recovered  %&                      %&
+                                                                                                                     ! " #l$channel
+                                                                                                         any of the first           blocks.
+and width of the image, respectively. We define N = CHW to
+denote the input dimension to facilitate following definitions.               "#$, %&                                   Power
+                                                                                         !              12()* , 34
+The encoder maps the input image, S, to a complex codeword                         '                                    Norm
+
+z ∈ CρN , where ρN ∈ Z, denotes the bandwidth used for
+transmission. Here, ρ is defined as the bandwidth ratio as it                                 )( * + -./ 0                      )* + -.5 0
+represents the average number of channel symbols available per
+                                                                   (b) Bandwidth-adaptive transmission: Available channel bandwidth is
+source dimension. The transmitted codeword z goes through an       dictated by the application, and may change from image to image.
+AWGN channel, y = z + w, where each element in w follows
+a complex Gaussian distribution with zero mean and variance        Figure 1: Successive refinement vs. bandwidth-adaptive trans-
+equals to σ 2 , and y ∈ CρN denotes the noisy channel output       mission.
+                                                  1
+vector. We impose an input power constraint: ρN      kzk22 ≤ 1
+for each z, which means that the channel SNR is given by
+SNR = 1/σ 2 .                                                      bandwidth ratios are allowed, specified by {ρ1 , . . . , ρL }, where
+   The decoder maps the received vector directly to its estimate   we assume that ρl = l · ρ1 , l ∈ [L].
+of the input signal, Se ∈ RC×H×W . The reconstruction quality         Next, we present the successive refinement problem for-
+can be measured through a variety of distortion measures. In       mulation considered in [8] and highlight the differences with
+this paper, we will consider the most commonly used peak           respect to the adaptive-bandwidth formulation considered here.
+signal-to-noise ratio (PSNR), defined as:                          As shown in Fig. 1a, in the successive refinement scheme
+                                                                   studied in [8], the encoder maps the image into a latent vector
+                                      2552                         z̃ ∈ CρL N , which is further power normalized to z before
+               PSNR = 10 log10 1                 .           (1)
+                                          e 2
+                                  N ||S − S||F                     transmission. Then, L different receivers are considered, where
+glo In conventional separate source-channel coding schemes,        receiver l receives only the first l portions of the noisy signal.
+we choose a pair of compression and channel coding rates           That is, if we define y ⊤ = y1:L  ⊤                     ⊤
+                                                                                                         = [y1⊤ , · · · , yL ], then the
+depending on the channel SNR and bandwidth ratio, ρ. Channel       receiver l reconstructs the signal as Sel = gΦ,l (y1:l , SNR).
+coding rate depends on the channel SNR, and is chosen              Therefore, in this scheme, the goal of the transmitter is to gen-
+to guarantee reliable transmission with high probability. The      erate a codeword that can simultaneously satisfy L receivers,
+source compression rate is dictated by the channel code rate       each of which receives a different amount of information.
+and the available bandwidth ratio, ρ. In practical systems,        Accordingly, the additional bandwidth available to receiver l is
+a mobile device chooses from a list of prescribed list of          used to refine the reconstruction generated by receiver (l − 1).
+modulation and coding schemes (MCSs) according to the              Additionally, the formulation in [8] imposes a separate power
+estimated channel SNR. In the case of JSCC, since we have a        normalization to each part of the transmitted codeword.
+single code, the code parameters will depend on both the SNR          We note that the DeepJSCC-l scheme proposed in [8]
+and the bandwidth ratio. The initial works on DeepJSCC [1]         with successive refinement is also a solution to our problem,
+considered a similar approach to these practical systems, where    although we expect it to be a suboptimal solution since in our
+a separate DeepJSCC encoder/decoder pair is trained for given      problem we have a more relaxed requirement: the transmitter
+(SNR, ρ) pairs. However, due to the high memory complexity         knows the available bandwidth, and can adapt its transmission
+of DeepJSCC codes, it is not practically feasible to assume        accordingly, as a consequence, a single average power alloca-
+that each device can store a large variety of code parameters      tion can be used.
+to be used in different channel conditions. Therefore, the goal
+in this paper is to train a single encoder/decoder pair, which
+                                                                   A. Proposed solution: DeepJSCC-l++
+can dynamically adapt to the desired bandwidth ratio and SNR
+level in an online manner at the time of transmission.                Here, we propose a new architecture called DeepJSCC-l++.
+   Let fΘ denotes the encoder function parameterized by DNN        In the proposed solution, the encoder maps the input image
+parameters Θ, while the decoder is denoted by gΦ , parama-         to an output of dimension ρL N , denoted by z̃, similarly
+terized by Φ. A single DNN model will be utilized to adapt         to DeepJSCC-l. However, instead of transmitting the full-
+to different SNR and ρ values, where the encoder fΘ takes          bandwidth codeword, we adopt a simple mask at the encoder
+the image S as well as the SNR and ρ as input, and we have         to transmit only the first ρl N elements, denoted by zl , which
+z = fΘ (S, SNR, ρ) ∈ CρN . The receiver then reconstructs          is expressed as
+the original image as Se = gΦ (y, SNR, ρ) ∈ RC×H×W . For
+the sake of simplicity, we will assume that only L different                                   zl = M(z̃, l),                                (2)
+                                                                                                                                                                                                                                                                                                                         3
+
+
+
+
+                                                                                                 )*
+
+
+
+
+                                                                                                                                                                                                                                                                                       Linear Embedding
+                                                                                                                 Linear Emb
+                                                        Linear Embed
+                                                                                                                                                                                                                                                                                                          #%
+
+
+
+
+                                                                                                                                                                                                                                                     Patch Merging
+                                                                                                                                                                            Patch Merging
+                            Patch Partition
+                                                                                                                                                           Swin                                                  Swin                                                      Swin
+                                                                                                                                                                     …                                                      …
+
+
+
+
+                                                                                                                        Embedding
+                                                               Embedding
+
+
+
+
+                                                                                                                                                                                  Merging
+                                                                                                                                                       Transformer                                           Transformerr                                              Transformer
+                   &                                                                                                                                                                                                                                                                                             #$
+
+
+
+
+                                                                                                             …
+
+
+
+
+                                                                                                                                                                                                                                                                                                          …
+                                                                                             …
+                                                                                                                                                          blocks                                                blocks                                                    blocks
+
+
+
+
+                                                                                                                            edding
+
+
+
+
+                                                                                                                                                                                                                                                               ing
+                                                                                             '
+                                                                                             (               (                                           × +,                                                  × +-                                                        × +.                           !"
+
+                                                                                                                           !"#$ 1                                            !"#$ %                                                                   !"#$ %
+
+                                                                                                                                                                                                                                                                                  );
+
+
+
+
+                                                                                                                                                                                                                                  Linear Embedding
+                                                                                                                                                                                                                                                                     6: < >?            6:
+
+
+
+                                                                           Patchh Division
+
+
+
+
+                                                                                                                                                                                            Patch Division
+                                                                                                                                            Division
+                                              Conv 2D                                                Swin                                                     Swin                                                 Swin
+
+
+
+
+                                                                                                                                          h Divi
+                                                   2
+                       '
+                                                                                  Di
+                       &4                                                                                mer
+                                                                                                 Transforme
+                                                                                                 Transformer     …                                        Transforme
+                                                                                                                                                                  mer
+                                                                                                                                                          Transformer   …                                              mer
+                                                                                                                                                                                                               Transforme
+                                                                                                                                                                                                               Transformer                                                                                67 = 8. 9.
+
+
+
+
+                                                                                                                                                                                                                                                                       …
+
+
+
+
+                                                                                                                                                                                                                                                                                                …
+                                                                                                                                      Patch
+                                                                                                    blocks                                                   blocks                                               blocks
+
+
+
+
+                                                                                                                                                                                            Patc
+                                                                                                                                      Patc
+                                                                           Pa
+                                                                                                      × +,                                                   × +-                                                 × +.                                                54                   '4
+                                                                                                                                                                                                                                                                                           5
+                                                                           !"#$ %                                                    !"#$ /% 0 23                                            !"#$ 1
+
+                  Figure 2: The detailed neural network architecture for the proposed DeepJSCC-l++ model.
+
+
+where M(·, ·) represents the masking operation. Note that                                                                                                                        blocks1 are applied to X before proceeding into the next stage.
+zl is subject to a more flexible power constraint compared                                                                                                                       We briefly introduce the operations of the Swin transformer
+with the successive refinement scheme: ρl1N ||zl ||22 ≤ 1. The                                                                                                                   block and refer readers to [12] for more details.
+power normalized signal is then transmitted over the complex                                                                                                                        The Swin transformer blocks resemble those in the standard
+AWGN channel. At the receiver, the decoder zero-pads the                                                                                                                         vision transformer [13] except the multi-head self-attention
+received signal yl to a length-ρL N vector, ỹ, and takes both                                                                                                                   module is replaced by the one based on shifted windows. We
+ỹ and the side information ρl , SNR as input to reconstruct                                                                                                                     describe the operations of two consecutive Swin transformer
+Sel = gΦ (ỹ, SNR, l) ∈ RC×H×W using a decode function                                                                                                                           blocks as follows. Assume that the input feature tensor Xi at
+gΦ : RρL N × R × Z → RC×H×W .                                                                                                                                                    stage i has dimension c × hi × wi and each window contains
+                                                                                                                                                                                 w × w patches/tokens, then the first Swin transformer block
+                    III. M ETHODOLOGY                                                                                                                                            whose operation is denoted by W-MSA, evenly partitions
+                                                                                                                                                                                 Xi into (hi /w, wi /w) non-overlapping windows2 then per-
+  In this section, we present the neural network architectures                                                                                                                   forms multi-head self-attention within each window. To allow
+to parameterize the encoder and decoder fΘ and gΦ for the                                                                                                                        communications between different windows, a shifted window
+DeepJSCC-l++. Then we propose a novel training methodology                                                                                                                       multi-head self-attention operation, denoted as SW-MSA, is
+called DWA to avoid substantial performance loss at the higher                                                                                                                   adopted, where a cyclic shift is applied to the window config-
+bandwidth ratios.                                                                                                                                                                uration in the first transformer block followed by the multi-head
+                                                                                                                                                                                 self-attention operated within the new (shifted) windows. We
+A. Neural Network Architectures                                                                                                                                                  summarize the operations as follows:
+                                                                                                                                                                                                                              (1)
+   As shown in Fig. 2, we use one of the state-of-the-art                                                                                                                                                                   X̂i   = W-MSA(LN(Xi )) + Xi
+vision transformer models, the Swin transformer [12], as the                                                                                                                                                                  (1)           (1)      (1)
+                                                                                                                                                                                                                            Xi = MLP(LN(X̂i )) + X̂i
+backbone, and the data flow for the proposed scheme is detailed
+                                                                                                                                                                                                                              (2)                (1)     (1)
+as follows:                                                                                                                                                                                                                 X̂i = SW-MSA(LN(Xi )) + Xi
+   Data flow at the encoder. We start with the initial stage                                                                                                                                                                  (2)           (2)      (2)
+                                                                                                                                                                                                                            Xi = MLP(LN(X̂i )) + X̂i .                                                                 (4)
+where the image S is first split into non-overlapping patches
+(also known as ‘tokens’) by a patch partition module followed                                                                                                                    where LN denotes the layer normalization and we use the
+by a linear embedding layer to project each ‘token’ into feature                                                                                                                 superscripts to distinguish the features processed by the first
+space with dimension c. We use a patch size of 2 × 2 thus the                                                                                                                    and second Swin transformer block. By applying the operations
+aforementioned patch partition and linear embedding modules                                                                                                                      defined in (4) Mi /2 times, we obtain the final output of the
+transform the original image from dimension C × H × W to                                                                                                                         i-th stage.
+a feature tensor Xf with dimension c × H/2 × W/2. Before                                                                                                                            As shown in Fig. 2, the output of the Swin transformer
+         f
+feeding X into the subsequent transformer layers, we concate-                                                                                                                    blocks in the i-th stage is then fed to the patch merging
+nate each of its tokens with the side information, u ∈ Rnu , to                                                                                                                  module in the (i + 1)-th stage, whose output is of dimension
+form a larger tensor X with dimension (c + nu ) × H/2 × W/2.                                                                                                                     c × hi+1 × wi+1 . Note that, in our setting, the patch merging
+Note that u is obtained by feeding both SNR and ρl (ρl is not                                                                                                                    layer concatenates the features of 2×2 neighboring patches and
+needed if the successive refinement scheme is adopted) to a                                                                                                                      applies a linear layer to reduce the 4c-dimensional features to
+fully connected layer and X can be obtained as:                                                                                                                                  a dimension of c. Thus, we have (hi+1 , wi+1 ) = (hi /2, wi /2).
+                                                                                                                                                                                 After passing all the I stages, we obtain the output with
+                  u = MLP([SNR, ρl ])                                                                                                                                            dimension c × hI × wI , which is reshaped and linear projected
+                 f
+             X = X ⊕ Ue with Ue [:, i, j] = u,                                                                                                                       (3)            1 Note that M is required to be an even number since the shifted window
+                                                                                                                                                                                                   1
+                                                                                                                                                                                 self-attention is performed over two consecutive transformer blocks.
+where Ue ∈ Rnu ×H/2×W/2 is obtained by duplicating the vec-                                                                                                                         2 We assume that h and w are multiples of w. We can simply zero-pad
+                                                                                                                                                                                                         i      i
+tor u and ⊕ denotes concatenation. Then M1 Swin transformer                                                                                                                      the corresponding tensors if the assumption does not hold.
+                                                                                                                                                  4
+
+
+
+to matrix Z e with dimension NF × NT , where NF NT = 2ρL N                       Algorithm 1 Overall Training Process for DeepJSCC-l++
+with NT = hI wI .                                                                Model with DWA.
+    Varying Patches versus Varying Features. The matrix Z       e                 1: Initialize wl1 = 1, ∀l ∈ [L]
+contains NT tokens, each consisting of NF features for the                        2: for t = 1, . . . , T do
+maximum bandwidth ratio ρL . To be adaptive to different                          3:     Training Phase:
+ρl ’s, one may either transmit a reduced number of tokens                         4:     for each batch do
+nt < NT , while keeping the dimension of features per token                       5:         Sample l ∈ [L], SNR ∈ [SNRmin , SNRmax ]
+the same (nf = NF ), which is called varying patches, or                          6:         Encoder: zl = fΘ (S, SNR, l)
+reduces the dimension of features per token (we assume the                        7:         Decoder: Sel = gΨ (y, SNR, l)
+same nf for different tokens) while fixing the number of tokens                   8:         Weighted Loss: Ltl = wlt ||S − Sel ||22 .
+(nt = NT ), which is referred to as varying features. Note that                   9:         Optimize {Θ, Ψ} using Ltl .
+a more flexible bandwidth adaptive scheme is proposed in [11],                   10:     Validation Phase:
+where different nf ’s are assigned to different tokens for better                11:     for l ∈ [L] do
+performance. However, we argue that this requires transmitting                   12:         Calculate PSNRtl , ∆tl over validation set.
+additional digital information to inform the decoder concerning                  13:         Update wlt according to (5).
+how to partition the received signal for each token. When the
+digital information is not correctly decoded, the decoder would
+totally fail to reconstruct the original image. Our schemes, both                on the reconstruction performance for smaller bandwidth ratios
+the varying patches and the varying features, on the other hand,                 with significantly larger loss values. The reconstruction for
+do not require to transmit any digital information3. We evaluate                 larger bandwidth ratios, however, becomes highly sub-optimal,
+the reconstruction performance for the two schemes, and find                     which motivates us to explore a better training methodology to
+that they yield similar performance, which will be detailed                      improve the reconstruction quality across all conditions.
+in Section IV. In the following discussions, we employ the                          Inspired by [14], we propose the DWA scheme, which
+varying features scheme.                                                         assigns different weights wlt to the loss achieved for different
+    Data flow at the decoder. Upon receiving yl ∈ Cρl N ,                        ρl values according to their reconstruction qualities in the
+the receiver first converts it to a real tensor and then zero-                   validation phase at the t-th epoch. To be specific, we first obtain
+pads it along the first dimension to obtain Yel ∈ RNF ×hI ×wI ,                  an average image reconstruction quality PSNRtl as defined in
+denoted by Yel = P(yl ), where P represents the reshap-                          (1) for each bandwidth ratio ρl in the t-th epoch, where the
+ing and zero-padding operations. As shown in Fig. 2, the                         images from the validation dataset along with ρl and SNRval
+same side information u for the encoder is first duplicated                      are fed to the DeepJSCC-l++ model. Without loss of generality,
+to Ud and then concatenated to each token of Yel to form                         we set the SNRval = (SNRmin +SNRmax )/2. To evaluate the
+Yl ∈ R(NF +nu )×hI ×wI whose hI × wI tokens will be further                      relative reconstruction performance for each ρl , we compare
+mapped to a c-dimensional vector. The decoder also has I                         PSNRtl with the PNSR upper bound for that specific bandwidth
+stages and each stage consists of a patch division block and                     ratio ρl , denoted by PSNR∗l , which is obtained by training a
+Swin transformer blocks. To be precise, the patch division                       non-adaptive model with fixed SNRval and ρl . Intuitively, a
+block adopts pixel shuffling to upsample the spatial dimension                   larger gap from PSNR∗l , requires a larger weight wlt assigned
+of the input tensors. The upsampled tensor is fed to the Swin                    to that bandwidth ratio ρl . Based on this intuition, we introduce
+transformer blocks in the subsequent stage, whose structures                     a policy to dynamically assign weights to the losses, Ltl , for
+are identical to those at the encoder. After passing all I                       different bandwidth ratios:
+stages, a 2d-convolutional layer converts the latent tensor to
+the reconstructed image Sel ∈ RC×H×W .                                                               ∆tl = PSNR∗l − PNSRtl ,
+                                                                                                                  t
+                                                                                                  wlt = clip(2α(∆l −β) −1, 0, Γ),               (5)
+B. Dynamic Weight Assignment (DWA)
+                                                                                 where α is set to be a positive number to ensure that a larger
+   In this subsection, we introduce a training methodology                       weight, wlt , is assigned to the bandwidth ratio ρl with a larger
+designed for both the successive refinement and adaptive-                        ∆tl . Since the reconstruction quality of the adaptive model is
+bandwidth frameworks, which is essential for good reconstruc-                    expected to be upper bounded by separately (non-adaptive)
+tion performance with different bandwidth ratios.                                trained models, we would expect a PSNR gap of the adaptive
+   To train a single model that is adaptive to the bandwidth                     model from these benchmarks. Thus, we set a non-zero β,
+ratio ρl and the channel SNR, we uniformly sample ρl ∈                           which allows the proposed DeepJSCC-l++ model to focus on
+{ρ1 , . . . , ρL } and SNR ∈ [SNRmin , SNRmax ] and feed them                    optimizing the reconstruction performance for other bandwidth
+along with the image S to both the encoder and decoder                           ratios ρi , i 6= l if ∆tl is smaller than β. Note that, even when
+during training. The loss Ll for ρl is evaluated using the                       ∆tl < β, a non-negative weight is required. Thus, we clip the
+mean square error (MSE) between the input image and its                          weights to have a minimum value 0 and a maximum value
+reconstruction. For small ρl , Ll is much larger compared with                   Γ to ensure stable training. Empirically, we found that setting
+that of larger ρl . As the losses for all bandwidth ratios are                   α = 2, β = 0.25, Γ = 10 yields reasonable performance and
+optimized together, the proposed DeepJSCC-l++ tends to focus                     we use these values throughout the paper. Fig. 3 plots the
+  3 We assume that ρ is available to both the transmitter and receiver as part
+                     l
+                                                                                 function in (5) for the settings given above. We can observe the
+of the control channel information.                                              weight assigned to a certain bandwidth ratio decays smoothly
+                                                                                                                                                                      5
+
+
+
+                                                                                         Table I: Evaluation for the varying patches and varying features
+                     10
+
+                     9                            clip(22(
+                                                             t
+                                                             l
+                                                               -0.25)
+                                                                      -1, 0, 10)
+                                                                                         DeepJSCC-l++ schemes at SNR = 7 dB in terms of PSNR
+                     8
+                                                                                         (dB).
+                     7
+
+                     6                                                                                      ρ            1/16      1/8     3/16       1/4
+                                                                                                     varying patches     26.12    30.01    32.53     34.32
+               wtl
+
+
+                     5
+
+                     4
+                                                                                                     varying features    26.14    30.01    32.53     34.31
+                     3
+                                                                                                    separate training    26.36    30.23    32.70     34.55
+                     2
+
+                     1
+
+                     0
+                          0   0.5   1
+                                        t
+                                            1.5               2                    2.5
+                                                                                         The varying patches scheme adopts a fixed NF = 24 while
+                                        l
+                                                                                         its nt changes from 16 to 64 to adjust for different band-
+Figure 3: We plot the function in (5) for the parameters α =                             width ratios, the varying features scheme, on the other hand,
+2, β = 0.25, Γ = 10.                                                                     fixes NT = 64 with a varying number of features nf =
+                                                                                         {6, 12, 18, 24}. The PSNR performance of the two adaptive
+                                                                                         schemes as well as the separately trained (non-adaptive) models
+with the reduction of ∆tl during the training process. The
+                                                                                         under a fixed channel quality SNR = 7 dB are shown in
+overall training process with the DWA training methodology
+                                                                                         Table I. Note that both adaptive schemes adopt the DWA
+for DeepJSCC-l++ is summarized in Algorithm 1.
+                                                                                         training methodology proposed in Section III-B. We observe
+                                                                                         similar PSNR values for the two schemes, and both of them
+                     IV. N UMERICAL E XPERIMENTS
+                                                                                         achieve comparable performance with the separately trained
+  Next, we evaluate the performance of the proposed                                      models where a maximum of 0.24 dB PSNR gap is observed
+DeepJSCC-l++ scheme for both the adaptive-bandwidth and                                  at ρL = 1/4. We use the varying features scheme for the
+successive refinement scenarios, along with the non-adaptive                             remaining simulations.
+models trained at a fixed bandwidth ratio and channel SNR4 .                                Next we consider a more challenging case where we train
+                                                                                         the adaptive models with L = 6 supported bandwidth ratios
+A. Parameter Setting and Training Details                                                and varying channel SNRs. The possible bandwidth ratios are
+   We consider the transmission of images from the CIFAR-10                              ρl ∈ {1/24, 1/12, 1/8, 1/6, 5/24, 1/4}, which correspond to
+dataset, which includes 40000 training, 10000 validation, and                            nf = {4, 8, 12, 16, 20, 24}. We show the PSNR performance
+10000 test RGB images, each with 32 × 32 resolution. Both                                of the proposed DeepJSCC-l++ applied to both bandwidth-
+the encoder and decoder employ I = 2 stages, the number of                               adaptive and successive refinement scenarios introduced in
+features c is set to 256, the window size to w = 8, the numbers                          Section II (with and without DWA), along with the DeepJSCC-l
+of Swin transformer blocks in each stage to M1 = 4, M2 = 2.                              model originally proposed in [8], which follows the successive
+The dimension of the embedding is set to nu = 2. Finally, the                            refinement principle but adopts a CNN as its backbone.
+GeLU activation function is used within the Swin transformer                                As can be seen in Fig. 4 (a) and (b), where we fix the
+blocks.                                                                                  channel SNR to 7 dB, the proposed DeepJSCC-l++ model
+   For training, we adopt the Adam optimizer and a varying                               with DWA can be adaptive to different bandwidth ratios with
+learning rate initialized at 10−4 , which is reduced by a factor                         a negligible performance gap from the separately trained (non-
+of 0.95 if the validation loss does not drop for 20 epochs.                              adaptive) benchmarks. Specifically, we observe that for the
+The maximum number of epochs is set to 4 × 103 , and the                                 proposed DeepJSCC-l++ models, the gap is more significant
+early stopping module is included, where the training process                            at larger ρl values, which is intuitive as the optimization
+terminates if the validation loss does not improve in 80 epochs                          task for reconstructing the image from a higher dimensional
+for the adaptive schemes, whereas the patience is set to 60                              latent is in general more challenging5. Further, it is shown
+for the non-adaptive models. Note that the settings mentioned                            that the DeepJSCC-l++ under successive refinement scenario
+above ensure that the validation losses are saturated for both                           with DWA generates a reconstruction performance with a
+adaptive and non-adaptive schemes when the training ends.                                modest PSNR gap of ≈ 0.5 dB compared to the adaptive-
+   Throughout this section, we assume a maximum bandwidth                                bandwidth scenarios at high ρl values. This is due to the fact
+ratio of ρmax = 1/4, which corresponds to a maximum number                               that the successive refinement scheme imposes more stringent
+of tokens NT = 64 and maximum number of features per token                               constraints as illustrated in Section II. The DeepJSCC-l++
+NF = 24. We train and evaluate the proposed schemes with                                 without the proposed training methodology, on the other hand,
+channel SNR ranging from 4 dB to 10 dB.                                                  is optimized with overwhelming focus on the performance of
+                                                                                         the smallest bandwidth ratio, ρ1 = 1/24, yielding ∆T1 ≈ 0
+                                                                                         dB where T denotes the epoch where the training terminates.
+B. Performance Evaluation
+                                                                                         However, the reconstruction performances at higher ρl , l > 1,
+   We first compare the reconstruction performance of the                                are far from optimal, which highlights the effectiveness of the
+bandwidth-adaptive model with varying patches and varying                                proposed DWA training methodology. The curve named ‘Succ.
+features. In this experiment, we set the number of supported                             refn. scheme of [8]’ in Fig. 4 (a) represents the results obtained
+bandwidth ratios to L = 4 with ρl ∈ {1/16, 1/8, 3/16, 1/4}.
+                                                                                           5 This can also be verified by checking the training curves for different ρ
+                                                                                                                                                                      l
+  4 Code available at https://github.com/aprilbian/deepjscc-lplusplus.                   values.
+                                                                                                                                                                                                                                         6
+
+
+
+
+                                                                                     33.5                                                                          10
+                34                                                                                                                                                                                                           = 1/24
+                                                                                      33                                                                           9                                                         = 1/12
+                33                                                                   32.5                                                                                                                                    = 1/8
+                                                                                                                        0.25 dB                                    8                                                         = 1/6
+                32                                                                                                                                                                                                           = 5/24
+                                                                                      32
+                31                                                                                                          0.4 dB                                 7                                                         = 1/4
+                                                                                     31.5
+                30                                                                                                                                                 6
+    PSNR (dB)
+
+
+
+
+                                                                         PSNR (dB)
+                                                                                      31
+
+
+
+
+                                                                                                                                                             wtl
+                29                                                                                                                                                 5
+                                                                                     30.5
+                28                                                                                                                                                 4
+                                                                                      30
+                27                                                                                                                                                 3
+                                                                                     29.5
+                                      Separate Trained
+                26                    DeepJSCC-l++ adaptive bw / DWA
+                                                                                      29                                                                           2
+                                      DeepJSCC-l++ succ. refn. / DWA                                                    Separate Trained
+                25                    DeepJSCC-l++ adaptive bw                                                          DeepJSCC-l++ adaptive bw / DWA
+                                                                                     28.5                                                                          1
+                                      DeepJSCC-l++ succ. refn.                                                          DeepJSCC-l++ succ. refn. / DWA
+                                      Succ. refn. scheme of [8]                                                         BPG + Capacity
+                24                                                                    28                                                                           0
+                     0   0.05   0.1   0.15           0.2          0.25                      5   5.5   6   6.5      7       7.5       8      8.5          9              0   500   1000   1500     2000       2500   3000   3500   4000
+                                                                                                                SNR (dB)                                                                        Epochs (t)
+
+
+Figure 4: We show the effectiveness of the proposed DeepJSCC-l++ models: (a) the PSNR performance over different ρl with
+SNR = 7 dB; (b) the PSNR performance over different evaluation SNRs with ρl = 1/6; (c) the weights wlt for different
+bandwidth ratios ρl with respect to the number of epochs t.
+
+
+in [8] for successive refinement, which has fallen short of the                                                        BPG compression with a capacity-achieving channel code,
+performance of the DeepJSCC-l++ scheme which is mainly                                                                 which provides an upper bound on the performance achievable
+due to the less powerful CNN backbone adopted in [8].                                                                  by a separation-based scheme employing BPG for compression.
+   We then demonstrate that the proposed DeepJSCC-l++                                                                  These results not only show the superior performance of
+model is also adaptive to different channel SNRs. In this                                                              DeepJSCC, but also highlight its potential for practical systems
+simulation, the settings are the same as those in Fig. 4 (a).                                                          through the use of a single pair of encoder/decoder parameters.
+The bandwidth ratio ρl is fixed at 1/6 while the evaluation
+SNR varies from 5 dB to 9 dB. As shown in Fig. 4 (b), the                                                                                                           R EFERENCES
+PSNR performance of the DeepJSCC-l++ models are compared                                                                [1] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+with the separately trained models. A fixed ≈ 0.25 dB PSNR                                                                  channel coding for wireless image transmission,” IEEE Trans. Cognitive
+gap from the separately trained models is observed for the                                                                  Commun. Netw., vol. 5, no. 3, pp. 567–579, 2019.
+                                                                                                                        [2] M. Yang, C. Bian, and H.-S. Kim, “OFDM-guided deep joint source
+DeepJSCC-l++ model, which corresponds to the ∆Tl value                                                                      channel coding for wireless multipath fading channels,” IEEE Trans. on
+introduced in Section III-B and also shown in Fig. 4 (a).                                                                   Cogn. Comm. and Networking, vol. 8, no. 2, pp. 584–599, 2022.
+All these schemes show significant gain compared with the                                                               [3] H. Wu, Y. Shao, K. Mikolajczyk, and D. Gündüz, “Channel-adaptive
+                                                                                                                            wireless image transmission with OFDM,” IEEE Wireless Communica-
+digital baseline which utilizes the BPG image compression and                                                               tions Letters, vol. 11, no. 11, pp. 2400–2404, 2022.
+capacity achieving code. Combining the results in Fig. 4 (a) and                                                        [4] H. Wu, Y. Shao, C. Bian, K. Mikolajczyk, and D. Gündüz, “Vision
+(b), we confirm the proposed schemes are adaptive to different                                                              transformer for adaptive image transmission over MIMO channels,” in
+                                                                                                                            IEEE International Conference on Communications (ICC), 2023.
+bandwidth ratios and channel SNRs.                                                                                      [5] C. Bian, Y. Shao, H. Wu, and D. Gunduz, “Space-time design for deep
+   Finally, for a comprehensive understanding of the DWA                                                                    joint source channel coding of images over MIMO channels,” 2022.
+training methodology for the DeepJSCC-l++, we present the                                                                   [Online]. Available: https://arxiv.org/abs/2210.16985
+                                                                                                                        [6] C. Bian, Y. Shao, H. Wu, and D. Gunduz, “Deep joint source-channel
+weights wlt versus the number of epochs t for different band-                                                               coding over cooperative relay networks,” 2022. [Online]. Available:
+width ratios ρl ’s in Fig. 4 (c). Note that the settings for this                                                           https://arxiv.org/abs/2211.06705
+simulation is identical to that in Fig. 4 (a). As analyzed before,                                                      [7] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+                                                                                                                            image transmission using deep source channel coding with attention
+the reconstruction task for larger ρl is generally harder, thus                                                             modules,” IEEE Trans. Circuits Syst. Video Technol, vol. 32, no. 4, pp.
+for a fixed epoch t, the corresponding ∆tl is larger leading to a                                                           2315–2328, 2021.
+larger wlt which is verified in the figure. As the reconstruction                                                       [8] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission with
+                                                                                                                            deep joint source-channel coding,” IEEE Trans. on Wireless Comm.,
+performance improves with more epochs, some of the wlt ’s                                                                   vol. 20, no. 12, pp. 8081–8095, 2021.
+reduce to 0 if ∆tl ≤ β = 0.25. Since a PSNR gap greater                                                                 [9] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+than 0.25 dB remains when the training finishes, we can still                                                               image transmission with adaptive rate control,” in ICASSP, 2022.
+                                                                                                                       [10] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,
+observe a non-zero weight for the ρL = 1/4 case.                                                                            “Predictive and adaptive deep coding for wireless image transmission in
+                                                                                                                            semantic communication,” IEEE Trans. on Wireless Comm., 2023.
+                       V. C ONCLUSION                                                                                  [11] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+                                                                                                                            transform source-channel coding for semantic communications,” IEEE J.
+   We developed a flexible wireless image transmission scheme,                                                              on Sel. Areas in Comm., vol. 40, no. 8, pp. 2300–2316, 2022.
+called DeepJSCC-l++, which can adapt to multiple bandwidth                                                             [12] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and B. Guo,
+ratios and channel SNRs using a single encoder/decoder neural                                                               “Swin transformer: Hierarchical vision transformer using shifted win-
+                                                                                                                            dows,” in ICCV, October 2021, pp. 10 012–10 022.
+network pair built upon the Swin transformer architecture.                                                             [13] D. Alexey, B. Lucas, K. Alexander, W. Dirk, Z. Xiaohua, U. Thomas,
+Numerical simulations verify that the proposed DeepJSCC-l++                                                                 D. Mostafa, M. Matthias, H. Georg, G. Sylvain, U. Jakob, and H. Neil,
+model can be adaptive to both the bandwidth ratio and the                                                                   “An image is worth 16x16 words: Transformers for image recognition at
+                                                                                                                            scale,” in ICLR, 2021.
+channel SNR with marginal performance loss with respect to                                                             [14] O. Rippel, A. G. Anderson, K. Tatwawadi, S. Nair, C. Lytle, and
+the separately trained models. It is also shown that the proposed                                                           L. Bourdev, “Elf-vc: Efficient learned flexible-rate video coding,” in
+architecture can be applied to the successive refinement prob-                                                              ICCV, October 2021.
+lem, outperforming the state-of-the-art by a significant margin.
+It also outperforms the separation-based baseline considering
+

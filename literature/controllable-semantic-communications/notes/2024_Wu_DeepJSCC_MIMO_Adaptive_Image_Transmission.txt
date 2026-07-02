@@ -1,0 +1,1626 @@
+                                                                                                                                                                                        1
+
+
+
+
+                                              Deep Joint Source-Channel Coding for Adaptive
+                                                Image Transmission over MIMO Channels
+                                                      Haotian Wu, Graduate Student Member, IEEE, Yulin Shao, Member, IEEE, Chenghong Bian,
+                                                              Krystian Mikolajczyk, Senior Member, IEEE, Deniz Gündüz, Fellow, IEEE
+
+
+
+                                            Abstract—We introduce a vision transformer (ViT)-based                        The conventional solution, motivated by Shannon’s separa-
+                                         deep joint source and channel coding (DeepJSCC) scheme                        tion theorem, is to independently design source and channel
+                                         for wireless image transmission over multiple-input multiple-                 coding, which is optimal in the asymptotic limit of infinite
+                                         output (MIMO) channels, called DeepJSCC-MIMO. We employ
+                                                                                                                       block length for ergodic source and channel distributions [11].
+arXiv:2309.00470v4 [cs.IT] 14 Jul 2024
+
+
+
+
+                                         DeepJSCC-MIMO in both open-loop and closed-loop MIMO
+                                         systems. The novel DeepJSCC-MIMO architecture surpasses                       However, the separation-based approach is known to be sub-
+                                         the classical separation-based benchmarks, exhibiting robustness              optimal in the practical finite block length regime, which
+                                         to channel estimation errors, and flexibility in adapting to                  is becoming increasingly relevant in emerging applications
+                                         diverse channel conditions and antenna configurations without                 involving Internet-of-things and edge intelligence. Despite
+                                         requiring retraining. Specifically, by harnessing the self-attention
+                                         mechanism of the ViT, DeepJSCC-MIMO intelligently learns                      its known benefits, designing practical joint source-channel
+                                         feature mapping and power allocation strategies tailored to                   coding (JSCC) schemes has been an ongoing challenge for
+                                         the unique characteristics of the source image and prevailing                 many decades. Most existing studies on JSCC either focus
+                                         channel conditions. Extensive numerical experiments validate                  on theoretical scenarios, e.g., Gaussian or Gauss-Markov
+                                         the significant improvements in both distortion quality and                   sources [12]–[15], or jointly optimize parameters of separate
+                                         perceptual quality achieved by DeepJSCC-MIMO for both open-
+                                         loop and closed-loop MIMO systems across a wide range of                      source and channel codes [16]–[19], as there is a lack of
+                                         scenarios. Moreover, DeepJSCC-MIMO exhibits robustness to                     practical JSCC schemes and theoretical performance bounds
+                                         varying channel conditions, channel estimation errors, and dif-               on the achievable mean squared error distortion for lossy
+                                         ferent antenna numbers, making it an appealing technology for                 JSCC in finite block lengths [20], particularly when dealing
+                                         emerging semantic communication systems.                                      with practical sources such as images. On the other hand,
+                                           Index Terms—Joint source-channel coding, MIMO, semantic                     significant progress has been made in the recent years in
+                                         communication, attention mechanism, image transmission.                       designing deep learning-based JSCC (DeepJSCC) schemes
+                                                                                                                       thanks to the introduction of deep neural networks (DNNs)
+                                                                  I. I NTRODUCTION                                     [1]–[4], which allow to directly map the input source signal
+                                                                                                                       to channel symbols, and vice versa at the decoder. This
+                                            The exponential growth of wireless multimedia applica-
+                                                                                                                       approach removes the necessity of explicit source compression
+                                         tions, encompassing augmented reality, virtual reality, real-
+                                                                                                                       or error correction, or the usage of bits as a common unit of
+                                         time streaming, and edge intelligence, has significantly height-
+                                                                                                                       representation of signals. Instead, the DeepJSCC approach is
+                                         ened the demand for efficient wireless transmission of im-
+                                                                                                                       optimized to directly generate channel symbols with the goal
+                                         age/video signals, particularly under strict delay constraints.
+                                                                                                                       of enhancing the overall transmission quality across diverse
+                                         Consequently, this has sparked a notable surge in research
+                                                                                                                       source and channel distributions. This is achieved through an
+                                         on developing optimized image communication systems over
+                                                                                                                       end-to-end training methodology that refrains from imposing
+                                         wireless channels [1]–[10].
+                                                                                                                       constraints on the distribution of the source or the channel.
+                                            H. Wu, C. Bian, K. Mikolajczyk, and D. Gündüz are with the Depart-            The first DeepJSCC scheme for image transmission was
+                                         ment of Electrical and Electronic Engineering, Imperial College London,       presented in [1], which was shown to outperform the con-
+                                         London SW7 2AZ, U.K. (e-mails: {haotian.wu17, c.bian22, k.mikolajczyk,
+                                         d.gunduz}@imperial.ac.uk). Y. Shao is with the State Key Laboratory of        catenation of the better portable graphics (BPG) image com-
+                                         Internet of Things for Smart City and the Department of Electrical and        pression codec with low-density parity-check (LDPC) codes.
+                                         Computer Engineering, University of Macau, Macau S.A.R (e-mail: yl-           It was later extended to adaptive channel bandwidth scenario
+                                         shao@um.edu.mo). He is also a visiting researcher at the Department of
+                                         Electrical and Electronic Engineering, Imperial College London, London SW7    in [5] and [7], and to the transmission over multi-path fading
+                                         2AZ, U.K.                                                                     channels in [2] and [21]. Its feasibility in practical systems has
+                                            This work received funding from the UKRI for the projects AIR (ERC-        also been evaluated, including building prototypes [8], [22],
+                                         Consolidator Grant, EP/X030806/1), SONATA (EPSRC-EP/W035960/1), and
+                                         the SNS JU project 6G-GOALS under the EU’s Horizon program (grant             or its implementation with constrained channel inputs [23], or
+                                         agreement No. 101139232). The work of Y. Shao was supported in part by        under peak-to-average power ratio constraints [24]. However,
+                                         the Start-up Research Grant under Grant SRG2023-00038-IOTSC, and in part      existing DeepJSCC schemes solely consider single-antenna
+                                         by the Science and Technology Development Fund, Macao SAR, under Grant
+                                         0068/2023/RIB3.                                                               transmitters and receivers. While there is a growing litera-
+                                            For the purpose of open access, the authors have applied a Creative        ture successfully employing DNNs for various multiple-input
+                                         Commons Attribution (CCBY) license to any Author Accepted Manuscript          multiple-output (MIMO)-related tasks in wireless communica-
+                                         version arising from this submission.
+                                            This paper was presented in part at the IEEE International Conference on   tions, such as detection, channel estimation, or beamforming
+                                         Communications (ICC) in May 2023.                                             [25]–[27], no previous work has so far applied DeepJSCC
+                                                                                                                                                         2
+
+
+
+                                                                   TABLE I
+                                    OVERVIEW OF ALTERNATIVE END - TO - END MIMO COMMUNICATION PIPELINES .
+
+    Potential Schemes         End-to-end AE [30]    DAE benchmarks [31]         SVD-DAE [32]                VST [36]                  Our work
+      Input source              One-hot input           One-hot input                 Bits                   Images                     Images
+     CSIR scenarios                    ✓                     ✓                         ✗                       ✓                           ✓
+     CSIT scenarios                    ✓                     ✓                         ✓                        ✗                          ✓
+    Antenna flexibility                ✗                      ✗                        ✗                        ✗                          ✓
+   Channel adaptability                ✗                      ✗                        ✓                       ✓                           ✓
+   Channel robustness                  ✓                      ✗                        ✗                        ✗                          ✓
+         Metrics                 Bit error rate        Block error rate          Bit error rate               PSNR                 PSNR & LPIPS
+                                SVD+QPSK+            STBC∗ /SVD + GS+                                                               BPG/DL-based
+       Main baseline                                                              Plain-DAE                BPG+LDPC
+                                 equal power          bit/power loading                                                        compression+Capacity
+                                        DAE outperforms/matches the baseline for CSIR;                 Method outperforms       Method outperforms
+           Results
+                                 DAE outperforms baseline at some specific SNRs for CSIT.†                the baseline               the baseline
+                                Pioneered the       Benchmark end-to-end         Evaluate the           Semantic coding        First unified DeepJSCC
+       Main insights
+                              DAE-based MIMO           MIMO systems           model-driven DAE            over CQI ‡             scheme over MIMO
+   ∗ STBC represents space-time block codes; GS represents geometrically-shaped signal constellations; QPSK is quadrature phase shift keying modulation;
+   SVD is singular value decomposition precoding operation.
+   † For the CSIT, DAE-based models can outperform baseline at some specific SNRs, but cannot perform better than properly chosen benchmarks [31].
+   ‡ CQI represents channel quality indicators, e.g., the SNR value, which needs to be assumed accessible for the transmitter in the open-loop MIMO system.
+
+
+
+to the more challenging MIMO scenario, with the exception                     scenarios with open-loop MIMO with only receiver-side CSI
+of our initial results in [28]. JSCC over MIMO channels                       (CSIR) and closed-loop MIMO with both transmitter and
+was studied in [29] from a theoretical perspective, providing                 receiver side CSI (CSIT). Such a system would be capable
+theoretical bounds for the distortion exponent as a function                  of leveraging the semantics of the source signal and channel
+of the bandwidth ratio considering Gaussian sources. It is                    conditions simultaneously, and efficiently managing both fluc-
+challenging to design a practical JSCC scheme for MIMO                        tuating channel conditions and potential channel estimation
+channels, where the model needs to learn how to map the input                 errors, all within a cohesive framework.
+signal to multiple antennas, and then to recover the input from                  The differences from earlier studies and the ensuing chal-
+multiple channel outputs, where each input-output antenna pair                lenges we aim to address in this paper can be outlined across
+experiences a distinct channel condition.                                     four key points: performance improvement, model general-
+   Advantages of DeepJSCC and end-to-end MIMO schemes                         izability, channel adaptability, and channel robustness. These
+in practical MIMO transmission scenarios have prompted the                    facets become particularly important to ensure the framework’s
+investigation of DeepJSCC over MIMO systems. The first deep                   effectiveness and practicality.
+autoencoder (DAE) based end-to-end MIMO communication                             • Performance improvement: Prior DL-based designs for
+method was introduced in [30]. In the subsequent work [31],                         MIMO systems [30]–[32], have mostly focused on sym-
+the authors systematically establish the symbol error rate                          bol detection in a digital communication framework.
+benchmarks for MIMO channels by evaluating several DAE-                             Moreover, even the state-of-art DL-based solution [31]
+based models with channel state information (CSI). A singular-                      cannot outperform a properly selected traditional model-
+value decomposition (SVD) based DAE is proposed in [32] to                          driven solution, which underscores the inherent difficulty
+achieve competitive performance for the closed-loop MIMO                            of learning effective communication strategies in MIMO
+system with CSI at the transmitter (CSIT). These works                              systems. Another important aspect of the performance
+indicate the potential of end-to-end MIMO communication                             is the memory and computational complexity, which
+schemes to enhance transmission quality when coupled with                           further motivates competitive and practical end-to-end
+advanced deep learning (DL) technologies. However, we re-                           architectures.
+mark that the aforementioned works focus on the transmission                      • Model generalizability: Most of the proposed schemes
+of bits/one-hot vectors for specific signal-to-noise ratio (SNR)                    [32], [36] have been designed specifically for open-loop
+values, and do not consider the contextual features of the                          or closed-loop systems. Moreover, they require retrain-
+input signals, also referred to as ‘semantics’ in the literature                    ing to be used in different antenna configurations. The
+[33], [34], and the model’s adaptability to varying channel                         impracticality of customizing distinct models tailored for
+conditions, as outlined in Table I. Two recent studies that                         specific scenarios is apparent, prompting our search for
+are more relevant to this work are [35] and VST [36], where                         a unified DeepJSCC solution. Specifically, our ambition
+[35] theoretically analyzes the excess distortion exponent for                      is to design a unique DeepJSCC scheme which can
+semantic-aware MIMO systems, while the authors in [36]                              generalize to both CSIR and CSIT scenarios, and varying
+propose a semantically coded transmission scheme utilizing                          antenna configurations.
+MIMO, assuming that CSI is available at the receiver (CSIR).                      • Channel adaptability: The adaptability to diverse channel
+                                                                                    conditions constitutes a pivotal attribute of DL-based
+   To the best of our knowledge, prior research has not delved                      communication schemes [3], [32]. The separate training
+into the specific exploration of adaptive JSCC MIMO systems                         of neural networks for different channel conditions ne-
+designed for wireless image transmission, encompassing both                         cessitates massive storage space for multiple networks
+                                                                                                                                   3
+
+
+
+    corresponding to distinct channel conditions. Previous in-         communication systems concerning semantic sources.
+    vestigations of channel adaptability in DeepJSCC within        •   DeepJSCC-MIMO is a comprehensive and versatile so-
+    single input single output (SISO) system focus on in-              lution that can be seamlessly applied to both open-loop
+    corporating the SNR as an additional network input                 and closed-loop MIMO systems. Importantly, DeepJSCC-
+    [3]. However, transferring these approaches to MIMO                MIMO demonstrates remarkable flexibility and adaptabil-
+    channels remains challenging, where the model needs                ity by efficiently accommodating diverse channel condi-
+    to simultaneously account for the coupled channel in-              tions and antenna number configurations. This is achieved
+    puts and the channel matrix. Consequently, we employ               without the necessity for retraining, thanks to the uti-
+    model-driven techniques to disentangle the channels and            lization of the channel heatmap and the self-attention
+    introduce an innovative paradigm, integrating the self-            mechanism. Furthermore, the DeepJSCC-MIMO scheme
+    attention mechanism and CSI heatmap, to learn and adapt            exhibits significant resilience to channel estimation errors.
+    to the channel conditions effectively.
+  • Channel Robustness: CSIR and CSIT are typically ac-            •   Extensive numerical evaluations validate the superiority
+    quired through channel estimation and feedback, respec-            of the proposed model, showcasing significant enhance-
+    tively, which can introduce estimation errors that can             ments in both distortion quality and perceptual quality
+    lead to reduction in the reliability of the transmitted            across a wide range of channel conditions and bandwidth
+    information [37]. Authors in [38] demonstrated that,               ratios when compared to traditional separate source and
+    in the presence of imperfect CSIT and minimal noise,               channel coding schemes.
+    MIMO performance can be enhanced through power
+                                                                                     II. S YSTEM M ODEL
+    allocation compared to systems without CSIT. However,
+    an increase in noise level can significantly deteriorate        We consider an M × M MIMO system, where an M -
+    the performance. Meanwhile, the joint design of the          antenna transmitter aims to deliver an image S ∈ Rh×w×3
+    system with channel estimation errors enables model          to an M -antenna receiver (h and w denote the height and
+    robustness against channel estimation errors [27], [30].     width of the image, while 3 refers to the color channels R,
+    This observation motivates us to incorporate imperfect       G, and B). The transmitter encodes the image into a vector of
+    CSI into the proposed DeepJSCC framework.                    channel symbols X ∈ CM ×k , where k denotes the number of
+                                                                 channel uses dedicated to transmitting one image. We define
+   This paper presents an innovative DeepJSCC scheme metic-      the bandwidth ratio as R ≜ k/n, representing the average
+ulously tailored for MIMO image transmission to address the      number of available channel symbols per source dimension,
+above practical concerns. Our approach introduces a unified      where n = 3hw is the number of source symbols. The
+vision transformer (ViT)-based DeepJSCC scheme, named            transmitted signal X is subject to a power constraint Ps as:
+DeepJSCC-MIMO, which accommodates both scenarios with
+                                                                                         1
+CSIR and CSIT. Inspired by the attention mechanism in                                        ∥X∥2F ≤ Ps ,                  (1)
+developing flexible communication schemes [3], [21], [39]–                             Mk
+[41], we leverage the self-attention mechanism inherent in       where ∥ · ∥F denotes the Frobenius norm, and we set Ps = 1
+ViT for adaptive wireless image transmission. Specifically, we   without loss of generality.
+                                                                    The channel model can be written as:
+represent the channel conditions with a channel heatmap and
+adapt the JSCC encoding and decoding parameters according                                Y = HX + W ,                           (2)
+to this heatmap. Our approach can learn global attention pa-     where X ∈ CM ×k and Y ∈ CM ×k denote the channel input
+rameters between the source image and the channel conditions     and output matrices, respectively, while W ∈ CM ×k is the
+across all the intermediate layers of the DeepJSCC encoder       additive white Gaussian noise (AWGN) term, whose entries
+and decoder. Intuitively, we expect this design to simultane-    W [i, j] ∼ CN (0, σw 2
+                                                                                        ) follow an independent and identically
+ously learn channel symbol mapping and power allocation,         distributed (i.i.d.) complex Gaussian distribution with zero
+considering different channel conditions, channel estimation     mean and variance σw   2
+                                                                                          . The entries of the channel gain matrix
+errors, and different antenna number configurations. There-      H∈C     M ×M
+                                                                                also follow a complex Gaussian distribution with
+fore, unlike most existing literature on DNN-aided MIMO          zero mean and variance σh2 , i.e., H[i, j] ∼ CN (0, σh2 ). We
+communications, we eliminate the need for training separate      consider a block-fading channel model, in which the channel
+DNN models for different transceiver settings and channel        matrix H remains constant for k channel uses, corresponding
+conditions. The proposed DeepJSCC-MIMO is a practical and        to the transmission of one image, and takes an independent
+unified scheme with robustness to channel estimation errors.     realization in the next block.
+   Our main contributions can be summarized as follows:             Given the channel output Y , the receiver reconstructs the
+  •   This paper presents the first DeepJSCC scheme over the     source image as Ŝ ∈ Rh×w×3 . The reconstruction quality
+      MIMO system for image transmission. The key innova-        is quantified through the peak signal-to-noise ratio (PSNR)
+      tion lies in utilizing a ViT-based model, which adeptly    and the learned perceptual image patch similarity (LPIPS)
+      exploits both the semantic features of the image and       metrics [42]. The PSNR metric serves as an indicator of image
+      the CSI through a self-attention mechanism. This design    distortion at the per-pixel level, defined as:
+      of jointly leveraging attention over both the source and                                       ∥S∥2∞
+      channel aspects can be readily applied to other emerging                 PSNR ≜ 10 log10                  (dB),           (3)
+                                                                                                  MSE(S, Ŝ)
+                                                                                                                                                                                               4
+
+
+
+where ∥ · ∥∞ is the infinity norm and MSE(S, Ŝ) ≜ 3hw    1
+                                                             ∥S −                                                       Transmitter
+
+
+
+
+                                                                                                                                         Precoder
+   2                                                                        𝑺                                                                         𝐕𝑿                  𝐕𝚲𝑿
+Ŝ∥2 is the mean squared error (MSE) between S and Ŝ.                              Source           Channel
+                                                                                                                        Modulator
+                                                                                                                                    𝑿                          Power
+                                                                                                                                                             allocation
+                                                                                   Encoder           Encoder
+LPIPS, on the other hand, computes the dissimilarity between
+the feature vectors of the input and reconstructed images,
+                                                                                                                                                                           MIMO
+where a lower LPIPS score implies a better perceptual quality,                                                                                                            Channel
+defined as:                                                                                                             Receiver
+                     X 1 X                                                  !
+                                                                            𝑺        Source            Channel
+                                                                                                            Channel                                 𝑿!     MIMO            𝒀
+     LPIPS(S, Ŝ) ≜                 ∥wl ⊙ (y l − ŷ l )∥22 ,   (4)                  Decoder            Decoder
+                                                                                                            Decoder
+                                                                                                                           Demodulator
+                                                                                                                                                          detection
+                          Hl W l
+                      L           h,w
+                                                                                                                             (a)
+         l   l       Hl ×Wl ×Cl
+where y , ŷ ∈ R                  are the intermediate features
+derived from the l-th layer of the given network (VGG in
+                                                                        𝑺            Joint                               MIMO                                      𝑿!                    !
+                                                                                                                                                                                         𝑺
+
+
+
+
+                                                                                                        Precoder
+                                                                                                 𝑿                 𝐕𝑿                    𝒀            MIMO
+                                                                                                                                                                             Joint
+our case) composed of a total of L layers. Hl , Wl , and Cl                     Source-Channel
+                                                                                                                        Channel                     equalization        Source-Channel
+                                                                                   Encoder                                                                                 Decoder
+are the intermediate feature map’s height, width, and channel
+dimensions, wl ∈ RCl is the weight vector, and ⊙ is the                                Transmitter                                                             Receiver
+                                                                                                                             (b)
+channel-wise feature multiplication operation [42].
+   As shown in Fig. 1, there can be two approaches to solve          Fig. 1. Block diagram of the MIMO image transmission system: (a) con-
+this problem, i.e., the traditional separate source and channel      ventional separate source-channel coding scheme and (b) DeepJSCC scheme,
+coding scheme and the JSCC scheme. This paper considers              where the gray blocks with dashed lines are the additional operations for the
+                                                                     closed-loop MIMO system.
+both the CSIR (open-loop MIMO) and CSIT (closed-loop
+MIMO) scenarios for each transmission scheme.
+                                                                     equalization. This involves training the model to minimize
+A. Open-loop MIMO with CSIR                                          the distortion in an end-to-end manner. However, in order to
+   In an open-loop MIMO system, CSI is only available at the         achieve better transmission quality, we adopt a model-driven
+receiver, enabling it to equalize the transmitted signals and        approach that explicitly performs channel equalization prior
+subsequently decode the image.                                       to the decoding process, leveraging the domain knowledge to
+   1) Separate source and channel coding scheme: In an open-         simplify the learning process, similarly to [2], [27].
+loop MIMO system with separate source and channel coders,
+the transmitter follows a sequential process, applying source        B. Closed-loop MIMO with CSIT
+coding, channel coding, and the modulation in order. We note            Within a closed-loop MIMO system, the CSI is accessible
+that, due to the lack of CSI, the transmitter has to choose the      to both the transmitter and receiver, which allows them to
+compression and channel coding rates and the constellation           apply pre-coding and power allocation at the transmitter, and
+independently of the current channel realization.                    MIMO equalization at the receiver, thereby improving the
+   Given the received signal Y and the CSI, the receiver             image transmission quality.
+decodes the source signal as Ŝ by sequentially performing the          1) Separate source and channel coding scheme: The trans-
+MIMO detection, demodulation, channel decoding, and source           mitter sequentially performs source coding, channel coding,
+decoding operations.                                                 and modulation to generate the channel input matrix X,
+   2) DeepJSCC scheme: Different from the traditional                the elements of which are constellations with average power
+separation-based scheme, DL-based JSCC scheme uses a joint           normalized to 1. Additional operations at the transmitter with
+source-channel encoder at the transmitter, denoted as fθ , to        CSIT are precoding and power allocation, which can boost
+directly map the source signal S into the channel input matrix       the communication rate. Specifically, given the CSI, we first
+X. The encoder fθ is trained to achieve the best end-to-end          decompose the channel matrix H by singular-value decompo-
+performance across diverse channel realizations in an average        sition (SVD), yielding H = U ΣV H , where U ∈ CM ×M and
+sense since the transmitter does not have access to CSI. This        V ∈ CM ×M are unitary matrices, V H is the conjugate trans-
+process can be represented as:                                       pose of V , and Σ is a diagonal matrix whose singular values
+                          X = fθ (S).                         (5)    are in descending order. We denote Σ by diag(s1 , s2 , . . . , sM ),
+                                                                     where s1 ≥ s2 ≥ · · · ≥ sM .
+   At the receiver, a MIMO equalization algorithm, such as              We denote the power allocation matrix by Λ, where Λ is
+zero-forcing (ZF) or minimum mean square error (MMSE), is            diagonal, with its diagonal elements being the power allocation
+employed first to exploit the CSI to decouple the entangled          weights for the signal streams of separate antennas. Λ can be
+signal Y as X ′ . Subsequently, a JSCC decoder, referred to as       derived using the standard water-filling algorithm [43]. With
+fϕ , is employed to reconstruct the source signal based on the       power allocation and SVD precoding (precoding X into V X),
+available CSI represented by (H, σw  2
+                                       ), along with X ′ . This      Eqn. (2) can be rewritten as:
+can be expressed as:
+                                                                                        Y = HV ΛX + W = U ΣΛX + W .                                                                          (7)
+                     Ŝ = fϕ (X ′ , H, σw
+                                        2
+                                          ).                  (6)
+                                                                     Multiplying both sides of Eqn. (7) by U H (MIMO detection)
+  An alternative approach is to directly learn the decoding          gives us:
+process using the CSI without explicitly performing channel                            X ′ = ΣΛX + U H W .                  (8)
+                                                                                                                                                           5
+
+
+
+   SVD-based precoding converts the MIMO channel into a set
+of parallel subchannels with different SNRs. In particular, the          𝑺
+SNR of the i-th subchannel is determined by the i-th singular                                        𝑺𝒊𝒏
+
+
+
+
+                                                                                                                             Precoder
+                                                                                                             ViT     𝑿                  𝑽𝑿
+value of si and the i-th power allocation coefficient of Λ.                                                Encoder
+   Given X ′ ∈ CM ×k , the receiver performs demodulation,
+
+
+
+
+                                                                                     …
+
+                                                                                            …
+channel decoding, and source decoding sequentially to recon-
+
+
+
+
+                                                                                                                                                 Channel
+struct the source image as Ŝ.                                                        𝑺𝒔              𝑴                  Channel             𝑯
+   2) DeepJSCC scheme: For the DeepJSCC scheme, we ex-
+                                                                                                                         Heatmap          𝜎!"
+ploit DL technologies to parameterize the encoder and decoder                                          𝑿’𝒔
+functions, which are trained jointly on an image dataset and
+                                                                         &
+                                                                         𝑺
+the channel model as in Eqn. (2). Let us denote the DeepJSCC
+encoder and decoder by fθ and fϕ , respectively, where θ and                                    𝑺𝒅                   𝑿’                      𝒀
+                                                                                        ViT                                  MIMO
+ϕ denote the network parameters. We have                                              Decoder                              equalization
+
+
+
+
+                                                                                                       …
+
+                                                                                                               …
+                                    2
+                     X = fθ (S, H, σw ).                     (9)
+Unlike the separate source-channel coding scheme, the trans-
+mitter does away with power allocation. Instead, we leverage       Fig. 2. The pipeline of the DeepJSCC-MIMO scheme, where the source
+the DeepJSCC encoder to perform feature extraction and             image S is encoded by a ViT-encoder and reconstructed by a ViT-decoder
+                                                                   as Ŝ. Precoding operation in dashed line will be performed if the CSI is
+channel symbol mapping, and power allocation, all at once.                                                        2 ) is fed to the encoder, if
+                                                                   available at the transmitter, and the CSI (H, σw
+Intuitively, the DNN is expected to transmit critical features     available, and decoder in the form of a “heatmap” M to facilitate the JSCC
+over subchannels with higher SNRs, thereby improving the           encoding/decoding process.
+transmission performance.
+   We note here that one option is to train the encoder/decoder
+                                                                   over both source features and channel conditions. Further
+networks directly, hoping they will learn to exploit the spatial
+                                                                   elaborations on the inner structures of these ViTs are provided
+degrees-of-freedom that the MIMO channel provides. We will
+                                                                   in Fig. 3. In the following, we detail the pipeline of DeepJSCC-
+instead follow the model-driven approach, where we will
+                                                                   MIMO in five main steps: image-to-sequence transformation,
+exploit the SVD and first convert the MIMO channel into
+                                                                   channel heatmap construction, ViT encoding, ViT decoding,
+subchannels. The received signal can then be written as
+                                                                   and the loss function.
+             Y = HV X + W = U ΣX + W .                     (10)
+   To simplify the training, we apply MIMO equalization at         A. Image-to-sequence transformation
+the receiver by left multiplying both sides of Eqn. (10) by           To construct the input of DeepJSCC-MIMO, we first convert
+Σ† U H to obtain                                                   the three-dimensional input image S into a sequence of
+                                                                   vectors, denoted by Ss = Seq(S). Specifically, given a source
+                X ′ = Σ† U H Y = X + W ′ ,                 (11)
+                                                                   image S ∈ Rh×w×3 , we divide S into a grid of p × p patches,
+                                                                                                                          3hw
+where W ′ ≜ Σ† U H W ∈ CM ×k is the equivalent noise term,         and reshape each patch into a vector of dimension R p2 . In
+Σ† is the Moore-Penrose inverse of matrix Σ, and U H is the        this way, S is converted to Ss ∈ Rl×c , where l = p2 is the
+conjugate transpose of matrix U .                                  sequence length and c ≜ 3hw p2 is the dimension of each vector
+  Finally, we feed both X ′ and the CSI into the DeepJSCC          in the sequence.
+decoder to recover the image as
+                    Ŝ = fϕ (X ′ , H, σw
+                                       2
+                                         ).                (12)    B. Channel heatmap construction
+                                                                      To enable efficient training, we construct a channel heatmap
+   In summary, our DeepJSCC framework integrates some
+                                                                   from CSI, indicating the effective noise variance faced by each
+well-established algorithms, such as SVD-based precoding and
+                                                                   channel symbol generated by ViT. Let us define Pn ∈ RM ×k
+equalization operations, from previous model-driven MIMO
+                                                                   as the average power of the equivalent additive noise term W ′ .
+solutions. The objective is to improve the end-to-end per-
+                                                                   Specifically, for different scenarios, P n is defined as:
+formance of DL-based JSCC approach by exploiting domain                     (
+knowledge from conventional MIMO design.                                      σw2
+                                                                                  (Hw ⊙ H̄w )JM ×k , MIMO with CSIR
+                                                                     Pn ≜       2 † H
+                                                                                                                               (13)
+                                                                              σw  Σ U JM ×k ,             MIMO with CSIT,
+                  III. P ROPOSED METHOD
+   This section presents a novel DeepJSCC architecture called      where ⊙ denotes the Hadamard product and H̄w is the
+DeepJSCC-MIMO, which aims to enable efficient image trans-         element-wise conjugate of matrix H w , which is obtained from
+mission in MIMO systems. The pipeline of our DeepJSCC-             the zero-forcing operation as: Hw ≜ (H H H)−1 H H , and
+MIMO scheme is depicted in Fig. 2 and outlined in Algorithm        J is the matrix of ones.
+                                                                                                  2M k
+1. In this scheme, DeepJSCC-MIMO employs a pair of ViT-               Then the heatmap M ∈ Rl× l is constructed as follows:
+based encoder fθ and decoder fϕ to encode and decode chan-
+                                                                                                                
+                                                                                                       1     1
+nel symbols, utilizing the inherent self-attention mechanism             M ≜ reshape concat              Pn , Pn      ,      (14)
+                                                                                                       2     2
+                                                                                                                                                     6
+
+
+
+
+                                                                                                                       
+
+Fig. 3. The architecture of the ViT-based encoder and decoder, where both encoder and decoder comprise linear projection layers, a positional embedding
+layer, and multiple transformer layers.
+
+
+
+where concat(·) and reshape(·) denote the concatenation                      (CPE) [45]. In specific, our Pe (·) is implemented with a DPE
+and reshape operations, respectively. We concatenate two                     that employs a dense layer to embed the index vector p of
+matrices 12 Pn to get the shape of RM ×2k , and reshape it into              each patch into a d dimensional vector.
+             2M k
+M ∈ Rl× l , which represents the equivalent noise term                          Transformer Layer: As shown in Fig. 3, the intermediate
+faced by each real encoder output element.                                   feature map Fi is generated by the i-th transformer layer
+   We expect that feeding the CSI in the form of a heatmap                   by a multi-head self-attention (MSA) block and a multi-layer
+will simplify the training process as the model only needs to                perceptron (MLP) layer as:
+focus on the ‘additive’ noise power faced by each channel
+symbol. As we will show later, this design enables our model                           Fi = M SA(Fi−1 ) + M LP (M SA(Fi−1 )),                     (17)
+to be used under various antenna numbers without retraining.                 where Fi ∈ Rl×d is the output sequence of the i-th transformer
+                                                                             layer, GeLU activation and layer normalization operations are
+C. ViT encoding                                                              applied before each MSA and MLP block.
+  For the two scenarios, the input sequences to our ViT                         Each MSA block consists of Ns self-attention (SA) modules
+encoder S in ∈ Rl×cin are given by:                                          with a residual skip, which can be formulated as:
+
+                                                                                 M SA(Fi ) = Fi + [SA1 (Fi ), · · · , SANs (Fi )]Wi ,
+           (
+             Ss ,                MIMO with CSIR                                                                                                   (18)
+    S in =                                          (15)
+             concat(Ss , M ), MIMO with CSIT,                                where the output of all SA modules SA(Fi ) ∈ Rl×ds are
+where the dimensions of the vectors in these sequences are                   concatenated for a linear projection Wi ∈ Rds Ns ×d , ds =
+cin = c and cin = c + 2Ml k for the MIMO with CSIR and                       d/Ns is the output dimension of each SA operation.
+MIMO with CSIT scenarios, separately.                                          For each SA module, the operations are formulated as:
+   The architecture of our encoder is shown in Fig. 3, which                                                      T
+                                                                                                                  qk
+mainly consists of linear projection layers, a positional em-                             SA(Fl−1 ) = sof tmax √         v,         (19)
+                                                                                                                    d
+bedding layer, and several transformer layers.
+   Linear projection and positional embedding: Sin is first                  where the q, k, v ∈ Rl×ds are the query, key, and value
+linearly projected by W0 ∈ Rcin ×d followed by a positional                  vectors generated through three linear projection layers
+embedding operation Pe (·) to get the initial input F0 ∈ Rl×d                Wq , Wk , Wv ∈ Rd×ds as:
+for the following transformer layers:
+                                                                                  q = Fl−1 Wq , k = Fl−1 Wk , v = Fl−1 Wv .                       (20)
+                      F0 = Sin W0 + Pe (p),                         (16)
+                                                                                Linear projection and power normalization: After Lt
+where d is the output dimension of the hidden projection layer.              transformer layers, we apply a linear projection Wc ∈
+Positional embedding Pe (·) serves the purpose of representing                    2M k
+                                                                             Rd× l to map the output of the transformer layers FLt to
+the spatial arrangement of sequences for better performance,                 the channel symbols as:
+where two typical methods are dense layer-based position
+embedding (DPE) [44] and conditional position embedding                                                  Ze = FLt Wc ,                            (21)
+                                                                                                                                                    7
+
+
+
+                         (𝟐𝑴 𝟐 &𝟐𝑴,𝟏𝟐𝟖)
+                        𝑾𝒓𝟏
+                                                   (𝟏𝟐𝟖,𝟐𝑴)
+                                                  𝑾𝒓𝟐                                Algorithm 1 Algorithm of the DeepJSCC-MIMO scheme
+                                                                                     For the transmitter:
+                                                                                                                    2M k
+                                                                                     Input: S ∈ Rh×w×3 , M ∈ Rl× l (MIMO with CSIT)
+
+
+
+
+                                                   Linear
+                                          PReLU
+                               Linear
+                                                                                                     M ×k
+                                                                                     Output: X ∈ C
+                                                                                      1: Ss = Seq(S) ∈ Rl×c             ▷ Image Sequentialization
+                                                                                      2: if MIMO with CSIR then
+                                          𝒇𝒓𝒆𝒔
+                                                                                      3:     Sin = Ss
+                                                               𝑪𝑴×𝒌
+                                        Res Block                                     4:     X = fθ (Sin ) ∈ CM ×k               ▷ ViT encoding
+                                                                                      5: else if MIMO with CSIT then
+           𝒀
+                                      ZF                                 𝑿′           6:     Sin = concat(Ss , M )
+                                                                     ⨁
+                 𝑪𝑴×𝒌                                         𝑪𝑴×𝒌
+                                                                                             X = fθ (Sin ) ∈ CM ×k               ▷ ViT encoding
+           𝑯                       detector                                           7:
+                 𝑪𝑴×𝑴                                                                 8:     H = U ΣV H                    ▷ SVD decomposition
+                                                                                      9:     X =VX                                  ▷ Precoding
+Fig. 4. Structure of DL-aided channel equalization method, where the input           10: end if
+at the i-th channel use is the concatenation of all elements within H and the
+channel output                                                                       Channel model: Y = HX + W
+                                                                                     For the receiver:
+                        2M k
+                                                                                     Input: Y ∈ CM ×k , H = U ΣV H , M
+where Ze ∈ Rl× l is then reshaped and normalized to                                  Output: Ŝ ∈ Rh×w×3
+satisfy the power constraints to form the complex channel                             1: if MIMO with CSIR then
+input symbols X ∈ CM ×k .                                                             2:     X ′ = Hw Y + fres (Y, H) ▷ DL-aided equalization
+                                                                                      3: else if MIMO with CSIT then
+D. ViT decoding                                                                       4:     X ′ = Σ† U H Y             ▷ SVD-based equalization
+                                                                                      5: end if
+  Channel equalization: To simplify the decoding process,                                                          2M K
+                                                                                      6: X ′ ∈ CM ×k → Xs′ ∈ Rl× l                    ▷ Reshape
+we perform an equalization operation on the channel output                                                 ′
+                                                                                      7: Ŝ = fϕ (concat(Xs , M ))               ▷ ViT decoding
+Y to decouple the transmitted data of each antenna as X ′ ∈
+CM ×k before feeding the signal into the ViT decoder. We
+apply different equalization methods for the MIMO systems
+                                                                                     sufficiently effective. Moreover, the ZF method converts the
+with CSIR and with CSIT:
+         (                                                                           MIMO channel into equivalent parallel sub-channels, which
+     ′     Hw Y + fres (Y , H), MIMO with CSIR                                       suits our approach of applying the self-attention mechanism
+  X =                                                  (22)
+           Σ† U H Y ,              MIMO with CSIT.                                   over different sub-channels and source signals.
+                                                                                        To perform MIMO equalization in a closed-loop MIMO sys-
+   To perform MIMO equalization in an open-loop MIMO
+                                                                                     tem with CSIT, we perform SVD decomposition and precoding
+system with CSIR, we designed a DL-aided equalization
+                                                                                     as in Eqn. (10). At the receiver, we perform equalization as
+method to retrieve the transmitted signal X ′ from Y , as
+                                                                                     in Eqn. (11) to get:
+detailed in Fig. 4.
+   Specifically, we add a residual block, denoted as fres (·),                                    X ′ = Σ† U H Y = X + Σ† U H W ,               (26)
+to learn the compensation after the zero-forcing (ZF) channel
+                                                                                     which converts the MIMO channel into a set of parallel
+equalization operation based on the received signals and CSI,
+                                                                                     subchannels.
+given as:                                                                               In summary, the proposed DeepJSCC-MIMO scheme ob-
+                X ′ = Hw Y + fres (Y , H)                                     (23)   tains disentangled channel output X ′ via channel equalization
+                     = X + Hw W + fres (Y , H),                               (24)   procedures, which is shown to improve decoding performance,
+                                                                                     as demonstrated in [46].
+                                                                                                                                                 ′
+where W ′ ≜ Hw W ∈ CM ×k is the equivalent addi-                                        Given the equalized signal X ′ , which is reshaped into Xs ∈
+                                                                                          2M k
+tive noise term from the channel. The residual operation                             Rl× l , and the noise heatmap M , a ViT-based decoder fϕ
+                                                                                                                                               ′
+fres (·) encompasses two linear layers, parameterized with                           is designed to recover the source image as Ŝ = fϕ (Xs , M ).
+              2
+Wr1 ∈ R(2M +2M )×128 and Wr2 ∈ R128×2M , and a PReLU                                 Our ViT-based decoder consists of a Siamese layer, positional
+activation function, formulated as:                                                  embedding layer, transformer layer, and linear projection layer,
+                                                                                     elaborated upon below:
+            fres (H, Y ) ≜ PReLU(fresin Wr1 )Wr2                              (25)
+                                                                                        Siamese layer and positional embedding: We design a
+where the elements of H and Y in each time slot are                                  weight-shared Siamese layer, denoted as Siam(·), consisting of
+concatenated to form an input fresin ≜ concat(H, Y ) ∈                               several linear projection layers and GeLU activation functions.
+     2
+R2M +2M for the residual block. We jointly optimize this                             To form the input of the Siamese layer Sd , we concatenate
+                                                                                        ′
+residual block with the whole pipeline and expect it to                              Xs and M as:
+compensate for ZF equalization when faced with channel esti-                                                         ′             4M k
+                                                                                                  Sd = concat(Xs , M ) ∈ Rl×        l     .     (27)
+mation errors. Note that we can also apply other MIMO equal-
+ization methods. However, we have observed that a simple ZF                          Sd multiplied by 1 and −1 are fed into several linear
+estimation method, together with a learned compensation, is                          projection layers and GeLU functions, as illustrated in Fig.
+                                                                                                                                                                                                                                           8
+
+
+
+
+              32                                                       0.8                                                         36                                                      0.8
+
+                                                                                             BPG-LDPC                              34
+                                                                                                                                                                                                                 BPG-LDPC
+              30                                                       0.7                   BPG-Capacity                                                                                  0.7                   BPG-Capacity
+                                                                                                                                   32
+              28
+                                                                                             DeepJSCC-MIMO-universal                                                                                             DeepJSCC-MIMO-universal
+                                                                       0.6                                                                                                                 0.6
+                                                                                             DeepJSCC-MIMO                         30                                                                            DeepJSCC-MIMO
+              26
+                                                                                                                                   28
+  PSNR (dB)
+
+
+
+
+                                                                                                                       PSNR (dB)
+                                                                       0.5                                                                                                                 0.5
+
+
+
+
+                                                               LPIPS
+
+
+
+
+                                                                                                                                                                                   LPIPS
+              24                                                                                                                   26
+                                                                       0.4                                                                                                                 0.4
+
+              22                                                                                                                   24
+
+                                                                       0.3                                                         22                                                      0.3
+              20
+
+                                                                                                                                   20
+              18
+                                     DeepJSCC-MIMO                     0.2                                                                               DeepJSCC-MIMO                     0.2
+
+                                     DeepJSCC-MIMO-universal                                                                       18                    DeepJSCC-MIMO-universal
+              16                     BPG-Capacity                      0.1
+                                                                                                                                   16
+                                                                                                                                                         BPG-Capacity                      0.1
+
+                                     BPG-LDPC                                                                                                            BPG-LDPC
+              14                                                        0                                                          14                                                       0
+                    2   4   6    8    10   12   14   16   18                 2   4   6   8    10   12   14   16   18                     2   4   6   8    10   12   14   16   18                 2   4   6   8    10   12   14   16   18
+
+                                SNRtest (dB)                                             SNRtest (dB)                                                SNRtest (dB)                                            SNRtest (dB)
+
+
+                   (a) R = 1/24 − P SN R                                 (b) R = 1/24 − LP IP S                                         (c) R = 1/12 − P SN R                                (d) R = 1/12 − LP IP S
+Fig. 5. Performance comparisons between the proposed DeepJSCC-MIMO and BPG-Capacity over different SNR values and bandwidth ratios for the MIMO
+systems with CSIR.
+
+
+
+3. In doing so, our networks are tasked with handling the                                                                height, width) as the training dataset and 10000 images as the
+positive and the negative noise realizations through two par-                                                            test dataset. We employ both the practical separation-based
+allel branches, and subsequently, the resultant features are                                                             codes and theoretical bounds (assuming capacity-achieving
+aggregated by a linear layer to obtain the final output. We                                                              channel codes) as benchmarks.
+expect that these GeLU functions and linear projection layers
+can learn to truncate excessive noise realizations to bootstrap                                                          A. Experimental setup
+the performance [39]. To introduce the positional information
+in the decoding process, we use the same positional embedding                                                               For the practical separation-based coding scheme, we use
+layer as in the Eqn. (16) to get the output D0 ∈ Rl×d :                                                                  the BPG codec [47] as well as the state-of-the-art neu-
+                                                                                                                         ral compression algorithms [48]–[52] as the source coding
+                                      D0 = Siam(Sd ) + Pe (p).                                               (28)        method. For channel coding, we consider LDPC codes at
+                                                                                                                         rates (1/2, 2/3, 3/4, 5/6) and various constellation sizes. A
+  Transformer layer: After the Siamese layer and positional
+                                                                                                                         lower LDPC coding rate can yield improved channel coding
+embedding, D0 is passed through Lt transformer layers, where
+                                                                                                                         results but at the cost of a reduced compression rate with
+                    Dl = M SA(Dl−1 ) + M LP (M SA(Dl−1 )),                                                   (29)        notable performance reduction, especially in very low coding
+                                                                                                                         rate regimes and short block length scenarios. In particular, we
+where Di ∈ Rl×d is the output of the i-th transformer layer at
+                                                                                                                         adopt WiFi (IEEE 802.11n) LDPC code construction, featuring
+the decoder, and the M SA and M LP blocks share the same
+                                                                                                                         block lengths of 648, 1296, and 1944 bits and 4-QAM, 16-
+structure as those in Eqn. (17).
+                                                                                                                         QAM, and 64-QAM constellations. For each channel condition
+   Linear Projection: Given the output of the Lt -th trans-
+                                                                                                                         and scenario, an exhaustive search for all samples is conducted
+former layer DLt , we apply a linear projection Wout ∈ Rd×c ,
+                                                                                                                         across all combinations of channel coding rates and constel-
+and then reshape the output into a matrix of size Rh×w×3 to
+                                                                                                                         lation orders, each associated with its respective compression
+reconstruct the input image as:
+                                                                                                                         rates. The best performances are subsequently identified and
+                                     Ŝ = reshape(DLt Wout ).                                                (30)        employed as the benchmark for the given channel condition
+                                                                                                                         and scenario. Although exploring a larger set of code rate
+E. Loss function                                                                                                         and constellation combinations could potentially enhance per-
+                                                                                                                         formance, the improvement is not expected to be significant
+  The encoder and decoder are optimized jointly to minimize                                                              and the overall performance is inherently constrained by
+the loss function                                                                                                        the capacity-achieving separation-based scheme, as elaborated
+                        L(θ, ϕ) = MSE(S, Ŝ) + λ · LPIPS(S, Ŝ),                                             (31)        subsequently.
+                                                                                                                            For the theoretical bound, we assume capacity-achieving
+  where we introduced an additional LPIPS term [9] with                                                                  channel codes for transmission, denoted as the BPG-Capacity
+λ = 0.1, which is set into 0 when optimizing the PSNR                                                                    scheme. For the MIMO system with CSIT, we apply the
+metric. We train the model to search for the optimal pa-                                                                 water-filling algorithm for power allocation among the parallel
+rameters (θ ∗ , ϕ∗ ) with                        ∗   ∗
+                         a minimal L(θ, ϕ) as: (θ , ϕ ) =                                                               channels formed after Eqn. 8. For the open-looop MIMO
+arg minθ,ϕ E L(θ, ϕ) , where the expectation is taken over                                                               system with CSIR, we assume that the transmitter knows the
+the image and channel datasets.                                                                                          instantaneous capacity of each channel block without power
+                                                                                                                         allocation, and can select the best compression rate. Note that,
+                                IV. T RAINING AND EVALUATION                                                             in practice, the transmitter does not have access to the CSI,
+  This section conducts a set of numerical experiments to                                                                and would probably employ a conservative compression rate
+evaluate the performance of our DeepJSCC-MIMO in various                                                                 to avoid a potential outage.
+bandwidth and SNR scenarios. Unless stated otherwise, we                                                                    Our model was implemented in Pytorch with two GTX
+consider a 2 × 2 MIMO system and the CIFAR10 dataset,                                                                    3090Ti GPUs. We use a learning rate of 5e−5 and a batch
+which has 50000 images with dimensions 3 × 32 × 32 (color,                                                               size of 128 with an Adam optimizer. Models were trained
+                                                                                                                                                     9
+
+
+
+        Ground Truth         Original Patch     BPG-LDPC        mbt2018-LDPC    DeepJSCC-MIMO      BPG-LDPC       mbt2018-LDPC    DeepJSCC-MIMO
+
+
+
+
+          𝟓𝟏𝟐×𝟕𝟔𝟖
+
+
+
+
+                              SNR / PSNR      5 dB / 20.98 dB   5 dB / 25.31 dB 5 dB / 25.86 dB 12 dB / 27.31 dB 12 dB / 27.39 dB 12 dB / 27.77 dB
+
+
+
+
+          𝟓𝟏𝟐×𝟕𝟔𝟖
+
+
+
+
+                              SNR / PSNR      5 dB / 26.04 dB   5 dB / 30.58 dB 5 dB / 32.61 dB 12 dB / 31.41 dB 12 dB / 32.11 dB 12 dB / 34.37 dB
+
+Fig. 6. Visual comparisons of images from the Kodak dataset transmitted over the open-loop MIMO channel at SNR 5 dB and 12 dB with R = 1/24. The
+first and second columns are the original image and the original patches of the bounding boxes.
+
+
+
+until the performance on a validation set stopped improving.                                              TABLE II
+Considering the model complexity and the performance, we                          C OMPARISON OF D EEP JSCC-MIMO WITH SEPARATION - BASED
+                                                                               BASELINES EMPLOYING DIFFERENT COMPRESSION ALGORITHMS , LDPC
+set p = 8, l = 64, c = 48 for image vectorization, and Lt = 8,                 CODE AND SPHERE DECODING FOR THE OPEN - LOOP MIMO SYSTEM ON
+d = 256, and Ns = 8 for each transformer layer of the ViT.                                 THE KODAK DATASET WHEN SN R = 5 D B.
+   Each element of H is sampled from a complex Gaussian                         Bandwidth ratio         1/24      1/12      1/8       1/6        1/4
+process as H[i, j] ∼ CN (0, 1), where we set σh2 = 1. Results                   BPG-LDPC [47]          24.05     25.50     27.02     28.21      29.70
+for a more general correlated MIMO channel are presented in                    MBT2018-LDPC [48]       24.48     26.03     27.64     28.91      30.39
+                                                                                VTM-LDPC [49]          24.81     26.31     27.91     29.15      30.68
+[46]. To measure the channel quality, we define the channel                     ELIC-LDPC [50]         24.99     26.54     28.16     29.35      30.85
+SNR, denoted by µ, as:                                                          DeepJSCC-MIMO          29.43     30.45     31.17     31.56      31.92
+
+                  EH,X [∥HX∥2F ]                M
+  µ ≜ 10 log10                   (dB) = 10 log10 2 .                (32)
+                   EW [∥W ∥2F ]                 σw
+                                                                            1.3 dB and 5.05 dB) for R = 1/24, compared with the BPG-
+                                                                            Capacity scheme and the BPG-LDPC scheme, respectively.
+B. Open-Loop MIMO system with CSIR                                          For R = 1/12, our DeepJSCC-MIMO can still outperform
+   We first evaluate DeepJSCC-MIMO in the open-loop MIMO                    the BPG-Capacity scheme (at least 0.77 dB) and the BPG-
+system with CSIR. Specifically, we compare DeepJSCC-                        LDPC scheme (at least 5.93 dB) in all SNRs. We observe
+MIMO, trained at specific SNRs, with the BPG-Capacity and                   that the gap between DeepJSCC-MIMO and BPG capacity is
+BPG-LDPC schemes at different SNR values and bandwidth                      larger in the lower bandwidth ratio case.
+ratios. For the BPG-LDPC scheme, we apply the sphere                           We observe in Figs. 5b and 5d that DeepJSCC-MIMO
+decoding (SD) algorithm [53].                                               achieves the best perceptual performance across a range
+   1) General performance: Fig. 5a and Fig. 5c show the                     of channel conditions and bandwidth ratios. Especially in
+PSNR performance of the DeepJSCC-MIMO, BPG-Capacity,                        poor SNR conditions, DeepJSCC-MIMO exhibits a substantial
+and BPG-LDPC schemes over the SNR values from 0 dB                          improvement over BPG-LDPC and BPG-Capacity, with a
+to 20 dB when the bandwidth ratio is R = 1/24 and                           maximum LPIPS discrepancy of 0.59 and 0.35 at SNR 1dB
+R = 1/12. We can observe that our DeepJSCC-MIMO                             for CIFAR10, respectively.
+can generally outperform the BPG-Capacity and BPG-LDPC                         2) SNR-adaptability: Note that each point on the
+schemes in all SNR values. We emphasize that the BPG-                       DeepJSCC-MIMO curve is obtained by training a separate
+Capacity performance shown in these figures is not achievable               encoder-decoder pair. We also consider a random SNR training
+by practical channel coding schemes. Thus, it serves as an                  strategy to evaluate the SNR adaptability of the DeepJSCC-
+upper bound on any separation-based scheme that employs                     MIMO scheme, denoted by DeepJSCC-MIMO-universal. We
+BPG for compression of the input image. We observe that                     train the model with random SNR values uniformly sampled
+DeepJSCC-MIMO provides significant improvements (at least                   from [0, 22] dB and test the well-trained model at different
+                                                                                                                                                      10
+
+
+
+            Ground Truth               Original Patch             σe2 = 0              σe2 = 0.1             σe2 = 0.2               σe2 = 1
+
+
+
+
+              512 × 768                  PSNR (dB)                 29.44                 28.22                 27.78                 26.84
+
+
+
+
+              512 × 768                  PSNR (dB)                 26.46                 25.44                 25.14                 24.35
+Fig. 7. Visual comparisons of images reconstructed by DeepJSCC-MIMO-universal in the presence of channel estimation errors, where the model is trained
+on the ImageNet dataset and validated on the Kodak dataset at SNR=12 dB and R = 1/24. The first and second columns are the source image and the image
+patch from the red bounding box of the original image. The third to sixth columns are the reconstructions of the same patches by DeepJSCC-MIMO universal
+with different channel estimation errors, respectively. The average PSNR metrics of the entire image are provided at the bottom of each visualized patch.
+
+
+
+SNRs. The comparisons in Fig. 5 show that there is a                                                      TABLE III
+slight performance degradation compared to training a separate                   C OMPARISONS OF D EEP JSCC-MIMO- UNIVERSAL AND BPG-LDPC
+                                                                                  SCHEMES WITH SPHERE DECODING OPERATIONS UNDER CHANNEL
+DeepJSCC-MIMO encoder-decoder pair for each SNR (up to                             ESTIMATION ERRORS OVER THE KODAK DATASET FOR R = 1/24
+0.99 dB for R = 1/24 and 2.02 dB for R = 1/12); however,
+the DeepJSCC-MIMO-universal brings significant advantage                           Different SNRtest (dB)          5         7          9        12
+                                                                                 DeepJSCC-MIMO (σe2 = 0)         29.38     30.08      30.80     31.62
+in terms of training complexity and storage requirements.                       DeepJSCC-MIMO (σe2 = 0.2)        29.18     29.86      30.53     31.33
+We can conclude that the DeepJSCC-MIMO-universal scheme                          DeepJSCC-MIMO (σe2 = 1)         28.73     29.49      30.08     30.78
+learns to adapt to different SNRs from the random training                          BPG-LDPC (σe2 = 0)           24.05     27.23      28.92     30.27
+strategy at the expense of a slight loss in PSNR, which tends                      BPG-LDPC (σe2 = 0.2)          18.65     21.27      23.21     24.84
+                                                                                    BPG-LDPC (σe2 = 1)           15.01     15.37      15.72     16.03
+to increase with SNR.
+   3) High resolution datasets and different bandwidth ratios:
+To further study the effect of bandwidth ratio and channel                    and compression algorithms, where the gap is even larger at
+SNR on the performance, and evaluate the model’s gener-                       low bandwidth ratios, which shows that DeepJSCC-MIMO
+alizability, we train and test the DeepJSCC-MIMO scheme                       outperforms traditional schemes despite using a weaker de-
+with various bandwidth ratios and SNRs individually over the                  tection algorithm.
+Kodak dataset. Specifically, we train the models with randomly                   4) Robustness to channel estimation errors: We take the
+cropped 128 × 128 patches from the ImageNet dataset, and                      same approach as in [38] to evaluate the robustness of MIMO
+evaluate the well trained models on the Kodak dataset.                        systems to channel estimation errors, where H is imperfectly
+   In Fig. 6, we present visualization examples of images                     estimated as Ĥ at the receiver. Similar to the work in [38],
+transmitted by DeepJSCC-MIMO and BPG-LDPC schemes                             [54], [55], let En ≜ H − Ĥ, where the entries of En are
+at 5 dB and 12 dB when R = 1/24, where SNR values                             zero-mean complex Gaussian with variance σe2 . Here σe2 is the
+and PSNR of the entire image are provided at the bottom                       ‘noise variance’ term to capture the channel estimation quality,
+of each visualized patch. It can be observed that recon-                      which can be appropriately selected depending on the channel
+structed by DeepJSCC-MIMO are qualitatively better with                       conditions and channel estimation method. We evaluate the
+more detailed high-frequency features. The comparisons here                   DeepJSCC-MIMO-universal and BPG-LDPC schemes with
+can clearly show the advantages of the DeepJSCC-MIMO                          different σe2 ∈ {0, 0.2, 1} values over different SNR values
+in high-resolution datasets. We also conclude that training                   on the Kodak dataset with R = 1/24. For the DeepJSCC-
+on a sufficiently large dataset (ImageNet) can allow our                      MIMO-universal scheme, we train and test the model both
+DeepJSCC-MIMO scheme to perform well on a never-seen                          with imperfect Ĥ. The experimental results are shown in
+dataset (Kodak) for a wide range of bandwidth ratios.                         Table. III. As expected, for both schemes, the performance
+   We also evaluate the model across various bandwidth ra-                    degrades as the channel estimation error increases. In specific,
+tios and compression algorithms [48]–[52] when SNR=5 dB                       for σe2 = 0.2, the performance loss of our DeepJSCC-MIMO
+over the Kodak dataset, as shown in Table. II. We want to                     scheme is up to 0.29 dB, compared with the performance loss
+emphasize that the sphere decoding algorithm in separation-                   up to 5.96 dB from the BPG-LDPC scheme. For σe2 = 1,
+based schemes is a much better MIMO detection method with                     the BPG-LDPC scheme starts to fail to work. However, our
+higher computation complexity, compared with ZF employed                      DeepJSCC-MIMO scheme can still work despite experiencing
+by DeepJSCC-MIMO. We can observe that the superiority                         a limited performance decrease of less than 0.84 dB, which
+of DeepJSCC-MIMO persists across various bandwidth ratios                     mainly arises from noisy channel equalization operations, as
+                                                                                                                                                                                                                                                                          11
+
+
+
+
+                   32                                                                                   38                                                                                    44
+
+
+                                                                                                                                                                                              42
+                                                                                                        36
+                   30
+                                                                                                                                                                                              40
+
+                                                                                                        34
+                   28                                                                                                                                                                         38
+       PSNR (dB)
+
+
+
+
+                                                                                            PSNR (dB)
+
+
+
+
+                                                                                                                                                                                  PSNR (dB)
+                                                                                                        32
+                                                                                                                                                                                              36
+                   26
+                                                                                                                                                                                              34
+                                                                                                        30
+
+
+                   24                                                                                                                                                                         32
+                                                                                                        28
+
+                                        DeepJSCC-MIMO                                                                        DeepJSCC-MIMO                                                    30
+                                                                                                                                                                                                                       DeepJSCC-MIMO
+                   22                   DeepJSCC-MIMO-universal                                         26
+                                                                                                                             DeepJSCC-MIMO-universal                                                                   DeepJSCC-MIMO-universal
+                                        DeepJSCC-MIMO-universal w/o SVD                                                      BPG-Capacity                                                     28                       BPG-Capacity
+                                        BPG-Capacity                                                                         DeepJSCC-MIMO-universal w/o SVD                                                           DeepJSCC-MIMO-universal w/o SVD
+                   20                                                                                   24                                                                                    26
+                        0   2   4   6   8    10    12    14        16        18        20                    0   2   4   6   8    10     12    14        16        18        20                    0   2   4   6   8      10     12    14        16        18        20
+
+                                        SNRtest (dB)                                                                         SNRtest (dB)                                                                          SNRtest (dB)
+
+                            (a) R = 1/24 − P SN R                                                                (b) R = 1/12 − P SN R                                                                 (c) R = 1/6 − P SN R
+                    0.4                                                                                                                                                                       0.14
+                                                                                                        0.25
+                                             BPG-Capacity                                                                         BPG-Capacity                                                                           BPG-Capacity
+                   0.35                      DeepJSCC-MIMO-universal                                                              DeepJSCC-MIMO-universal                                     0.12                       DeepJSCC-MIMO-universal
+                                             DeepJSCC-MIMO                                               0.2
+                                                                                                                                  DeepJSCC-MIMO                                                                          DeepJSCC-MIMO
+                    0.3
+                                                                                                                                                                                               0.1
+
+
+                   0.25
+                                                                                                        0.15
+       LPIPS
+
+
+
+
+                                                                                            LPIPS
+
+
+
+
+                                                                                                                                                                                  LPIPS
+                                                                                                                                                                                              0.08
+
+                    0.2
+
+                                                                                                                                                                                              0.06
+                   0.15                                                                                  0.1
+
+
+                                                                                                                                                                                              0.04
+                    0.1
+
+                                                                                                        0.05
+                                                                                                                                                                                              0.02
+                   0.05
+
+
+
+                        0                                                                                    0                                                                                     0
+                            2   4   6    8    10    12        14        16        18                             2   4   6    8    10     12        14        16        18                             2   4   6    8      10     12        14        16        18
+
+                                        SNRtest (dB)                                                                         SNRtest (dB)                                                                          SNRtest (dB)
+
+                            (d) R = 1/24 − LP IP S                                                               (e) R = 1/12 − LP IP S                                                                (f) R = 1/6 − LP IP S
+Fig. 8. Performance of the proposed DeepJSCC-MIMO model compared with the BPG-Capacity benchmark at different channel SNR and bandwidth ratio
+scenarios for the closed-loop MIMO.
+
+
+
+demonstrated in [46].                                                                                                                                             TABLE IV
+                                                                                                                                           T HE NUMBER OF PARAMETERS ( MILLIONS ), FLOP S (G), PSNR
+   To visualize the performance of DeepJSCC-MIMO-                                                                                         PERFORMANCE ( D B), AND ENCODING / DECODING TIME ( MS ) FOR
+universal scheme in the presence of channel estimation errors,                                                                          DIFFERENT BACKBONES ACROSS VARIOUS BASIC BLOCK NUMBERS Lt .
+we present the reconstructed images with different channel
+                                                                                                                                               Number of basic blocks Lt                                                         4        8        12
+estimation errors in Fig. 7. We can observe that the increasing                                                                                              Proposed method                                                   6.61     12.92    19.23
+channel estimation error is reflected in the gradual loss of high-                                                                        Parameters         DeepJSCC-CNN                                                      6.89     20.00    33.11
+frequency details during transmission. We want to emphasize                                                                                                  DeepJSCC-Swin                                                     8.89     15.21    21.52
+                                                                                                                                                             Proposed method                                                   0.43      0.83     1.23
+that even with a significant channel estimation error (σe2 = 1),                                                                            FLOPs            DeepJSCC-CNN                                                      0.83      1.67     2.51
+DeepJSCC-MIMO continues to function, with only limited                                                                                                       DeepJSCC-Swin                                                     1.22      2.23     3.24
+performance loss, compared with the significant performance                                                                                                  Proposed method                                                   23.76    24.41    24.32
+                                                                                                                                         Performance         DeepJSCC-CNN                                                      22.83    23.54    23.04
+loss with the traditional separation benchmark. We can con-                                                                                                  DeepJSCC-Swin                                                     22.67    23.61    23.22
+clude that the proposed scheme is more robust to channel                                                                                                     Proposed method                                                       O(4ld2 + 2l2 d)
+estimation errors, as it can learn to compensate for it during                                                                            Complexity         DeepJSCC-CNN                                                        O(k2 F 2 Cin Cout )
+transmission.                                                                                                                                                DeepJSCC-Swin                                                       O(4ld2 + 2Mw   2 ld)
+
+                                                                                                                                        Encoding time /     BPG-LDPC (CPU)                                                          37.25 / 71.28
+   5) Model efficiency and other architectures: The proposed                                                                            decoding time    Proposed method (GPU)                                                       4.82 / 5.16
+DeepJSCC-MIMO scheme is versatile and can be seam-
+lessly integrated with various network architectures. Table IV
+presents the model size, floating point operations (FLOPs),
+PSNR performance, and computational complexity for alter-                                                                          proposed method maintains the lowest parameter and FLOP
+native DeepJSCC architectures with different block numbers                                                                         counts when achieving the best transmission performance,
+when transmitting a single sample from the CIFAR10 dataset                                                                         reducing the memory consumption and FLOP operations by
+under R = 1/24 and SNR=5 dB. Lt represents the number of                                                                           up to 44.74% and 61.4%, respectively.
+basic blocks in different DeepJSCC architectures. Specially,                                                                          Considering computational complexity, the proposed Deep-
+each CNN block [2], [21] is characterized by kernel size k,                                                                        JSCC method and CNN-based DeepJSCC methods exhibit
+feature size F , along with input / output channel numbers                                                                         quadratic computation complexity concerning the sequence
+Cin / Cout . On the other hand, each Swin block within Swin-                                                                       length or input size. This underscores the necessity for metic-
+based DeepJSCC [4], [36] is characterized by the window                                                                            ulous design of patch sizes, particularly when dealing with
+size Mw , sequence length l, and hidden dimension d. We can                                                                        high-resolution images such as 2K images, or alternatively,
+observe from our experiments on CIFAR10 dataset that the                                                                           Swin block can be employed as an optional solution. It is
+                                                                                                                                                      12
+
+
+
+                                                                                      42
+also noteworthy that the inherently parallelizable architecture
+of our approach renders it particularly efficient for deployment                      40
+
+
+on GPU-like systems, as opposed to conventional methods                               38
+typically tailored for optimization on CPUs. The DeepJSCC-
+MIMO scheme implemented on a GPU is significantly faster                              36
+
+
+
+
+                                                                          PSNR (dB)
+compared to the traditional scheme executed on a CPU with                             34
+
+the iterative decoding algorithm.
+                                                                                      32
+   In summary, the proposed ViT-based solution significantly
+reduces both the inference complexity and parameter count.                            30
+
+
+Furthermore, it is feasible to retain the total coding time of                        28
+
+DeepJSCC-MIMO within 10 ms, which can be further reduced                                                                DeepJSCC-MIMO
+by encompassing alternative hardware, different architectures,                        26                                BPG-Capacity
+optimized implementations, and acceleration techniques [46].                               0   0.05   0.1        0.15   0.2       0.25   0.3   0.35
+
+                                                                                                            Bandwidth ratio k/n
+
+C. Closed-Loop MIMO system with CSIT                               Fig. 9. Performance of DeepJSCC-MIMO and BPG-LDPC scheme with
+   In this section, we consider the closed-loop MIMO system        respect to the bandwidth ratio at SNR=10 dB.
+with CSI at the transmitter as well as at the receiver. We
+evaluate the DeepJSCC-MIMO trained at specific SNRs with
+SNRtest ∈ [0, 20] dB in three bandwidth ratios R = 1/24,              3) SVD ablation study: To evaluate the effectiveness of
+R = 1/12 and R = 1/6.                                              the SVD strategy in our scheme, we train the models
+   1) General performance: As before, we first evaluate the        of DeepJSCC-MIMO-universal without SVD decomposition-
+DeepJSCC-MIMO model under the setup where the training             based precoding in different bandwidth ratios, denoted by
+SNR, denoted by SNRtrain matches the test SNR, SNRtest . In        DeepJSCC-MIMO-universal w/o SVD. Specifically, we di-
+particular, we set SNRtrain = SNRtest ∈ {1, 5, 10, 15, 19} dB      rectly feed the channel heatmap M into both transceivers
+and the bandwidth ratio R ∈ {1/24, 1/12, 1/6}. The com-            and the performance is shown in Fig. 8. Compared with the
+parisons between DeepJSCC-MIMO and the BPG-Capacity                DeepJSCC-MIMO-universal, we can observe that the perfor-
+benchmark is shown in Fig. 8.                                      mance of DeepJSCC-MIMO-universal w/o SVD has a gap
+   In terms of the PSNR performance, DeepJSCC-MIMO                 of up to 0.97 dB, 1.91 dB and 4.21 dB for R = 1/24,
+outperforms the separation-based benchmark in all SNR              R = 1/12, and R = 1/6, respectively. Although the networks
+and bandwidth-ratio scenarios. Specifically, we can see that       can still learn to communicate over the MIMO channel, the
+DeepJSCC-MIMO outperforms the benchmark by at least 1.98           SVD-based model-driven strategy can significantly simplify
+dB and 1.78 dB for R = 1/24 and R = 1/12, respectively.            the training process and improve performance, illustrating the
+When R = 1/6, improvements of up to 3.58 dB can be                 importance of exploiting domain knowledge in designing data-
+observed. These significant improvements demonstrate the           driven communication technologies.
+superiority of the DeepJSCC-MIMO scheme and its capacity              4) Different bandwidth ratios: To further evaluate the im-
+in extracting and mapping image features to the available          pact of the bandwidth ratio R on the system performance, we
+channels in an adaptive fashion. We observe in Figs. 8d, 8e        compare the DeepJSCC-MIMO and BPG-Capacity schemes
+and 8f that DeepJSCC-MIMO achieves the best perceptual             over a wide range of bandwidth ratios in Fig. 9, where
+performance across a wide range of channel conditions and          the test SNR is set to 10 dB. We observe that DeepJSCC-
+bandwidth ratios, particularly in the low SNR regimes.             MIMO can outperform the BPG-Capacity benchmark at all
+   2) SNR-adaptability: We also consider a random SNR              bandwidth ratios for 10 dB, with a gain of up to 2.21 dB
+training strategy to evaluate the channel adaptability of          in PSNR, respectively. The gap between the two is more
+DeepJSCC-MIMO. We train the model with random SNR                  significant for low R values. We would like to emphasize that
+values uniformly sampled from [0, 22] dB, denoted by               the BPG-Capacity performance shown in these figures serves
+DeepJSCC-MIMO-universal, and test it at different SNRs. The        as an upper bound for separate source and channel coding
+comparisons in Fig. 8 show that there is a slight performance      schemes employing BPG compression, and the real gap can
+degradation compared to training a separate DeepJSCC-MIMO          be even larger, especially in the short block length regime, i.e.,
+encoder-decoder pair for each channel SNR (up to 0.65 dB,          low R. Thus, the results here illustrate the clear superiority
+0.93 dB, and 2.19 dB for R = 1/24, R = 1/12 and                    of DeepJSCC-MIMO for the CIFAR dataset compared to
+R = 1/6); however, DeepJSCC-MIMO-universal brings sig-             separation-based alternatives.
+nificant advantage in terms of training complexity and storage        5) High resolution datasets: To evaluate the model gen-
+requirements.                                                      eralizability, we validate the DeepJSCC-MIMO on Kodak
+   We can observe more performance loss in the high SNR            and CelebA datasets. Specifically, we train the DeepJSCC-
+regime. However, DeepJSCC-MIMO-universal still signifi-            MIMO and DeepJSCC-MIMO-universal schemes with ran-
+cantly outperforms the BPG-Capacity benchmark. We con-             domly cropped 128 × 128 patches from the ImageNet dataset,
+clude that the DeepJSCC-MIMO-universal scheme can adapt            and evaluate the well-trained models on the Kodak and CelebA
+to SNR variations with a slight loss in PSNR, especially in        datasets. The detailed visualization and the PSNR performance
+the high-SNR regime.                                               of the transmission, compared with BPG-Capacity, are shown
+                                                                                                                                                                       13
+
+
+
+            Ground Truth          Original Patch      BPG-Capacity     mbt2018-Capacity cheng2020-Capacity DeepJSCC-MIMO-                           DeepJSCC-MIMO
+                                                                                                              universal
+
+
+
+
+             𝟓𝟓𝟓𝟓𝟓𝟓 × 𝟕𝟕𝟕𝟕𝟕𝟕
+
+
+
+
+                                   SNR / PSNR        1 dB / 24.75 dB    1 dB / 24.84 dB                    1 dB / 25.96 dB       1 dB / 25.83 dB    1 dB / 26.06 dB
+
+
+
+
+             𝟓𝟓𝟓𝟓𝟓𝟓 × 𝟕𝟕𝟕𝟕𝟕𝟕
+
+
+
+
+                                   SNR / PSNR        5 dB / 28.42 dB    5 dB / 28.73 dB                    5 dB / 28.85 dB       5 dB / 28.84 dB     5 dB / 29.23 dB
+
+Fig. 10. Visual comparison of different schemes on two samples from the Kodak dataset at a bandwidth ratio R = 1/24 and different SNRs . The first
+and second columns are the original image and the original patch in the red and blue bounding boxes. The third, fourth, and fifth columns are the patch
+reconstructed by the BPG-Capacity [47], MBT2018-Capacity [48], and Cheng2020-Capacity [51] schemes, respectively. The last two columns demonstrate
+the patch recovered by the DeepJSCC-MIMO-universal and DeepJSCC-MIMO schemes.
+
+
+                                                                                                      32
+in Fig. 10 and Fig. 11, respectively.
+   Similarly to the CIFAR dataset, from Fig. 11, we can                                               31
+
+observe that our DeepJSCC-MIMO can outperform BPG-
+Capacity at all test SNRs and generally provide higher                                                30
+
+
+gains at lower SNRs (up to 2.1 dB) in the CelebA dataset.
+                                                                                          PSNR (dB)
+
+
+
+
+                                                                                                      29
+There is a slight performance degradation of the DeepJSCC-
+MIMO-universal scheme (up to 0.27 dB) compared with                                                   28
+
+DeepJSCC-MIMO trained at specific SNRs; however, the                                                                                        DeepJSCC-MIMO
+DeepJSCC-MIMO-universal can still outperform the BPG-                                                 27
+                                                                                                                                            Cheng2020-Capacity
+                                                                                                                                            DeepJSCC-MIMO-universal
+Capacity scheme at all SNRs. Additionally, we consider state-                                                                               MBT2018-Capacity
+                                                                                                      26
+of-the-art learning-based compression algorithms along with                                                                                 BMSHJ2018-Capacity
+                                                                                                                                            BPG-Capacity
+capacity-achieving codes and water-filling algorithm, denoted                                         25
+                                                                                                             1     2         3    4     5      6    7     8      9
+as Cheng2020-Capacity [51], MBT2018-Capacity [48], and                                                                            SNRtest (dB)
+BMSHJ2018-Capacity schemes [52]. The superior perfor-
+mance of Deep JSCC-MIMO is evident when compared                             Fig. 11. Performance of DeepJSCC-MIMO and conventional separation-based
+to both the MBT2018-Capacity and BMSHJ2018-Capacity                          scheme in the CelebA dataset when R = 1/48.
+schemes. Furthermore, Deep-JSCC-MIMO achieves similar
+performance with the Cheng2020-Capacity scheme. It is also
+noteworthy that capacity-achieving channel codes are practi-                 these figures is an upper bound on the performance of any
+cally not possible, and require accurate channel estimation and              separation-based scheme that employs the BPG codec, the
+sufficiently long block lengths to approximate in practice.                  comparison here clearly shows the benefits of the DeepJSCC-
+   We also visualize the results of the DeepJSCC-MIMO                        MIMO and DeepJSCC-MIMO-universal schemes in high-
+scheme on the Kadak dataset and compare them with those                      resolution datasets. We can also conclude that a sufficiently
+of the BPG-Capacity scheme in Fig. 10. We can observe that                   large dataset (ImageNet) can allow our DeepJSCC-MIMO
+DeepJSCC-MIMO performs better in the low SNR regime,                         scheme to perform well on other never-seen datasets (Ko-
+such as 1 and 5 dB, with more detailed high-frequency                        dak/CelebA) for a wide range of channel conditions (SNRs).
+features. Comparing the performance of DeepJSCC-MIMO-                           6) Channel heatmap ablation study: To assess the effective-
+universal and DeepJSCC-MIMO schemes, we can observe                          ness of the channel heatmap, we conduct ablation studies over
+that the DeepJSCC-MIMO-universal can achieve comparable                      the DeepJSCC-MIMO-universal scheme, as outlined in Tables.
+performance at the expense of a slight drop in distortion.                   V. Specifically, we can observe a maximum increase in PSNR
+   Considering that the BPG-Capacity performance shown in                    of 1.07 dB and 1.28 dB for open-loop and closed-loop MIMO
+                                                                                                                                                                                                 14
+
+
+
+                           TABLE V                                                                                                                       TABLE VI
+    A BLATION STUDY OF D EEP JSCC-MIMO- UNIVERSAL SCHEME                                                                          A BLATION STUDY OF D EEP JSCC-MIMO- UNIVERSAL SCHEME
+  WITH / WITHOUT CHANNEL HEATMAP ACROSS VARIOUS SNR S ON THE                                                                  WITH / WITHOUT CHANNEL HEATMAP ON THE CIFAR10 DATASET ACROSS
+                CIFAR10 DATASET WHEN R = 1/12.                                                                                   VARIOUS SNR S IN THE FAST FADING CHANNEL WHEN R = 1/48.
+
+                Open-loop MIMO system with CSIR                                                                                               Open-loop MIMO system with CSIR
+       Models       1 dB     5 dB   10 dB    15 dB                                                               19 dB               Models       1 dB     5 dB   10 dB    15 dB        19 dB
+    w/o heatmap    24.22    26.69    29.10   30.89                                                               31.86            w/o heatmap    18.72    20.64   22.35    23.51        24.04
+    with heatmap   24.95    27.56   30.02    31.91                                                               32.93            with heatmap   19.24    21.23   23.11    24.47        25.17
+               Closed-loop MIMO system with CSIT                                                                                             Closed-loop MIMO system with CSIT
+       Models       1 dB     5 dB   10 dB    15 dB                                                               19 dB               Models       1 dB     5 dB   10 dB    15 dB        19 dB
+    w/o heatmap    26.21    28.71    31.36   33.41                                                               34.67            w/o heatmap    20.75    22.57   24.30    25.50        26.14
+    with heatmap   26.89    29.30   32.10    34.50                                                               35.95            with heatmap   21.56    23.44   25.23    26.67        27.30
+
+
+                                                                                                                                                 40
+
+                                                                                                                                                      M=2
+               Antenna index
+
+
+
+
+                                                    Antenna index
+
+
+
+
+                                                                                         Antenna index
+                                                                                                                                                      M=3
+                                                                                                                                                 35
+                                                                                                                                                      M=4
+                                                                                                                                                      adaptive-M
+                                                                                                                                                 30
+
+
+
+
+                                                                                                                                     PSNR (dB)
+                               channel uses index                   channel uses index                   channel uses index
+                                                                                                                                                 25
+               Antenna index
+
+
+
+
+                                                    Antenna index
+
+
+
+
+                                                                                         Antenna index
+
+
+
+
+                                                                                                                                                 20
+
+
+
+
+                                                                                                                                                 15
+
+                               channel uses index                   channel uses index                   channel uses index
+
+                                                                                                                                                 10
+Fig. 12. Visualization of the channel heatmap and power allocation across                                                                               1             5           10
+
+the channel symbols, where antenna number is set as M = 32 and R = 1/6                                                                                             SNRtest (dB)
+
+                                                                                                                              Fig. 13. Performance of DeepJSCC-MIMO with different antennas number.
+systems when R = 1/12, respectively. Our experimental
+findings demonstrate that integrating the channel heatmap
+is essential to enhance the performance of the DeepJSCC-                                                                      the transmitter and receiver. In this subsection, we investigate
+MIMO-universal scheme in both open-loop and closed-loop                                                                       the generalizability of the DeepJSCC-MIMO architecture to
+MIMO systems across various SNRs and bandwidth ratios                                                                         different antenna numbers. In particular, we repeat the ex-
+[46]. Similar findings can also be observed in more challeng-                                                                 periment of DeepJSCC-MIMO in Fig. 8b for different M
+ing fast fading channels, where individual channel symbols                                                                    values. The performance of our DeepJSCC-MIMO models
+experience fast fading, resulting in distinct channel heatmap                                                                 with different antenna numbers M ∈ {2, 3, 4} and channel
+in each time slot, as elaborated in Table. VI.                                                                                SNRs SN Rtest ∈ {1, 5, 10} dB is shown in Fig. 13. We can
+   7) Visualization of the channel heatmap and power allo-                                                                    observe that DeepJSCC-MIMO can generally achieve better
+cation: We visualize the channel heatmap and the power                                                                        performance with the increase in the number of antennas,
+allocation of the channel input matrix for a closed-loop MIMO                                                                 thanks to its more flexible power allocation. We also consider
+system in Fig. 12. Within our channel heatmap, we visualize                                                                   a random antenna number training strategy with a maximal
+the equivalent noise power experienced by each channel sym-                                                                   antenna number setting Mmax , denoted as ‘adaptive-M’. We
+bols, with the color red indicating higher noise power, and                                                                   train the DeepJSCC-MIMO model with M uniformly sampled
+hence, a poorer channel condition. In the power allocation                                                                    from {2, . . . , Mmax } and test the well-trained model with
+map, the color red denotes a higher allocation of power to                                                                    different M values. Specifically, our encoder generates the
+the respective channel symbols. We can observe that for each                                                                  channel symbols X ∈ CMmax ×k , and only transmits first
+SNR value, DeepJSCC-MIMO generally assigns more power                                                                         CMi ×k symbols for the M = Mi antenna scenario. At the
+to antennas with better channel conditions. Specifically, in                                                                  same time, the receiver pads the received signal into CMmax ×k
+the low SNR regime, DeepJSCC-MIMO concentrates most of                                                                        with zeros for decoding. The representation of CSI heatmaps
+the power on a few select antennas with exceptional quality.                                                                  differs across scenarios with distinct antenna configurations,
+In certain extreme cases, DeepJSCC-MIMO refrains from                                                                         serving as a guide for effectively encoding the channel sym-
+allocating power to the sub-channels characterized by the                                                                     bols. We think these adaptive characteristics are attributed to
+worst channel conditions. As the SNR increases, we note                                                                       the transformer’s powerful learning and generalization capabil-
+that DeepJSCC-MIMO demonstrates a tendency to distribute                                                                      ities. From experiments with Mmax = 4, we observe in Fig. 13
+power more evenly across a greater number of antennas,                                                                        that the adaptive-M strategy can achieve similar performance
+instead of concentrating on a limited set of antennas with the                                                                compared with models trained for specific M values: the
+worst channel conditions.                                                                                                     performance loss is at most 0.6dB. We can conclude that
+   8) Adaptability to the antenna numbers: In all the above                                                                   DeepJSCC-MIMO is highly flexible and adaptive and can be
+experiments, we have the same number of M = 2 antennas at                                                                     applied to different number of antennas without retraining.
+                                                                                                                                                           15
+
+
+
+                           V. C ONCLUSION                                       [11] C. E. Shannon, “A mathematical theory of communication,” The Bell
+                                                                                     system technical journal, vol. 27, no. 3, pp. 379–423, 1948.
+   We introduced the first DeepJSCC-enabled MIMO com-                           [12] F. Hekland, P. A. Floor, and T. A. Ramstad, “Shannon-kotel-nikov
+munication system designed for wireless image transmis-                              mappings in joint source-channel coding,” IEEE Transactions on Com-
+sion. The proposed DeepJSCC-MIMO model utilizes a vision                             munications, vol. 57, no. 1, pp. 94–105, 2009.
+                                                                                [13] F. J. Vazquez-Araujo, O. Fresnedo, L. Castedo, and J. Garcia-Frias,
+transformer-based architecture to exploit contextual seman-                          “Analog joint source-channel coding over MIMO channels,” EURASIP
+tic features and channel conditions through a self-attention                         Journal on Wireless Communications and Networking, vol. 2014, pp.
+mechanism. The results demonstrate significant improvements                          1–10, 2014.
+                                                                                [14] I. E. Aguerri and D. Gündüz, “Joint source-channel coding with time-
+in transmission quality across a wide range of SNRs and                              varying channel and side-information,” IEEE Transactions on Informa-
+bandwidth scenarios, with enhanced robustness to channel es-                         tion Theory, vol. 62, no. 2, pp. 736–753, 2015.
+timation errors. Moreover, DeepJSCC-MIMO is a unified and                       [15] M. Vaezi and F. Labeau, “Distributed source-channel coding based on
+                                                                                     real-field BCH codes,” IEEE Transactions on Signal Processing, vol. 62,
+adaptable design capable of accommodating varying channel                            no. 5, pp. 1171–1184, 2014.
+conditions and different antenna numbers without the need for                   [16] Z. Peng, Y.-F. Huang, and D. Costello, “Turbo codes for image
+retraining.                                                                          transmission-a joint channel and source decoding approach,” IEEE
+                                                                                     Journal on Selected Areas in Communications, vol. 18, no. 6, pp. 868–
+   Moving forward, there are several potential directions for                        879, 2000.
+future exploration based on the findings of this paper:                         [17] L. Pu, Z. Wu, A. Bilgin, M. W. Marcellin, and B. Vasic, “LDPC-
+   • JSCC with space-time coding. In the open-loop scenario,                         based iterative joint source-channel decoding for JPEG2000,” IEEE
+                                                                                     Transactions on Image Processing, vol. 16, no. 2, pp. 577–581, 2007.
+      full potential of the spatial and temporal dimensions                     [18] M. Fresia, F. Peréz-Cruz, H. V. Poor, and S. Verdú, “Joint source and
+      in MIMO can be harnessed by integrating DeepJSCC                               channel coding,” IEEE Signal Processing Magazine, vol. 27, no. 6, pp.
+      with space-time codes [56]. This synergy can allow for                         104–113, 2010.
+                                                                                [19] A. Golmohammadi and D. G. M. Mitchell, “Concatenated spatially
+      even greater flexibility and performance enhancements,                         coupled LDPC codes with sliding window decoding for joint source-
+      especially in the low-SNR regime.                                              channel coding,” IEEE Transactions on Communications, vol. 70, no. 2,
+   • Variable length JSCC. Building upon the adaptability of                         pp. 851–864, 2022.
+                                                                                [20] Z. Xuan and K. Narayanan, “Low-delay analog joint source-channel
+      ViT-based models to varying antenna numbers, future                            coding with deep learning,” IEEE Transactions on Communications,
+      investigations can extend this concept to accommodate                          vol. 71, no. 1, pp. 40–51, 2023.
+      variable code lengths, where the channel resources are                    [21] H. Wu, Y. Shao, K. Mikolajczyk, and D. Gündüz, “Channel-adaptive
+                                                                                     wireless image transmission with OFDM,” IEEE Wireless Communica-
+      judiciously exploited depending on the channel state as                        tions Letters, vol. 11, no. 11, pp. 2400–2404, 2022.
+      well as the input signal.                                                 [22] T.-Y. Tung, D. B. Kurka, and D. Gündüz, “Deepjscc: The future
+                                                                                     of wireless video transmission,” in IEEE International Conference on
+                                                                                     Acoustics, Speech and Signal Processing (ICASSP), Demo Session,
+                             R EFERENCES                                             2020. [Online]. Available: https://cmsworkshops.com/ICASSP2020/
+                                                                                     Papers/ViewPaper.asp?PaperNum=6212
+ [1] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint source-
+     channel coding for wireless image transmission,” IEEE Transactions on      [23] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,            Q: Constellation constrained deep joint source-channel coding,” IEEE
+     2019.                                                                           Journal on Selected Areas in Information Theory, vol. 3, no. 4, pp.
+ [2] M. Yang, C. Bian, and H.-S. Kim, “OFDM-guided deep joint source                 720–731, 2022.
+     channel coding for wireless multipath fading channels,” IEEE Transac-      [24] Y. Shao and D. Gunduz, “Semantic communications with discrete-time
+     tions on Cognitive Communications and Networking, vol. 8, no. 2, pp.            analog transmission: A PAPR perspective,” IEEE Wireless Communica-
+     584–599, 2022.                                                                  tions Letters, vol. 12, no. 3, pp. 510–514, 2023.
+ [3] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless        [25] N. Samuel, T. Diskin, and A. Wiesel, “Learning to detect,” IEEE
+     image transmission using deep source channel coding with attention              Transactions on Signal Processing, vol. 67, no. 10, pp. 2554–2564, 2019.
+     modules,” IEEE Transactions on Circuits and Systems for Video Tech-        [26] M. B. Mashhadi and D. Gündüz, “Pruning the pilots: Deep learning-
+     nology, vol. 32, no. 4, pp. 2315–2328, 2022.                                    based pilot design and channel estimation for MIMO-OFDM systems,”
+ [4] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear        IEEE Transactions on Wireless Communications, vol. 20, no. 10, pp.
+     transform source-channel coding for semantic communications,” IEEE              6315–6328, 2021.
+     Journal on Selected Areas in Communications, vol. 40, no. 8, pp. 2300–     [27] H. He, C.-K. Wen, S. Jin, and G. Y. Li, “Model-driven deep learning
+     2316, 2022.                                                                     for MIMO detection,” IEEE Transactions on Signal Processing, vol. 68,
+ [5] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission                  pp. 1702–1715, 2020.
+     with deep joint source-channel coding,” IEEE Transactions on Wireless      [28] H. Wu, Y. Shao, C. Bian, K. Mikolajczyk, and D. Gündüz, “Vision
+     Communications, vol. 20, no. 12, pp. 8081–8095, 2021.                           transformer for adaptive image transmission over MIMO channels,” in
+ [6] C. Bian, Y. Shao, H. Wu, E. Ozfatura, and D. Gunduz, “Process-                  ICC 2023 - IEEE International Conference on Communications, 2023,
+     and-forward: Deep joint source-channel coding over cooperative relay            pp. 3702–3707.
+     networks,” arXiv preprint arXiv:2403.10613, 2024.                          [29] D. Gunduz and E. Erkip, “Joint source–channel codes for MIMO block-
+ [7] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless           fading channels,” IEEE Transactions on Information Theory, vol. 54,
+     image transmission with adaptive rate control,” in ICASSP 2022 -                no. 1, pp. 116–134, 2008.
+     2022 IEEE International Conference on Acoustics, Speech and Signal         [30] T. J. O’Shea, T. Erpek, and T. C. Clancy, “Deep learning based MIMO
+     Processing (ICASSP), 2022, pp. 5193–5197.                                       communications,” arXiv preprint arXiv:1707.07980, 2017.
+ [8] H. Yoo, L. Dai, S. Kim, and C.-B. Chae, “On the role of ViT and CNN        [31] J. Song, C. Häger, J. Schröder, T. J. O’Shea, E. Agrell, and H. Wymeer-
+     in semantic communications: Analysis and prototype validation,” IEEE            sch, “Benchmarking and interpreting end-to-end learning of MIMO and
+     Access, vol. 11, pp. 71 528–71 541, 2023.                                       multi-user communication,” IEEE Transactions on Wireless Communi-
+ [9] E. Erdemir, T.-Y. Tung, P. L. Dragotti, and D. Gunduz, “Generative joint        cations, vol. 21, no. 9, pp. 7287–7298, 2022.
+     source-channel coding for semantic image transmission,” IEEE Journal       [32] X. Zhang, M. Vaezi, and T. J. O’Shea, “SVD-embedded deep autoen-
+     on Selected Areas in Communications, vol. 41, no. 8, pp. 2645–2657,             coder for MIMO communications,” in ICC 2022-IEEE International
+     2023.                                                                           Conference on Communications. IEEE, 2022, pp. 5190–5195.
+[10] C. Bian, Y. Shao, H. Wu, and D. Gunduz, “Deep joint source-channel         [33] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K.
+     coding over cooperative relay networks,” in 2024 IEEE International             Wong, and C.-B. Chae, “Beyond transmitting bits: Context, semantics,
+     Conference on Machine Learning for Communication and Networking                 and task-oriented communications,” IEEE Journal on Selected Areas in
+     (ICMLCN). IEEE, 2024.                                                           Communications, vol. 41, no. 1, pp. 5–41, 2023.
+                                                                                                                                                          16
+
+
+
+[34] W. F. Lo, N. Mital, H. Wu, and D. Gündüz, “Collaborative semantic               IEEE 24th International Workshop on Signal Processing Advances in
+     communication for edge inference,” IEEE Wireless Communications                 Wireless Communications (SPAWC), 2023, pp. 616–620.
+     Letters, vol. 12, no. 7, pp. 1125–1129, 2023.                              [57] C. Oestges, “Validity of the kronecker model for MIMO correlated
+[35] Y. Shi, S. Shao, Y. Wu, W. Zhang, X.-G. Xia, and C. Xiao, “Excess               channels,” in 2006 IEEE 63rd Vehicular Technology Conference, vol. 6.
+     distortion exponent analysis for semantic-aware MIMO communication              IEEE, 2006, pp. 2818–2822.
+     systems,” IEEE Transactions on Wireless Communications, vol. 22,           [58] K. Yang, S. Wang, J. Dai, K. Tan, K. Niu, and P. Zhang, “WITT: A
+     no. 9, pp. 5927–5940, 2023.                                                     wireless image transmission transformer for semantic communications,”
+[36] S. Yao, S. Wang, J. Dai, K. Niu, and P. Zhang, “Versatile seman-                in ICASSP 2023 - 2023 IEEE International Conference on Acoustics,
+     tic coded transmission over MIMO fading channels,” arXiv preprint               Speech and Signal Processing (ICASSP), 2023, pp. 1–5.
+     arXiv:2210.16741, 2022.                                                    [59] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and
+[37] J. Baltersee, G. Fock, and H. Meyr, “Achievable rate of MIMO channels           B. Guo, “Swin transformer: Hierarchical vision transformer using shifted
+     with data-aided channel estimation and perfect interleaving,” IEEE              windows,” in Proceedings of the IEEE/CVF international conference on
+     Journal on Selected Areas in Communications, vol. 19, no. 12, pp. 2358–         computer vision, 2021, pp. 10 012–10 022.
+     2368, 2001.                                                                [60] B. Graham, A. El-Nouby, H. Touvron, P. Stock, A. Joulin, H. Jegou, and
+[38] T. Yoo and A. Goldsmith, “Capacity and power allocation for fading              M. Douze, “LeViT: A vision transformer in convnet’s clothing for faster
+     MIMO channels with channel estimation error,” IEEE Transactions on              inference,” in Proceedings of the IEEE/CVF International Conference
+     Information Theory, vol. 52, no. 5, pp. 2203–2214, 2006.                        on Computer Vision (ICCV), October 2021, pp. 12 259–12 269.
+[39] Y. Shao, E. Ozfatura, A. G. Perotti, B. M. Popović, and D. Gündüz,        [61] P. Dollár, M. Singh, and R. Girshick, “Fast and accurate model scaling,”
+     “Attentioncode: Ultra-reliable feedback codes for short-packet commu-           in Proceedings of the IEEE/CVF Conference on Computer Vision and
+     nications,” IEEE Transactions on Communications, vol. 71, no. 8, pp.            Pattern Recognition, 2021, pp. 924–932.
+     4437–4452, 2023.                                                           [62] Y. Xu, Z. Zhang, M. Zhang, K. Sheng, K. Li, W. Dong, L. Zhang,
+[40] E. Ozfatura, Y. Shao, A. G. Perotti, B. M. Popović, and D. Gündüz, “All        C. Xu, and X. Sun, “Evo-vit: Slow-fast token evolution for dynamic
+     you need is feedback: Communication with block attention feedback               vision transformer,” in Proceedings of the AAAI Conference on Artificial
+     codes,” IEEE Journal on Selected Areas in Information Theory, vol. 3,           Intelligence, 2022, pp. 2964–2972.
+     no. 3, pp. 587–602, 2022.                                                  [63] J. R. Stevens, R. Venkatesan, S. Dai, B. Khailany, and A. Raghunathan,
+[41] H. Wu, Y. Shao, E. Ozfatura, K. Mikolajczyk, and D. Gündüz,                     “Softermax: Hardware/software co-design of an efficient softmax for
+     “Transformer-aided wireless image transmission with channel feedback,”          transformers,” in 2021 58th ACM/IEEE Design Automation Conference
+     IEEE Transactions on Wireless Communications, pp. 1–1, 2024.                    (DAC). IEEE, 2021, pp. 469–474.
+[42] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The           [64] D. B. Kurka and D. Gündüz, “Deepjscc-f: Deep joint source-channel
+     unreasonable effectiveness of deep features as a perceptual metric,” in         coding of images with feedback,” IEEE Journal on Selected Areas in
+     IEEE/CVF Conf. on Comp. Vis. and Ptrn. Recog., 2018, pp. 586–595.               Information Theory, vol. 1, no. 1, pp. 178–193, 2020.
+[43] G. Scutari, D. P. Palomar, and S. Barbarossa, “The MIMO iterative wa-
+     terfilling algorithm,” IEEE Transactions on Signal Processing, vol. 57,
+     no. 5, pp. 1917–1935, 2009.
+[44] S. Zheng, J. Lu, H. Zhao, X. Zhu, Z. Luo, Y. Wang, Y. Fu, J. Feng,
+     T. Xiang, P. H. Torr et al., “Rethinking semantic segmentation from a
+     sequence-to-sequence perspective with transformers,” in Proceedings of
+     the IEEE/CVF conference on computer vision and pattern recognition,
+     2021, pp. 6881–6890.
+[45] X. Chu, Z. Tian, Y. Wang, B. Zhang, H. Ren, X. Wei, H. Xia, and
+     C. Shen, “Twins: Revisiting the design of spatial attention in vision
+     transformers,” Advances in Neural Information Processing Systems,
+     vol. 34, pp. 9355–9366, 2021.
+[46] H. Wu, Y. Shao, C. Bian, K. Mikolajczyk, and D. Gündüz, “Deep joint
+     source-channel coding for adaptive image transmission over MIMO
+     channels,” arXiv preprint arXiv:2309.00470, 2023.
+[47] “Better portable graphics 0.9.8,” URL https://bellard.org/bpg/, 2018.
+[48] D. Minnen, J. Ballé, and G. Toderici, “Joint autoregressive and hier-
+     archical priors for learned image compression,” in Neural Information
+     Processing Systems, 2018, pp. 10 794–10 803.
+[49] “Versatile video coding reference software version 12.1 (vtm-12.1).”
+     https://vcgit.hhi.fraunhofer.de/jvet/VVCSoftware_VTM, vol. 6, 2021.
+[50] D. He, Z. Yang, W. Peng, R. Ma, H. Qin, and Y. Wang, “Elic:
+     Efficient learned image compression with unevenly grouped space-
+     channel contextual adaptive coding,” in IEEE/CVF Conf. on Comp. Vis.
+     and Ptrn. Recog., 2022.
+[51] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image com-
+     pression with discretized Gaussian mixture likelihoods and attention
+     modules,” in IEEE/CVF Conf. on Comp. Vis. and Ptrn. Recog., 2020.
+[52] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston,
+     “Variational image compression with a scale hyperprior,” in 6th
+     International Conference on Learning Representations, ICLR 2018,
+     Vancouver, BC, Canada, April 30 - May 3, 2018, Conference
+     Track Proceedings. OpenReview.net, 2018. [Online]. Available:
+     https://openreview.net/forum?id=rkcQFMZRb
+[53] Z. Guo and P. Nilsson, “Algorithm and implementation of the K-best
+     sphere decoding for MIMO detection,” IEEE Journal on selected areas
+     in communications, vol. 24, no. 3, pp. 491–503, 2006.
+[54] B. Hassibi and B. M. Hochwald, “How much training is needed in
+     multiple-antenna wireless links?” IEEE Transactions on Information
+     Theory, vol. 49, no. 4, pp. 951–963, 2003.
+[55] R. Etkin and D. Tse, “Degrees of freedom in some underspread MIMO
+     fading channels,” IEEE Transactions on Information Theory, vol. 52,
+     no. 4, pp. 1576–1608, 2006.
+[56] C. Bian, Y. Shao, H. Wu, and D. Gündüz, “Space-time design for deep
+     joint source channel coding of images over MIMO channels,” in 2023
+                                                                                                                                       17
+
+
+
+
+                               (a) R = 1/24                                                      (b) R = 1/12
+Fig. 14. Ablation studies over the model-driven design for the proposed DeepJSCC-MIMO schemes with CSIR.
+
+
+
+                            A PPENDIX                                    MIMO-universal scheme and DeepJSCC-MIMO scheme with-
+                                                                         out channel heatmap. The ablation results over the DeepJSCC-
+                           TABLE VII                                     MIMO-universal scheme are presented in Tables. VIII and
+ A BLATION STUDY OF DIFFERENT MIMO EQUALIZATION METHODS FOR              IX for open-loop and closed-loop MIMO systems, respec-
+           D EEP JSCC-MIMO- UNIVERSAL WITH R = 1/12.
+                                                                         tively. The experiments demonstrate that integrating the chan-
+    Equalizations       1 dB     5 dB     10 dB     15 dB    19 dB       nel heatmap is essential to enhance the performance of the
+  End-to-end w/o ZF    22.65     24.4     26.16     26.83    27.03       DeepJSCC-MIMO-universal scheme in both open-loop and
+       Pure ZF         24.47    26.98     29.41     31.43    32.73
+     Pure MMSE         24.61    27.04     29.48     31.50    32.74       closed-loop MIMO systems. Additional experiments for the
+    DL-aided ZF        24.95    27.56     30.02     31.91    32.93       DeepJSCC-MIMO scheme are conducted in the open-loop
+                                                                         MIMO scenario. As depicted in Table. X, despite the model
+                                                                         being optimized for a particular channel condition, the perfor-
+A. Ablation study over the model-driven design                           mance can be further improved through the utilization of the
+   To evaluate the effectiveness of the DL-aided equalization            channel heatmap.
+method with the residual block, we repeat the experiments                   Furthermore, we have conducted an additional ablation
+of DeepJSCC-MIMO-universal in Fig. 5c with an MMSE                       study of the channel heatmap when considering channel esti-
+receiver. The experimental results in Table VII show that the            mation errors, as detailed in Table. XI. When jointly consider-
+residual block improves the performance (up to 0.54 dB).                 ing the proposed schemes in the presence or absence of a noisy
+More interestingly, we observe that the ZF combined with the             channel heatmap, we can observe that the primary performance
+residual block achieves the best performance, which shows                degradation arises from the imperfect MIMO equalization,
+that the residual block helps to compensate for the limitation           where the performance degradation is up to 0.44 dB and 1.03
+of ZF and outperforms MMSE.                                              dB for σe2 = 0.2 and σe2 = 1, respectively. The additional
+   To provide a more comprehensive study of this issue, we               imperfect channel heatmap can slightly improve the perfor-
+conducted additional ablation studies over this model-driven             mance, which is up to 0.17 dB and 0.19 dB for σe2 = 0.2 and
+approach for R = 1/24 and R = 1/12. Specifically, we                     σe2 = 1, respectively. This observation can be attributed to the
+removed the ZF operations and trained DeepJSCC-MIMO                      potential benefits of imperfect channel condition information
+models in an end-to-end fashion, denoted by “DeepJSCC-                   in facilitating robust DeepJSCC transmission. Nevertheless,
+MIMO w/o ZF” and “DeepJSCC-MIMO-universal w/o ZF”.                       given the limited performance improvement, the effect of the
+The experimental results are presented in Fig. 14a and Fig.              channel heatmap remains relatively minor under the channel
+14b for R = 1/24 and R = 1/12, respectively. It is                       estimation errors. We can then conclude that the primary
+evident from the figures that the performance of DeepJSCC-               performance degradation of DeepJSCC-MIMO scheme under
+MIMO models experiences a notable decline in the absence of              channel estimation errors arises from the imperfect MIMO
+ZF operations. Furthermore, the DeepJSCC-MIMO-universal                  equalization.
+models exhibit a diminished capacity for channel adaptability,              In summary, the channel heatmap serves two objectives: a)
+as the channel heatmap tailored for our model-driven approach            it provides CSI for the transmitter/receiver, enabling the model
+proves ineffective in conveying channel-related information.             to adapt to diverse channel conditions; b) it simplifies the
+                                                                         learning process for the transformer model by presenting the
+B. Ablation study of channel heatmap                                     channel condition that each channel symbol faces after specific
+  In order to assess the effectiveness of the channel heatmap,           equalization operations for the attention computation. As a
+we have conducted ablation studies over the DeepJSCC-                    direct result, it yields substantial performance improvements
+                                                                                                                                           18
+
+
+
+                                                            TABLE VIII
+       A BLATION STUDY OF D EEP JSCC-MIMO- UNIVERSAL WITH / WITHOUT CHANNEL HEATMAP OVER THE CIFAR10 DATASET WITH CSIR.
+
+                                   Open-loop MIMO system                                  Channel SNRs
+                       Ratio                     Models                     1 dB     5 dB    10 dB     15 dB   19 dB
+                                         DeepJSCC-MIMO-universal           22.27    24.41    26.56    28.26    29.33
+                     R = 1/24
+                                   DeepJSCC-MIMO-universal w/o heatmap     21.83    24.00     26.07    27.64   28.53
+                                         DeepJSCC-MIMO-universal           24.95    27.56    30.02    31.91    32.93
+                     R = 1/12
+                                   DeepJSCC-MIMO-universal w/o heatmap     24.22    26.69     29.10    30.89   31.86
+
+
+                                                             TABLE IX
+       A BLATION STUDY OF D EEP JSCC-MIMO- UNIVERSAL WITH / WITHOUT CHANNEL HEATMAP OVER THE CIFAR10 DATASET WITH CSIT.
+
+                                  Closed-loop MIMO system                                 Channel SNRs
+                       Ratio                     Models                     1 dB     5 dB    10 dB     15 dB   19 dB
+                                         DeepJSCC-MIMO-universal           23.95    25.90    28.13    29.94    30.93
+                     R = 1/24
+                                  DeepJSCC-MIMO-universal w/o heatmap      23.48    25.63     27.75    29.34   30.24
+                                         DeepJSCC-MIMO-universal           26.89    29.30    32.10    34.50    35.95
+                     R = 1/12
+                                  DeepJSCC-MIMO-universal w/o heatmap      26.21    28.71     31.36    33.41   34.67
+                                         DeepJSCC-MIMO-universal            30.7    33.65    36.87    39.56    41.11
+                     R = 1/6
+                                  DeepJSCC-MIMO-universal w/o heatmap      29.19    32.03     35.02    37.31   38.63
+
+
+
+                            TABLE X                                                                TABLE XI
+  A BLATION STUDY OF D EEP JSCC-MIMO WITH / WITHOUT CHANNEL                       A BLATION STUDY OF CHANNEL HEATMAP FOR THE
+  HEATMAP OVER THE KODAK DATASET AND SNR=5 D B WITH CSIR.                D EEP JSCC-MIMO- UNIVERSAL SCHEME UNDER CHANNEL ESTIMATION
+                                                                            ERRORS OVER THE KODAK DATASET FOR R = 1/24 WITH CSIR.
+ Proposed schemes                   Bandwidth ratio R
+ DeepJSCC-MIMO        1/24       1/12     1/8        1/6     1/4           DeepJSCC-MIMO-universal             Different SNRtest
+   with heatmap      29.43      30.45   31.17       31.56   31.92           σe2 = 0  with heatmap     29.38    30.08      30.80    31.62
+  without heatmap    28.88      29.73    30.36      30.84   31.02                    with heatmap     29.18    29.86      30.53    31.33
+                                                                           σe2 = 0.2
+                                                                                      w/o heatmap     29.05    29.74      30.36    31.18
+                                                                                     with heatmap     28.73    29.49      30.08    30.78
+                                                                            σe2 = 1
+                                                                                      w/o heatmap     28.68    29.47      29.93    30.59
+for the DeepJSCC-MIMO scheme as seen from the ablation
+studies above.
+   The integration of the above model-driven designs form our               The experimental results of DeepJSCC-MIMO in the con-
+DeepJSCC-MIMO approach, each of them contributing to the                 text of spatially correlated channel models for both open-loop
+competitive transmission performance while maintaining an                MIMO and closed-loop MIMO systems are presented in Figs.
+acceptable computational complexity. It is important to note             15 and 16. It is evident from the figures that the superiority of
+that each constituent of this integrated approach exerts a dis-          DeepJSCC-MIMO continues of hold in this channel scenario
+tinct influence. Notably, the equalization operation emerges as          as well.
+a pivotal element in the MIMO channel, and its absence would
+render the proposed DeepJSCC scheme ineffective, similar to              D. More detailed study over the model efficiency
+its role in traditional systems. While the SVD, heatmap design,             Meanwhile, the particular structure of our proposed ViT-
+and various other architectural choices substantially improve            based methodology significantly limits both the inference com-
+the performance, we can still surpass the performance of                 plexity and the parameter count. In the proposed DeepJSCC-
+traditional separation-based benchmarks even in their absence.           MIMO architecture, we have carefully balanced the perfor-
+                                                                         mance with model efficiency, maintaining acceptable com-
+C. Additional experiments over realistic correlated MIMO                 putational and storage costs. The ViT-based model proposed
+channel models                                                           herein demonstrates state-of-the-art performance results while
+                                                                         requiring limited computational and memory resources.
+  To investigate a more realistic correlated MIMO channels,                 In order to better evaluate the complexity of the proposed
+we have added supplementary experiments over the MIMO                    model, we provide a comparative analysis with an alternative
+channels for both open-loop and closed-loop MIMO systems.                DeepJSCC architecture using convolutional neural networks
+Specifically, following [36] and [35], we employed the trans-            (CNN) [2], [21] or Swin transformers [58], [59] in Table
+mitter SNR and the Kronecker channel model [57], given as:               XII. Specifically, we compare the number of floating point
+                          R 1/2  T 1/2                                   operations (FLOPs) as a representative of the time complexity,
+                    H = (RH ) G(RH ) ,                         (33)
+                                                                         and the number of model parameters for the memory com-
+where the channel covariance is approximated by the Kro-                 plexity, calculated from thop library. We can observe that the
+necker product of the covariance matrices from                           proposed DeepJSCC-MIMO scheme requires the least number
+                                           the transmit
+                                                    
+                   T      1 0.3       R       1 0.5                      of computational operations and parameters compared to all
+and receive side. RH =            , RH =             , and               other approaches under the same network layer configuration.
+                         0.3 1               0.5 1
+each element from G is sampled from a standard Gaussian                     We carried out another ablation study whose results are
+complex distribution.                                                    shown in Table XII. In particular, we conducted experiments
+                                                                                                                                         19
+
+
+
+
+                            (a) R = 1/24                                                       (b) R = 1/12
+Fig. 15. Performance comparisons between the proposed DeepJSCC-MIMO and BPG-Capacity over different SNR values and bandwidth ratios for the
+open-loop Kronecker MIMO channels with CSIR.
+
+
+
+
+                            (a) R = 1/24                                                       (b) R = 1/12
+Fig. 16. Performance comparisons between the proposed DeepJSCC-MIMO and BPG-Capacity over different SNR values and bandwidth ratios for the
+closed-loop Kronecker MIMO channels with CSIT.
+
+
+
+over different backbones across different layer numbers, where         [63] or employing a state-of-the-art inference acceleration
+all models are equipped with ZF precoding. We can observe              library (such as NVIDIA FasterTransformer v4.0).
+that our design achieves the best performance with Lt = 8.
+   Additionally, performance ablation study is conducted to
+                                                                       E. Implementation details
+assess the performance of different layer settings, as detailed
+in Table XII. We perform experiments utilizing various back-             This section presents the implementation details.
+bones and layer numbers, with all models incorporating DL-               Part A. Implementation details:
+aided equalization operations. The results indicate that our             For source coding, we adopt BPG version 0.9.8 using the
+design attains optimal performance when Lt = 8, leading us             binary file with the following command:
+to establish Lt = 8 as the final configuration.
+                                                                                    bpgenc -f 444 -q (quantization level)
+   In summary, the proposed DeepJSCC-MIMO scheme                                                                                      (34)
+                                                                                           -o (out filepath) (in filepath).
+demonstrates both practicality and efficiency, making it a
+promising alternative for emerging semantic communication                 The 0.9.8 version is extensively used in the literature on
+systems. It is worth highlighting that there is potential for          image compression and achieves the best performance in
+further improvements over our models’ inference speed. This            our experiments in CelebA and Koadak datasets. For the
+can be achieved through alternative hardware options, different        CelebA dataset, we adopt YCgCo color space to yeild a better
+architectural implementations, or acceleration techniques for          performance.
+vision transformers (ViTs), such as structure compression [60],           For channel coding and modulation, the detailed implemen-
+fast scaling [61], slow-fast evolution [62], efficient softmax         tation of LDPC is given in Section IV.
+                                                                                                                              20
+
+
+
+                                                             TABLE XII
+ T HE NUMBER OF PARAMETERS AND FLOP S FOR DIFFERENT MODELS ACROSS DIFFERENT LAYERS (Lt ), WHERE D EEP JSCC (CNN) REPRESENTS THE
+    CNN- BASED D EEP JSCC ARCHITECTURE INTRODUCED IN [2], [21]. B OLD FIGURES CORRESPOND TO THE MINIMAL VALUES AMONG DIFFERENT
+            MODELS FOR EACH Lt , WHICH IS CONSISTENTLY ACHIEVED BY THE PROPOSED V I T- BASED ARCHITECTURE IN THIS PAPER .
+
+                    Layer number Lt                          4         6          8         10        12         14         16
+                                DeepJSCC-MIMO (ours)       6.61      9.76      12.92      16.07     19.23      22.38      25.54
+ No. of Parameters (millions)       DeepJSCC (CNN)         6.89     13.44      20.00      26.56     33.11      39.67      46.22
+                                 DeepJSCC (Swin) [58]      8.89     12.05      15.21      18.36     21.52      24.68      27.83
+                                DeepJSCC-MIMO (ours)       0.43      0.63       0.83       1.03      1.23       1.43       1.64
+         FLOPs (G)                  DeepJSCC (CNN)         0.83      1.25       1.67       2.08      2.51       2.93       3.35
+                                 DeepJSCC (Swin) [58]      1.22      1.73       2.23       2.74      3.24       3.74       4.25
+
+
+
+                          TABLE XIII
+ A BLATION STUDY OVER D EEP JSCC-MIMO SCHEME AND BPG-LDPC
+BENCHMARK FOR THE OPEN - LOOP MIMO SYSTEM AT SN R = 10dB ON
+                        KODAK DATASET.
+
+     Different ratios R    1/24    1/16    1/12    1/8
+      BPG-LDPC [47]       29.45   30.51   31.69   34.04
+     DeepJSCC-MIMO        32.32   33.71   34.39   35.21
+
+
+
+   Part B. Analysis: In general, DeepJSCC demonstrates
+significant advantages in scenarios characterized by low band-
+width ratios and low SNRs [9], [64]. Moreover, [30], [31]
+underscores the advantages of DL-based methods compared
+with traditional MIMO schemes, particularly in CSIR scenar-
+ios. Further investigations tailored for the open-loop MIMO
+image transmission problem, as shown in [36], exhibit similar
+findings, revealing significant performance gains ranging from
+7 dB to 9 dB at low SNRs (i.e., SNR = 4 − 6 dB).
+   We have also performed additional experiments to validate
+these observations. We first compare the findings of low
+SNR regimes under the same setting of an open-loop MIMO
+system with R = 1/24 over various SNRs. We can see that
+even for the BPG-Capacity scheme with the instantaneous
+channel capacity, the DeepJSCC-MIMO can still outperform
+this bound over 3dB, clearly demonstrating the benefits of the
+DeepJSCC-MIMO pipeline. When it comes to higher SNRs,
+the performance gap becomes smaller. Providing more details
+for the reviewer: for SNR=5dB, the average available total
+capacity for each image is around 420 bits, resulting in a
+high compression ratio with relatively poor performance. In
+conclusion, it is apparent that the compression algorithm’s ef-
+ficacy is limited by the available bandwidth and channel SNR,
+constituting the primary factor contributing to the significant
+performance gap.
+   We have conducted supplementary experiments at a higher
+SNR value of 10dB. The results are presented in Table XIII.
+Observations reveal that DeepJSCC-MIMO can consistently
+outperform the BPG-LDPC benchmark even in the higher
+SNR regime. However, compared with Table II, there is a
+discernible trend indicating a gradual reduction in the perfor-
+mance gap.
+

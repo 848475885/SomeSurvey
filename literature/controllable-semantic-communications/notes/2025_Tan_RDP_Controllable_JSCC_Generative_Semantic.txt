@@ -1,0 +1,1017 @@
+                                                                                                                                                                                           1
+
+
+
+
+                                                     Rate-Distortion-Perception Controllable Joint
+                                                      Source-Channel Coding for High-Fidelity
+                                                             Generative Communications
+                                                 Kailin Tan, Graduate Student Member, IEEE, Jincheng Dai, Member, IEEE, Zhenyu Liu, Member, IEEE,
+                                                  Sixian Wang, Member, IEEE, Xiaoqi Qin, Senior Member, IEEE, Wenjun Xu, Senior Member, IEEE,
+                                                                          Kai Niu, Member, IEEE, Ping Zhang, Fellow, IEEE
+arXiv:2408.14127v1 [eess.IV] 26 Aug 2024
+
+
+
+
+                                              Abstract—End-to-end image transmission has recently become                  Traditional communication systems, based on the source-
+                                           a crucial trend in intelligent wireless communications, driven                 channel separation paradigm, utilize rate-distortion theory for
+                                           by the increasing demand for high bandwidth efficiency. How-                   source coding and channel coding theory for transmission.
+                                           ever, existing methods primarily optimize the trade-off between
+                                           bandwidth cost and objective distortion, often failing to deliver              These systems aim to minimize the size of source data under a
+                                           visually pleasing results aligned with human perception. In                    distortion constraint while ensuring reliable data transmission
+                                           this paper, we propose a novel rate-distortion-perception (RDP)                over noisy channels. However, they can cause significant band-
+                                           jointly optimized joint source-channel coding (JSCC) framework                 width waste due to their focus on global bit information rather
+                                           to enhance perception quality in human communications. Our                     than critical semantic information. To address this inefficiency,
+                                           RDP-JSCC framework integrates a flexible plug-in conditional
+                                           Generative Adversarial Networks (GANs) to provide detailed and                 recent advancements in deep learning have inspired data-
+                                           realistic image reconstructions at the receiver, overcoming the                driven solutions that extract semantic feature information [1]–
+                                           limitations of traditional rate-distortion optimized solutions that            [3] and implement joint source-channel coding (JSCC) [4]–[9]
+                                           typically produce blurry or poorly textured images. Based on                   for end-to-end communications.
+                                           this framework, we introduce a distortion-perception controllable                 Initial works in DeepJSCC [4]–[6] typically employ an
+                                           transmission (DPCT) model, which addresses the variation in the
+                                           perception-distortion trade-off. DPCT uses a lightweight spatial               autoencoder architecture that directly maps source informa-
+                                           realism embedding module (SREM) to condition the generator on                  tion to channel-input symbols, considering wireless channel
+                                           a realism map, enabling the customization of appearance realism                impairments to minimize end-to-end distortion metrics (e.g.,
+                                           for each image region at the receiver from a single transmission.              the mean-squared error (MSE)). It has been demonstrated that
+                                           Furthermore, for scenarios with scarce bandwidth, we propose an                DeepJSCC can outperform classical separation schemes, such
+                                           interest-oriented content-controllable transmission (CCT) model.
+                                           CCT prioritizes the transmission of regions that attract user                  as JPEG combined with LDPC channel coding [10] for small
+                                           attention and generates other regions from an instance label                   images [4]. In [11], [12], the authors proposed SwinJSCC,
+                                           map, ensuring both content consistency and appearance realism                  which is built on the Swin Transformer architecture, and
+                                           for all regions while proportionally reducing channel bandwidth                showed that SwinJSCC outperforms BPG [13] (compatible
+                                           costs. Comprehensive experiments demonstrate the superiority                   with HEVC intra coding) combined with 5G LDPC channel
+                                           of our RDP-optimized image transmission framework over state-
+                                           of-the-art engineered image transmission systems and advanced                  coding for medium-sized images. However, these works only
+                                           perceptual methods.                                                            optimize a single distortion metric with a fixed rate.
+                                                                                                                             To enhance transmission efficiency in variable-rate cod-
+                                             Index Terms—Joint source-channel coding, RDP optimization,
+                                           generative adversarial networks, human perception.                             ing (VRC) under varying channel conditions and available
+                                                                                                                          bandwidth, the nonlinear transform source-channel coding
+                                                                                                                          (NTSCC) approach [7]–[9], [14] integrates a learned entropy
+                                                                     I. I NTRODUCTION
+                                                                                                                          model in the latent space to optimize the trade-off between
+                                              The rapid expansion of ultra-large-scale image/video trans-                 transmission rate and distortion metrics end-to-end. This rate-
+                                           mission applications in camera phones and extended reality                     distortion (RD) optimized JSCC framework has demonstrated
+                                           devices continues to drive the demand for efficient transmis-                  significant coding gains over distortion-optimized JSCC ap-
+                                           sion of large media data under limited bandwidth conditions.                   proaches, exhibiting comparable or superior end-to-end RD
+                                             This work was supported in part by the National Natural Science Foundation   performance [14] compared to state-of-the-art (SOTA) engi-
+                                           of China under Grant 62293481, Grant 62371063, Grant 62201089, Grant           neered source and channel codecs, such as VTM [15] com-
+                                           92267301, in part by the Natural Science Foundation of Beijing Municipality    bined with 5G LDPC. However, the reconstructed images from
+                                           under Grant 4222012, and in part by the Program for Youth Innovative
+                                           Research Team of BUPT No. 2023YQTD02, in part by BUPT Excellent Ph.D.          these methods, despite reduced distortion, which can degrade
+                                           Students Foundation CX2023118.                                                 human perceptual quality due to their pixel-wise averages of
+                                             Kailin Tan, Jincheng Dai, Sixian Wang, and Kai Niu are with the Key          plausible solutions. As the transmission rate decreases, the first
+                                           Laboratory of Universal Wireless Communications, Ministry of Education,
+                                           Beijing University of Posts and Telecommunications, Beijing 100876, China.     aspect to degrade in the reconstructed images is the texture
+                                             Zhenyu Liu is with the 5GIC and 6GIC, Institute for Communication            details, resulting in an increasingly smoother appearance, and
+                                           Systems, University of Surrey, GU2 7XH Guildford, United Kingdom.              eventually leading to damage to the image contents. However,
+                                             Xiaoqi Qin, Wenjun Xu, and Ping Zhang are with the State Key Laboratory
+                                           of Networking and Switching Technology, Beijing University of Posts and        high perceptual quality indicates high-fidelity reconstructions
+                                           Telecommunications, Beijing 100876, China.                                     that possess both “appearance realism” and “content con-
+                                                                                                                                                       2
+
+
+
+sistency”, where “appearance realism” requires sharp and
+appropriate textures to provide a visually pleasing and natural
+appearance.
+   To improve perceptual quality while ensuring limited dis-
+tortion in the wireless transmission of images, it is essential to
+clarify the differences and connections between distortion and                                        25.4dB                                  24.7dB
+perception. Specifically, “distortion” refers to the dissimilarity                      (a)                                     (b)
+between the reconstructed signal and the source signal, while
+“perceptual quality” is formalized as a divergence between
+the distribution of source signals and the distribution of re-
+constructed signals [16]. Furthermore, Blau and Michaeli [17]
+have theoretically revealed the trade-off between perception
+and distortion: for a fixed rate, reducing distortion alone
+can lead to poor perceptual quality, whereas accepting some
+distortion can enhance perceptual quality. Leveraging this                                            23.5dB                                  23.9dB
+principle, we propose to upgrade the optimization goal of the                           (c)                                     (d)
+JSCC framework to incorporate the triple trade-off of “rate-         Fig. 1. Flexible DP control using our DPCT model: decoding multiple
+distortion-perception (RDP)” to meet the demand for high             reconstructions with different distortion-perception trade-offs from a single
+perceptual quality in end-to-end communication systems.              received signal ŝ in one-shot transmission. The realism map β (bottom left
+                                                                     of each reconstruction) enables customization of the amount of details for per
+   When we follow the RDP theory to develop the generative           image region, with darker colors indicating more details. Fig. 1 (a), (b), and (c)
+JSCC framework, we usually face different practical deploy-          show the change of preference from distortion to perception by global control
+                                                                     mode, and Fig. 1 (d) demonstrates the spatial control mode (low distortion
+ment challenges due to different available bandwidth:                for the elephant and high perception for other regions).
+  • Personalized transmission for various perception and
+    distortion demands in affordable bandwidth: Given
+    feasible bandwidth limitations, different users may have         work incorporates a flexible plug-in conditional Generative
+    varying perception and distortion requirements for the           Adversarial Networks (GANs) [18] that can be efficiently
+    same visual data source; for example, individuals may            integrated with existing RD-based models to enhance human
+    have personalized areas of interest in the same image            perception. Based on the developed framework, we propose
+    or video stream. To meet these variable demands, the             two RDP-JSCC implementations: a distortion-perception con-
+    RDP-optimized framework must be distortion-perception            trollable transmission (DPCT) model for bandwidth-sufficient
+    controllable. This means the model should be capable             scenarios and an interest-oriented content-controllable trans-
+    of decoding either a realistic reconstruction (fine-grained      mission (CCT) model for bandwidth-scarce scenarios. We
+    details for human vision), a smooth one (minimal details         demonstrate the superiority of our RDP-optimized solutions
+    for distortion demands), or anything in between. While           in improving perceptual quality, and a visual demo of DPCT
+    using multiple models for each distortion and perception         is presented in Fig. 1.
+    trade-off can meet this requirement, it incurs significant          Our main contributions are summarized below.
+    training and deployment costs. Therefore, it is desirable to        • To improve perceptual quality while ensuring limited
+    utilize a single model capable of handling these variations           distortion in wireless image transmission, we develop
+    from a single received signal in one-shot transmission.               a novel generative JSCC framework (RDP-JSCC) that
+  • Interest-oriented generative transmission in scarce
+                                                                          jointly optimizes transmission rate, image distortion, and
+    bandwidth: When bandwidth is extremely limited, such                  human perception. The proposed RDP-JSCC framework
+    as in emergency communication, it becomes challenging                 is compatible with existing RD-JSCC frameworks by
+    to ensure content consistency while reproducing realistic             integrating a flexible plug-in conditional GAN for percep-
+    details using extremely low rates. Note that, not all                 tion enhancement and a triple RDP optimization objective
+    information within the media data is needed or equally                that includes transmission rate, distortion loss, and GAN
+    important for different users; for example, in emergency              loss. To the best of our knowledge, this is the first JSCC
+    rescue, medical personnel might focus more on injuries,               framework to achieve RDP joint optimization.
+    while telecommunication maintenance staff might priori-             • Based on the proposed framework, we introduce a DPCT
+    tize base station damage. This recognition motivates the              model to manage the personalized distortion-perception
+    development of interest-oriented implementations, where               trade-off in bandwidth-affordable scenarios. To efficiently
+    communication success means conveying personalized                    enhance the DP trade-off, our DPCT model conditions
+    critical information to meet the receiver’s interest, while           the generator on a realism map using a lightweight
+    lower-priority information can rely on generative models              spatial realism embedding module (SREM). Our approach
+    to produce realistic outcomes.                                        enables customization of the appearance realism for each
+  Consequently, in this paper, we develop a novel RDP jointly             image region only at the receiver from a signal received
+optimized JSCC framework to facilitate perception-oriented                signal. Experimental results show that our DPCT model
+end-to-end communications. Our proposed RDP-JSCC frame-                   dominates existing transmission methods in terms of per-
+                                                                                                                                                                                                    3
+
+
+
+                                                                     Scenario-related Guidance
+                                                                          for Generation
+                                                                                                                          source image, respectively. Note that gs also functions as a
+                                        Scenarios                 Image Prior          Realism                    Label   generator in Fig. 2.
+                                                                  Knowledge             Map                       Map
+                                          Rate
+                                        Constraint
+                                                                                                                             In the latent space, the learned entropy model ε estimates the
+                                                                  Customized
+                                                                    Condition
+                                                                                                                          parameterized distributions of y, i.e., py (y). The transmitter
+                  Entropy Model                                  Plug-in Module
+                                                                                                                          leverages py (y) to calculate the entropy of a quantized version
+                                            Wireless                                                                      of y, which is utilized to estimate the bandwidth required for
+
+
+
+
+                                                                                                  Discriminator
+                                            Channel
+               Analysis
+              Transform
+                                  VR-JSCC              VR-JSCC   Conditional                                              transmitting y. Concurrently, y is encoded by the VR-JSCC
+                                  Encoder              Decoder   Generator
+Input Image
+               Encoder
+                                    Variable-Rate JSCC
+                                                                                  Reconstructed
+                                                                                     Image
+                                                                                                                          encoder fe into the sequence of channel symbols s ∈ Rk ,
+  Analysis Transform Process                                               Conditional GAN                                and the receiver gets a sequence ŝ = W (s). In this paper,
+                                                                                                                          we consider the general fading channel model, such that this
+Fig. 2. Architecture of our RDP-JSCC framework, which includes analysis
+transform process (an analysis transform encoder and an entropy model),                                                   process can be represented as ŝ = W (s) = h ⊙ s + n, where
+variable-rate JSCC, a conditional GAN, and a customized condition plug-                                                   ⊙ denotes the element-wise product, h is the channel gain
+in module. c is the conditional information, and it varies with different rate                                            vector, and n is the noise vector. The VR-JSCC decoder fd
+scenarios. The discriminator D is only operated during the training phase.
+                                                                                                                          recovers the reconstructed latent features ŷ from ŝ. In total,
+                                                                                                                          the forward procedure of transmission is outlined as:
+     ceptual performance, while its distortion performance is                                                                         ga (·)   fe (·)     W (·)         fd (·)       gs (·)
+     only slightly inferior to or even close to VTM combined                                                                       x −−−→ y −−−→ s −−−→ ŝ −−−→ ŷ −−−→ x̂
+                                                                                                                                                                                                  (1)
+     with 5G LDPC.                                                                                                                                                     ε(·)
+                                                                                                                                                                  − py (y) ,
+                                                                                                                                   with the entropy model y −−→ Φ →
+   • Unlike existing works that primarily encode all features
+     with comparable priority, leading to content inconsistency                                                           where Φ is the distribution parameters of y. The system
+     and loss of important details in bandwidth-scarce scenar-                                                            efficiency is quantified by the channel bandwidth ratio (CBR)
+     ios, we propose an interest-oriented CCT model that can                                                              ρ = k/(3 × W × H).
+     controllably generate any concerned content completely.                                                                 The optimization objective for the RD trade-off without
+     By fully leveraging the biased property [19] of user                                                                 perception can be expressed as:
+     perception, we prioritize the transmission of interested re-
+                                                                                                                                                                            
+                                                                                                                             LRD = Ex∼px λ − η log py (y) + d(x, x̂)            ,
+     gions that attract user attention and generate other regions                                                                               |      {z      }     | {z }          (2)
+     from an instance label map, ensuring content consistency                                                                                      transmission rate          distortion metric
+
+     and appearance realism for all regions. Compared to the                                                              where the weight factor λ determines the trade-off between the
+     coding overhead of the image, the overhead caused by                                                                 transmission rate and the distortion metric. The scaling factor
+     the instance label map is minimal. More importantly, the                                                             η > 0 correlates the estimated entropy to the channel band-
+     size of transmitted symbols is reduced in proportion to the                                                          width cost. Specifically, each embedding yi is a c-dimensional
+     regions generated from the instance label map, ultimately                                                            vector, and the bandwidth cost ki for transmitting yi is
+     resulting in substantial channel bandwidth savings.                                                                                                            
+   The rest of this paper unfolds as follows. Section II in-                                                                                ki = Q − η log pyi (yi ) ,                (3)
+troduces the proposed RDP-JSCC framework. Then, Section                                                                   where Q represents the scalar quantization function involving
+III and Section IV present the implementation details of                                                                  2q (q = 1, 2, . . . ) integers with the quantization value set V =
+DPCT and CCT, respectively. Experimental results, presented                                                               {v1 , v2 , . . . , v2q }. Hence, the receiver can know the bandwidth
+in Section V, elucidate the performance improvement achieved                                                              allocated to every yi by transmitting side information with the
+by DPCT and CCT. We conclude this paper in Section VI.                                                                    predefined q bits. With the VR-JSCC, every yi is adaptively
+                                                                                                                          mapped to a ki -dimensional channel symbol vector si guided
+                          II. T HE RDP-JSCC F RAMEWORK                                                                    by a rate allocation vecotr k = [k1 , · · · , kl ], where l = w × h.
+   In this section, we propose a novel rate-distortion-perception
+jointly optimized JSCC framework, which includes analysis
+transform process, variable-rate JSCC, a conditional GAN, and                                                             B. Generative Receiver: Aligned with Human Perception
+a customized condition plug-in module as shown in Fig. 2.                                                                    To optimize perception together with the transmission rate
+                                                                                                                          and the distortion jointly in our framework, we introduce
+A. Variable-Rate JSCC Transmitter: Towards High Transmis-                                                                 conditional GANs [18], [20], widely used for deep generative
+sion Efficiency                                                                                                           models, to learn the distribution of prior knowledge.
+   To achieve high transmission efficiency, our framework                                                                    In standard conditional GANs, every data point x is linked
+includes three modularized components: a pair of nonlinear                                                                with additional information c, while the joint distribution px,c
+transforms, an entropy model, and variable-rate JSCC (VR-                                                                 remains unknown. The training procedure involves two com-
+JSCC). Specifically, given a source image x ∈ R3×W ×H (W                                                                  peting networks. A generator G conditioned on c transforms
+and H are the width and height of x), the analysis transform                                                              latent samples z from a predetermined known distribution pz
+encoder ga and synthesis transform decoder gs is responsible                                                              into samples from px|c , while a discriminator D maps the
+for transforming x into latent features y ∈ Rc×w×h (w, h,                                                                 input (x, c) to the probability that it is a sample from px|c
+and c are the width, height, and channel numbers of y) and                                                                rather than from the output of G. The target is for G to
+recovering the reconstructed latent features ŷ back into the                                                             “deceive” D into believing its samples are real. By holding c
+                                                                                                                                     4
+
+
+
+constant, the non-saturating loss can be optimized as detailed          •   Conversely, if R → 0 (using λ = ∞, ki → 0), ŷ
+in [18]:                                                                    would lost all semantics about the real image x. In this
+                                                                            setting, ŷ could be random and independent of x, and
+            LG = Ez∼pz [− log (D (G (z, c) , c))] ,            (4)
+                                                                            the objective becomes akin to a standard GAN combined
+           LD = Ez∼pu [− log (1 − D (G (z, c) , c))]                        with a distortion term, serving as a restraint.
+                                                               (5)
+                  + Ex∼px|c [− log (D (x, c))] .                         From these two scenarios, we can find that the transmission
+                                                                      rate R closely affects the role of GANs in image reconstruc-
+   At the generative receiver of our framework, we aim to             tion. In our framework, we always impose restrictions on R,
+generate high perceptual quality images from the latent feature       thereby ensuring that the GAN loss neither becomes moot
+ŷ. However, ŷ contains the information of the real image x          nor serves as a standard GAN. Thus, it needs to balance the
+and is affected by channel interference, while transmission rate      distortion term and the GAN loss.
+and distortion are also crucial factors to consider. Obviously,          Most previous works constrain R to an affordable range,
+the triple dynamic trade-off under wireless channel clearly           allowing for almost lossless transmission of contents but with-
+goes beyond the equation (4) in standard conditional GANs.            out preserving texture details. In this scenario, the distortion
+Therefore, we must design new compatible structures and               term ensures “content consistency”, while the GAN only
+new optimization objectives to achieve joint optimization.            needs to generate plausible textures to ensure “appearance
+Specifically, we upgrade the synthesis transform decoder gs           realism”. Besides, β, as a “realism factor”, determines the
+into a generator to reconstruct the image x̂. Crucially, we           amount of texture generated. Intuitively, when β = 0, the
+also provide conditional information c for gs and D to guide          optimization objective (6) simplifies to (2). For a fixed R,
+model generation capability by conditioning the distribution          increasing β shifts the model’s preference towards perception
+of x on c (i.e., px|c ). A discriminator D assesses how likely        at the cost of higher distortion. In the field of neural image
+x̂ is sampled from the true distribution px|c . Under such a          compression (NIC), [21] implemented a compression scheme
+framework, the goal of gs includes two: reconstructing the            with one encoder and multiple decoders (each for a different
+transmitted image x to a specific extent; generating x̂ that          β), making it approximately universal across the DP trade-
+aligns with the real conditional distribution px|c . Therefore,       off, thereby reducing the need to design a new encoder for
+by merging equations (4), (5) and (2), the objective for our          each DP objective. The work [22] extends this idea to high-
+RDP-JSCC framework is expressed as                                    resolution image compression. These inspire us to develop
+                     
+       LF = Ex∼px          d (x, x̂) +λ (−η log py (y)) +             a more universal transmission model using a single decoder
+                           | {z }         |       {z          }       effective for any β to meet various perception and distortion
+                        distortion metric   transmission rate
+                                                               (6)   demands in personalized transmission, which we explore in
+              β (− log D (x̂, c)) ,                                   Section III.
+                                                                         However, when R cannot carry all contents, especially when
+                |       {z          }
+                  perception metric
+                                                                      some contents are completely lost, how does our framework
+      L′D = Ex∼px (− log (1 − D (x̂, c)) − log D (x, c)) ,     (7)    cater to human perception? In the field of JSCC, this remains
+where x̂ = gs (ŷ, c), and both λ > 0 and β > 0 act as balance        an unexplored issue. For instance, the sender does not transmit
+factors: the former between the transmission rate R and the           the channel symbols corresponding to trees to meet scarce
+combined distortion metric with perception metric, and the lat-       bandwidth, and the information related to trees is completely
+ter between distortion metric itself and perception metric. The       lost. To address this issue, we study in Section IV how to
+full set of neural network modules optimized by (6) is sym-           boost GAN to generate contents consistent with the source
+bolized by F, which can be detailed as F = (ga , gs , fe , fd , ε).   while producing realistic details. In this way, detailed “green
+Training involves a dual-step approach: firstly, F parameters         trees” can be fully generated, with slightly different shapes,
+are adjusted for LF minimization, followed by adjusting D             but visually imperceptible.
+parameters to minimize LD .                                              Consequently, to address the variation in the prior distribu-
+                                                                      tion that the GAN needs to learn when R changes, we provide
+                                                                      a conditional plug-in module to guide the GAN in generating
+C. Discussion on the Properties of RDP-JSCC Framework                 the required information more accurately. This module can be
+                                                                      customized for different scenarios. In the following sections,
+   A pivotal factor in the practical implementation of the RDP-
+                                                                      we will detail the DPCT model and the CCT model, which are
+JSCC framework in different scenarios is the transmission rate
+                                                                      custom-designed implementations of RDP-JSCC for scenarios
+term, defined as R = −η log py (y) (η > 0).
+                                                                      with affordable bandwidth and scarce bandwidth, respectively.
+   We first discuss two extreme scenarios:
+  •   Allowing R to be large enough (ki → ∞ and λ = 0),
+      makes the practical channel bandwidth to be infinite. In          III. DPCT: F LEXIBLE C ONTROL FOR DP T RADE -O FF
+                                                                                UNDER A FFORDABLE BANDWIDTH
+      this case, F is capable of reconstructing x nearly loss-
+      lessly over the noise channel, such that the distortion term       Although affordable bandwidth can prevent over-distortion
+      would disappear. Consequently, the divergence between           in reconstructed images, users in lossy image transmission can
+      p (x) and p (x̂) would also disappear, rendering the GAN        have varying demands—some prioritizing human perception
+      loss moot.                                                      and others requiring low distortion. To simultaneously meet
+                                                                                                                                                                                                                                      5
+
+
+
+                                                                                                                               Realism Map
+                                                                                              Perception
+
+
+
+                                                                  CCEM                                                                                         SREM
+                                                                                                    Distortion                                                               Reconstructed
+          Input image                                                                                                                                                           image
+
+
+
+
+                                                                                                                                                                                                        Discriminator
+                            Analysis
+                                                            VR-JSCC                                                 VR-JSCC                                  Conditional
+                           Transform
+                                                            Encoder                                                 Decoder                                  Generator
+                            Encoder
+                                                                             Variable-Rate JSCC
+
+                             Spatial Realism Embedding Module (SREM)
+                                Linear
+
+
+
+                                                Linear
+                                         ReLU
+
+
+
+                                                           ReLU
+             Sinusoidal
+                                                                             UpS                              UpS                      UpS                               Linear             Linear                         Linear
+             Embedding
+
+
+
+
+                                                                                                                                                                                  GELU
+
+
+
+
+                                                                                                                                                                                                     GELU
+                                                                                                                                                                      Conv
+
+
+
+
+                                                                                                                                                                                         Conv
+
+
+
+
+                                                                                                                                                                                                                        Conv
+                                                                              Cond RBs
+
+
+
+
+                                                                                                                 Cond RBs
+
+
+
+                                                                                                                                       Cond RBs
+                                                                                         Tconv ↑2
+                                                                  Tconv ↑2
+
+
+
+
+                                                                                                                            Tconv ↑2
+
+
+
+                                                                                                                                                  Tconv ↑2
+                                                         Attn
+
+
+
+
+             Realism Map                                                                               Attn                                                         Conditioning Residual Bottleneck
+                                                                             Conditional Generator                                                                             (Cond RB)
+
+Fig. 3. Network architectures of our DPCT. We design a spatial realism embedding module (SREM) to condition gs on the realism map β. The details of
+SREM and the conditional generator are given, where UpS represents an upsampling operation with a factor of 2, Attn is the attention module, and each
+Tconv is a transposed convolution layer with a stride of 2. Cond RBs denotes 3 stacked conditioning residual bottleneck (Cond RB) modules, and the global
+features gi are fed into every Cond RB.
+
+
+
+these diverse demands, we propose the DPCT model, which                                                                     β to spatially weight the perception term in the optimization
+flexibly controls the DP trade-off with one-shot transmission.                                                              objective (6), guiding the model to optimize specific RD
+This control can be applied uniformly across the entire image                                                               trade-offs across different spatial regions. Standard conditional
+or even vary spatially with the help of control information                                                                 GANs are refined to fit this model, G and D in (4) and (5)
+from the realism map.                                                                                                       are formulated as
+                                                                                                                                              G ← gs (ŷ, β) , D ← D (gs (ŷ, β) , y) ,                                             (8)
+A. Realism Map-based Control on the DP Trade-off
+   We set a realism map β ∈ Rw×h that has the same                                                                          where we take β and y as the conditional information for D
+spatial dimension with y. Each element βi,j ∈ [0, βmax ] of                                                                 and gs respectively.
+β specifies where and how many details should be generated.                                                                    To condition gs on β, we propose a spatial realism embed-
+Our proposed DPCT can support two typical control modes                                                                     ding module (SREM) to embed the control information of β
+during the inference phase:                                                                                                 into gs , as demonstrated in Fig. 3. Besides, for the analysis
+   • Global control mode: Setting β = b · Jw×h , where
+                                                                                                                            transform encoder ga and conditional generator gs , we draw on
+      b ∈ [0, βmax ] and Jw×h represents an w × h matrix                                                                    the “ELIC” architectures, which is widely used for NIC works
+      with all elements equal to 1. If b is a precise value, for                                                            [24]. We widen its bottleneck dimension to 256 to enhance the
+      example, b = 2, we simplify this representation to β = 2.                                                             model’s expressive capacity. Our entropy model ε follows the
+      This represents global control over the entire image,                                                                 design of the checkerboard context entropy model (CCEM) in
+      which PDJSCC [23] can only achieve by training multiple                                                               NTSCC+ [14], with details available in [14]. Our VR-JSCC
+      models with different β and multiple transmissions.                                                                   also employs the architectures based on swin transformer [14].
+   • Spatial control mode: Setting β spatially non-uniformly
+                                                                                                                            Besides, our discriminator D adopts a network structure akin
+      enables customization of the amount of details per image                                                              to that in PatchGAN [25]. For simplicity, the structures of
+      region. With an instance label map, we can specify                                                                    some modules in Fig. 3 are simplified, but this does not affect
+      the locations of each instance, such as trees, sky, text,                                                             our discussion.
+      etc. Thus, the receiver can subjectively adjust for each
+      instance.
+                                                                                                                            B. Spatial Realism Embedding Module
+   Figure 3 illustrates the architecture of our DPCT model,
+and our goal is to train this model to work well for any β                                                                     The goal of SREM is to embed a continuous-value map into
+under one-shot transmission, without significantly increasing                                                               multi-scale feature spaces of the generator. As shown in Fig.
+the complexity compared to the procedure (1). To realize this,                                                              3, we first derive global features g by calculating sinusoidal
+on the one hand, we only condition the generator gs on the                                                                  embedding features and connecting them with a two-layer
+realism map β, thereby one received signal ŝ can be used for                                                               MLP, and this is inspired by Transformer position embedding
+decoding any RD trade-off. On the other hand, we leverage                                                                   [26]. Particularly, given a maximum sinusoidal period pmax ,
+                                                                                                                                       6
+
+
+
+we can obtain a constant frequency vector ν f req ∈ Rc and its         used for stabilizing training) into the perception metrics, and
+every element νifreq can be calculated by                              CP is a hyper-parameter to weight the LPIPS loss and the
+                                                                       GAN loss. We emphasize that LPIPS is also configured
+                     νifreq = pmax −(2×i)/c ,                   (9)
+                                                                       to be spatial. The function A (·) denotes average pooling
+where c is the channel dimension, and i ∈ [0, 1, · · · , c/2 − 1].     calculation. During the training phase, we first set the realism
+Meanwhile, we normalize β and get                                      map to a constant matrix for the first 80% training steps, i.e.,
+                                                                       β = b·J, where b is randomly sampled from [0, βmax ]. For the
+                   βnorm = β/βmax × pmax .                     (10)    remaining 20% steps, every element βi,j of β is independently
+After that, we calculate the sine and cosine components of             sampled from [0, βmax ].
+sinusoidal embedding features, i.e.,
+                gsin = sin βnorm ⊙ ν freq ,
+                                                                            IV. CCT: C ONTENT-AWARE C ONTROL FOR DP
+                                                      (11)                      T RADE - OFF UNDER S CARCE BANDWIDTH
+                gcos = cos βnorm ⊙ ν freq ,
+                                         
+                                                                          In scenarios with scarce bandwidth, RD-optimized methods
+where ⊙ denotes element-wise product which is operated on
+                                                                       can not only lose all textures but also suffer from content loss.
+the broadcasted dimensions (c/2) × w × h. Finally, the global
+                                                                       To address this, beyond optimizing global appearance realism
+features g ∈ Rc×w×h are expressed as
+                                                                       with DPCT, we further explore the generative capabilities of
+             g = MLP (concatenate [gsin , gcos ]) ,            (12)    our framework to enhance content consistency under band-
+                                                                       width constraints.
+where MLP consists of two linear layers with c channels                   When user is interested in specific regions of an image,
+and ReLU activations, and concatenate denotes a concate-               it becomes unnecessary to transmit other regions in low
+nation operation between two features. To match multi-scale            distortion, allowing us to generate them completely to reduce
+features of gs , g are then up-sampled to g1 ∈ Rc×2w×2h ,              channel bandwidth costs. In this case, the GAN must generate
+g2 ∈ Rc×4w×4h , and g3 ∈ Rc×8w×8h .                                    realistic textures for entire image and consistent content for
+   For the generator gs , we replace its residual block with a         untransmitted regions to ensure a global satisfactory human
+conditioning residual bottleneck (Cond RB). In each Cond RB,           perception. To achieve this, we leverage the biased property
+we first align the corresponding global feature gi to match            of human perception within our RDP-JSCC framework to
+the channel dimensions of the intermediate features output by          develop a new model, called content-controllable transmis-
+each convolutional layer (each uses a linear layer), and then          sion (CCT). CCT is designed to completely generate user-
+add them together. We note that we only add a lightweight              uninteresting regions in the image from an instance label
+control module at the receiver, which allows us to decode              map while other regions are preserved with lossless contents.
+reconstructions for any realism map β from a single received           This reduces bandwidth cost proportionally, as fully generated
+signal in a one-shot transmission.                                     regions do not require any coding stream to transmit them.
+                                                                       Besides, extensive textures are generated over the entire image
+C. Spatial-Weighted Training Strategy                                  like DPCT; even though textures of the fully generated regions
+   To train our DPCT model, we develop a spatial-weighted              deviate more from the original, they can still serve the intended
+training strategy, where the optimization objective can adjust         purpose. For example, in video calls, the synthesized back-
+the perception penalty at different locations according to the         ground does not affect user perception. Furthermore, through
+realism map β. Specifically, We first pre-train a model without        user prompt feedback from the receiver to the sender, our
+SREM, optimized for the RD trade-off using (2). Based on               CCT can support an interactive and scalable JSCC system to
+the pre-trained model, we optimize the RDP trade-off by (13)           progressively satisfy the user perception needs.
+and (7) for the full DPCT model. Unlike a single value in
+(13), the weight of the perception term in (13) is a vector
+map. Therefore, the GAN loss should be weighted spatially.             A. Content-Aware Selective Transmission Paradigm
+Our discriminator D is well-suited to meet this requirement:              As shown in Fig. 4, the transmitter only transmits the coding
+it assigns penalties on image patches, essentially assessing           stream of certain regions of the image x ∈ R3×W ×H . This
+whether each patch in the reconstructed image is fake or               is specified by a pixel-level binary heatmap m ∈ R1×W ×H ,
+real. This means that the output of the discriminator, i.e.,           where “1” in m denotes that the corresponding image regions
+D (x, y) ∈ Rw×h , is also spatially aligned with the image.            will be transmitted, while the pixel of “0” denotes untrans-
+Thus, (6) is reformulated as                                           mitted regions. Additionally, a pixel-level instance label map
+                                                                      w ∈ R3×W ×H of x is available at the transceiver, with pixels
+  L′F = Ex∼px Eβ∼pβ MSE (x, x̂) +λ (−η log py (y))                     of the same RGB value in w belonging to the same instance,
+                        |       {z      } |       {z          }
+                        distortion metric   transmission rate          such as trees, sky, or people. We down-sample m to match
+                                                               (13)
+          + A β ⊙ (− log D (x̂, y) + CP LP (x, x̂)) ,
+                                                                      the spatial dimensions of y and reshape it to a binary mask
+                |                   {z                   }             vector my ∈ R1×l , where l = w × h. Subsequently, we use
+                       spatial-weighted perception metric
+                                                                       my to directly guide which embeddings in y′ (the output of
+where we use the MSE distortion metric and add the LPIPS               swin transformer) should be transmitted and which should be
+loss LP (a “perceptual” distortion metric based on networks,           dropped.
+                                                                                                                                                                                                                                                           7
+
+
+
+                                                                                                                                          ͧ3ͨ
+                                                                                                       CCEM
+         Input image                                                                                                                                                                              FC
+
+
+
+
+                                                                                                                                                                                                          Power Normalization
+                                                                                                                                                    Swin Transformer
+                                 Analysis                                                                                                                                                                                                  Discriminator
+                                Transform                                                                                                                                                         FC
+                                 Encoder
+                                                                                Latent features                                                                                                   FC
+
+                                                                                        Downsample                                                                                                FC                                          Concat
+                                                                                                             Reshape
+       Instance label map   Binary heatmap                                                                                    1 0 1      1 0 1                                                 VR-JSCC Encoder                               ConvB ↓2
+                                                                                                                            Binary mask vector
+                                                                                                                                                                                                                                Wireless
+                                                                                                                                                                                                                                Channel      ConvB ↓2
+         Reconstructed                        Conditional Generator
+            image
+                                                                                                                                                                                                                                             ConvB ↓2
+                             TConv ↑2
+
+
+                                                   TConv ↑2
+
+
+
+
+                                                                                            TConv ↑2
+
+
+                                                                                                               TConv ↑2
+                                                                                                                                                                                                          FC
+
+
+
+
+                                                                                                                          Concat
+                                        RBs
+
+
+                                                                 RBs
+
+
+
+
+                                                                                                       RBs
+                                                                              Attn
+
+
+
+
+                                                                                                                                   Attn
+
+
+
+
+                                                                                                                                                                         Swin Transformer
+                                                                                                                                                                                                        Padding 0                            ConvB ↓2
+                                                                                                                                                                                                          FC
+                                                                                                                                                                                                                                              Sigmoid
+                                                                                                                                                                                                          FC
+                                        ConvB ↓2
+
+                                                      ConvB ↓2
+
+                                                                   ConvB ↓2
+
+                                                                                 ConvB ↓2
+                             Conv
+
+
+
+
+                                                                                                                                          Reconstructed                                                 Padding 0
+                                                                                                                                          latent features                                                 FC
+
+       Instance label map                                                                                    Label features                                                                 VR-JSCC Decoder
+                            Label Map Encoder
+
+Fig. 4. The network architectures of the CCT model. We present the details of VR-JSCC to show how each embedding is guided by the instance label map
+w, and function (3) calculates the bandwidth cost for each embedding. Both the generator and the discriminator D condition on w, A label map encoder
+is used for conditioning the generator on w, and the discriminator D is also conditioned on w. ConvB represents a convolutional block, each includes one
+convolutional layer, one normalization layer, and one activation function. The instance label map is transmitted as a side information through the reliable coded
+transmission link (e.g. 5G digital link) to the receiver, and it takes about 3.3%∼4.5% of the total bandwidth cost for transmitting 1024 × 2048 resolution
+images in our CCT setting.
+
+   At the receiver, the noise channel vectors ŝi will be resized                                                                                                          Specifically, given py (y), the function (3) calculates the
+to the same dimension, then combined with 0-padding em-                                                                                                                bandwidth cost for each embedding, yielding the rate alloca-
+beddings to recover the latent features ŷ using JSCC decoder                                                                                                          tion vector k = [k1 , · · · , kl ]. Besides, we impose an additional
+fd . Next, we take w as the conditional information to provide                                                                                                         control: using my to control each embedding whether to be
+the location knowledge for the generator gs . Instead of being                                                                                                         transmitted. Guided by k and my , fe realizes a variable-
+fed directly into gs , w is sent to a label map encoder gl to                                                                                                          rate transmission for transmitting the latent representation y,
+extract the label features yw , which is then concatenated with                                                                                                        and fe incorporates a robust shared backbone based on Ne
+intermediate features of gs . During training, we also take w as                                                                                                       swin transformer blocks to learn the contextual dependencies
+conditional information for the discriminator D. Accordingly,                                                                                                          among yi . Meanwhile, we institute a collection of learnable
+the formulation of conditional GANs in the CCT model can                                                                                                               rate tokens, R = {r0 , rv1 , rv2 , · · · , rv2q }, to convey the CBR
+be expressed as                                                                                                                                                        information, where r0 is for untransmitted embeddings. After
+                                                                                                                                                                       added with R, y is fed into swin transformer blocks to obtain
+                 G ← gs (ŷ, gl (w)) , D ← D (x̂, w) .                                                                                                        (14)
+                                                                                                                                                                       y′. Additionally, light FC layers are utilized to compress each
+Notably, w can be obtained through readily available seg-                                                                                                              yi′ into a ki -dimensional channel symbol vector si . We utilize
+mentation models (such as SAM [27]) at the transmitter,                                                                                                                a set of 2q FC layers, each having unique output dimensions
+stored as a simple vector graphic, and transmitted via a                                                                                                               {v1 , v2 , . . . , v2q }, activated as needed.
+reliable coded transmission link (e.g., 5G coded transmission                                                                                                              At the receiver, FC blocks reshape noisy channel vectors
+[28]). This process consumes minimal additional bandwidth,                                                                                                             ŝi with various lengths to the same dimension, and missing
+independent of the image dimension. Thus, the bandwidth                                                                                                                positions are replaced by 0-padding embedding. Then they
+cost of w as a percentage of total bandwidth cost decreases                                                                                                            are added to the rate tokens and fed in parallel into Nd shared
+as image dimensions increase. For example, it constitutes                                                                                                              Transformer blocks to recover ŷ. For other modules in Fig. 4,
+only 3.3%∼4.5% of the total bandwidth cost for transmitting                                                                                                            We show the details of the generator gs and the discriminator
+1024 × 2048 resolution images in our CCT setting. When the                                                                                                             D, both of which are conditioned on w.
+image resolution increases to 2048 × 4096 pixels, it is only
+0.8%∼1.2%.
+                                                                                                                                                                       C. Masked Training Strategy
+                                                                                                                                                                          To optimize the CCT model, we adopt a masked training
+B. Content-Aware VR-JSCC Codec Implementation                                                                                                                          strategy, which aims to train the model to adapt well to any
+   In this subsection, we mainly present the details of our                                                                                                            combination of transmitted instances. Particularly, we first pre-
+content-aware VR-JSCC codec. Unlike the VR-JSCC in [8],                                                                                                                train an RD-optimized CCT model without any masking. In
+the bandwidth cost for each embedding is determined not only                                                                                                           the next phase, we use a fixed weight factor β to bias the
+by the entropy py (y) but also controlled by binary mask                                                                                                               model towards perception. Meanwhile, we randomly select
+vector my to further save bandwidth. In other words, our                                                                                                               only 25% of all instances to transmit but masking others
+content-aware VR-JSCC can transmit the contents specified                                                                                                              at every training step. After that, we can obtain a masked
+by the user.                                                                                                                                                           binary heatmap m to mask the MSE distortion (pixel-wise),
+                                                                                                                                                   8
+
+
+
+                                                 original image              can be negligible, as the prompts are texts and easy to be
+                   Request an image                                          compressed to an extremely tiny bandwidth cost.
+                                                                                2) Interactive and Scalable Properties: “Interactive” means
+       User                                Server
+                                                                             that multiple communications can be operated between the
+                                  Label Stream                               user and the server to progressively meet the user’s needs.
+                                    01010110                                 As shown in Fig. 5, the user first requests for an image,
+     All synth.
+                                                                             and the server then transmits the instance label map w.
+                                       Coding Stream                Car      The user can then generate a preliminary image from w,
+                                                                             which provides an approximation of the content but lacks the
+                                                                             most realistic textures, i.e., it allows the user to know the
+                                                                             approximate contents but is heavily damaged. Subsequently,
+                                       Coding Stream              People
+                                                                             the user sends prompts Pi to make the specific instances
+                                                                             clearer and sharper (realistic textures), while other areas are
+                                                                             also generated to enhance the overall perceptual quality. If the
+                                       Coding Stream              Building   desired subjective perception is not achieved, the user may
+                                                                             continue to communicate until satisfied.
+                                                                                Before responding to the first prompts, the server out-
+                                                                             puts the whole sequence of channel symbols s with-
+                                       Coding Stream               Road
+                                                                             out masking, then divides them into multiple transmis-
+                                                                             sion streams [s1 , s2 , · · · , sn ] corresponding to different in-
+                                       Coding Stream
+                                                                             stances. All streams are stored in the cache. In response to
+                                                                  Others     Pi (i = 1, 2, . . . ), the server retrieves si from the cache and
+                                                                             transmits it, and the user end reconstructs the image x̂i from
+                                                                             [w, ŝ1 , · · · , ŝi ]. This agrees with the “scalable” concept, where
+Fig. 5. Illustration about the process of an interactive and scalable JSCC
+                                                                             we first transmit only the label stream sw , and whether to pass
+system based on the CCT model.                                               coding streams si depends on the request for ever-increasing
+                                                                             instances of the user. The scalability of our CCT is facilitated
+which makes our model focus on improving the distortion of                   by the two facts that: (1) s is divisible in spatial dimensions;
+preserved instances while generating untransmitted instances.                (2) the user end can reconstruct an image from the combination
+Therefore (6) is reformulated as                                             of the label stream sw and any noisy coding streams ŝi .
+                          
+     L′′F = Ex∼px Em∼pm m · MSE (x, x̂) + λR                                                   V. E XPERIMENTAL R ESULTS
+                                                        (15)
+            + β (− log D (x̂, w) + CP LP (x, x̂)) ,                          A. Experimental Setup
+                                                                                1) Datasets: We train DPCT models for transmission using
+where both − log D (x̂, w) and LP (x, x̂) are scalars after
+                                                                             500,000 diverse natural images sampled from the Open Images
+average pooling calculation, and R = −η log py (y). Overall,
+                                                                             dataset [30] and we use the medium-size Kodak dataset [31]
+our masked training strategy draws on the advantages of mask
+                                                                             (24 images, 768 × 512 pixels) as well as the large-size
+learning [29], significantly enhancing the representational ca-
+                                                                             CLIC2022 dataset [32] (including validation set and test set,
+pacity and robustness of the entire model. Additionally, this
+                                                                             60 images, up to 2048 × 2048 pixels) for testing. During
+strategy helps the transmission system proportionally save
+                                                                             DPCT model training, images are randomly cropped into
+bandwidth cost as masked instances increase.
+                                                                             256 × 256 patches. CCT models are trained on the Cityscapes
+                                                                             dataset [33] (2975 training images, validation 500 images,
+D. CCT Model Enabled Interactive and Scalable JSCC                           2048 × 1024 pixels). We randomly select 20 validation images
+                                                                             to evaluate them and resize both training and validation images
+   Given a well-trained CCT model as above, we can further                   to 1024 × 512 pixels.
+realize an interactive and scalable JSCC transmission system                    2) Comparison Schemes: To evaluate our proposed
+by introducing the user prompt feedback mechanism, as shown                  methods, we conducted comparative analyses with estab-
+in Fig. 5.                                                                   lished transmission techniques across several categories. For
+   1) User Prompt Feedback Mechanism: Here, we consider                      separation-based image transmission schemes, our benchmarks
+a more specialized scenario where the user (the receiver)                    include an array of mainstream image codecs, both handcrafted
+can specify any contents to preserve or generate through a                   and learned, paired with 5G LDPC channel coding [28] (code
+simple prompt feedback to the server (the transmitter). For                  length 4096) and digital modulation in line with the 3GPP TS
+simplicity, instance labels such as car, road, or trees are                  38.214 standard. Specifically, the handcrafted image codecs
+used as prompts, and each image is segmented into different                  in consideration encompass BPG [13] (compliant with the
+instances. In this setting, the binary heatmap m can be easily               intra-frame coding scheme of the HEVC standard), and VTM
+constructed according to the instance label map w and the                    [15] (intra-frame coding scheme of the VVC standard, SOTA
+label prompt, and the bandwidth cost used for sending prompts                engineered image codec). The learned image codec assessed
+                                                                                                                                                   9
+
+
+
+
+Fig. 6. CBR-FID curves and CBR-PSNR curves on Kodak (the first row) and CLIC2022 (the second row). FID is a measure of perception (↓ indicates lower
+is better) and PSNR is a measure of distortion (↑ indicates higher is better). All experiments are taken over the AWGN channel at SNR = 10dB. For our
+DPCT model, we decode multiple distortion-perception points by varying β from 0 to 8 on the receiver side, using a single model per CBR.
+
+
+
+is HiFiC [34] (a former long-term SOTA in terms of RDP-                     our methods or “VTM + LDPC” method. We require raters
+optimized NICs). These three separation-based schemes are                   to vote for the image which looks visually more pleasing. We
+marked as “BPG + LDPC”, “VTM + LDPC”, and “HiFiC                            randomly pick 5 images from Cityscapes validation images.
++ LDPC”. In the category of end-to-end JSCC methods, we
+                                                                               4) Models Training Details: For both DPCT and CCT
+consider NTSCC+, the latest version of NTSCC, proposed in
+                                                                            models, we draw on the “ELIC” architectures [24] for ga
+[8], and PDJSCC, the first JSCC work for human perception
+                                                                            and gs , and each layer has 3 (Cond) RBs with the bottleneck
+under high-resolution images.
+                                                                            dimension N = 256. Besides, the VR-JSCC encoder and
+   3) Evaluation Metircs and User Study: To evaluate the dis-               decoder fe and fd are built on 4 Transformer blocks, i.e.
+tortion performance, we calculate the peak signal-to-noise ratio            Ne = Nd = 4. The channel dimension c of the latent space is
+(PSNR) of each pair of the original and reconstructed images.               set to 320. The quantization value set V consists of 26 values,
+To evaluate the perception performance, we use FID [35],                    which are evenly distributed from 1 to 320. The resulting rate
+which has been widely used in various tasks to assess human                 allocation vector k is reliably transmitted as additional side
+perceptual quality. Due to the large variation of resolutions in            information via a digital link (details can be found in [14]),
+our validation sets, we calculate FID on image patches rather               and the cost of this side information ranges from 1%∼7% of
+than on full images. We use a patch size of 128 pixels for                  the total bandwidth.
+Kodak resulting in 936 patches, and 256 pixels for CLIC2022                    For DPCT, we train models with different CBRs by setting
+resulting in 4290 patches. In addition, for the CCT model,                  λ = 0.1, 0.025, 0.005, 0.0015, and fixing LP = 1 and µ = 0.2.
+we also adopt the mean IoU [36] to evaluate the semantic                    We consider the AWGN channel at SNR=0, 5, 10dB and the
+consistency. We use “↓” and “↑” to mark that lower or higher                Rayleigh fading channel at SNR=10dB. During the RDP
+metrics represent better quality.                                           training phase, we first set the realism map to a constant
+   For a more subjective assessment on CCT, we use the “two                 matrix for the first 80% training steps, i.e., β = b · J, where
+alternatives, forced choice” test for quantitative assessment in            b is randomly sampled from [0, βmax ]. For the remaining
+our user study. The user study system we design shows human                 20% steps, every element βi,j is independently sampled from
+raters an interactive window, where the raters can drag the                 [0, βmax ] (βmax = 8 for SNR=10dB). Even though different λs
+slider to compare the original image with one produced from                 make different dynamics within equation (13), the DP trade-
+                                                                                                                                                       10
+
+
+
+
+Fig. 7. Results under variable channel states. Left two: CBR-FID performance and CBR-PSNR performance on CLIC2022 over the Rayleigh fading channel
+at average SNR = 10dB. Right two: SNR-CBR-PSNR performance and SNR-CBR-FID performance on CLIC2022 over the AWGN channel. For the digital
+systems, we adjust the channel coding rate and modulation order to ensure reliable transmission and the highest efficiency under different channel states.
+
+                                                                                    by a factor 10× in the last 50% steps. The batch size is set
+                                                                                    to 8 for DPCT and 1 for CCT. All the implementations were
+                                                                                    executed utilizing Pytorch.
+
+                                                                                    B. Results of DPCT
+                                                                                       In Fig. 6, we show the CBR-FID and CBR-PSNR curves
+                                                                                    over the AWGN channel at SNR = 10dB on Kodak (the first
+                                                                                    row) and CLIC2022 (the second row), respectively. For the
+                                                                                    digital communication systems, after traversing given combi-
+                                                                                    nations of LDPC coded modulation schemes, we exploit a 2/3
+                                                                                    rate (4096, 6144) LDPC code with 16-ary quadrature ampli-
+Fig. 8. The fine-grained spatial control of our DPCT over the DP trade-off.         tude modulation (16QAM) to ensure reliable transmission and
+The FID (right Y-axis) and PSNR (left Y-axis) results vary with the number of       the highest efficiency at SNR = 10dB. For our DPCT model,
+patches with βi,j = 8 on Kodak. We initialize the realism map to β = 0 and
+then incrementally set βi,j = 8 for each 16 × 16 image patch in sequential          we decode multiple distortion-perception points by varying
+rows until β = 8. For each Kodak image, the size of β is 32×48 or 48×32,            β from 0 to 8 on the receiver side. Our DPCT using the
+and there are 1536 patches in total.                                                global control mode achieves a remarkable performance in
+                       Global Control      Global Control      Spatial Control
+                                                                                    terms of distortion-perception: on the perception side (β = 8),
+                                                                                    our models dominate compared to all other methods, while
+                                                                                    outperforming significantly the generative methods PDJSCC
+                                                                                    and “HiFiC + LDPC” in PSNR. On the distortion side (β = 0),
+                                                                                    we show strong PSNR, reaching towards the SOTA learned
+   Original image
+                                                                                    and handcrafted MSE end-to-end methods, i.e., NTSCC+ and
+                                                                                    “VTM + LDPC”, while superior obviously to them in FID. We
+                                                                                    highlight that it means reconstructions by our DPCT models
+                                                                                    in the perception setting are much closer to the input than
+                                                                                    PDJSCC and “HiFiC + LDPC”, and we also realize greater
+                                                                                    appearance realism than NTSCC+ and “VTM + LDPC” in the
+   HiFiC + LDPC:       high perception      low distortion     customized DP        distortion setting.
+    CBR=0.056                            DPCT: CBR=0.0344                              In Fig. 7, we provide additional results under various
+Fig. 9. A visual demo of using the spatial control mode to improve the
+                                                                                    channel conditions. For the digital schemes, we adjust the
+visual quality of small faces. Both “HiFiC + LPDC” and DPCT (β = 8)                 channel coding rate and modulation order to ensure reliable
+generate rich details of the waves, but both over-distort the face, making          transmission and the highest efficiency. In two leftmost sub-
+it not so realistic. However, we can find that DPCT (β = 0) recovers the
+face faithfully, but it can not generate details for waves. Therefore, we set
+                                                                                    figures, we evaluate all schemes over the Rayleigh fading
+βi,j = 0 at the region of face and βi,j = 8 at the others to make the face          channel at SNR=10dB, and we assume perfect channel es-
+more faithful, while generating realistic details for other regions. We note that   timation, thereby the receiver is able to obtain an accurate
+the three images of DPCT are all decoded from the same ŷ.
+                                                                                    h and employs zero-forcing equalization. The results show
+                                                                                    that our DPCT model demonstrates competitiveness under the
+off depends only on β.                                                              Rayleigh fading channel similar to that under the AWGN
+   For CCT, we train two models over the AWGN channel at                            channel: its perception performance still surpasses all com-
+SNR = 10dB by setting λ = 0.1, 0.025, LP = 1, and µ = 0.2.                          parison schemes, and its distortion performance at β = 0 and
+However, we use a fixed weight factor β = 8 in (15). During                         β = βmax approaches that of “BPG + LDPC” and “VTM
+the training phase of DPCT and CCT, we adopt the Adam                               + LDPC” respectively. In the two rightmost subfigures, we
+optimizer [37] with a learning rate of 1 × 10−4 and decay it                        present the FID and PSNR results at a wide range of SNR and
+                                                                                                                                                           11
+
+
+
+            Original                    DPCT (       )                  HiFiC + LDPC                      NTSCC+                       VTM + LDPC
+
+
+
+
+          CBR / PSNR                  0.0164 (+0%) / 29.3            0.0180 (+10%) / 29.2           0.0265 (+60%) / 33.1           0.0235 (+43%) / 33.2
+
+
+
+
+          CBR / PSNR                 0.0308 (+0%) / 25.19           0.0478 (+55%) / 25.65           0.0553 (+80%) / 27.7           0.0558 (+81%) / 28.02
+Fig. 10. Visual comparison between the input images between the reconstructions from our DPCT (β = 8), “HiFiC + LDPC”, and NTSCC+. Images are
+transmitted over the AWGN channel (first row) and the Rayleigh channel (second row) at SNR = 10dB. For each image, we present two crops of it for detail
+comparison. Red numbers indicate the percentage of bandwidth cost increase compared to our DPCT (β = 8). Note that our models always have the smallest
+CBR. Overall, we show how our high-realism reconstructions closely match the input, more than the other two. In the first row (AWGN), we can see the
+stripes on the headband, finer details in the hair, and more texture around the eyes, which “HiFiC + LDPC” does not render well. In the first row (Rayleigh
+fading), even though “HiFiC + LDPC” uses 55% more the CBR, the details such as cat fur, stones, and the train are still not as realistic as ours, and are less
+close to the input. For NTSCC+, all the reconstructions are blurrier and lack details, even using 60% or 80% more the CBR.
+
+
+
+CBR over the AWGN channel. We can find that our DPCT                            of side-by-side visual comparison under the AWGN (first
+models also work well at variable SNR: there is still a clear                   row) and Rayleigh fading (second row) channel in Fig. 10.
+trade-off between the distortion setting (β = 0, blue face) and                 Compared to “HiFiC + LDPC”, the textures generated by
+perception setting (β = βmax · J, green face), and any region                   our DPCT are not only more realistic but also closer to the
+between these two faces is also achievable by adjusting β.                      input. For example, we reconstruct the parallel stripes on
+   To demonstrate fine-grained spatial control over the DP                      the headband instead of the meaningless spots produced by
+trade-off, we present the FID and PSNR results as the num-                      “HiFiC + LDPC”. This advantage is even more pronounced
+ber of patches with βi,j = 8 varies on Kodak in Fig. 8.                         on the Rayleigh fading channel: “HiFiC + LDPC” uses 50%
+Specifically, we initialize the realism map to β = 0 and then                   more than the CBR, yet its generated textures are still not
+incrementally set βi,j = 8 for each 16 × 16 image patch in                      as realistic as ours. As for NTSCC+, due to the lack of
+sequential rows until β = 8. The results show that as the                       distribution optimization, it tends to yield pixel-wise averages
+number of patches with βi,j = 8 increases, PSNR gradually                       of plausible solutions that are overly smooth and lack details,
+worsens while FID gradually improves. This indicates that our                   even when using 80% more the CBR than ours.
+realism map β can precisely guide the generator to produce
+realistic textures in the corresponding regions, achieving patch-               C. Results of CCT
+level control.                                                                     We first evaluate the interactive user-server process based
+   Based on the patch-level control, we can use the realism                     on CCT (described in IV-D2), where we report the FID and
+map β to control the DP trade-off for different contents.                       PSNR performance on Cityscapes dataset over the AWGN
+This addresses a drawback of traditional perception-optimized                   channel at SNR = 10dB in Fig. 11 (a) and (b). During this
+models: generating excessive details for content regions to                     process, the users can interact multiple times until they are
+which the human eyes are more sensitive, causing visually                       satisfied with the perceptual quality of received images. For
+noticeable discomfort, such as small faces (“HiFiC + LDPC”                      simplicity, we pick four typical instances (car, road, people,
+and DPCT (β = 8) in Fig. 9 overly distort faces). This issue                    building) as optional prompts for the user, and we restrict
+arises from applying the same optimization strategy to all                      a prompt to include only one instance. Thus, one user can
+contents. To mitigate this, we set βi,j = 0 in the facial region                have up to 4 interactions, and we evaluate the reconstructed
+and βi,j = 8 in other regions to make the face more faithful                    images in the transmissions for all the 15 combinations from
+while generating reasonable textures for other contents. For                    {car, road, people, building}. Besides, we evaluate the images
+small faces, low pixel consistency is more important [38].                      recovered from only instance label maps (masking all the
+   To intuitively demonstrate the remarkable perception perfor-                 instances) and all instances (not masking). In Fig. 11 (a) and
+mance (β = 8) of our DPCT model, we give some examples                          (b), each colorful data point denotes one combination, and
+                                                                                                                                                                                                                                                           12
+
+
+
+
+                                                            (a)                                                                                                               (b)                                                  (c)
+
+Fig. 11. (a) and (b): Evaluation for the interactive user-server process based on CCT, including the PSNR and FID performance on Cityscapes validation set
+at SNR = 10dB. Each colorful data point denotes one transmission for one combination from {car, road, people, building}, and the dashed line connecting
+two data points denote the added instance between two combinations. The left-most data point corresponds to the transmission for instance label maps (CBR
+= 0.0035 for 512 × 1024 resolution images). Inside the parentheses is the number of preserved instances. (c): Mean IoU in relation to CBR on Cityscapes
+dataset of CCT, DPCT (β), NTSCC+, and “VTM + LDPC”, and the gray dash line denotes the mIoU of the original images in Cityscapes validation set. We
+consider three situations for our CCT: (1) transmit road, building, car, and people; (2) transmit road, car, and people; (3) transmit building, car, and people.
+Others are generated.
+
+
+
+                        100%
+                                               Ci%yscapes                                                     100%
+                                                                                                                                         City%cape%                                 despite the images produced by “VTM + LDPC” consuming
+                                          Our CCT , CBR=0.0097                                                                    Our CCT , CBR=0.0154                              142% and 113% more CBRs compared to those produced by
+                        75%                                                                                   75%
+                                                                                                                                                                                    our models.
+ours %o VTM + LDPC
+
+
+
+
+                                                                                      our% to VTM + LDPC
+% of users preferri g
+
+
+
+
+                                                                                      % of u%er% preferring
+
+
+
+
+                        50%                                                                                   50%                                                                      In Fig. 13, we display some example images produced by
+                                    VTM + LDPC spe ds 142% more                                                            VTM + LDPC %pend% 113% more                              the CCT model at SNR = 10dB, where different instances
+                                    ba dwid%h cos% a d ours s%ill preferred                                                bandwidth co%t and our% %ti preferred
+                        25%                                                                                   25%
+                                                                                                                                                                                    are generated. Our CCT models manage to merge preserved
+                                      0.0097                   0.0235                                                           0.0154                 0.0328
+                         0%
+                          0.005   0.010    0.015    0.020   0.025
+                                           channel ba dwidth ratio
+                                                                     0.030    0.035
+                                                                                                               0%
+                                                                                                                0.010   0.015    0.020 0.025 0.030 0.035
+                                                                                                                                    channel bandwidth ratio
+                                                                                                                                                              0.040   0.045         and synthesized image content seamlessly. Furthermore, our
+                                                                                                                                                                                    CCT reduces CBR by up to 46% compared to the same
+Fig. 12. The results of the user study for CCT, and the transmitted instances                                                                                                       network without generation, with no significant impact on
+are fixed, including car, people, and building.                                                                                                                                     visual quality. When generating these contents with repetitive
+the dashed line connecting two data points denotes the added                                                                                                                        structures (e.g. sky, vegetation, and roads), the perceptual
+instance. From the results, as expected, the PSNR performance                                                                                                                       quality is essentially unimpaired. We can see that Fig. 13(d)
+of CCT is inferior compared to “VTM + LDPC”. However,                                                                                                                               is visually more pleasing than NTSCC+ and “VTM + LDPC”,
+the FID performance of all the CCT data points significantly                                                                                                                        while they use 110% and 118% more CBRs than Fig. 13(d).
+outperforms “VTM + LDPC” by a large margin. In addition,                                                                                                                                                  VI. C ONCLUSION
+we find that our FID performance is almost saturated when
+the number of preserved instances increases to 4.                                                                                                                                      This paper has introduced the first RDP jointly optimized
+   Figure 11 (c) presents the mean IoU in relation to CBR on                                                                                                                        generative JSCC framework designed to enhance perceptual
+the Cityscapes validation set for CCT models over the AWGN                                                                                                                          quality in human communications. By integrating a flexible
+channel at SNR = 10dB, along with the results obtained for the                                                                                                                      plug-in conditional GAN, the RDP-JSCC framework provides
+DPCT model, “VTM + LDPC” and NTSCC+. The quantitative                                                                                                                               high-fidelity image reconstructions while supporting control-
+evaluation of the semantic preservation ability demonstrates                                                                                                                        lable generative transmission. Based on this framework, we
+that CCT models uphold content consistency marginally better                                                                                                                        propose two RDP implementations: a realism map-assisted
+than DPCT. This suggests that the CCT effectively generates                                                                                                                         DPCT model that considers personalized DP preferences for
+lost contents while seamlessly integrating them with preserved                                                                                                                      bandwidth-affordable scenarios and an interest-oriented la-
+regions. Attributed to blocky and blurry artifacts, the “VTM                                                                                                                        bel map-assisted CCT model for bandwidth-scarce scenarios.
++ LDPC” and NTSCC+ are significantly inferior to those                                                                                                                              Comprehensive experiments demonstrate the superiority of our
+obtained by our CCT. Comparing the CCT themselves, we                                                                                                                               RDP-JSCC framework: our DPCT model significantly outper-
+find that the mean IoU decreases obviously when the preserved                                                                                                                       formed existing transmission methods in terms of perceptual
+instances change from {road, car, people} to {building, car,                                                                                                                        performance, and its distortion performance also approached
+people}, as building has more sophisticated structures.                                                                                                                             that of “VTM + LDPC” scheme in some cases. Additionally,
+   In Fig. 12, the user study results of our CCT models at                                                                                                                          our CCT model enabled a novel interactive and scalable image
+two CBRs on Cityscapes validation set at SNR = 10dB are                                                                                                                             transmission system, maintaining remarkable perceptual per-
+presented. Here, we only transmit car, people, and building.                                                                                                                        formance while saving transmission bandwidth considerably.
+In particular, we require that raters allow a certain degree of                                                                                                                                                 R EFERENCES
+distortion for the synthesized regions, as they are unimportant
+                                                                                                                                                                                    [1] D. Gündüz, Z. Qin et al., “Beyond transmitting bits: Context, seman-
+to the user. From the results, our CCT models with CBR =                                                                                                                                tics, and task-oriented communications,” IEEE J. Sel. Areas Commun.,
+0.009 and CBR = 0.0192 are preferred to “VTM + LDPC”,                                                                                                                                   vol. 41, no. 1, pp. 5–41, 2023.
+                                                                                                                                                              13
+
+
+
+
+(a) CCT, all generated, 0.0034 (–90%)       (b) CCT, –car, 0.0258 (–26%)           (c) CCT, –road, 0.0188 (–45%)          (d) CCT, –building, 0.0185 (–46%)
+
+
+
+
+   (e) CCT, –people, 0.0256 (–25%)          (f) CCT, all trans., 0.0341 (0%)         (g) NTSCC+, 0.039 (+14%)             (h) VTM + LDPC, 0.0404 (+19%)
+
+Fig. 13. Generating different instances for one image using our CCT model at SNR=10dB. In (b)-(e), the subtracted instance (e.g. “–car”) indicates the
+corresponding instance is generated (not transmitted), and we additionally generate the instances vegetation, sky, sidewalk, wall. Red number and blue number
+indicate the percentage of bandwidth cost increase and saving compared to the CCT (all transmitted) scheme.
+
+
+ [2] J. Dai, P. Zhang, K. Niu et al., “Communication beyond transmitting          [21] G. Zhang, J. Qian, J. Chen, and A. Khisti, “Universal rate-distortion-
+     bits: Semantics-guided source and channel coding,” IEEE Wireless                  perception representations for lossy compression,” Adv. Neural Inf.
+     Commun., vol. 30, no. 4, pp. 170–177, 2023.                                       Process. Syst., vol. 34, pp. 11 517–11 529, 2021.
+ [3] Y. Shi, S. Shao et al., “Excess distortion exponent analysis for semantic-   [22] E. Agustsson, D. Minnen et al., “Multi-realism image compression with
+     aware mimo communication systems,” IEEE Trans. Wireless Commun.,                  a conditional generator,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+     vol. 22, no. 9, pp. 5927–5940, 2023.                                              Recognit., 2023, pp. 22 324–22 333.
+ [4] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-          [23] J. Wang, S. Wang, J. Dai et al., “Perceptual learned source-channel
+     channel coding for wireless image transmission,” IEEE Trans. Cogn.                coding for high-fidelity image semantic transmission,” in GLOBECOM
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, 2019.                                  2022-2022 IEEE Global Commun. Conf. (GLOBECOM). IEEE, 2022,
+ [5] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel               pp. 3959–3964.
+     coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,     [24] D. He, Z. Yang, W. Peng et al., “ELIC: Efficient learned image
+     no. 1, pp. 178–193, 2020.                                                         compression with unevenly grouped space-channel contextual adaptive
+ [6] ——, “Bandwidth-agile image transmission with deep joint source-                   coding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2022,
+     channel coding,” IEEE Trans. Wireless Commun., vol. 20, no. 12, pp.               pp. 5718–5727.
+     8081–8095, 2021.                                                             [25] C. Li and M. Wand, “Precomputed real-time texture synthesis with
+ [7] Y. M. Saidutta, A. Abdi, and F. Fekri, “Joint source-channel coding               markovian generative adversarial networks,” in Computer Vision–ECCV
+     over additive noise analog channels using mixture of variational autoen-          2016: 14th European Conference, Amsterdam, The Netherlands, October
+     coders,” IEEE J. Sel. Areas Commun., vol. 39, no. 7, pp. 2000–2013,               11-14, 2016, Proceedings, Part III 14. Springer, 2016, pp. 702–716.
+     2021.                                                                        [26] A. Vaswani, N. Shazeer et al., “Attention is all you need,” Adv. Neural
+ [8] J. Dai, S. Wang et al., “Nonlinear transform source-channel coding for            Inf. Process. Syst., vol. 30, 2017.
+     semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 8,        [27] A. Kirillov, E. Mintun et al., “Segment anything,” in Proc. IEEE/CVF
+     pp. 2300–2316, 2022.                                                              Int. Conf. Comput. Vis., 2023, pp. 4015–4026.
+                                                                                  [28] T. Richardson and S. Kudekar, “Design of low-density parity check
+ [9] ——, “Toward adaptive semantic communications: Efficient data trans-
+                                                                                       codes for 5g new radio,” IEEE Commun. Mag., vol. 56, no. 3, pp. 28–34,
+     mission via online learned nonlinear transform source-channel coding,”
+                                                                                       2018.
+     IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2609–2627, 2023.
+                                                                                  [29] K. He, X. Chen et al., “Masked autoencoders are scalable vision
+[10] 3GPP, “NR; Physical layer procedures for data,” 3rd Generation Part-              learners,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.,
+     nership Project (3GPP), Technical Specification (TS) 38.214, 2018.                2022, pp. 16 000–16 009.
+[11] K. Yang, S. Wang et al., “WITT: A wireless image transmission                [30] A. Kuznetsova, H. Rom et al., “The open images dataset v4,” Int. J.
+     transformer for semantic communications,” in ICASSP 2023-2023 IEEE                Comput. Vis., pp. 1–26, 2020.
+     Int. Conf. Acoust., Speech, Signal Process. (ICASSP). IEEE, 2023, pp.        [31] “Kodak PhotoCD dataset,” URL: http://r0k.us/graphics/kodak/, 1993.
+     1–5.                                                                         [32] “CLIC 2022: Challenge on learned image compression,” URL:
+[12] ——, “SwinJSCC: Taming swin transformer for deep joint source-                     http://compression.cc, 2022.
+     channel coding,” IEEE Trans. Cogn. Commun. Netw., 2024.                      [33] M. Cordts, M. Omran et al., “The cityscapes dataset for semantic urban
+[13] F. Bellard, “BPG image format.” URL: https:// bellard.org/ bpg/ .                 scene understanding,” in Proc. IEEE/CVF Conf. Comput. Vis. Pattern
+[14] S. Wang, J. Dai et al., “Improved nonlinear transform source-channel              Recognit., 2016, pp. 3213–3223.
+     coding to catalyze semantic communications,” IEEE J. Sel. Top. Signal        [34] F. Mentzer, G. D. Toderici et al., “High-fidelity generative image
+     Process., 2023.                                                                   compression,” Adv. Neural Inf. Process. Syst., vol. 33, pp. 11 913–11 924,
+[15] B. Bross, J. Chen et al., “Developments in international video coding             2020.
+     standardization after avc, with an overview of versatile video coding        [35] M. Heusel, H. Ramsauer et al., “Gans trained by a two time-scale update
+     (VVC),” Proc. IEEE, vol. 109, no. 9, pp. 1463–1493, 2021.                         rule converge to a local nash equilibrium,” Adv. Neural Inf. Process.
+[16] Y. Blau and T. Michaeli, “The perception-distortion tradeoff,” in Proc.           Syst., vol. 30, 2017.
+     IEEE/CVF Conf. Comput. Vis. Pattern Recognit., 2018, pp. 6228–6237.          [36] G. Csurka, D. Larlus et al., “What is a good evaluation measure for
+[17] ——, “Rethinking lossy compression: The rate-distortion-perception                 semantic segmentation?.” in Bmvc, vol. 27, no. 2013. Bristol, 2013,
+     tradeoff,” in Int. Conf. Mach. Learn. PMLR, 2019, pp. 675–685.                    pp. 10–5244.
+[18] I. Goodfellow, J. Pouget-Abadie et al., “Generative adversarial nets,”       [37] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+     Adv. Neural Inf. Process. Syst., vol. 27, 2014.                                   arXiv preprint arXiv:1412.6980, 2014.
+[19] C. Cai, L. Chen, X. Zhang, and Z. Gao, “End-to-end optimized roi             [38] M. Li, S. Gao et al., “Content-oriented learned image compression,” in
+     image compression,” IEEE Trans. Image Process., vol. 29, pp. 3442–                Eur. Conf. Comput. Vis. Springer, 2022, pp. 632–647.
+     3457, 2019.
+[20] M. Mirza and S. Osindero, “Conditional generative adversarial nets,”
+     arXiv preprint arXiv:1411.1784, 2014.
+

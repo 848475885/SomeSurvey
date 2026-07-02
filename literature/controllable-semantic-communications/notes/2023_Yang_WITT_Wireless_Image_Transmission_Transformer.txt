@@ -1,0 +1,576 @@
+                                                 WITT: A WIRELESS IMAGE TRANSMISSION TRANSFORMER FOR SEMANTIC
+                                                                         COMMUNICATIONS
+
+                                                           Ke Yang ? , Sixian Wang? , Jincheng Dai? , Kailin Tan? , Kai Niu?† , Ping Zhang?
+                                                                              ?
+                                                                                  Beijing University of Posts and Telecommunications, Beijing, China
+                                                                                             †
+                                                                                                 Peng Cheng Laboratory, Shenzhen, China
+                                                                                                    Email: daijincheng@bupt.edu.cn
+arXiv:2211.00937v1 [cs.CV] 2 Nov 2022
+
+
+
+
+                                                                     ABSTRACT                                        CNN-based deep JSCC degrades rapidly and falls behind separation-
+                                                                                                                     based schemes. In this paper, we aim to break the aforementioned
+                                        In this paper, we aim to redesign the vision Transformer (ViT) as a
+                                                                                                                     limits and increase the representation capacity of deep JSCC mod-
+                                        new backbone to realize semantic image transmission, termed wire-
+                                                                                                                     els. To this end, we expect to introduce the global attention mech-
+                                        less image transmission transformer (WITT). Previous works build
+                                                                                                                     anism among all the image patches to extract high-level semantic
+                                        upon convolutional neural networks (CNNs), which are inefficient
+                                                                                                                     features of the source image for boosting a more efficient wireless
+                                        in capturing global dependencies, resulting in degraded end-to-end
+                                                                                                                     image transmission method. Inspired by the recent advances of vi-
+                                        transmission performance especially for high-resolution images. To
+                                                                                                                     sion Transformer [12] in the computer vision field, it is the very time
+                                        tackle this, the proposed WITT employs Swin Transformers as a
+                                                                                                                     to redesign the vision Transformer as a new backbone for wireless
+                                        more capable backbone to extract long-range information. Different
+                                                                                                                     image transmission.
+                                        from ViTs in image classification tasks, WITT is highly optimized
+                                        for image transmission while considering the effect of the wireless               In this paper, we propose a new JSCC framework named WITT,
+                                        channel. Specifically, we propose a spatial modulation module to             a high-efficiency wireless image transmission scheme that injects the
+                                        scale the latent representations according to channel state informa-         advantages of the vision Transformer into the deep JSCC framework.
+                                        tion, which enhances the ability of a single model to deal with var-         By integrating the Swin Transformer [13] backbone in our scheme, a
+                                        ious channel conditions. As a result, extensive experiments verify           considerable performance gain can be achieved, especially for high-
+                                        that our WITT attains better performance for different image res-            resolution images. Swin Transformer constructs hierarchical feature
+                                        olutions, distortion metrics, and channel conditions. The code is            maps in the latent semantic space and has linear computational com-
+                                        available at https://github.com/KeYang8/WITT.                                plexity to image size. Nevertheless, a naive change of the network
+                                                                                                                     backbone cannot obtain the expectable transmission performance
+                                            Index Terms— wireless image transmission, vision Trans-                  gain over the imperfect wireless channels. To tackle this, we de-
+                                        former, joint source and channel coding                                      sign a plug-in “Channel ModNet” inserted into Transformer to track
+                                                                                                                     the varying channel states. By this means, a single model can adapt
+                                                                1. INTRODUCTION                                      to various channel states without retraining, which makes sense for
+                                                                                                                     the practical use of WITT.
+                                             Recently, learning-based joint source-channel coding (JSCC)                  We verify the performance of the proposed method through ex-
+                                        for wireless data transmission emerges as an active research area            tensive experiments. We show that for image transmission, the pro-
+                                        in communication community [1–7]. By replacing the hand-crafted              posed WITT method can achieve significant performance on various
+                                        codecs with deep neural networks (DNNs), they achieve comparable             metrics such as PSNR and MS-SSIM [14]. Equivalently, the pro-
+                                        or even better end-to-end transmission performance than traditional          posed method can save bandwidth costs by achieving identical end-
+                                        separation-based source and channel coding schemes. In particular,           to-end transmission performance. As the source image resolution
+                                        for image transmission tasks, deep JSCC [3] and its variants [4,8–10]        increases, the performance superiority shows more clearly.
+                                        have competitive performance and much lower complexity com-
+                                        pared to advanced image codec (JPEG/JPEG2000/BPG) followed
+                                                                                                                                   2. THE PROPOSED WITT SCHEME
+                                        by capacity-approaching channel code family (such as low-density
+                                        parity-check (LDPC) coding [11]). Moreover, they can be agilely
+                                                                                                                     2.1. Overall Architecture
+                                        optimized for human visual perception [9], or downstream machine
+                                        tasks [10]. Therefore, it is promising for many latency-sensitive                 An overview of the WITT architecture for wireless image trans-
+                                        applications, such as XR and autonomous driving.                             mission is given in Fig. 1(a). An RGB image x ∈ RH×W ×3 is
+                                             Despite its great potential, previous works mainly build upon           first split into l1 = H   2
+                                                                                                                                                  × W 2
+                                                                                                                                                        non-overlapping patches. Each patch
+                                        CNNs [3, 4, 8]. Limited by the model capacity, it can be observed            can be viewed as a “token”. We thus have a sequence of tokens
+                                        that with the increase of the image dimension, the performance of the        (x1 , . . . , xl1 ) by putting these tokens in the order from top left to
+                                                                                                                     bottom right. After patch embedding, N1 Swin Transformer blocks
+                                             This work was supported in part by the National Natural Science Foun-
+                                        dation of China under Grant 92067202, Grant 62001049, Grant 62071058,        are applied on these l1 tokens [13]. Here, we refer to these N1 blocks
+                                        and Grant 61971062, Beijing Natural Science Foundation under Grant           together with the patch embedding layer as “stage 1”.
+                                        4222012, and the Fundamental Research Funds for the Central Universities.         Then, these tokens are fed to several stages where “stage i” is en-
+                                                                                                                                                                                                                                                                                                                                                              ...                                               ...
+
+                                                                                                                                                                                                                                                                                                                                                   patch embeddings                              patch embeddings
+
+
+
+
+                                                                   Swin Transformer Block
+
+
+
+
+                                                                                                                       Swin Transformer Block
+
+
+
+
+                                                                                                                                                                                 Swin Transformer Block
+
+
+
+
+                                                                                                                                                                                                                                     Swin Transformer Block
+ Source Space
+
+
+
+
+                      Patch Embedding
+
+
+
+
+                                                                                                                                                                                                                                                                     Channel ModNet
+                                                                                            Patch Merging
+
+
+
+
+                                                                                                                                                      Patch Merging
+
+
+
+
+                                                                                                                                                                                                          Patch Merging
+                                                                                                                                                                                                                                                                                                 Semantic Space
+                                                                                                                                                                                                                                                                                                                                                         Add                                              Add
+
+
+
+
+                                                                                                                                                                                                                                                                                           FC
+                                                          ...
+                                                                                                                                                                                                                                                                                                                                                        MLP                                               MLP
+
+
+                                                                                                                                                                                                                                                                                                  PowerNorm
+                                                                                                                                                                                                                                                                                                                                                         LN                                                LN
+
+
+
+
+                                                                                                                                                                                                                                                                                                                          Swin Transformer Block
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                          Swin Transformer Block
+                                              Stage 1                                                   Stage 2                                                   Stage 3                                             Stage 4
+ɑ Deep JSCC Encoder                                                                                                                                                                                                                                                                             Wireless Channel
+                                                                                                                                                                                                                                                                Channel State
+ɓ Deep JSCC Decoder                                                                                                                                                                                                                                                                                                                                      Add                                              Add
+                                                         Stage 4                                             Stage 3                                                   Stage 2                                             Stage 1
+                                                                   Swin Transformer Block
+
+
+
+
+                                                                                                                       Swin Transformer Block
+
+
+
+
+                                                                                                                                                                                 Swin Transformer Block
+
+
+
+
+                                                                                                                                                                                                                                     Swin Transformer Block
+                                                                                                                                                                                                                                                                                                                                                       W-MSA                                             SW-MSA
+
+
+
+
+                                                                                                                                                                                                                                                                     Channel ModNet
+                                        Patch Division
+
+
+
+
+                                                                                            Patch Division
+
+
+
+
+                                                                                                                                                      Patch Division
+
+
+
+
+                                                                                                                                                                                                          Patch Division
+
+
+
+
+                                                                                                                                                                                                                                                                                           FC
+                                                                                                                                                                                                                                                                                                                                                         LN                                                LN
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                              ...
+
+                                                                                                                                                                                                                                                                                                                                                   patch embeddings
+
+                                                                                                                                                (a)                                                                                                                                                                                                                             (b)
+
+Fig. 1. (a) The overall architecture of the proposed WITT scheme for wireless image transmission. (b) Two successive Swin Transformer
+Blocks. W-MSA and SW-MAS are multi-head self attention modules with regular and shifted windowing configurations, respectively.
+
+capsulated by a down-sampling patch merging layer and the follow-
+                                                                                                                                                                                                                                                                                                            (k )                                                     (k −1)                    (k −1)
+ing Ni Swin Transformer blocks. It is worth noting that the number                                                                                                                                                                                                                                     ŷi i = W-MSA(LN(yi i )) + yi i                                                                       ,                           (2a)
+                                                                                                                                                                                                                                                                                                             (k )           (k )       (k )
+of stages of the encoder fe should vary with the image resolution. In                                                                                                                                                                                                                                       yi i = MLP(LN(ŷi i )) + ŷi i ,                                                                                             (2b)
+general, images of higher resolution need more stages. As an exam-
+                                                                                                                                                                                                                                                                                                       (k +1)                                                              (k +1)                    (k +1)
+ple, Fig. 1(a) presents the four-stages version. After that, each patch                                                                                                                                                                                                                            ŷi i            = SW-MSA(LN(yi i                                                    )) + yi i                     ,                     (3a)
+embedding will be rescaled by a Channel ModNet according to the                                                                                                                                                                                                                                      (k +1)            (k +1)     (k +1)
+                                                                                                                                                                                                                                                                                                    yi i    = MLP(LN(ŷi i )) + ŷi i ,          (3b)
+channel state. Next, an FC layer is applied on these embeddings to                                                                                                                                                                                                                            (ki )      (ki )
+                                                                                                                                                                                                                                                                                      where ŷi and yi represent the output feature of the (S)W-MSA
+project it to C dimension. The channel bandwidth ratio is defined as
+                                                                                                                                                                                                                                                                                      module and the MLP module for block ki at stage i, respectively.
+R = C/(2 × 3 × 2n × 2n ), where n denotes the number of stage.
+                                                                                                                                                                                                                                                                                      W-MSA and SW-MAS are multi-head self attention modules with
+     Before transmitting y into the wireless channel, the power nor-                                                                                                                                                                                                                  regular and shifted windowing configurations. LN denotes the layer
+malization operation enables y to satisfy the average power con-                                                                                                                                                                                                                      normalization operation [12].
+straint. Then, the analog feature map is directly sent over the wire-
+less channel. In this paper, we consider the general fading channel
+model with transfer function ŷ = w(y; h) = h y + n, where                                                                                                                                                                                                                            2.3. Channel ModNet
+is the element-wise product, h denotes the channel state information
+(CSI) vector, and each component of the noise vector n is indepen-
+dently sampled from a Gaussian distribution, i.e., n ∼ N (0, σn2 Ik ),
+where σn2 is the average noise power.
+     The deep JSCC decoder fd has a symmetric architecture with                                                                                                                                                                                                                                                                                                                                Sigmoid
+                                                                                                                                                                                                                                                                                                     FC |
+
+
+                                                                                                                                                                                                                                                                                                                   FC |
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                    FC |
+
+
+                                                                                                                                                                                                                                                                                                                                                                                 FC |
+
+
+
+
+encoder fe . It consists of an FC layer, Channel ModNet, patch di-
+vision layers for up-sampling, and Swin Transformer blocks. It re-
+constructs input images from noisy latent representations ŷ. The
+                                                                                                                                                                                                                                                                                                            SM
+
+
+                                                                                                                                                                                                                                                                                                                          SM
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                         SM
+
+
+                                                                                                                                                                                                                                                                                                                                                                           SM
+
+
+
+
+training loss function of the whole system is
+                                                                                                                                                                                                                                                                                                                                                                                                           FC |
+                                                                                                                                                                                                                                                                                                                                                                                                FC |
+                                                                                                                                                                                                                                                                                                                                                                                        FC |
+
+
+
+
+                                                          min Ex∼px Eŷ∼pŷ|x [d (x, x̂)],                                                                                                                                                                    (1)
+                                                           φ,θ
+                                                                                                                                                                                                                                                                                                                                                                                  SM Module
+where ŷ = w (fe (x; φ); ν), x̂ = fd (ŷ; θ), φ and θ encapsulate all                                                                                                                                                                                                                 Fig. 2. The architecture of Channel ModNet. C4 and M denote the
+the network parameters of fe and fd , respectively.                                                                                                                                                                                                                                   number of channels in y 0 or ŷ 0 and the number of intermediates of
+                                                                                                                                                                                                                                                                                      FCN in smj respectively.
+2.2. Swin Transformer Block
+                                                                                                                                                                                                                                                                                           The proposed “Channel ModNet” is a plug-in module to modu-
+     As shown in Fig. 1(b), a Swin Transformer block is a sequence-                                                                                                                                                                                                                   late the output of several Transformer stages as shown in Fig. 1(a).
+to-sequence function that is built by replacing the standard multi-                                                                                                                                                                                                                   For different channel states, Channel ModNet can generate specific
+head self attention (MSA) module in a Transformer block with a                                                                                                                                                                                                                        deep JSCC codec functions to adapt to channel changes.
+module based on shifted windows [13]. The shift of the window par-                                                                                                                                                                                                                         In particular, the semantic feature map y 0 is fed into our Chan-
+tition between consecutive self attention layers provides connections                                                                                                                                                                                                                 nel ModNet to be modulated by the channel state information. Cor-
+among them, significantly enhancing modeling power.                                                                                                                                                                                                                                   respondingly, the received symbol ŷ is first processed by the FC
+     With the shifted window partitioning approach, consecutive                                                                                                                                                                                                                       layer and then sent into our ModNet. Thus, for both fe and fd , the
+Swin Transformer blocks ki and ki + 1 of “stage i” are computed as                                                                                                                                                                                                                    channel state is taken as a coding factor sent into Channel ModNet,
+              40
+                         CIFAR10 dataset, AWGN channel                            36
+                                                                                               Kodak dataset, AWGN channel                                   39
+                                                                                                                                                                         CLIC2021 dataset, AWGN channel                                 34
+                                                                                                                                                                                                                                               CIFAR10 dataset, Rayleigh channel                      32
+                                                                                                                                                                                                                                                                                                                  Kodak dataset, Rayleigh channel                                        CLIC2021 dataset, Rayleigh channel
+                         BPG + LDPC                                                           BPG + LDPC                                                                 BPG + LDPC                                                                BPG + LDPC                                                     BPG + LDPC                                                     35          BPG + LDPC
+              38         BPG + Capacity                                           35          BPG + Capacity                                                 38          BPG + Capacity                                                            Deep JSCC                                                      Deep JSCC                                                                  Deep JSCC
+                         Deep JSCC                                                            Deep JSCC                                                                  Deep JSCC                                                      32         WITT                                               31          WITT                                                                       WITT
+                                                                                  34                                                                         37                                                                                                                                                                                                                  34
+              36         WITT                                                                 WITT                                                                       WITT
+                                                                                                                                                             36                                                                                                                                       30
+                                                                                  33                                                                                                                                                    30                                                                                                                                       33
+
+
+
+
+                                                                                                                                                 PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                     PSNR (dB)
+  PSNR (dB)
+
+
+
+
+                                                                      PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                            PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                          PSNR (dB)
+              34                                                                                                                                             35
+                                                                                  32
+              32                                                                                                                                             34                                                                                                                                       29                                                                         32
+                                                                                  31                                                                                                                                                    28
+                                                                                                                                                             33                                                                                                                                                                                                                  31
+              30                                                                                                                                                                                                                                                                                      28
+                                                                                  30                                                                         32                                                                         26
+              28                                                                  29                                                                                                                                                                                                                                                                                             30
+                                                                                                                                                             31                                                                                                                                       27
+              26                                                                  28                                                                         30                                                                         24                                                                                                                                       29
+                    2         4       6      8       10      12                           2          4         6      8        10       12                           2          4         6      8        10       12                         2        4        6      8      10   12                         2          4         6      8        10       12                           2          4         6      8        10       12
+                                      SNR (dB)                                                                 SNR (dB)                                                                   SNR (dB)                                                              SNR (dB)                                                           SNR (dB)                                                                   SNR (dB)
+
+
+                                   (a)                                                                      (b)                                                                        (c)                                                                 (d)                                                                  (e)                                                                        (f)
+Fig. 3. (a)∼(c) PSNR performance versus the SNR over the AWGN channel. (d)∼(f) PSNR performance versus the SNR over the Rayleigh
+fast fading channel. The average CBR is set to 1/3, 1/16, and 1/16 for CIFAR10 dataset, Kodak dataset, and CLIC2021 dataset.
+
+                         CIFAR10 dataset, AWGN channel                            38           Kodak dataset, AWGN channel                                   40          CLIC2021 dataset, AWGN channel                                 31     CIFAR10 dataset, Rayleigh channel                  32              Kodak dataset, Rayleigh channel                                        CLIC2021 dataset, Rayleigh channel
+              40                                                                                                                                                                                                                                   BPG + LDPC                                                     BPG + LDPC                                                 34              BPG + LDPC
+                                                                                                                                                                                                                                        30         Deep JSCC                                      31              Deep JSCC                                                                  Deep JSCC
+              38                                                                  36                                                                         38                                                                                    WITT                                                           WITT                                                       33              WITT
+                                                                                                                                                                                                                                        29                                                        30
+              36                                                                                                                                                                                                                        28                                                                                                                                   32
+                                                                                  34                                                                         36                                                                                                                                   29
+                                                                                                                                                PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                    PSNR (dB)
+ PSNR (dB)
+
+
+
+
+                                                                     PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                           PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                         PSNR (dB)
+              34                                                                                                                                                                                                                        27                                                                                                                                   31
+                                                                                                                                                                                                                                                                                                  28
+              32                                                                  32                                                                                                                                                    26
+                                                                                                                                                             34                                                                                                                                   27                                                                         30
+              30                                                                                                                                                                                                                        25
+                                                   BPG + LDPC                     30                                        BPG + LDPC                                                                 BPG + LDPC                                                                                                                                                            29
+                                                   BPG + Capacity                                                           BPG + Capacity                                                             BPG + Capacity                   24                                                        26
+              28                                                                                                                                             32
+                                                   Deep JSCC                                                                Deep JSCC                                                                  Deep JSCC                        23                                                        25                                                                         28
+              26                                   WITT                           28                                        WITT                                                                       WITT
+                                                                                                                                                             30                                                                         22                                                        24                                                                         27
+                   0.1         0.2       0.3         0.4       0.5                 0.00       0.02       0.04    0.06    0.08    0.10    0.12                 0.00       0.02       0.04    0.06    0.08    0.10    0.12                     0.1       0.2       0.3        0.4    0.5                 0.00       0.02       0.04    0.06    0.08    0.10    0.12                 0.00       0.02       0.04    0.06    0.08    0.10    0.12
+                               channel bandwidth ratio                                                   channel bandwidth ratio                                                    channel bandwidth ratio                                             channel bandwidth ratio                                              channel bandwidth ratio                                                    channel bandwidth ratio
+
+
+
+                                   (a)                                                                      (b)                                                                        (c)                                                                 (d)                                                                  (e)                                                                        (f)
+Fig. 4. (a)∼(c) PSNR performance versus the CBR over the AWGN channel at SNR = 10dB. (d)∼(f) PSNR performance versus the CBR
+over the Rayleigh fast fading channel at SNR = 3dB.
+
+which modulates the intermediate feature maps to the wireless chan-                                                                                                                                                                     CNN-based deep JSCC scheme [3] and classical separation-based
+nel state.                                                                                                                                                                                                                              source and channel coding schemes. Specifically, we employ
+     The architecture of the Channel ModNet is depicted in Fig. 2.                                                                                                                                                                      the BPG [19] codec for compression combined with 5G LDPC
+It consists of 8 FC layers alternating with 7 SNR modulation (SM)                                                                                                                                                                       codes [11] for channel coding (marked as “BPG + LDPC”). Here,
+modules. SM module is a three-layered FC network, which trans-                                                                                                                                                                          we considered 5G LDPC codes with a block length of 6144 bits
+forms the input SNRj into an M -dimensional vector smj . Multiple                                                                                                                                                                       for different coding rates and quadrature amplitude modulations
+SM modules are cascaded sequentially in a coarse-to-fine manner.                                                                                                                                                                        (QAM). Moreover, the ideal capacity-achieving channel code is also
+The previous modulated features are fed into subsequent SM mod-                                                                                                                                                                         considered during evaluation (marked as “BPG + Capacity”).
+ules. The arbitrary target modulator can be realized by assigning a                                                                                                                                                                     Evaluation Metrics: We qualify the performance of the proposed
+corresponding SNR value. The mapping procedures from SNRj to                                                                                                                                                                            scheme using both the widely used pixel-wise metric PSNR and
+smj are                                                                                                                                                                                                                                 the perceptual metric MS-SSIM [20]. For PSNR, we optimized our
+                                                    (1)                                                                                                                                                                                 model by the mean square error (MSE) loss function. For MS-SSIM,
+                                          smj               = ReLU(W (1) · SNRj + b(1) ),                                                                                                              (4a)
+                                                                                                                                                                                                                                        the loss function is 1 − MS-SSIM.
+                                            (2)                (1)
+                                          smj = ReLU(W (2) · smj + b(2) ),                                                                                                                             (4b)                             Training Details: The number of stages in WITT varies with
+                                                                                                                               (2)                                                                                                      training image resolution. For low-resolution images, we use
+                                           smj = ReLU(W (3) · smj + b(3) ),                                                                                                                            (4c)                             2 stages with [N1 , N2 ] = [2, 4], [C1 , C2 ] = [128, 256], and
+where ReLU and Sigmoid are the activation functions, W and b are                                                                                                                                                                        the window size is set to 2. For large-resolution images, we
+the affine function parameters and their corresponding bias.                                                                                                                                                                            use 4 stages [N1 , N2 , N3 , N4 ] = [1, 1, 2, 6], [C1 , C2 , C3 , C4 ] =
+    Therefore, the coding SNRj is associated with a tensor smj in                                                                                                                                                                       [128, 192, 256, 320], and the window size is set to 8. During the
+each SM module. Then, the input feature will be fused with smj in                                                                                                                                                                       training process, we first train other parameters except for the Chan-
+the element-wise product, i.e.,                                                                                                                                                                                                         nel ModNet over the wireless channel. Then, the whole proposed
+                                                                                                                                                                                                                                        model is trained with Channel ModNet. We exploit the Adam op-
+                                                           output = input                                                        smj                                                                      (5)
+                                                                                                                                                                                                                                        timizer with a learning rate of 1 × 10−4 , and the batch size is set
+Here, input denotes the feature output from the previous FC layer,                                                                                                                                                                      to 128 and 16 for CIFAR10 dataset and DIV2K dataset, respec-
+and output is feeding into the next FC layer.                                                                                                                                                                                           tively. The WITT model is trained under the channel with a uniform
+                                                                                                                                                                                                                                        distribution of SNRtrain from 1dB to 13 dB.
+                                                 3. EXPERIMENTAL RESULTS
+3.1. Experimental Setup                                                                                                                                                                                                                 3.2. Result Analysis
+
+Datasets: We train and evaluate the proposed WITT scheme on im-                                                                                                                                                                              Fig. 3(a) ∼ 3(c) show the PSNR performance versus SNR over
+age datasets with different resolutions from 32x32 upto 2K. For low-                                                                                                                                                                    the AWGN channel, and Fig. 3(d) ∼ 3(f) present the Rayleigh
+resolution images, we use the CIFAR10 [15] dataset for training and                                                                                                                                                                     fast fading channel. For the WITT scheme, a single model can
+testing. For high-resolution images, we choose DIV2K [16] dataset                                                                                                                                                                       cover a range of SNR from 1dB to 13dB. For the “BPG + LDPC”
+for training, and use the Kodak [17] dataset and the CLIC2021 [18]                                                                                                                                                                      scheme, according to adaptive modulation and coding (AMC) stan-
+testset for testing. During training, images are randomly cropped                                                                                                                                                                       dard [21], we choose the best-performing configuration of coding
+into 256 × 256 patches.                                                                                                                                                                                                                 rate and modulation (the green dashed lines) under each specific
+Comparsion Schemes: We compare our WITT scheme with the                                                                                                                                                                                 SNR and plot the envelope. Compared to the CNN-based deep JSCC
+                                                                 Original                             Deep JSCC               BPG + LDPC              BPG + Capacity           Our WITT
+
+
+
+
+                         512 × 768                         R / PSNR (dB)                           0.0208 (0%) / 24.81      0.0237 (+14%) / 25.22 0.0217 (+4%) / 25.70     0.0208 (0%) / 26.16
+
+
+
+
+                         512 × 768                         R / PSNR (dB)                          0.0208 (0%) / 23.76       0.0209 (0%) / 23.37     0.0223 (+7%) / 24.49   0.0208 (0%) / 25.11
+Fig. 5. Examples of visual comparison under AWGN channel at SNR = 10dB. The first column, second column, and third to sixth column
+shows the original image, original patch, and reconstructions of different transmission schemes, respectively. The red number indicates the
+percentage of extra bandwidth cost compared to WITT.
+
+                        Kodak dataset, AWGN channel                                  CLIC2021 dataset, AWGN channel
+                                                                                                                                   Table 1. Inference speed and complexity comparison.
+               20                                                           22
+                                                                                                                                 method           inference time       FLOPs         #param.
+               18                                                           20
+                                                             MS-SSIM (dB)
+MS-SSIM (dB)
+
+
+
+
+                                                                                                                                 WITT                116ms             198G           28.2M
+                                                                            18
+               16
+                                                                                                                                ADJSCC               155ms             511G           16.2M
+                                                                            16
+               14                           BPG + LDPC                                                     BPG + LDPC
+                                            BPG + Capacity                  14                             BPG + Capacity
+                                            Deep JSCC                                                      Deep JSCC
+               12                           WITT                                                           WITT             MS-SSIM is a multi-scale perceptual metric that approximates hu-
+                                                                            12
+                    2      4     6      8     10      12                         2       4      6      8     10       12    man visual perception well. Fig. 6 shows the performance versus the
+                                 SNR (dB)                                                       SNR (dB)
+                                                                                                                            SNR at the AWGN channel with an average CBR = 1/16. For more
+Fig. 6. MS-SSIM performance versus the SNR at the AWGN chan-                                                                intuitive observation and comparison, it is converted into the form of
+nel, and the average CBR is set to 1/16.                                                                                    dB and the formula is MS-SSIM(dB) = −10log(1−MS-SSIM). Re-
+                                                                                                                            sults indicate that the proposed WITT model can outperform other
+                                                                                                                            competitors by a large margin. Compared to the PSNR results in
+scheme, we achieve much better performance for all SNRs. Due to
+                                                                                                                            Fig. 3, we can find that classical image transmission series are in-
+the enhanced model capacity by incorporating Transformers, it can
+                                                                                                                            ferior to the learning-based WITT because classical image compres-
+be seen that the performance gap increases with the growth of im-
+                                                                                                                            sion is designed to be optimized for squared error with hand-crafted
+age resolution. For the CIFAR10 dataset, WITT and deep JSCC
+                                                                                                                            constraints. Fig. 5 visualizes the reconstructions. It can be observed
+scheme significantly outperform the “BPG + LDPC” and “BPG +
+                                                                                                                            that WITT can achieve better visual quality with the same or lower
+Capacity”. However, for high-resolution images, the performance
+                                                                                                                            channel bandwidth cost. More specifically, it avoids block artifacts
+of CNN-based deep JSCC degrades a lot and falls behind to the
+                                                                                                                            and produces higher fidelity textures and details.
+separation-based scheme. Our proposed maintains a considerable
+                                                                                                                                 Table 1 lists the inference time, FLOPs, and model size (#param.)
+performance, especially in the low SNR regions.
+                                                                                                                            for WITT and ADJSCC [4] on Kodak dataset with a batch size of 1.
+     Fig. 4(a) ∼ 4(c) demonstrate the PSNR performance versus                                                               All experiments are carried out using a Linux server with a single
+the CBR over the AWGN channel, and Fig. 4(d) ∼ 4(f) show the                                                                RTX 3090 GPU. Benefiting from the high-efficient window-based
+Rayleigh fast fading channel. For the CIFAR10 dataset, our pro-                                                             attention mechanism, WITT spends 2.5x lower floating point of op-
+posed model can generally outperform deep JSCC for all CBRs.                                                                erations (FLOPs). Despite its larger model size, WITT can provide
+Meanwhile, our model achieves considerable gains compared to                                                                better performance and run faster than the ADJSCC.
+the existing classical separation-based schemes, especially on the
+Rayleigh channel. For high-resolution image datasets, our proposed
+                                                                                                                                                      4. CONCLUSION
+model outperforms the CNN-based deep JSCC scheme. Compared
+to “BPG + LDPC”, our WITT model achieves comparable or better                                                                   In this paper, we have proposed a high-efficiency scheme named
+performance and coding gain. Moreover, WITT cannot provide                                                                  WITT to improve the performance of wireless image transmission.
+comparable coding gain as that of the “BPG + Capacity” scheme,                                                              The WITT framework is built upon the Swin Transformer to extract
+i.e., the slope of the performance curve slows down with the in-                                                            long-term hierarchical image representation. To deal with various
+crease of SNR. Nevertheless, the performance of WITT approaches                                                             channel conditions, we have further proposed the Channel Mod-
+the “BPG + Capacity” in the low CBR regions and obviously im-                                                               Net to rescale the representations according to channel states au-
+proves compared to CNN-based deep JSCC.                                                                                     tomatically. Results have demonstrated that our proposed method
+    Besides, to more comprehensively evaluate the performance of                                                            outperforms the CNN-based deep JSCC scheme and the classical
+our model, we also train and test our model on the MS-SSIM metric.                                                          separated-based schemes.
+                       5. REFERENCES                                 [14] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Comparison
+                                                                          of full-reference image quality models for optimization of im-
+ [1] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Er-            age processing systems,” International Journal of Computer
+     mon, “Neural joint source-channel coding,” in International          Vision, vol. 129, no. 4, pp. 1258–1281, 2021.
+     Conference on Machine Learning. PMLR, 2019, pp. 1182–
+                                                                     [15] A Krizhevsky, “Learning multiple layers of features from tiny
+     1192.
+                                                                          images,” Master’s thesis, University of Tront, 2009.
+ [2] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint   [16] E. Agustsson and R. Timofte, “Ntire 2017 challenge on sin-
+     source-channel coding of text,” in 2018 IEEE International           gle image super-resolution: Dataset and study,” in 2017
+     Conference on Acoustics, Speech and Signal Processing. IEEE,         IEEE Conference on Computer Vision and Pattern Recognition
+     2018, pp. 2326–2330.                                                 Workshops, 2017, pp. 1122–1131.
+ [3] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint     [17] “Kodak PhotoCD dataset,” URL: http://r0k.us/grap
+     source-channel coding for wireless image transmission,” IEEE         hics/kodak/, 1993.
+     Transactions on Cognitive Communications and Networking,
+     vol. 5, no. 3, pp. 567–579, 2019.                               [18] “CLIC 2021: Challenge on learned image compression,” URL:
+                                                                          http://compression.cc, 2021.
+ [4] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues,
+                                                                     [19] F. Bellard, “BPG image format.,” URL: https://bellar
+     “Wireless image transmission using deep source channel cod-
+                                                                          d.org/bpg/.
+     ing with attention modules,” IEEE Transactions on Circuits
+     and Systems for Video Technology, 2021.                         [20] Z. Wang, E. P Simoncelli, and A. C. Bovik, “Multiscale struc-
+                                                                          tural similarity for image quality assessment,” in The Thrity-
+ [5] H. Xie, Z. Qin, G. Y. Li, and B. H. Juang, “Deep learning en-
+                                                                          Seventh Asilomar Conference on Signals, Systems & Comput-
+     abled semantic communication systems,” IEEE Transactions
+                                                                          ers. IEEE, 2003, vol. 2, pp. 1398–1402.
+     on Signal Processing, vol. 69, pp. 2663–2675, 2021.
+                                                                     [21] 3GPP, “NR; Physical layer procedures for data,” Technical
+ [6] J. Dai, P. Zhang, K. Niu, S. Wang, Z. Si, and X. Qin, “Com-          Specification (TS) 38.214, 3rd Generation Partnership Project
+     munication beyond transmitting bits: Semantics-guided source         (3GPP), 2018, Version 15.0.0.
+     and channel coding,” IEEE Wireless Communications, pp. 1–8,
+     2022.
+ [7] P. Zhang, W. Xu, H. Gao, K. Niu, X. Xu, X. Qin, C. Yuan,
+     Z. Qin, H. Zhao, J. Wei, et al., “Toward wisdom-evolutionary
+     and primitive-concise 6g: A new paradigm of semantic com-
+     munication networks,” Engineering, vol. 8, pp. 60–73, 2022.
+ [8] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-
+     channel coding of images with feedback,” IEEE Journal on
+     Selected Areas in Information Theory, vol. 1, no. 1, pp. 178–
+     193, 2020.
+ [9] J. Wang, S. Wang, J. Dai, Z. Si, D. Zhou, and K. Niu, “Per-
+     ceptual learned source-channel coding for high-fidelity image
+     semantic transmission,” Proceedings of IEEE Global Commu-
+     nications Conference, 2022.
+[10] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless im-
+     age retrieval at the edge,” IEEE Journal on Selected Areas in
+     Communications, vol. 39, no. 1, pp. 89–100, 2020.
+[11] T. Richardson and S. Kudekar, “Design of low-density parity-
+     check codes for 5G new radio,” IEEE Communications Maga-
+     zine, vol. 56, no. 3, pp. 28–34, 2018.
+[12] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn,
+     X. Zhai, T. Unterthiner, M. Dehghani, M. Minderer,
+     G. Heigold, S. Gelly, et al., “An image is worth 16x16 words:
+     Transformers for image recognition at scale,” arXiv preprint
+     arXiv:2010.11929, 2020.
+[13] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and
+     B. Guo, “Swin transformer: Hierarchical vision transformer
+     using shifted windows,” in Proceedings of the IEEE/CVF In-
+     ternational Conference on Computer Vision, 2021, pp. 9992–
+     10002.
+

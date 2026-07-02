@@ -1,0 +1,1779 @@
+1
+
+Disentangled Information Bottleneck guided
+Privacy-Protective JSCC for Image Transmission
+
+arXiv:2309.10263v1 [cs.CR] 19 Sep 2023
+
+Lunan Sun, Yang Yang, Member, IEEE, Mingzhe Chen, Member, IEEE, Caili Guo, Senior Member, IEEE
+
+Abstract—Joint source and channel coding (JSCC) has attracted increasing attention due to its robustness and high
+efficiency. However, JSCC is vulnerable to privacy leakage due
+to the high relevance between the source image and channel
+input. In this paper, we propose a disentangled information bottleneck guided privacy-protective JSCC (DIB-PPJSCC) for image
+transmission, which aims at protecting private information and
+achieving superior communication performance. In particular,
+we propose a DIB objective to compress the private information
+in public subcodewords and improve the reconstruction quality
+simultaneously. To optimize JSCC neural networks using the
+DIB objective, we derive a differentiable estimation based on
+variational approximation and the density-ratio trick. Additionally, we design a password-based privacy-protective algorithm
+that encrypts the private subcodewords, achieving joint optimization with JSCC neural networks. The proposed algorithm
+involves an encryptor for encrypting private information and
+a decryptor for recovering it at the legitimate receiver. A loss
+function is derived based on the maximum entropy principle for
+jointly training the encryptor, decryptor, and JSCC decoder to
+maximize eavesdropping uncertainty and improve reconstruction
+quality. Experimental results show that DIB-PPJSCC reduces
+eavesdropping accuracy on private information by up to 15%
+and decreases inference time by 10%.
+Index Terms—Information bottleneck, joint source and channel
+coding, image transmission, privacy protection.
+
+I. I NTRODUCTION
+Shannon’s information theory has laid the cornerstone of
+modern communication systems. In particular, Shannon’s separation theorem pointed out that separate source and channel coding (SSCC) is optimal for a memoryless source and
+channel when the latency, complexity, and code length are not
+constrained [1]. However, the assumption of potentially infinite
+code lengths is impractical in real-world scenarios, and thus
+SSCC is suboptimal for finite code lengths. Additionally, to
+achieve theoretically optimal performance, maximum likelihood detection methods must be used, which is generally NPhard [2], thus introducing high computational complexity and
+leading to unacceptable latency. Moreover, the envisioned sixth
+generation (6G) of wireless networks are expected to support
+a wide range of services and applications, such as ugmented
+reality, medical imaging and autonomous vehicles [3], which
+have strict latency requirement [4]. Therefore, SSCC may not
+be able to meet the demands of 6G.
+To address these challenges, joint source and channel coding
+(JSCC) has attracted increasing attention as a means to achieve
+reliable data transmission. In the initial stage, the studies
+on JSCC focus on coding schemes [5], [6] or performance
+analysis under ideal channel or source assumptions [7], [8].
+However, these hand-crafted coding schemes may require
+
+additional tuning. Recently, deep learning (DL) based approaches have been proposed for JSCC, driven by the rapid
+advancements in artificial intelligence (AI). Specifically, since
+images possess larger dimensions compared to speech and text
+data, there exists more information redundancy in images, and
+transmitting image data requires a higher rate than transmitting
+speech and text data. Therefore, DL-based JSCC system for
+image transmissions has attracted a plethora of prior art,
+and these works have exhibited appealing properties in terms
+of image restoration quality [9]–[11], flexibility [12], and
+robustness [13].
+However, the aforementioned studies mainly aim at improving the system performance, while ignoring the potential
+adversarial eavesdroppers and privacy leakage during image
+transmission. To enhance security, recent studies combined existing hand-crafted encryption schemes with DL-based JSCC
+to encrypt the transmitted information [14], [15]. However, the
+introduction of encryption schemes may lead to high computational complexity and a reduction of image reconstruction
+quality [16]. Some other studies on JSCC for image transmission have taken into account the protection of specific private
+information [17], [18] by adversarially training the JSCC
+encoder/decoder and the hypothetical eavesdropper to discard
+the private information in the codeword before transmission.
+However, the loss of private information can lead to significant
+degradation in terms of the image reconstruction quality.
+Therefore, a privacy-protective JSCC that not only safeguards
+private information but also achieves superior communication
+performance at the legitimate receiver deserves investigation.
+A. Related work and Motivations
+The existing works on DL-based JSCC for image transmission typically model the communication system as an
+end-to-end deep neural network (DNN)-based autoencoder
+(AE) [9]–[15], [17]–[19]. The seminal work [9] proposed an
+AE-based JSCC architecture called deep JSCC to minimize
+the reconstruction distortion, which outperforms conventional
+SSCC under the Gaussian channel and slow Rayleigh fading
+channel. Based on [9], the authors in [19] exploited the channel feedback and further improved the reconstruction quality
+of deep JSCC. To deal with the performance degradation
+caused by the variations of signal-to-noise ratios (SNRs),
+the authors in [12] employed a channel-wise soft attention
+network to adapt to varying channel conditions. The above
+studies concentrate on DL-based JSCC with the Gaussian
+channel and the Rayleigh channel. For the discrete channel
+such as the binary symmetric channel (BSC), the authors in
+
+2
+
+[10] designed a discrete variational autoencoder (VAE)-based
+deep JSCC model and maximized the mutual information
+between the source and noisy codewords. The authors in [13]
+further developed a JSCC model to maximize the mutual
+information between the source and the codewords based on
+[10]. Both works in [10] and [13] focused on minimizing the
+reconstruction distortion while ignoring the required rate. In
+contrast, the authors in [11] proposed an adaptive information
+bottleneck (IB) guided JSCC which jointly minimized the
+distortion and the rate, aligning with the rate-distortion theory.
+Even though interesting, these DL-based JSCC studies for
+image transmission aim at reducing reconstruction errors while
+ignoring the security and privacy aspects of JSCC. Recently,
+the authors in [14] considered the joint encryption and sourcechannel coding and placed the encryption module in front of
+the JSCC encoder. The raw images were directly encrypted
+using the discrete cosine transform (DCT) and then input into
+the JSCC encoder. The authors in [15] followed a different
+approach by positioning the encryption process behind the
+JSCC encoder and employing a key cryptographic scheme
+to encrypt the output of the JSCC encoder. In [14], all
+pixels in the raw image were encrypted, while in [15], all
+the extracted semantic information from the raw image was
+encrypted. Both methods encrypted the entire information of
+the raw image. In fact, the privacy protection goal is to protect
+specific private information rather than entire information
+mostly, and encrypting entire information can lead to extra
+computation and storage costs [20], [21]. Moreover, encrypting
+and decrypting entire information may result in a larger
+reconstruction error [22]. To tackle this issue, the work in [17]
+first considered the DL-based JSCC that aimed at protecting
+specific private information and proposed an adversarially
+trained JSCC with Gaussian channels. The main objective
+of their neural networks is minimizing the reconstruction
+distortion while minimizing the mutual information between
+the private information and the noisy codewords received by
+the eavesdropper. Furthermore, the authors in [18] introduced
+a VAE-based JSCC model for privacy protection with BSC.
+They jointly minimized the reconstruction distortion and the
+mutual information between the private information and the
+noisy codewords received by the eavesdropper, as well as
+maximizing the mutual information between the raw image
+and the codewords extracted by the JSCC encoder. However,
+these works discarded the information related to private information during image transmission. The legitimate receiver
+had no access to private information, thus severely damaging
+the reconstruction quality.
+To solve these challenges, we need to separate private
+information and public information and protect private information without altering public information. However, existing
+JSCC studies cannot distinguish between private and public
+information due to the inexplicability of neural networks. Recently, the authors in [23] introduced an information-theoretic
+principle for neural networks, termed IB, which extracts
+information relevant to target prediction while compressing
+information irrelevant to target prediction. Since IB gives
+an information-theoretic explanation for neural networks, it
+enables the neural networks to disentangle the target-relevant
+
+and the target-irrelevant information [24]. Therefore, we propose a novel disentangled IB guided privacy-protective JSCC
+(DIB-PPJSCC) that is able to disentangle private and public
+information. However, the information-theoretic principle in
+[23] is designed for image classification and does not consider
+communication over channel. Thus, it is not suitable for
+the considered scenario where images are transmitted over
+channel and recovered by the receiver. In addition, traditional
+encryption schemes are not suitable for protecting the private
+information extracted by the JSCC encoder. These schemes are
+designed for discrete inputs and are not easily integrated with
+JSCC neural networks, which generate continuous outputs.
+Thus, the encryption schemes hinder gradient backpropagation
+and fail to achieve the ideal optimal solution. Therefore, we
+need to design a new form of disentangled IB objective as well
+as a privacy-protective algorithm that can be jointly optimized
+with the JSCC neural networks so as to achieve a balance
+between privacy protection and reconstruction quality.
+
+B. Contributions
+The main contribution of this paper is a DIB-PPJSCC
+scheme for image transmission. The major contributions of
+the paper can be summarized as follows:
+We design a new form of DIB objective for privacyprotective JSCC that aims at maximizing the mutual
+information between the private subcodewords and the
+private information, minimizing the reconstruction distortion as well as minimizing the mutual information
+between the private and the public subcodewords. Thus,
+the new DIB objective enables privacy-protective JSCC
+to disentangle private and public information into private
+and public subcodewords which are independent of each
+other. To the best of the authors’ knowledge, this is
+the first work that introduces the IB principle to design
+privacy-protective JSCC for image transmission.
+• The mutual information used in the DIB objective is
+intractable for DNNs with high-dimensional representations. Therefore, we develop a new mathematically
+tractable and differentiable estimation of mutual information via variational approximations and density ratio trick
+by involving a discriminator and a classifier to estimate
+posterior probability. These derived estimations are used
+as the loss function of DIB-PPJSCC.
+• We propose a privacy-protective algorithm, which can be
+optimized with the JSCC neural networks jointly in order
+to protect the private subcodewords during transmission
+and recover private information at the legitimate receiver.
+Specifically, we apply a private information encryptor and
+decryptor to achieve a password-based protection process.
+To jointly optimize the encryptor, decryptor and JSCC
+decoder, we derive a novel loss function based on the
+maximum entropy principle, which aims at maximizing
+the randomness of the eavesdropping as well as improving the reconstruction quality.
+•
+
+We compare DIB-PPJSCC with state-of-the-art privacyprotective JSCC methods and the traditional separate scheme.
+
+3
+
+the decoder neural network parameters θ B , and the decoding
+process is expressed as DθB : RM → RN . The reconstructed
+image x̂ is
+x̂ = DθB (ŷ B ) = DθB (ηAB (Eφ (x))) .
+
+(4)
+
+Meanwhile, Eve estimates the private information s contained in x from the received codeword ŷ E using its own
+S
+neural network with parameter θE , DθE : RM → {0, 1} .
+S
+The estimated private information ŝ ∈ {0, 1} at Eve is
+Fig. 1. An illustration of the privacy-protective JSCC system with wiretap
+channel.
+
+Simulation results show that compared with baselines, DIBPPJSCC significantly reduces the reconstruction error, the
+eavesdropping accuracy on private information as well as the
+complexity.
+The rest of this paper is organized as follows. In Section
+II, the system model is described. The DIB objective for
+privacy-protective JSCC and its optimization are presented
+in Section III. The privacy-protective algorithm is introduced
+in Section IV. Extensive experimental results to verify the
+effectiveness of DIB-PPJSCC are provided in Section V.
+Finally, the conclusions are drawn in Section VI.
+
+(5)
+
+The goal of the considered system is to determine the
+encoder and decoder parameters φ and θ B that minimize
+the average reconstruction error between x and x̂ (distortion)
+while keeping the estimated private information ŝ at Eve
+different from the private information s in raw image (privacy).
+III. D ISTENGLED IB GUIDED JSCC
+This section first introduces the proposed DIB objective for
+the image transmission privacy-protective JSCC system. To
+obtain a tractable and differentiable form of DIB objective,
+we then derive the estimations on mutual information terms
+used in DIB objective.
+A. DIB objective
+
+II. S YSTEM M ODEL
+As shown in Fig. 1, we consider a communication scenario
+where a sender Alice transmits an image x ∈ RN with size
+N = H (Height) × W (Width) × C (Channel) to a legitimate
+receiver Bob, where R represents the set of real numbers. The
+image x contains a certain class of private information, which
+S
+is encoded into one-hot vector s ∈ {0, 1} , where S represents
+the number of classes of the private information. Alice encodes
+the image x into a codeword y ∈ RM , where M represents
+the length of the codeword y to be transmitted. The encoding
+function Eφ : RN → RM is parameterized by an encoder
+neural network with parameters φ, and the encoding process
+can be expressed as:
+y = Eφ (x) ,
+
+ŝ = DθE (ŷ E ) = DθE (ηAE (Eφ (x))) .
+
+(1)
+
+The codeword y is transmitted across a noisy channel ηAB :
+RM → RM . We consider the widely used Additive White
+Gaussian Noise (AWGN) wiretap channel model. The channel
+output noisy codeword ŷ B ∈ RM received by Bob is
+ŷ B = ηAB (y) = y + z B ,
+(2)
+
+2
+where z B ∼ N 0, σB
+I represents the additive white Gaussian noise at Bob. At the same time, an external eavesdropper
+Eve has access to the codeword y via an eavesdropping channel ηAE : RM → RM . The channel output noisy codeword
+ŷ E ∈ RM received by Eve is
+ŷ E = ηAE (y) = y + z E ,
+(3)
+
+2
+where z E ∼ N 0, σE
+I represents the additive white Gaussian noise at Eve.
+Bob decodes the noisy codeword ŷ B into reconstructed
+image x̂ ∈ RN . The decoding function is parameterized by
+
+The considered JSCC system is shown in Fig. 2, and it
+mainly consists of an encoder block Eφ (·) at Alice, a decoder
+block DθB (·) at Bob, two decoder blocks DθE (·) and D̄θ̄E at
+Eve, two channel blocks ηAB (·) and ηAE (·), and a privacyprotective algorithm block between Alice and Bob.
+In the considered system, DIB principle is adopted to guide
+JSCC to disentangle the codeword y into the public subcodeword and the private subcodeword which are independent with
+each other. Therefore, we divide the encoder block Eφ (·)
+into two components, the public encoder with parameters φt ,
+fφt : RN → RMt and the private encoder with parameters
+φs , fφs : RN → RMs , where Mt and Ms are the length of
+public subcodewords and private subcodewords, respectively.
+Denote the public subcodeword as y t ∈ RMt and the private
+subcodewords as y s ∈ RMs . We have M = Mt + Ms
+and y = concat [y t , y s ], where concat [·] represents the
+concatenation along the last axis. Then, the proposed DIB
+objective for separating y t and y s as well as minimize the
+reconstruction error is
+min Ep(x,s) (d (x; x̂)) + αI (y t ; y s ) − βI (y s ; s) , (6)
+
+φs ,φt ,θ B
+
+where α and β are hyperparameters, d (·) is the mean squared
+error (MSE) distortion of image transmission, I (y t ; y s ) is
+the mutual information between y t and y s , and I (y s ; s) is
+the mutual information between y s and s. The first term in
+(6) is used to minimize the image transmission error when
+separating y t and y s . The second term is used to compress
+the information between y s and y t thus encouraging the
+independence between y s and y t . The third term is used
+to preserve the information related to s in y s . By jointly
+minimizing I (y t ; y s ) and maximizing I (y s ; s), the private
+
+4
+
+Fig. 2. An illustration of our proposed DIB-PPJSCC. Orange: the disentangled encoder Eφ and the encryptor Tϕ at Alice. Green: the decryptor T−1
+ϕ and
+the decoder DθB at Bob. Blue: the classifiers DθE and D̄θ̄E at Eve. First, we train Eφ by optimizing the DIB objective. Then, we fix Eφ and train Tϕ ,
+T−1
+ϕ and DθB to defense against the eavesdropping of DθE and D̄θ̄E according to the PP algorithm.
+
+information in y t is removed, and the public information
+is stored only in y t . This ensures that y t that contains no
+private information, can be directly transmitted through the
+channel. The subsequent privacy-protective algorithm only
+needs to protect y s instead of the entire information. Since (6)
+compresses the private information in y t as well as reducing
+the reconstruction distortion, we refer (6) as DIB objective.
+However, (6) still cannot be applied to the privacy-protective
+JSCC systems, since the mutual information terms I (y t ; y s )
+and I (y s ; s) in (6) are mathematically intractable due to the
+unknown p (y t , y s ), p (y s ) and p (y t ). To circumvent this
+challenge, we next derive the variational lower bound on
+I (y s ; s) and estimation of I (y t ; y s ).
+B. Variational lower bound on I (y s ; s)
+Instead of maximizing the intractable true value of I (y s ; s),
+we maximize its lower bound since the marginal and joint
+distributions of y s and s are unknown. According to the
+definition of mutual information and entropy, we have [25]
+I (y s ; s) = H (s) − H (s|y s ) ≥ −H (s|y s )
+
+
+p (s|y s )
+= Ep(ys ,s) (log q (s|y s )) + Ep(ys ,s) log
+q (s|y s )
+|
+{z
+}
+DKL [p(s|y s )||q(s|y s )|]≥0
+
+≥ Ep(ys ,s) (log q (s|y s )) ,
+
+(7)
+where H(s) is the entropy of s, H(s|y s ) is the conditional
+entropy of s given y s , q (s|y s ) is the variational approximation
+of the true posterior p (s|y s ). The equivalence in the first row
+of (7) is in the sense of optimization,
+ignoring the constant
+
+p(s|y s )
+term H (s). Ep(ys ,s) log q(s|y ) in the second row of (7) is
+s
+the KL divergence between q (s|y s ) and p (s|y s ) and is larger
+than 0. Therefore, we have the third row of (7). We use a
+S
+classifier Cγ : RM → {0, 1} consists of neural network with
+parameters γ to express q (s|y s ). To make q (s|y s ) close to
+p (s|y s ), we optimize γ to minimize the cross entropy between
+
+Cγ (y s ) and p (s|y s ) so as to reduce the approximation error.
+The trained Cγ (y s ) is denoted as q (s|y s ). Since there exists
+a Markov chain s ↔ x ↔ y s , p (y s , s) = p (x, s) p (y s |x).
+The lower bound of I (y s ; s) is estimated as
+I (y s ; s) ≥ Ep(x,s) Ep(ys |x) [log Cγ (y s )] .
+
+(8)
+
+As we use a deterministic fφs , p (y s |x) can be regarded as a
+Dirac-delta function, i.e.,
+(
+1 if y s = fφs (x)
+p (y s |x) =
+.
+(9)
+0 else
+Replacing p (y s |x) in (8) with (9), we can calculate the
+variational lower bound on I (y s ; s) as
+
+I (y s ; s) ≥ Ep(x,s) log Cγ fφs (x) .
+(10)
+Then, we can use the variational lower bound in (10) as the
+loss function to optimize φs .
+C. Estimation of I (y t ; y s )
+By maximizing the variational lower bound on I (y s ; s),
+the private information can be converged in y s . It is
+also crucial to minimize I (y t ; y s ) to enforce independence between y s and y t and prevent any private information from leaking into y t . However, minimizing
+I (y t ; y s ) = DKL [p (y t , y s ) ||p (y t ) p (y s )] is intractable
+since both p (y t , y s ) and p (y t ) p (y s ) involve mixtures with
+a large number of components and are intractable. Therefore,
+instead of the true value of I (y t ; y s ), we estimate I (y t ; y s )
+and minimize the estimation.
+We first sample several y. Denote τ (y t , y s ) as the probability that y t is interdependent with y s . We have
+(
+0 if p (y t , y s ) = p (y t ) p (y s )
+τ (y t , y s ) =
+.
+(11)
+1 else
+
+5
+
+If y t and y s are sampled from p (y t ) p (y s ), τ (y t , y s ) = 0. If
+y t and y s are sampled from p (y t , y s ), τ (y t , y s ) = 1. Then,
+I (y t ; y s ) can be changed into [26]–[28]
+
+
+p (y t , y s )
+I (y t ; y s ) = Ep(yt ,ys ) log
+p (y t ) p (y s )
+
+
+(12)
+p (τ (y t , y s ) = 1)
+= Ep(yt ,ys ) log
+.
+p (τ (y t , y s ) = 0)
+According to (11), p (τ (y t , y s ) = 1)+p (τ (y t , y s ) = 0) = 1.
+(12) can be changed into
+
+
+p (τ (y t , y s ) = 1)
+. (13)
+I (y t ; y s ) = Ep(yt ,ys ) log
+1 − p (τ (y t , y s ) = 1)
+From (13), the estimation of I (y t ; y s ) requires only the
+probability p (τ (y t , y s ) = 1). However, directly estimating
+p (τ (y t , y s ) = 1) using Monte Carlo does not work due to
+high dimensions of y t and y s [26]. Hence, we employ the
+density-ratio trick [29] that involves a discriminator to approximate p (τ (y t , y s ) = 1). Suppose we have a discriminator
+Disε : RM → [0, 1]2 consists of neural network with parameters ε. The output of the discriminator Disε (y t , y s ) is treated
+as p (τ (y t , y s ) = 1). We obtains samples from p (y t , y s ) by
+first choosing x uniformly at random and then sampling from
+p (y t |x) and p (y s |x). We can also sample from p (y t ) p (y s )
+by first sampling from p (y t , y s ) and then permuting y t and
+y s along the batch axis. Having access to samples from both
+τ (y t , y s ) = 1 and τ (y t , y s ) = 0, we train the discriminator
+Disε to distinguish samples from p (y t , y s ) and p (y t ) p (y s ).
+The loss function of the discriminator is
+min log Disε (y t , y s ) + log (1 − Disε (ỹ t , ỹ s )) ,
+ε
+
+(14)
+
+where ỹ t and ỹ s are the results by randomly permuting y t
+and y s along the batch axis, respectively. By optimizing (14),
+the output of Disε will be forced to approach 0 when y t
+and y s are independent and approach 1 when y t and y s are
+dependent. Once the discriminator is properly trained, (13) can
+be expressed as
+
+
+Disε (y t , y s )
+I (y t ; y s ) ≈ Ep(yt ,ys ) log
+.
+(15)
+1 − Disε (y t , y s )
+Overall, by replacing I (y s ; s) and I (y t ; y s ) in (6) with
+(10) and (15), respectively, we can calculate the DIB objective
+for image transmission privacy-protective JSCC. However, we
+experimentally observe that when simultaneously training fφs
+and fφt , the neural networks will converge to a degenerated
+solution, where all information is encoded in y s , whereas
+y t holds almost no information. To prevent this undesirable
+solution, we adopt a two-step training strategy [30]. In the first
+step, fφs and the classifier Cγ are jointly trained using (10) as
+loss function to extract y s that contains private information.
+In the second step, fφs is fixed. fφt and DθB are jointly
+trained using (15) as loss function, followed by alternating
+training with Disε using (14) as loss function in order to
+enable y t to capture public information. By training fφs in
+the first step, and fixing the values of its parameters in the
+second step, fφs has a limited capacity since it ignores most
+of the public information and thus enabling fφt to extract
+
+Algorithm 1 Disentangled IB guided JSCC
+Input: Dataset (X ); SNR of ηAB (·) SNRAB ; Hyperparamdisten
+eters α and β; Maximum Disentangled Epochs Emax
+;
+cls
+Maximum Classification Epochs Emax ;.
+Output: Learned DθB , DθB , fφs , fφt , Disε and Cγ .
+(0)
+1: Initialize fφs and Cγ : φs , γ ← φs , γ (0) .
+cls
+2: for t = 1, 2, . . . , Emax do
+3:
+Sample B samples fromP
+Dataset: (x, s) ∼ p (x, s);
+4:
+Calculate LC (φs , γ) = log Cγ fφs (x) ;
+x
+
+5:
+Update φs , γ ← arg min LC (φs , γ);
+6: end for
+(0)
+(0)
+7: Initialize fφt , Dθ B and Disε : φt , θ B , ε ← φt , θ B , ε(0) .
+disten
+8: for t = 1, 2, . . . , Emax
+do
+P
+9:
+Calculate LB (θ B ) = d (x, x̂p )
+
+LA (φt ) =
+10:
+11:
+12:
+
+x
+
+P
+Disε (y t ,y s )
+d (x, x̂p ) + α log 1−Dis
+ε (y ,y )
+x
+
+t
+
+s
+
+Update θ B ← arg min LB (θ B );
+Update φt ← arg min LA (φt );
+Calculate P
+Ldis (ε) = log (Disε (y t , y s ) (1 − Disε (ỹ t , ỹ s )));
+x
+
+13:
+Update ε ← arg min Ldis (ε);
+14: end for
+
+public information. The whole training procedure of the DIB
+objective for JSCC is summarized in Algorithm 1.
+Even though the public subcodewords y t can be directly
+transmitted through the channel, the private subcodewords y s
+still needs protection. Directly deleting y s will severely damage the image transmission quality due to the loss of private
+information. Therefore, in section V, we further propose a
+privacy-protective algorithm that mitigates privacy leakage at
+Eve and recovers the private information at Bob.
+IV. P RIVACY- PROTECTIVE ALGORITHM
+This section first proposes a password-based protection
+process that converts the private subcodewords into secure
+representations. Then, we introduce the optimization objective
+of the privacy-protective algorithm and derive its differentiable
+form. Next, we describe the whole training process of DIBPPJSCC that combines the DIB objective and the passwordbased privacy-protective algorithm.
+
+A. Password-based privacy-protective process
+The password-based privacy-protective process is shown in
+the dashed box on the right side of Fig. 2. Assume Alice and
+Bob share a legitimate-user-specific password p ∈ ZLen , 0 <
+p ≤ plevel , where Len is the length of p, and plevel is a positive
+integer greater than 0. To protect y s from being eavesdropped
+by Eve during transmission, an encryptor consist of fullyconnected (FC) layer, Tϕ : R(Ms +Len) → RMs is applied
+after the encoder at Alice to encrypt y s into protected private
+subcodeword y s ∈ RMs . The raw private subcodeword y ps is
+
+6
+
+first concatenated with p and then input into Tϕ to obtain the
+protected subcodeword y ps :
+y ps = Tϕ (concat [y s , p]) ,
+
+(16)
+
+Since y t contains little private information, we do no protection on y t . y t and y ps are directly concatenated to obtain the
+protected codeword y p = concat [y t , y ps ] ∈ RM , which is
+transmitted by Alice through the channel. The noisy protected
+codeword ŷ pB that Bob received is
+ŷ pB = ηAB (y p )
+= ηAB (concat [y t , y ps ])
+h
+i
+= concat ŷ t,B , ŷ ps,B ,
+
+(17)
+
+ŷ t,B is concatenated with ȳ ps,B to obtain the recovered codeword at Bob ȳ pB ∈ RM
+
+h
+i
+concat ŷ t,B , ȳ ps,B .
+(19)
+ȳ pB = T−1
+ϕ
+According to (4), ȳ pB is then input into the decoder to
+reconstruct the input image as
+(20)
+
+Meanwhile, the adversarial eavesdropper Eve has access to
+the protected codeword y p through the channel between Alice
+and Eve. The noisy protected codeword received at Eve ŷ pE is
+
+(21)
+
+where ŷ t,E = ηAE (y t ) ∈ RMt is the noisy public subcodeword received at Eve, and ŷ ps,E = ηAE (y ps ) ∈ RMs is the
+noisy protected private subcodeword received at Eve. Eve will
+try to estimate s from ŷ pE . The estimation is
+ŝpE = DθE (ŷ pE ) .
+
+(0)
+
+(0)
+
+P
+Calculate LB (θ B ) = d (x, x̂p ),
+x
+P
+p,p 
+LT (ϕ) = d (x, x̂p ) − α1 H (ŝ) − β1 H s̄E 1 ,
+x
+P
+p,p 
+LE θ E , θ̄ E =
+log DθE (ŷ pE ) D̄θ̄E ȳ E 1 ;
+x
+
+7:
+Update θ E , θ̄ E ← arg min LE θ E , θ̄ E ;
+8:
+Update θ B , ϕ ← arg min (LB (θ B ) + LT (ϕ));
+9: end for
+
+Denote the codeword
+that
+h
+i Eve uses to estimate s as
+p,p
+p,p
+ȳ E 1 = concat ŷ t,E , ȳ s,E 1 . The private information estimated by Eve in this situation is
+p,p
+p,p 
+(24)
+s̄E 1 = D̄θ̄E ȳ E 1 ,
+S
+
+where D̄θ̄E : RM → {0, 1} is neural networks with parameters θ̄ E and structure similar to that of DθE (·). The goal of
+the password-based privacy-protective process is to minimize
+p,p
+the amount of private information in ŷ pE and ȳ E 1 while
+maximizing the amount of private information in ȳ ps,B . This
+ensures that Bob can successfully recover all the necessary
+private and public information, while Eve remains incapable
+of eavesdropping the private information.
+B. Loss function
+
+ŷ pE = ηAE (y p )
+= ηAE (concat [y t , y ps ])
+h
+i
+= concat ŷ t,E , ŷ ps,E ,
+
+(0)
+
+θ B , ϕ, θ E , θ̄ E ← θ B , ϕ(0) , θ E , θ̄ E .
+2: for t = 1, 2, . . . , Emax do
+3:
+Sample B samples from Dataset: (x, s) ∼ p (x, s);
+4:
+Sample B passwords p ∼ U (1, plevel );
+5:
+Sample B passwords p1 ∼ U (1, plevel ) guessed by Eve;
+6:
+
+where ŷ t,B = ηAB (y t ) is the noisy public subcodeword
+received at Bob, and ŷ ps,B = ηAB (y ps ) is the noisy protected
+private subcodeword received at Bob. At Bob, a decryptor
+(Ms +Len)
+consists of FC layer, T−1
+→ RMs is applied
+ϕ : R
+to recover the private information. Similarly, ŷ ps,B is first
+concatenated with p and then input into T−1
+ϕ . The recovered
+noisy private subcodeword at Bob, ȳ ps,B ∈ RMs is
+
+h
+i
+p
+ȳ ps,B = T−1
+concat
+ŷ
+,
+p
+.
+(18)
+s,B
+ϕ
+
+x̂p =DθB (ȳ pB ) .
+
+Algorithm 2 PP-algorithm
+Input: Dataset (X ); SNR of ηAB SNRAB ; SNR of ηAE
+SNRAE ; Hyperparameters α1 and β1 ; Trained fφs (·) and
+fφt (·), Maximum Epochs Emax ; Password level plevel .
+Output: Learned DθB , Tϕ , T−1
+ϕ , Dθ E and D̄θ̄ E .
+−1
+1: Initialize Dθ B , Tϕ , Tϕ , Dθ E and D̄θ̄ E :
+
+(22)
+
+In addition, we consider a severe scenario where Eve has
+access to the structure and parameters of T−1
+ϕ (·) as well as
+the structure of password, but has no access to the actual
+correct password p. In this situation, Eve randomly guesses
+the password p shared by Alice and Bob and tries to recover
+the raw private subcodword y s . Assume the password guessed
+by Eve is p1 . The recovered noisy private subcodeword at Eve,
+p,p
+ȳ s,E 1 ∈ RMs is
+
+h
+i
+p,p
+p
+ȳ s,E 1 = T−1
+concat
+ŷ
+,
+p
+.
+(23)
+1
+s,E
+ϕ
+
+To guarantee the image transmission quality as well as the
+privacy-protection effectiveness, we design an optimization
+objective for the aforementioned protection process as
+min Ep(x,s) (d (x, x̂p ))
+θB
+
+min Ep(x,s) (d (x, x̂p )) + α1 DKL (ŝ||U)
+ϕ
+
+p,p
++ β1 DKL s̄E 1 ||U
+
+p,p
+max I (ŷ pE , s) + I ȳ E 1 , s
+
+(25)
+
+θ E ,θ̄ E
+
+where α1 and β1 are hyperparameters, U is the uniform
+distribution. The optimization objective comprises three terms
+associated with different components: the decoder at Bob
+DθB , the encryptor Tϕ and the decryptor T−1
+ϕ , the private
+information estimator DθE and D̄θ̄E at Eve. The first line in
+(25) optimizes DθB to minimize the reconstruction distortion
+between the raw image x and the reconstructed image x̂p at
+Bob. This term enables the enhancement of the reconstruction
+quality. The second line in (25) also optimizes Tϕ and
+T−1
+ϕ to reduce the reconstruction distortion so as to ensure
+
+7
+
+reconstruction quality while protecting private information.
+Additionally, this line optimizes Tϕ and T−1
+ϕ to minimize the
+KL divergence between ŝ and uniform distribution, as well
+p,p
+as the KL divergence between s̄E 1 and the uniform distrip,p
+bution. By doing so, the estimations based on ŷ pE and ȳ E 1
+p,p1
+p
+become more randomized, and ŷ E and ȳ E contain minimal
+information about s [20]. According to the definition of KL
+p,p
+divergence, DKL (ŝ||U) and DKL s̄E 1 ||U are calculated as
+
+ 
+p (ŝ)
+DKL (ŝ||U) = Ep(ŝ) log
+p (U)
+= log S − H (ŝ)
+!!
+(26)
+p,p 
+
+p s̄E 1
+p,p1
+DKL s̄E ||U = Ep(s̄p,p1 ) log
+E
+p (U)
+p,p1 
+= log S − H s̄E
+.
+Since S is a fixed constant that cannot
+ be optimized, minimizp,p
+ing DKL (ŝ||U) and DKL s̄E 1 ||U is equal to maximizing
+p,p
+the entropy of ŝ and s̄E 1 , thus increasing the uncertainty of
+the private estimations made by Eve. The third line in (25)
+p
+optimizes D
+ θE and D̄θ̄E at Eve to maximizes I (ŷ E , s) and
+p,p1
+I ȳ E , s . This optimization goal aims to improve Eve’s
+eavesdropping accuracy on private information s. When Alice
+and Bob engage in alternating training with Eve, they can
+obtain stronger privacy protection performance. However, the
+mutual information used in (25) cannot
+be calculated due to
+p,p 
+the unknown p (ŷ pE ) and p ȳ E 1 . We use DθE and D̄θ̄E to
+p,p
+estimate I (ŷ pE ,s) and I ȳ E 1, s . Let q (s|ŷ pE ) = DθE (ŷ pE )
+p,p1
+p,p1
+. Similar to (10), we have
+= D̄θ̄E ȳ E
+and q s|ȳ E
+I (ŷ pE , s) ≥ Ep(x,s) (log DθE (ŷ pE ))
+
+p,p 
+p,p
+I ȳ E 1 , s ≥ Ep(x,s) log D̄θ̄E ȳ E 1 .
+
+(27)
+
+By substituting (26) and (27) into (25), we can derive the
+differentiable form of the proposed loss function. The training
+procedure of PP algorithm is summarized in Algorithm 2.
+C. Training Process of DIB-PPJSCC
+The architecture of the DIB-PPJSCC system is shown in
+Fig. 2. The encoder first extracts the information of the input
+image as features according to feature extractors. Then, to
+control the length of y t and y s , FC layers are used to turn the
+features into vectors y t and y s . At Bob, ŷ B is first passed into
+an FC layer and then upsampled to the same dimension as x
+to obtain x̂. At the output layer of DθB , an activation function
+is used to transform the pixel values in x̂ to [0, 1]. We then
+multiply x̂ by 255 and round the resulting values to ensure that
+the pixel values are discrete and fall between [0, 255]. At Eve,
+ŷ E is directly input into DθE and D̄θ̄E . The softmax layer [31]
+is applied to calculate the estimated probabilities at the output
+layers of DθE and D̄θ̄E . The whole training process of DIBPPJSCC consists of two stages. In the first stage, the encoder
+Eφ and the classifier Cγ are trained to disentangle y t and y s
+following Algorithm 1. In particular, fφs and Cγ are jointly
+trained to improve the classification accuracy of y s for Vd1
+epochs, and then fφt is trained to extract y t for Vd2 epochs.
+In the second stage, fφs and fφt are fixed. DθB , Tϕ , T−1
+ϕ Dθ E
+and D̄θ̄E are jointly trained using (25) as loss function for Vp
+epochs to achieve the password-based privacy-protection.
+
+V. E XPERIMENTAL R ESULTS
+In this section, we provide extensive experiments to validate
+DIB-PPJSCC. We compare the image transmission and privacy
+protection performance of DIB-PPJSCC with various baselines
+by assessing the reconstruction error and privacy eavesdropping accuracy as key metrics. Furthermore, we employed visualizations of the extracted codewords and recovered images
+to illustrate the disentanglement and privacy protection capabilities of DIB-PPJSCC, and the robustness and complexity of
+DIB-PPJSCC are also discussed.
+A. Experimental settings
+1) Datasets: The experiments are carried on two datasets
+including the colored MNIST [32] and the UTK Face dataset
+[33] to account for different image sizes and colors.
+The colored MNIST dataset: The raw MNIST dataset
+comprises grayscale images of handwritten digits ranging from
+“0” to “9”, consisting of a train set with 60000 samples
+and a test set with 10000 samples. We extend it into the
+colored MNIST dataset by randomly and uniformly assigning
+ten different colors to the handwritten digits. The generated
+colored MNIST dataset is RGB, and we set the color of
+the handwritten digits as the private information s. The raw
+images are normalized to the range of [0, 1] by dividing 255.
+The UTK Face dataset: It has a total of 23705 facial
+images of individuals from different age groups, ethnicities,
+and genders without the specification of the train and test
+dataset. We set ethnicity to the private information s. The
+dataset provides annotations for five categories of ethnicity:
+White, Black, Asian, Indian, and an ”Other” category including individuals from various other ethnic backgrounds. We
+randomly select 19000 images for the train set, while the
+remaining images are allocated to the test set. The raw images
+sized at 200 × 200 × 3, are first cropped into 128 × 128 × 3
+and then normalized to the range of [0, 1] by dividing 255.
+2) Baselines: We compare DIB-PPJSCC with the following
+four baselines to illustrate the advantages of different components of DIB-PPJSCC over existing studies.
+A. Deep JSCC [9] + randomly discard: The model
+consists of a JSCC encoder and decoder that are jointly trained
+to reduce the image transmission error without considering
+privacy protection. During testing, part of the codewords
+extracted by the JSCC encoder is randomly discarded, while
+the remaining codewords are transmitted.
+B. DIB-JSCC + private codewords discard: The JSCC
+encoder and decoder in this method are trained to reduce
+the DIB objective following Algorithm 1. After training, the
+extracted codewords consist of private codewords and public
+codewords. During testing, this model only transmits the
+public codewords and does not transmit the private codewords.
+C. Adversarial JSCC [17], [18]: This model is composed
+of a JSCC encoder followed by a JSCC decoder at Bob
+for image reconstruction and a classifier at Eve for private
+information classification. The JSCC encoder and decoder
+are jointly trained to reduce the reconstruction error as well
+as increase the uncertainty of privacy classification at Eve.
+
+8
+
+TABLE I
+E AVESDROPPING ACCURACY UNDER DIFFERENT SNRAE .
+
+-15dB
+
+-10dB
+
+Acc under different SNRAE
+-5dB
+0dB
+5dB
+10dB
+
+15dB
+
+Deep JSCC + randomly discard
+DIB-JSCC + private codewords discard
+Adversarial JSCC
+DIB-PPJSCC
+
+0.125
+0.0781
+0.125
+0.0938
+
+0.1797
+0.1328
+0.1328
+0.1171
+
+0.2656
+0.1093
+0.1849
+0.1249
+
+0.4141
+0.125
+0.2969
+0.1302
+
+0.4297
+0.1172
+0.3125
+0.1406
+
+0.5313
+0.1172
+0.3672
+0.1823
+
+0.5703
+0.1406
+0.3647
+0.1953
+
+Deep JSCC + randomly discard
+DIB-JSCC + private codewords discard
+Adversarial JSCC
+DIB-PPJSCC
+
+0.2968
+0.2344
+0.2344
+0.2188
+
+0.3593
+0.2657
+0.3438
+0.25
+
+0.4063
+0.375
+0.3906
+0.3281
+
+0.5469
+0.3906
+0.4063
+0.375
+
+0.5938
+0.4063
+0.4063
+0.375
+
+0.6093
+0.4375
+0.4375
+0.3906
+
+0.6094
+0.4375
+0.4844
+0.4063
+
+Datasets
+
+Methods
+
+Colored MNIST
+
+UTK face
+
+Fig. 3. Visual comparison between baselines and DIB-PPJSCC on the colored
+MNIST dataset.
+
+Fig. 4. Visual comparison between separate scheme and the proposed schemes
+on the UTK face dataset.
+
+Meanwhile, a classifier at Eve is trained to improve the
+eavesdropping accuracy on the private information.
+D. Separate scheme: This baseline employs separate source
+coding, encryption, and channel coding followed by modulation. We choose the better portable graphics (BPG) [34] for
+source coding, the advanced encryption standard (AES) [35]
+with block and key size of 128 bits for encryption, the lowdensity parity-check (LDPC) [36] codes with 12 rate for channel coding, and the 4-ary quadrature amplitude modulation
+(QAM) for modulation.
+
+3) Implementation details: To make a fair comparison, the
+settings and structure of neural networks used in DIB-PPJSCC
+are the same as those used in baselines. We choose α1 and
+β1 from the set {0.5, 1, 1.5, 2, 2.5} × 105 , plevel from the set
+{4, 8, 16, 32, 64, 128} that provide the best performance. Vd1 ,
+Vd2 and Vp are set to be 30, 50 and 50, respectively.
+For the colored MNIST dataset, the private encoder is
+composed of 3 FC layers with dimensions 2352 → 512 →
+128 → Ms , while the public encoder consists of 3 FC
+layers with dimensions 2352 → 512 → 128 → Mt . The
+decoder is constructed with three FC layers of dimensions
+M → 256 → 512 → 2352. The optimizers of encoders
+and the decoder are Adam optimizers with a learning rate
+of 0.001 and betas of (0.9, 0.999). For the UTK face dataset,
+the private encoder consists of a convolutional neural network
+(CNN) with 5 convolutional layers, followed by an FC layer
+with dimensions of 512 × 8 × 8 → Ms . The public encoder
+consists of a CNN with 5 convolutional layers followed by an
+FC layer with dimensions of 512 × 8 × 8 → Mt . The decoder
+is constructed with an FC layer of dimension M → 512×8×8
+followed by 5 transposed convolutional layers. The optimizers
+of encoders and the decoder are Adam optimizers with a
+learning rate of 0.0002 and betas of (0.5, 0.999).
+For baseline A and C, the JSCC encoder and decoder are
+jointly trained for Vd2 epochs. For baseline B, the JSCC
+encoder and decoder are trained similarly to DIB-PPJSCC
+following Algorithm 1, and then y s is fixed to 0, and DθB is
+trained to reduce the reconstruction distortion for 50 epochs.
+Classifiers consisting of 2 FC layers with dimensions M →
+16 → S are trained for 5 epochs to detect the private information from codewords extracted by the encoder. For baseline D,
+the MLP classifier is trained using the QAM codewords. The
+accuracy of these classifiers in classifying private information
+serves as a metric of defense against eavesdroppers.
+B. Performance comparsion
+Table I shows the private information classification accuracy, i.e., the eavesdropping accuracy of baselines A, B, C
+and DIB-PPJSCC under various SNRAE . plevel is fixed to
+128, and Len used for the colored MNIST and the UTK
+face datasets are 16 and 10, respectively. The reconstruction
+MSE of all methods is kept close on both datasets, except
+for baseline B on the colored MNIST dataset. The MSE of
+
+9
+
+(a) t-SNE on y t with respect to color. (b) t-SNE on y t with respect to dig- (c) t-SNE on y s with respect to color. (d) t-SNE on y s with respect to digits.
+its.
+Fig. 5. t-SNE visualization of public subcodewords y t and private subcodewords y s extracted by DIB-PPJSCC for test set of the colored MNIST dataset.
+The neural network is trained when SNRAB = 30dB. Each color represents a different class.
+
+(a) t-SNE of y s when SNRAE = 5dB.
+
+(b) t-SNE of y p
+s when SNRAE = 5dB.
+
+(c) t-SNE of y p
+s when SNRAE = 15dB.
+
+Fig. 6. t-SNE visualization of the private subcodeword y s and the protected private subcodeword y p
+s extracted by DIB-PPJSCC for test set of the UTK
+dataset. The neural network is trained when SNRAB = 30dB, SNRAE = 5dB, 15dB. Each color represents a different class of race.
+
+baseline B is approximately 0.01 larger than other methods
+on the colored MNIST dataset due to the failure of baseline
+B in achieving a lower MSE. From Table I, we can observe
+that the eavesdropping accuracy of DIB-PPJSCC is lower than
+all other methods on the UTK face dataset. On the colored
+MNIST dataset, the eavesdropping accuracy of DIB-PPJSCC
+is lower than baseline A and C and close to baseline B with
+a smaller MSE. These observations validate the effectiveness
+of DIB-PPJSCC. From Table I, we can also observe that the
+eavesdropping accuracy of baseline B on the colored MNIST
+dataset is close to random guess (about 0.1 for 10 categories)
+and exhibits minimal variation when SNRAE increases. This
+is because the color information can be completely separated
+from other information, and the public codewords on the
+colored MNIST dataset in baseline B contain no information
+about color, thus leading to eavesdropping accuracy close to
+that of a random guess.
+Figure 3 shows the visual reconstructions of baselines A,
+B, C and DIB-PPJSCC on the colored MNIST dataset when
+SNRAB = 30dB and SNRAE = 5dB. From Fig. 3, we can observe that the reconstruction error and the visual performance
+of DIB-PPJSCC are both superior to all other baselines. For
+example, in the third column of the fifth row of Fig. 3, the
+color can be clearly identified as yellow, while in the third
+column of other rows, the color may be identified as green or
+
+white. Hence, DIB-PPJSCC can protect private information
+and recover images more precisely. From Fig. 3, we can
+also observe that the reconstruction error of baseline B is
+much larger than those of other methods even though baseline
+B has the lowest eavesdropping accuracy. This is because
+baseline B discards all color-relevant information in private
+codewords, and the color of all recovered images is similar,
+shown as in the third row of Fig. 3. We can also observe
+that although losing color-relevant information, baseline B
+can keep consistent with the raw image in other information
+such as the value of handwritten digits. For example, in the
+second column of the third row of Fig. 3, we can identify
+the digit as 7 although the color is different from that in the
+corresponding raw image. This makes baseline B valuable
+when the security requirements are strict since baseline B
+is able to thoroughly discard the private information without
+losing public information in the recovered images.
+Figure 4 shows the visual reconstructions of baselines D, C
+and DIB-PPJSCC on the UTK face dataset when SNRAB =
+30dB and SNRAE = 5dB. Since we choose the password
+Len
+uniformly from [1, . . . , plevel ] , the information amount of
+the password used by DIB-PPJSCC is
+Hp = Len × logp2level (bits) .
+
+(28)
+
+plevel and Len are set to be 256 and 16 to keep the consistency
+
+10
+
+TABLE II
+E AVESDROPPING ACCURACY UNDER DIFFERENT SNRAB AND SNRAE .
+Datasets
+
+-15dB
+
+Acc under different test SNRAE
+-10dB
+-5dB
+0dB
+5dB
+10dB
+
+15dB
+
+-15dB
+5dB
+15dB
+
+0.125
+0.1406
+0.125
+
+0.2109
+0.2344
+0.1484
+
+0.2578
+0.2422
+0.2031
+
+0.3828
+0.3125
+0.2813
+
+0.5313
+0.3125
+0.3281
+
+0.5938
+0.375
+0.3203
+
+0.6797
+0.4922
+0.3647
+
+DIB-PPJSCC
+
+-15dB
+5dB
+15dB
+
+0.0938
+0.1172
+0.1172
+
+0.1485
+0.125
+0.1016
+
+0.1485
+0.1641
+0.1328
+
+0.1641
+0.1563
+0.1328
+
+0.2656
+0.1328
+0.1406
+
+0.3906
+0.3203
+0.1875
+
+0.5938
+0.4688
+0.1953
+
+Adversarial JSCC
+
+-15dB
+5dB
+15dB
+
+0.2344
+0.3438
+0.3906
+
+0.4375
+0.4375
+0.4531
+
+0.4688
+0.4375
+0.4531
+
+0.5
+0.5469
+0.5
+
+0.4844
+0.4063
+0.5
+
+0.5
+0.4844
+0.6094
+
+0.6094
+0.4844
+0.4844
+
+DIB-PPJSCC
+
+-15dB
+5dB
+15dB
+
+0.2188
+0.2967
+0.3218
+
+0.3437
+0.2813
+0.3594
+
+0.3593
+0.3438
+0.4219
+
+0.4688
+0.4531
+0.4688
+
+0.4531
+0.375
+0.3906
+
+0.5
+0.4375
+0.4844
+
+0.5312
+0.4844
+0.4063
+
+Methods
+
+Train SNRAE
+
+Adversarial JSCC
+Colored MNIST
+
+UTK face
+
+between the passwords used by baseline D and DIB-PPJSCC
+(both 128 bits). According to Shannon’s separation theorem
+[1], the necessary and sufficient condition for reliable communication over a channel with capacity C is that the transmitted
+rate R is smaller than its upper bound Rmax , i.e.,
+R ≤ Rmax =
+
+M
+C.
+N
+
+(29)
+
+(1+SNR)
+
+For AWGN channel, there is C = log2
+. Then, we calculate the maximum achievable rate, Rmax as the compression
+level utilized by the BPG encoder. The eavesdropping accuracy
+of the baseline D is around 0.35 under different SNRAE due
+to the randomness in the QAM codewords generated through
+AES encryption scheme. The eavesdropping accuracy of DIBPPJSCC ranges from 0.2166 to 0.4219 and is higher than that
+of the separate scheme only when SNRAE = 10, 15dB. From
+Fig. 4, we can observe that even though the reconstruction
+MSE of baseline D is slightly lower than baseline C and
+DIB-PPJSCC, the key facial information such as eye and nose
+positions is damaged severely. This is because the BPG breaks
+down the adjacent pixels of the raw image into multiple blocks
+for compression without considering the semantic relationship
+between pixels, thus potentially damaging the key information.
+In addition, even though the eavesdropping accuracy of DIBPPJSCC is slightly higher than that of baseline D when
+SNRAE = 10dB, 15dB, baseline D exhibits the cliff effect
+when SNRAB decreases due to the thresholding effects of the
+channel code [9]. Consequently, the recovered images cannot
+be opened due to damage to the BPG header. Hence, the DIBPPJSCC has better reconstruction and robustness performance
+than the separate scheme.
+C. Qualitative analysis
+Figure 5 shows the 2-dimensional projections of the public
+subcodewords y t and private subcodewords y s extracted by
+DIB-PPJSCC for test set of the colored MNIST dataset.
+In particular, we utilize t-Distributed Stochastic Neighbor
+Embedding (t-SNE) [37] to project the codewords into a 2dimensional space. We also show the labels of each image
+
+with regard to the private information, i.e., color, and the
+public information, i.e., digits, to make it easier to investigate
+the clusters. From Fig. 5(a) and 5(b), we can observe that
+the t-SNE projections of y t with different colors exhibit
+significant overlap, while the t-SNE projections of y t with
+different digits are separated well. This indicates that y t
+contains abundant digit-related information and is agnostic to
+the private information. From Fig. 5(c) and 5(d), we can also
+observe that the t-SNE projections of y s shows distributions
+totally different to those of y t . The t-SNE projections of y s
+with different colors are distinctly separated, while the t-SNE
+projections of y s with different digits are mixed together. This
+suggests that y s contains abundant color-related information
+while almost no digit-related information. This is because
+the DIB algorithm shown in Algorithm 1 preserves as much
+private information, i.e., the information related to the color in
+y s as possible, and removes the private information in y t at the
+same time. In addition, to guarantee the reconstruction quality,
+the DIB algorithm preserves the public information, i.e., the
+information related to the digit, that will not cause privacy
+leakage in y t instead of y s , as y t is directly transmitted to
+the legitimate receiver Bob while y s is altered to be protected
+using Algorithm 2. Hence, the DIB algorithm is able to
+effectively disentangle the private and public information and
+preserve them in the proper codewords to achieve privacy
+protection.
+Figure 6 shows the 2-dimensional t-SNE projections of the
+private subcodewords y s and the protected private subcodewords y ps extracted by DIB-PPJSCC for test set of the UTK
+face dataset. The labels of the private information, i.e., race
+are also shown to investigate the clusters. From Fig. 6(a), we
+can observe that the t-SNE projections of y s are clustered
+based on the class of race, which indicates that y s contains
+abundant race-related information by applying DIB algorithm.
+From Fig. 6(b) and Fig. 6(c), we can observe that the distance
+between the t-SNE projections of y ps with different races are
+smaller than those of y s . This is because the PP algorithm
+reduces the mutual information between y ps and the label of
+race. Consequently, y ps contains less race-related information
+
+11
+
+0.8
+
+0.6
+1
+
+1
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.4
+
+0.2
+
+0
+8
+
+16
+
+32
+
+64
+
+128
+
+0.2
+
+0.2
+
+0
+
+0
+8 16
+
+32
+
+64
+
+128
+
+8 16
+
+32
+
+(a) Len = 4
+
+64
+
+128
+
+(b) Len = 8
+
+1
+
+1
+
+0.8
+
+0.8
+
+0.6
+
+0.6
+
+0.4
+
+0.4
+
+0.2
+
+0.2
+
+0
+
+0
+8 16
+
+32
+
+64
+
+128
+
+(c) Len = 12
+
+8 16
+
+32
+
+64
+
+128
+
+(d) Len = 16
+
+Fig. 7. The eavesdropping accuracy on the colored MNIST dataset under various Len and plevel . The neural networks are trained when SNRAB =
+30dB, SNRAE = −15dB, 5dB, 15dB. The solid lines, the dashed lines and the dotted lines represent the eavesdropping accuracy of ŷ t,E (expressed as
+p,p
+w/o p1 ), ȳ E 1 (expressed as w/ p1 ) and ŷ E (expressed as ŷ E ), respectively.
+
+than y s , and the difference between y ps with different races are
+also reduced. Moreover, we can also observe that compared
+with Fig. 6(a), some of the t-SNE projections of y ps are totally
+mixed together in Fig. 6(b) (the left cluster) and Fig. 6(c) (the
+bottom cluster) regardless of races. This is because the PP
+algorithm reduces the KL divergence between the uniform
+distribution and y ps , and thus increases the randomness of
+y ps . The left cluster of Fig. 6(b) and the bottom cluster of
+Fig. 6(c) represent y ps that are randomly distributed with
+respect to the race after the application of the PP algorithm.
+These y ps with different races are projected to the same space,
+which demonstrates the effectiveness of the PP algorithm.
+Therefore, the PP algorithm can reduce privacy leakage as well
+as increase the randomness of the codewords to be transmitted
+through the channel.
+
+D. Robustness and complexity
+Table II shows the eavesdropping accuracy of DIB-PPJSCC
+and baseline C on the colored MNIST dataset that is trained
+when SNRAB = 30dB, SNRAE = −15dB, 5dB, 15dB and
+tested under different SNRAE . From Table II, we can observe that the eavesdropping accuracy of DIB-PPJSCC is
+always lower than that of baseline C. This implies that DIBPPJSCC has better robustness than baseline C when there
+is an estimated error on SNRAE . From Table II, we can
+also observe that increasing the train SNRAE can reduce the
+privacy leakage caused by the mismatching between train and
+test SNRAE . For instance, when the test SNRAE = 15dB, the
+eavesdropping accuracy when the train SNRAE = −15dB,
+increases up to 0.5938 and 0.5312 for the colored MNIST and
+UTK face datasets, respectively. However, the eavesdropping
+accuracy is 0.4688 and 0.4844 when the train SNRAE = 5dB,
+
+12
+
+(a) The colored MNIST dataset.
+
+(b) The UTK face dataset.
+
+Fig. 8. The PSNR of the images recovered by DIB-PPJSCC for the test set of the colored MNIST and the UTK face dataset. The neural network is trained
+when SNRAB = 30dB, SNRAE = −5dB, 0dB, 5dB, 10dB, 15dB and is tested under various SNRAB .
+
+which is lower than 0.5938 and 0.5312. Moreover, when
+the train SNRAE = 15dB and the test SNRAE varies,
+the eavesdropping accuracy slightly fluctuates around 0.15
+on the colored MNIST dataset, and 0.4 on the UTK face
+dataset, which is close to the random guess probability. This
+is because when the train SNRAE is larger, the randomness
+of y s introduced by the noise becomes weaker. To prevent
+privacy leakage, the PP algorithm needs to impose a stronger
+security constraint on y s . Hence, the defense capability against
+eavesdropping is better than that when the train SNRAE is
+smaller. This indicates that DIB-PPJSCC has better robustness
+to the change of test SNRAE when the train SNRAE is larger.
+Figure 7 shows the eavesdropping accuracy of ŷ E as well as
+p,p
+the eavesdropping accuracy of ŷ t,E and ȳ s,E 1 on the colored
+MNIST dataset under different password lengths Len and
+password levels plevel when SNRAB = 30dB and SNRAE =
+−15, 5, 15dB. From Fig. 7, we can observe that when Len
+and plevel become larger, the eavesdropping accuracy becomes
+smaller. This is because the larger the Len and plevel are, the
+randomness of y s introduced by the PP algorithm is stronger,
+and thus decreasing the eavesdropping accuracy more. Morep,p
+over, the eavesdropping accuracy of ȳ s,E 1 which is recovered
+by the eavesdropper using the wrong password p1 , is always
+close to the eavesdropping accuracy of ŷ t,E under all Len and
+plevel . This demonstrates the effectiveness of the PP algorithm
+in defending against the strong eavesdropper that has access to
+T−1
+ϕ . From Fig. 7, we can also observe that the eavesdropping
+accuracy will be significantly reduced as long as using the PP
+algorithm to protect private information no matter what Len
+and plevel are. For instance, when Len = 4, plevel = 8 and
+SNRAE = 15dB where the eavesdropper is strong and the
+password is poorly random, the eavesdropping accuracy of
+DIB-PPJSCC is still lower than that of ŷ E . This implies that
+the PP algorithm is robust to Len and plevel , and we can apply
+different Len and plevel to achieve various security levels.
+Figure 8 shows the peak signal-to-noise ratio (PSNR) of
+DIB-PPJSCC under various test SNRAB on test sets of the
+
+colored MNIST and the UTK face datasets. PSNR is
+!
+2
+(2n − 1)
+PSNR = 10log10
+,
+mse (x, x̂)
+
+(30)
+
+where n is the number of bits that each image pixel uses,
+mse (x, x̂) is MSE between x and x̂. In particular, SNRAB
+is fixed as 30dB when training. The neural networks are
+trained with identical hyperparameters under various SNRAE
+and tested under various SNRAB . From Fig. 8, we can
+observe that the PSNR decreases when the train SNRAE
+increases under all test SNRAB . This is because an increase
+in the train SNRAE means stronger eavesdroppers. In order
+to defend against eavesdropping, the codewords extracted by
+DIB-PPJSCC will pay more attention to privacy protection,
+thus reducing the reconstruction quality. From Fig. 8, we can
+also observe that when the test SNRAB drops below the train
+SNRAB , the performance does not saturate immediately, and
+the reconstruction quality exhibits a graceful degradation. This
+is because DIB-PPJSCC uses the channel conditions in the loss
+function and enables the learned codewords to resist channel
+interference. Hence, the codewords extracted by DIB-PPJSCC
+are robust to different test SNRAB .
+We also test the time and calculate the computational
+complexity of baselines and DIB-PPJSCC. The average run
+time achieved by DIB-PPJSCC on the CPU is 300ms per
+image. The neural networks used by DIB-PPJSCC consist of
+convolutions/deconvolutions and FC layers. The computational
+cost of a single convolutional layer is H×W ×K×K×Ci ×Co ,
+where K is the filter size, Co is the number of output channels,
+Ci is the number of input channels and H × W is the size
+of the feature map. The computational cost of an FC layer
+is (2I − 1) O, where I is the input vector dimension and O
+is the output vector dimension. Only the width and height of
+the feature map and the vector dimension depend on the image
+dimensions, and all other factors are constant and independent
+of the image size. Consequently, the computational complexity
+of DIB-PPJSCC is linear with respect to the pixel count of
+the input image. Regarding the DL-based baselines (A, B and
+C), the time and computational complexity are similar since
+
+13
+
+the neural networks used by these baselines are similar to
+those used by DIB-PPJSCC. For the separate scheme, the
+encoding and decoding time is 337ms per image, which is
+larger than DIB-PPJSCC due to the iterative channel decoding
+process required by LDPC to achieve optimal error correction
+capabilities. Furthermore, it is worth noting that the separate
+schemes will need more time for optimal iterative channel
+decoding when SNRAB becomes smaller [38], [39]. The
+above results prove that DIB-PPJSCC is competitive with
+the baselines not only in terms of reconstruction quality and
+privacy protection but also in terms of complexity.
+VI. C ONCLUSION
+In this work, we have proposed a DIB-PPJSCC scheme
+for privacy-protective image transmission, which can protect
+private information as well as recover it at the legitimate receiver. Specifically, we first derived a mathematically tractable
+form of the IB objective for disentangling private information and public information. Then, to appropriately protect
+private information, we further proposed a password-based
+privacy-protective algorithm that can prevent privacy leakage
+and guarantee privacy recovery simultaneously. Experimental
+results have shown that DIB-PPJSCC always achieved a better
+balance between privacy protection and reconstruction quality
+than other baselines, which demonstrates the effectiveness of
+the DIB objective and the password-based privacy-protective
+algorithm. In addition, the images recovered by DIB-PPJSCC
+had better visual performance and preserved more critical
+information than other baselines. The eavesdropping accuracy
+of DIB-PPJSCC gradually decreases when the level and length
+of the passwords increase, which implies that the PP algorithm
+is robust and is able to provide different levels of privacy
+protection. When the channel SNR falls, DIB-PPJSCC is
+shown to provide a graceful degradation of the reconstruction
+quality. The overall results showed that the proposed schemes
+can significantly reduce privacy leakage and improve the
+reconstruction quality.
+R EFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+Techn. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[2] E. Berlekamp, R. McEliece, and H. Van Tilborg, “On the inherent
+intractability of certain coding problems (corresp.),” IEEE Trans. Inf.
+Theory, vol. 24, no. 3, pp. 384–386, May 1978.
+[3] M. Chafii, L. Bariah, S. Muhaidat, and M. Debbah, “Ten scientific challenges for 6G: Rethinking the foundations of communications theory,”
+Available: https://arxiv.org/abs/physics/2207.01843, 2022.
+[4] M. Chen, D. Gündüz, K. Huang, W. Saad, M. Bennis, A. V. Feljan, and
+H. V. Poor, “Distributed learning in wireless networks: Recent progress
+and future challenges,” IEEE J. Sel. Areas Commun., vol. 39, no. 12,
+pp. 3579–3605, Oct. 2021.
+[5] G. Cheung and A. Zakhor, “Bit allocation for joint source/channel
+coding of scalable video,” IEEE Trans. Image Process., vol. 9, no. 3,
+pp. 340–356, Mar. 2000.
+[6] S. Heinen and P. Vary, “Transactions papers source-optimized channel coding for digital transmission channels,” IEEE Trans. Commun.,
+vol. 53, no. 4, pp. 592–600, Apr. 2005.
+[7] R. G. Gallager, Information Theory and Reliable Communication.
+Springer, 1968, vol. 2.
+[8] M. Gastpar, B. Rimoldi, and M. Vetterli, “To code, or not to code: Lossy
+source-channel communication revisited,” IEEE Trans. Inf. Theory,
+vol. 49, no. 5, pp. 1147–1158, May 2003.
+
+[9] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sept. 2019.
+[10] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+joint source-channel coding,” in Proc. Int. Conf. Mach. and Learn., Long
+Beach, California, USA, Jun. 2019, pp. 1182–1192.
+[11] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+information bottleneck guided joint source and channel coding for image
+transmission,” IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2628–
+2644, Aug. 2023.
+[12] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+image transmission using deep source channel coding with attention
+modules,” IEEE Trans. Circuits Syst. Video Technol., Apr. 2021.
+[13] Y. Song, M. Xu, L. Yu, H. Zhou, S. Shao, and Y. Yu, “Infomax neural
+joint source-channel coding via adversarial bit flip,” in Proc. AAAI Conf.
+Artificial Intell., New York, USA, Feb. 2020, pp. 5834–5841.
+[14] J. Xu, B. Ai, W. Chen, N. Wang, and M. Rodrigues, “Deep joint
+encryption and source-channel coding: An image visual protection
+approach,” Available: https://arxiv.org/abs/2111.03234, 2021.
+[15] T.-Y. Tung and D. Gunduz, “Deep joint source-channel and encryption
+coding: Secure semantic communication,” Available: https://arxiv.org/
+abs/2208.09245, 2022.
+[16] A. Massoudi, F. Lefebvre, C. De Vleeschouwer, B. Macq, and J.-J.
+Quisquater, “Overview on selective encryption of image and video:
+challenges and perspectives,” Eurasip J. Inf. Security, vol. 2008, no. 1,
+pp. 1–18, Nov. 2008.
+[17] T. Marchioro, N. Laurenti, and D. Gündüz, “Adversarial networks for
+secure wireless communications,” in Proc. Int. Conf. Acoustics Speech
+Signal Process., Virtual, May 2020, pp. 8748–8752.
+[18] E. Erdemir, P. L. Dragotti, and D. Gündüz, “Privacy-aware communication over a wiretap channel with generative networks,” in Proc. Int.
+Conf. Acoustics Speech Signal Process., Shenzhen, China, Oct. 2022,
+pp. 2989–2993.
+[19] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, May 2020.
+[20] P. C. Roy and V. N. Boddeti, “Mitigating information leakage in image
+representations: A maximum entropy approach,” in Proc. IEEE Conf.
+Comput. Vis. Pattern Recog., Long Beach, California, USA, June 2019,
+pp. 2586–2594.
+[21] A. Boulemtafes, A. Derhab, and Y. Challal, “A review of privacypreserving techniques for deep learning,” Neur. Comput., vol. 384, pp.
+21–45, Apr. 2020.
+[22] M. Bloch, O. Günlü, A. Yener, F. Oggier, H. V. Poor, L. Sankar, and R. F.
+Schaefer, “An overview of information-theoretic security and privacy:
+Metrics, limits and applications,” IEEE J. Sel. Areas Inf. Theory, vol. 2,
+no. 1, pp. 5–22, Mar. 2021.
+[23] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” Available: https://arxiv.org/abs/physics/0004057, 2000.
+[24] Z. Pan, L. Niu, J. Zhang, and L. Zhang, “Disentangled information
+bottleneck,” in Proc. AAAI Conf. Artificial Intell., Virtual, Feb. 2021,
+pp. 9285–9293.
+[25] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational information bottleneck,” Available: https://arxiv.org/abs/1612.
+00410, 2016.
+[26] H. Kim and A. Mnih, “Disentangling by factorising,” in Proc. Int. Conf.
+Mach. and Learn., Stockholm, Sweden, Jul. 2018, pp. 2649–2658.
+[27] R. T. Q. Chen, X. Li, R. B. Grosse, and D. K. Duvenaud, “Isolating sources of disentanglement in variational autoencoders,” in Proc.
+Adv. Neural Inform. Process. Syst., Montreal, Canada, Dec. 2018, p.
+2610–2620.
+[28] Z. Chen, Y. Luo, R. Qiu, S. Wang, Z. Huang, J. Li, and Z. Zhang,
+“Semantics disentangling for generalized zero-shot learning,” in Proc.
+Int. Conf. Comput. Vis., Virtual, Oct. 2021, pp. 8712–8720.
+[29] X. Nguyen, M. J. Wainwright, and M. I. Jordan, “Estimating divergence
+functionals and the likelihood ratio by convex risk minimization,” IEEE
+Trans. Inf. Theory, vol. 56, no. 11, pp. 5847–5861, Nov. 2010.
+[30] N. Hadad, L. Wolf, and M. Shahar, “A two-step disentanglement
+method,” in Proc. IEEE Conf. Comput. Vis. Pattern Recog., Salt Lake
+City, USA, Jun. 2018, pp. 772–780.
+[31] G. E. Hinton, S. Osindero, and Y.-W. Teh, “A fast learning algorithm
+for deep belief nets,” Neur. Comput., vol. 18, no. 7, pp. 1527–1554, Jul.
+2006.
+[32] E. Sariyildiz, H. Yu, and K. Ohnishi, “Gradient-based learning applied
+to document recognition,” Proceedings of the IEEE, vol. 86, no. 11, pp.
+2278–2324, Nov. 1998.
+
+14
+
+[33] Z. Zhang, Y. Song, and H. Qi, “Age progression/regression by conditional adversarial autoencoder,” in Proc. IEEE Conf. Comput. Vis.
+Pattern Recog., Hawaii, USA, Jul. 2017, pp. 5810–5818.
+[34] F. Bellard, “BPG image format,” Available: https://bellard.org/bpg/,
+2018.
+[35] S. Heron, “Advanced encryption standard (aes),” Netw. Security, vol.
+2009, no. 12, pp. 8–12, Dec. 2009.
+[36] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory,
+vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[37] L. Van der Maaten and G. Hinton, “Visualizing data using t-SNE.” J.
+Mach. Learn. Research, vol. 9, no. 11, Nov. 2008.
+[38] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block
+and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2, pp.
+429–445, Mar. 1996.
+[39] H. Vikalo, B. Hassibi, and T. Kailath, “Iterative decoding for MIMO
+channels via modified sphere decoding,” IEEE Trans. Commun., vol. 3,
+no. 6, pp. 2299–2311, Spet. 2004.
+
+

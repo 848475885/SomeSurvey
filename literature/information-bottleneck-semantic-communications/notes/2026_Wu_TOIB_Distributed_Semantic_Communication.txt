@@ -1,0 +1,996 @@
+TOIB: Task-Oriented Orthogonalised Information
+Bottleneck for Distributed Semantic Communication
+Jiaxiang Wang∗ , Zhaohui Yang†‡ , Yahao Ding,∗ , Ye Hu§ , and Mohammad Shikh-Bahaei∗
+∗ Department of Engineering King’s College London London, UK
+† College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou, China
+‡ Zhejiang Provincial Key Laboratory of Info. Proc., Commun. & Netw. (IPCAN), Hangzhou, China
+§ Department of Industrial and Systems Engineering, University of Miami, Miami, FL, USA
+
+arXiv:2604.11053v1 [eess.SP] 13 Apr 2026
+
+E-mails: {jiaxiang.wang, k19005540, m.sbahaei}@kcl.ac.uk, yang zhaohui@zju.edu.cn, yehu@miami.edu
+Abstract—Task-oriented semantic communication emerges as
+a crucial paradigm for next-generation wireless networks, aiming
+to efﬁciently transmit task-relevant information while reducing
+interference and redundancy across multiple users. Existing
+information bottleneck (IB)-based frameworks predominantly
+focus on single-user scenarios, neglecting cross-user semantic interference in distributed semantic communications. To
+overcome this limitation, we propose a task-oriented orthogonalised information bottleneck (TOIB) approach, explicitly
+designed for distributed semantic communication systems. By
+introducing task-conditioned latent variables, TOIB adaptively
+balances semantic sufﬁciency, semantic compression, and interuser semantic orthogonality. Extensive simulations conducted on
+classiﬁcation tasks demonstrate that TOIB consistently achieves
+superior classiﬁcation accuracy across various signal-to-noise
+ratio (SNR) regimes compared to traditional IB and deep joint
+source-channel coding (JSCC) methods. Speciﬁcally, the proposed method signiﬁcantly enhances robustness under harsh lowSNR conditions and effectively suppresses cross-user semantic
+interference, as validated by cross-decoding accuracy metrics.
+
+I. I NTRODUCTION
+The proliferation of intelligent applications and multimedia
+services in future wireless networks necessitates a paradigm
+shift from traditional data-oriented communication towards
+semantic and task-oriented communication [1]–[4]. Unlike
+conventional communication systems focused solely on transmitting raw data bits with high reliability, task-oriented communication aims to deliver semantic features that are explicitly
+relevant to speciﬁc user tasks, such as image reconstruction,
+video analytics, and semantic classiﬁcation.
+Existing research on deep learning (DL)-based semantic
+communication system has already demonstrated a favourable
+performance in single-user or point-to-point tasks, spanning
+a range of applications such as text-based [5], image-based
+[6], and video-based [7] semantic communication system.
+However, the joint optimisation between the communication
+overhead and task execution performance was not considered
+by above methods. To address this issue, the authors in [8]
+have leveraged the information bottleneck (IB) framework to
+explicitly formulate the joint optimisation of communication
+overhead and task execution performance as a rate-distortion
+optimisation problem. The IB framework was later extended
+to multi-device cooperative edge inference in [9] However,
+traditional IB-based semantic communication framework only
+
+balances semantic compression and information sufﬁciency
+in single-user settings, but lack the capability to handle
+cross-user semantic interference in distributed semantic communication. However, directly adopting traditional IB-based
+methods which balance semantic compression and information
+sufﬁciency for single-user settings, the issue of semantic interference is not be well tackled when extended to distributed
+semantic communication.
+Some recent works [10], [11] have focused on the IB based
+multi-user broadcast communication. In [10], the authors
+proposed a semantic feature division multiple access scheme
+for digital semantic broadcast scheme. However, this approach
+does not explicitly impose orthogonality constraints across
+different users’ semantic features. As a result, the burden
+of learning orthogonality is shifted entirely onto the network
+during training, thereby increasing the overall training complexity. In [11], the authors proposed a feature-disentangled
+semantic broadcast communication systems. However, this
+method does not account for the task correlation and heterogeneity. In broadcast scenarios, if one directly minimises the
+compression term of each user and maximises its task-related
+mutual information in parallel without explicitly constraining
+the cross-user representational correlation, substantial semantic interference will arise in the latent space. Particularly,
+(i) for mutually independent tasks, the semantic features of
+different users become entangled in the latent space, causing
+irrelevant or even conﬂicting semantic components to be
+inadvertently carried over and propagated to other users’
+receivers; (ii) for correlated tasks, beneﬁcial task structures
+exist across users that can be jointly exploited, and excessive
+separation of these features would hinder such cross-task
+knowledge transfer.
+Motivated by these issues, this paper proposes a taskoriented semantic orthogonalised information bottleneck
+(TOIB) framework to jointly balance semantic sufﬁciency,
+compression, and inter-user orthogonality. The main contributions of this work are summarised as follows:
+• We establish an end-to-end single-cell distributed semantic communication system, where the BS employs userspeciﬁc semantic encoders to extract latent semantic representations, performs power-controlled superposition,
+and transmits over a wireless channel; each user decodes
+
+Latent space
+User 1
+ܼ
+ܺଵ
+ࣘଵ ଵ
+Semantic encoder
+Orthogonality
+min ‫ܼ(ܫ‬௜ ; ܼ௝ |ܹ௜௝ )
+
+…
+
+…
+Semantic encoder
+ܼ
+ܺே
+ࣘே ே
+
+෡ଵ
+ࢁ
+ࣂଵ
+Semantic
+Decoder
+
+Base
+station
+
+where pφi (zi | xi ) = N (µφi (xi ), diag(σφ2 i (xi ))), and
+E[kzi k2 ] = 1. Then, the BS transmitter performs power
+control and superimposes the semantic representations of all
+users to form a transmission signal, which is denoted as:
+s=
+
+N
+X
+√
+
+pi zi ,
+
+(2)
+
+i=1
+
+Semantic
+User N Decoder
+ࣂே
+
+෡ே
+ࢁ
+
+Task classes (colors)
+
+where pi isP
+the power allocated to user i’s semantic informaN
+tion, with i=1 pi = P max , and P max being the maximum
+power of BS. The received signal of the downlink user i ∈ N
+is denoted as:
+yi = hi s + ni ,
+
+Fig. 1. The considered distributed semantic communication system.
+
+its task target from the received signal via a dedicated
+semantic decoder.
+• Under this broadcast setting, we formulate a task-oriented
+orthogonalised IB optimisation to simultaneously maximise semantic sufﬁciency and enforce semantic compression, and we identify that naive parallel optimisation
+across users leads to strong latent-space coupling, inducing redundancy and task degradation due to semantic
+interference.
+• To explicitly regulate cross-user dependence, we introduce a pairwise task-conditioning variable and propose
+the TOIB objective by augmenting IB with a conditional mutual-information regulariser. We further derive a
+tractable variational surrogate and employ CLUB-based
+estimators together with Monte Carlo sampling, resulting
+in a two-stage training procedure that alternates between
+tightening inter-user MI upper bounds and updating the
+main networks
+• Extensive CIFAR-10 classiﬁcation experiments demonstrate that TOIB yields consistently improved accuracy
+over the considered baselines. Deep VIB and Deep JSCC
+across SNR regimes. In particular, TOIB achieves clear
+gains on both AWGN and Rayleigh channels, including
+2%–5% improvement over Deep VIB under Rayleigh
+fading, while Deep JSCC saturates at about 84%.
+II. S YSTEM M ODEL AND P ROBLEM F ORMULATION
+A. System Overview
+As shown in Fig. 1, we focuses on a single-cell taskoriented distributed semantic communication system. In this
+system, the base station (BS) concurrently transmits semantic
+information to the user set N = {1, . . . , N }, and all users
+share the identical time and frequency resources. Speciﬁcally,
+the source information of each user i ∈ N is denoted as
+a random variable Xi , and the corresponding semantic task
+target is denoted as a random variable Ui . The BS is equipped
+with a user-speciﬁc semantic encoder parametrised by φi to
+extract the semantic feature representation for each user image
+xi , which is denoted as:
+zi ∼ pφi (zi | xi ),
+
+(1)
+
+(3)
+
+where hi is the channel gain from the BS to user i, and ni ∼
+N (0, σi2 I) is the Additive White Gaussian Noise (AWGN) of
+user i. After receiving the signal, the receiver at user i decodes
+the corresponding user task target from yi using its dedicated
+semantic decoder Dθi (·) by:
+ûi = Dθi (yi ),
+
+(4)
+
+where Dθi (·) denotes the semantic decoder of user i with
+learnable parameters θi .
+According to the end-to-end broadcast model, the transmit signal is a deterministic function of all users’ latent
+representations, and each receiver observes the signal (3).
+We optimise per-user task performance under a semantic
+compression constraint, while explicitly controlling cross-user
+dependence in the latent space through a conditional mutual
+information regulariser.
+B. Problem Formulation
+Our goal is to ﬁnd the optimal semantic encoder and
+decoder design that can serve all the users with balanced
+semantic sufﬁciency and compression in the considered taskoriented communication systems. Thus, we formulate an optimization problem whose objective is to maximize the semantic
+sufﬁciency and compression at all users:
+N
+X
+[−I(Ui ; Yi ) + βI(Xi ; Zi )].
+min
+| {z } | {z }
+{φi ,θi }N
+i=1
+i=1
+
+sufﬁciency
+
+(5)
+
+compression
+
+However, under the conventional IB framework, if one merely
+minimises the single-user semantic compression term and
+maximises the semantic sufﬁciency term without imposing
+constraints on cross-user representation correlation, the semantic representations from different users in a downlink
+distributed communication scenario often exhibit strong coupling in the latent space. Such semantic interference leads to
+two consequences: on the one hand, it introduces information redundancy across tasks, causing the limited downlink
+bandwidth to be occupied by duplicated features; on the other
+hand, when the tasks are independent, it delivers irrelevant
+noisy features to each user, thereby signiﬁcantly degrading
+classiﬁcation performance.
+
+III. A TOIB A PPROACH FOR TASK - ORIENTED
+D ISTRIBUTED C OMMUNICATION
+In this section, we introduce a novel TOIB approach to
+overcome the limitations of the conventional IB framework (5)
+in multi-user distributed scenarios. We establish the proposed
+system framework and formulates its information-theoretic
+objective tailored for distributed semantic communication.
+A. Proposed TOIB Scheme
+We introduce a pairwise conditioning variable Wij to
+capture task-related dependence between user i and user j.
+In the classiﬁcation experiments, we let Wij take discrete
+values in {1, . . . , K}, corresponding to the class index, and we
+construct matched/mismatched cross-user pairs within each
+class to estimate I(Zi ; Zj | Wij ). The variable subsequently
+induces the conditional joint distribution of latent semantic
+representations as:
+p(zi ,zj |wij ) =
+ZZ
+p(xi , xj |wij )pφi (zi |xi )pφj (zj |xj )dxi dxj . (6)
+The information theoretic objective of proposed TOIB is
+expressed as:
+LTOIB
+=
+
+N
+X
+i=1
+
+[−I(Ui ; Yi ) + βI(Xi ; Zi ) +α
+| {z } | {z }
+sufﬁciency
+
+compression
+
+N
+X
+j=1
+j6=i
+
+I(Zi ; Zj | Wij )],
+{z
+}
+|
+orthogonality
+
+(7)
+
+where the efﬁciency term I(Ui ; Yi ) encourages the received
+signal Yi to preserve as much task-relevant information Ui as
+possible, the compression term I(Xi ; Zi ) penalizes the mutual
+information between the raw source Xi and the semantic
+representation Zi to compress the task-irrelevant details of
+the source while retaining only the essential task-relevant semantics, and the orthogonality term I(Zi ; Zj | Wij ) enforces
+orthogonality across the latent semantic representations of
+different users to minimise the conditional mutual information
+between the latent semantic representations of user i and
+user j given the shared task Wij . The parameters α, β ≥ 0
+are the weighting factors to control the degree of semantic
+compression and semantic orthogonality, respectively. The
+optimisation problem (7) can be equivalently reformulated as
+follows:
+N h
+X
+Epφi (ui ,yi ) [− log pφi (ui | yi )] − H(Ui )
+LTOIB =
+i=1
+
++βEp(xi ) [DKL (pφi (zi | xi ) k pφi (zi ))]
+
+
+N X
+N
+X
+p(zj |zi , wij )
+, (8)
+Ep(wij ) Ep(zi ,zj |wij ) log
++α
+p(zj |wij )
+i=1 j=1
+j6=i
+
+where DKL (pφi (zi | xi ) k pφi (zi )) is the Kullback–Leibler
+(KL) divergence between pφi (zi | xi ) and pφi (zi ), and the
+
+term H(Ui ) in (8) is constant for a given task and can be
+ignored in the optimisation process. However, optimising (8)
+faces the challenges
+R of high-dimensional integrals in the latent
+prior pφi (zi ) = p(xi )pφi (zi |xi ), the label posterior distribution pφi (ui |yi ) and p(zj |zi ), which are computationally
+prohibitive. To address this challenge, we use the variational
+approximation method to derive a variational surrogate upper
+bound LvTOIB in Lemma 1.
+Lemma 1. The variational surrogate upper bound of (8) is
+given by:
+LTOIB ≤
+
+N h
+X
+Epφi (ui ,yi ) [− log qθi (ui | yi )]
+i=1
+
++ βEpφi (xi ) [DKL (pφi (zi | xi ) k ri (zi ))]
++α
+
+N X
+N
+X
+i=1 j=1
+j6=i
+
+i
+
+
+Ep(wij ) Ep(zi ,zj |wij ) log p(zj |zi , wij )
+
+
+−Ep(zi |wij )p(zj |wij ) log p(zj |zi , wij ) ,
+
+(9)
+
+and (8) can be accurately approximated by LvTOIB in
+(12b) by replacing p(zi , zj |wij ) in (9) with its variational
+approximation qψij (zj |zi , wij ), where qθi (ui |yi ), ri (zi ),
+qψij (zj |zi , wij ) are the variational approximation of the distribution pφi (ui |yi ), pφi (zi ), p(zj |zi , wij ), respectively, i.e.
+p(ui |yi ) ≈ qθi (ui |yi ), ri (zi ) ≈ pφi (zi ), qψij (zj |zi , wij ) ≈
+p(zj |zi , wij ). Here, φi and θi are the parameters of the user
+i’s semantic encoder and decoder, respectively, and ψij is the
+parameter of a Contrastive Log-ratio Upper Bound (CLUB)based lightweight neural network to variationally approximate
+the distribution p(zj |zi , wij ).
+Proof. Please refer to the Appendix A.
+Lemma 1 derives a tractable variational upper bound of (7)
+by replacing its three intractable distributions with learnable
+surrogates, enabling end-to-end gradient-based optimisation.
+B. The Optimisation Algorithm
+To obtain a tractable and differentiable approximation
+of the variational training objective in (12b), we employ
+Monte Carlo (MC) estimation of all expectations and optimise
+the parameters by stochastic gradient descent (SGD) with
+back-propagation.
+For each
+o user i, we draw a mini-batch
+n
+
+B =
+
+(v)
+
+(v)
+
+(v)
+
+xi , ui , wij
+
+(v)
+sample encodings zi
+
+V
+
+v=1
+
+with the mini-batch size V ,
+(v)
+
+∼ pφi (zi | xi ), and transmit the
+superimposed features through the downlink L times to obtain
+(v,l)
+the received signals yi . Since the latent factor Wij is
+assumed to be discrete in classiﬁcation scenarios, we explicitly
+deﬁne its ﬁnite support set as W = {1, · · · , K}, where K
+represents the total number of distinct task classes. Then,
+we introduce the batch-speciﬁc subset WB ⊆ W containing
+only those categories present in the current mini-batch B. For
+each category w ∈ WB , we further deﬁne the sample set
+(v)
+Vw = {v ∈ {1, · · · , V } | wij = w}, which represents the
+set of indices corresponding to samples within the mini-batch
+
+N
+V
+L
+V
+N
+i
+
+X
+ X
+1 X
+1 X 1 Xh
+(v) (v,l)
+(v)
++
+β
+|y
+u
+−
+log
+q
+DKL (pφi (zi | xi ) k ri (zi ))
+L̃TOIB {φi , θi , ψij }N
+=
+θi
+i,j=1
+i
+i
+V
+L
+V
+v=1
+i=1
+
+ i=1 v=1 l=1
+
+
+
+matched term
+mismatched term
+z
+}|
+{ z
+}|
+{
+
+
+ ′
+
+
+X |Vw |  1 X
+X
+
+1
+(v ) (v)
+(v) (v)
+.
+
++α
+,
+w
+|z
+z
+log
+q
+,
+w
+−
+|z
+z
+log
+q
+ψij
+ψij
+i
+j
+i
+j
+
+
+V  |Vw |
+|Vw |(|Vw | − 1) ′
+
+i=1 j=1 w∈WB
+v∈V
+v 6=v
+w
+
+
+j6=i
+v,v ′ ∈Vw
+
+
+{z
+}
+|
+N
+N X
+X
+
+(10)
+
+IˆvCLUB (ψij )
+
+that belong to category w. Consequently, |Vw | denotes the
+number of samples associated with the same task category
+w within in B. This construction matches the estimator
+structure shown in (10), where within-class matched and
+mismatched pairs are built by leave-one-out (LOO) inside
+each sample set Vw . To handle cases where |Vw | < 2,
+we skip the mismatched term computation for numerical
+stability in practice. Concretely,
+given
+n
+o a mini-batch of size
+(v)
+
+(v)
+
+V
+
+V , denoted by B =
+xi , u i
+and assuming L
+v=1
+independent samples of the physical channel per data point,
+we deﬁne the Monte Carlo estimator of the loss function in
+(v,l)
+denotes the l-th sampled received signal
+(10), where yi
+(v)
+corresponding to the v-th source information xi for user
+i after transmission through the channel. The i-th encoder
+(v)
+(v)
+output zi ∼ pφi (zi | xi ) is used both for downstream
+semantic decoding and for estimating cross-user semantic
+dependence via the CLUB objective IˆCLUB (ψij ) in (10).
+Therefore, a variance-reduced MC estimator of the TOIB loss
+can be calculated by (10).
+
+C. Implementation Overhead and Computation Complexity
+For each mini-batch, the additional overhead of Algorithm 1
+mainly stems from the pairwise orthogonality regularisation. In Phase-A, N (N −1) lightweight CLUB estimators are
+updated for M gradient-ascent steps, leading to O(M N 2 )
+auxiliary pair updates with respect to the number of users. In
+Phase-B, the same pairwise regulariser is further involved in
+the encoder–decoder back-propagation. Hence, the quadratic
+scaling over user pairs is the principal bottleneck for larger
+N . More precisely, under the estimator in (10), the exact
+arithmetic cost also depends on the batch-level construction
+of matched and mismatched pairs.
+IV. S IMULATION R ESULTS
+A. Experiments Setup
+We run the simulations on the CIFAR-10 dataset, which
+contains 50, 000 training data and 10, 000 testing data, to
+perform classiﬁcation tasks. For fairness, we use ResNet50 as the backbone network in all experiments. We set
+β = 0.01 in all experiments with learning rate 10−4 , and
+α = 0.01 in our proposed TOIB model. For fairness, our
+TOIB model and these three baselines are all trained with
+
+Algorithm 1 The TOIB Training Procedure
+Input: Epochs T , batch size V , channel resamples L, CLUB
+steps M , negatives Kneg , weighting factors α, β, initialised
+parameters {φi , θi , ψij }N
+i,j=1 .
+1: for t = 1 to T do
+2:
+for i = 1 to N do
+(v)
+(v)
+3:
+Sample mini-batch {(xi , ui )}Vv=1 ;
+(v)
+4:
+Generate encoder outputs {zi }Vv=1 by (1);
+5:
+Calculate superposed signal s(v) by (2) and transmit over the AWGN channel;
+6:
+Resample channel L times to generate received
+(v,l)
+signals {yi }V,L
+v=1,l=1 by (3);
+7:
+Phase-A (update ψij ):
+8:
+for m = 1 to M do
+9:
+for j = 1 to N, j 6= i do
+(v)
+10:
+Set Vw = {v : wij = w};
+11:
+Update CLUB-based estimator ψij by gradient ascent on IˆvCLUB (ψij );
+12:
+end for
+13:
+end for
+14:
+Phase-B (Back-propagation): Compute (10) and
+update {φi , θi } by back-propagation method;
+15:
+end for
+16: end for
+Output: Optimised parameters {φi , θi , ψij }N
+i,j=1 .
+
+SNR = 5 dB for 100 epochs in a 2-user scenario, where
+U1 and U2 represent for user 1 and user 2, respectively. In
+addition, the equal power allocation strategy is performed.
+We compare the proposed method with the following three
+schemes below: 1) Deep JSCC [12]: An end-to-end DL-based
+JSCC scheme with the cross-entropy loss function. Since the
+original Deep JSCC is a single-user model, we superimpose
+the output of each users’ encoder to generate the broadcast
+signal, which follows the same procedure in (2) and (3); 2)
+Upper Bound: We consider the original single-user model
+Deep JSCC as our upper bound to compare the difference
+between single-user model and multi-user model; 3) Deep
+VIB: If we set α = 0 in our proposed TOIB, we have a multiuser variational information bottleneck framework in (5) with
+
+150
+
+90
+80
+
+100
+Latent Space Projection 2
+
+70
+Airplane
+Auto
+Bird
+Cat
+Deer
+Dog
+Frog
+Horse
+Ship
+Truck
+
+50
+
+0
+
+-50
+
+User 1
+User 2
+
+60
+50
+90
+
+40
+86
+
+30
+
+82
+
+20
+
+78
+10
+
+10
+
+15
+
+20
+
+-100
+
+0
+-20
+-150
+
+-100
+
+-50
+0
+50
+Latent Space Projection 1
+
+100
+
+-15
+
+-10
+
+-5
+
+0
+
+5
+
+10
+
+15
+
+20
+
+150
+
+Fig. 2. The t-SNE visualisation of each user’s encoder output.
+
+Fig. 3. The classiﬁcation accuracy (%) versus SNRs over AWGN channel.
+100
+90
+
+the cross-entropy and KL divergence loss function. Here, we
+assume the latent prior is a standard multivariable Gaussian
+distribution, i.e., zi ∼ N (0, I).
+
+80
+
+60
+
+86
+
+B. Experiments Results
+In Fig. 2, we present the t-distribution stochastic neighbour
+embedding (t-SNE) of the each encoder’s output (1) in our
+proposed TOIB model and project it into a two-dimension
+latent space. The latent features of different users are expressed with different markers, and there are 10 classes in
+total. As shown in this ﬁgure, we can observe that the latent
+features of different classes are well-separated, which proves
+the classiﬁcation ability of our TOIB model. We can also
+observe that both users’ latent features have 10 classes, and
+latent features from different users are also well-separated,
+which proves the orthogonality ability of our TOIB model.
+In Fig. 3, we evaluate the classiﬁcation accuracy over the
+AWGN channel. As shown in this ﬁgure, our proposed TOIB
+model performs better than other the Deep VIB model, where
+we set α = 0. This shows the effectiveness of our proposed
+orthogonality term in (7) compared with the traditional IB
+framework in (5). We also observe that our TOIB model
+performs better than the Deep JSCC model. This is due to the
+fact that the Deep JSCC model does not explicitly consider
+the orthogonality between semantic representations between
+different users, which may leads to semantic interference and
+reduce the classiﬁcation accuracy. We can also observe that
+the curves corresponding to U1 and U2 across all models
+are closely aligned, which demonstrates the fairness of the
+proposed models. In Fig. 4, we evaluate the classiﬁcation
+accuracy over the Rayleigh fading channel. Our proposed
+TOIB model outperforms Deep VIB (α = 0) by 2% − 5%,
+demonstrating the effectiveness of the orthogonality term in
+(7). TOIB also signiﬁcantly outperforms Deep JSCC, which
+saturates at approximately 84% due to the lack of explicit
+orthogonality constraints between users’ semantic representations. The gap between TOIB and the single-user upper bound
+remains less than 1%, indicating that inter-user interference is
+
+50
+
+82
+10
+
+15
+
+20
+
+0
+
+5
+
+10
+
+94
+
+70
+
+90
+
+40
+30
+20
+10
+0
+-20
+
+-15
+
+-10
+
+-5
+
+15
+
+20
+
+Fig. 4. The classiﬁcation accuracy (%) versus SNRs over Rayleigh channel.
+
+effectively mitigated. The closely aligned U1 and U2 curves
+across all models further demonstrate the fairness of the
+proposed system.
+In Table I, we evaluate the cross-decoding accuracy at
+SNR = 0 dB comparing across Deep JSCC, Deep VIB and
+our TOIB model. We use Dθi (yi ) → ui to represent for
+the normal decoding process, where the decoder i tries to
+decode the information ui from the received signal yi . On
+the contrary, we use Dθi (yi ) → uj , j 6= i to represent for the
+cross-decoding process, where the decoder i tries to decode
+the information uj from the received signal yi . As shown in
+the table, we observe that our proposed TOIB model performs
+better than the other two baselines in the normal decoding
+process, which is also demonstrated in Fig. 3. We can also
+observe that the accuracy of cross decoding process is merely
+10%. Since we are evaluating a 10-class classiﬁcation task,
+the accuracy level of cross-decoding is nearly equivalent to
+that of random guessing.
+V. C ONCLUSION
+This paper has proposed a novel TOIB framework for
+task-oriented distributed semantic communication systems. By
+introducing conditional task-related latent factors and incor-
+
+N
+(a) X
+
+LTOIB ≤
+
+
+
+
+
+Epφ (ui ,yi ) [− log qθi (ui | yi )] − H(Ui ) +βEpφ (xi ) [DKL (pφi (zi | xi ) k ri (zi ))]
+i
+i
+| {z }
+i=1
+constant
+
+
+
++α
+
+N X
+N
+X
+
+
+
+
+Ep(wij ) 
+p(zi ,zj |wij ) [log p(zj |zi , wij )] − Ep(zi |wij )p(zj |wij ) [log p(zj |zi , wij )]
+E
+{z
+}
+|
+i=1 j=1
+ICLUB(Zi ,Zj |wij )
+
+j6=i
+
+(b)
+
+≃
+
+N h
+X
+i=1
+
++α
+
+Epφi (ui ,yi ) [− log qθi (ui | yi )] + βEpφi (xi ) [DKL (pφi (zi | xi ) k ri (zi ))]
+
+N X
+N
+X
+
+(12a)
+
+i
+
+
+
+
+
+
+
+
+Ep(wij ) 
+p(zi ,zj |wij ) [log qψij (zj |zi , wij )] − Ep(zi |wij )p(zj |wij ) [log qψij (zj |zi , wij )] = LvTOIB (12b)
+E
+{z
+}
+|
+i=1 j=1
+IvCLUB(Zi ,Zj |wij )
+
+j6=i
+
+porating a mutual information regulariser, TOIB explicitly enforces semantic orthogonality across users while maintaining
+semantic sufﬁciency and compression. A variational surrogate
+bound was derived to facilitate tractable optimization, employing CLUB-based estimators and Monte Carlo sampling.
+Extensive experiments on classiﬁcation tasks demonstrate that
+TOIB signiﬁcantly improves accuracy over Deep JSCC and
+VIB baselines. These results underline TOIB as a promising
+direction for scalable and interference-resilient distributed
+semantic communication.
+A PPENDIX A
+P ROOF OF L EMMA 1
+We adopt the variational information bottleneck (VIB)
+method in (8) to approximate the intractable distributions
+p(ui |yi ), pφi (zi ) and p(zj |zi , wij ) by qθi (ui |yi ), ri (zi ) and
+qψij (zj |zi , wij ), respectively. Speciﬁcally, the upper bound of
+LTOIB in (8) is derived in (12a) at the top of this page. where
+the inequality (a) in (12a) holds since DKL (pφi (ui |yi ) k
+qθi (ui |yi )) ≥ 0, DKL (pφi (zi ) k ri (zi )) ≥ 0 and the
+inequality (11) holds according to [13]:
+I(Zi , Zj |wij ) ≤ ICLUB (Zi , Zj |wij ).
+
+(11)
+
+Since the distribution p(zj |zi , wij ) is intractable, we introduce a CLUB-based light-weight neural network with the
+parameter ψij to approximate the surrogate upper bound
+in (12a), i.e., qψij (zj |zi , wij ) ≈ p(zj |zi , wij ). We claim
+that the inequality in (12b) means that IvCLUB (Zi , Zj |wij )
+no longer guarantees an upper bound of I(Zi , Zj |wij ),
+but with a good variational approximation qψij (zj |zi , wij ),
+IvCLUB (Zi , Zj |wij ) can still hold a MI upper bound or become a reliable MI estimator, which is illustrated detailed in
+[13]. Therefore, as long as qψij (zj |zi , wij ) can adequately
+approximate p(zj |zi , wij ), the inequality (12b) behaves as a
+reliable estimator practically.
+R EFERENCES
+[1] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+Applications, trends, technologies, and open research problems,” IEEE
+Netw., vol. 34, no. 3, pp. 134–142, 2019.
+
+TABLE I
+C ROSS - DECODING ACCURACY (%) AT DIFFERENT SNR S
+
+Deep JSCC
+Deep VIB
+TOIB
+
+Dθ1 (y1 ) → u1
+82.03%
+81.59%
+87.04%
+
+Dθ1 (y1 ) → u2
+9.96%
+9.98%
+10.18%
+
+Dθ2 (y2 ) → u2
+81.83%
+77.98%
+84.05%
+
+Dθ2 (y2 ) → u1
+10.88%
+10.08%
+10.40%
+
+[2] Z. Zhao, Z. Yang, Y. Hu, C. Zhu, M. Shikh-Bahaei, W. Xu, Z. Zhang,
+and K. Huang, “Compression ratio allocation for probabilistic semantic
+communication with RSMA,” IEEE Trans. Commun., 2025.
+[3] Y. Yang, Z. Yang, C. Huang, W. Xu, Z. Zhang, D. Niyato, and M. ShikhBahaei, “Integrated sensing, computing and semantic communication
+for vehicular networks,” IEEE Trans. Veh. Technol., 2025.
+[4] Y. Ding, Z. Yang, Q.-V. Pham, Y. Hu, Z. Zhang, and M. Shikh-Bahaei,
+“Distributed machine learning for UAV swarms: Computing, sensing,
+and semantics,” IEEE Internet Things J., vol. 11, no. 5, pp. 7447–7473,
+2023.
+[5] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+pp. 2663–2675, 2021.
+[6] J. Wang, Z. Yang, C. Huang, Z. Zhang, M. Shikh-Bahaei, and M. Chen,
+“Semantic feature multiple access (SFMA) over wireless networks,” in
+Proc. IEEE INFOCOM Wkshps., pp. 1–6, 2025.
+[7] J. Wang, Y. Yang, Z. Yang, C. Huang, M. Chen, Z. Zhang, and M. ShikhBahaei, “Generative AI empowered semantic feature multiple access
+(SFMA) over wireless networks,” IEEE Trans. on Cogn. Commun.
+Netw., 2025.
+[8] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, 2021.
+[9] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for multidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+vol. 22, no. 1, pp. 73–87, 2022.
+[10] S. Ma, Z. Sun, B. Shen, Y. Wu, H. Li, G. Shi, S. Li, and N. Al-Dhahir,
+“Semantic feature division multiple access for digital semantic broadcast
+channels,” IEEE Internet Things J., 2025.
+[11] S. Ma, Z. Zhang, Y. Wu, H. Li, G. Shi, D. Gao, Y. Shi, S. Li, and N. AlDhahir, “Features disentangled semantic broadcast communication networks,” IEEE Trans. Wireless Commun., vol. 23, no. 6, pp. 6580–6594,
+2023.
+[12] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. on Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, 2019.
+[13] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “CLUB: A
+contrastive log-ratio upper bound of mutual information,” in Proc. Int.
+Conf. Mach. Learn. (ICML), pp. 1779–1788, 2020.
+
+

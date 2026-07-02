@@ -1,0 +1,1633 @@
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+14023
+
+Joint Source-Channel Coding for Task-Oriented
+Broadcast Communications: An Information
+Bottleneck Approach With Rate Splitting
+Youlong Wu , Member, IEEE, Jingfeng Huang, Yuanming Shi , Senior Member, IEEE,
+Shuai Ma , Member, IEEE, Kai Niu , Senior Member, IEEE, Meixia Tao , Fellow, IEEE,
+and Khaled B. Letaief , Fellow, IEEE
+Abstract—To support efficient and accurate multi-task inference in edge environments, we propose a task-oriented broadcast
+communication system that enables an edge transmitter to
+serve multiple edge devices with heterogeneous inference tasks.
+The proposed system adopts a two-phase design inspired by
+Marton’s channel coding with rate splitting and the information
+bottleneck principle. In the first phase, a common feature vector
+is extracted to capture the shared information across tasks.
+In the second phase, task-specific private feature vectors are
+generated conditioned on the common feature to preserve unique
+task-relevant information. To facilitate interference-robust task
+execution, our scheme leverages the intrinsic structural alignment between the task correlations and broadcast channel
+properties; specifically, the common and private features are
+mapped directly to Marton’s common and private codewords. A
+variational approximation method is introduced to optimize the
+feature extraction process in both phases, allowing for compact
+and informative representations while reducing redundant data
+Received 1 August 2025; revised 12 January 2026; accepted 27 February
+2026. Date of publication 13 March 2026; date of current version 23 March
+2026. The work of Youlong Wu was supported by the National Natural Science
+Foundation of China (NSFC) under Grant 62571329. The work of Yuanming
+Shi was supported in part by NSFC under Grant 62522117. The work of
+Shuai Ma was supported in part by NSFC under Grant 62471270, in part
+by Guangdong Basic and Applied Basic Research Foundation under Grant
+2024A1515030028, and in part by the National Science and Technology Major
+Project—Mobile Information Networks under Grant 2024ZD1300700. The
+work of Kai Niu was supported by NSFC under Grant 62293481. The work
+of Meixia Tao was supported in part by NSFC under Grant 62125108 and
+in part by the National Science and Technology Major Project—Mobile
+Information Networks under Grant 2024ZD1300700. The work of Khaled
+B. Letaief was supported in part by Hong Kong Research Grants Council
+under Grant 16215624 and Grant AoE/E-601/22R. An earlier version of
+this paper was presented in part at the 2023 IEEE International Conference on Communications, Kuala Lumpur, Malaysia, December 2023 [DOI:
+10.1109/GLOBECOM54140.2023.10437085]. The associate editor coordinating the review of this article and approving it for publication was A. Schmeink.
+(Corresponding author: Yuanming Shi.)
+Youlong Wu, Jingfeng Huang, and Yuanming Shi are with the School
+of Information Science and Technology, ShanghaiTech University, Shanghai 201210, China (e-mail: wuyl1@shanghaitech.edu.cn; huangjf2022@
+shanghaitech.edu.cn; shiym@shanghaitech.edu.cn).
+Shuai Ma is with the Peng Cheng Laboratory, Shenzhen 518066, China
+(e-mail: mash01@pcl.ac.cn).
+Kai Niu is with the Key Laboratory of Universal Wireless Communications,
+Ministry of Education, Beijing University of Posts and Telecommunications,
+Beijing 100876, China (e-mail: niukai@bupt.edu.cn).
+Meixia Tao is with the School of Information Science and Electronic
+Engineering, Shanghai Jiao Tong University, Shanghai 200240, China (e-mail:
+mxtao@sjtu.edu.cn).
+Khaled B. Letaief is with the Department of Electronic and Computer Engineering, The Hong Kong University of Science and Technology (HKUST),
+Hong Kong (e-mail: eekhaled@ust.hk).
+Digital Object Identifier 10.1109/TWC.2026.3671290
+
+transmission. Extensive experiments on a real-world multi-label
+dataset demonstrate that the proposed method achieves superior
+inference accuracy and robustness over wireless networks, compared to traditional digital compression and deep learning-based
+joint source-channel coding schemes. These results confirm the
+potential of task-oriented design for scalable and reliable edge
+intelligence.
+Index Terms—Semantic, broadcast, rate-splitting, edge inference.
+
+I. I NTRODUCTION
+NTEGRATING with AI technologies, the sixth-generation
+(6G) networks are enabled to provide more complex intelligent services, especially in the edge environments [2], [3].
+An increasing number of IoT devices will be equipped with
+AI models, allowing them to communicate more efficiently
+and perform on-device AI inference, which leads to the recent
+trends in research on edge inference [4]. Edge inference
+tasks typically impose stringent Quality of Service (QoS)
+requirements, including low latency and high inference accuracy [5], [6], [7]. However, AI model inference may demand
+extensive transmission of raw data from edge devices. For
+instance, in smart surveillance systems, high-resolution video
+streams around 30 Gbps must be transmitted for real-time
+analysis [8], [9], and in autonomous driving, multimodal data
+streams including radar and camera inputs of 3-40 Gbps must
+be communicated for decision-making [10]. Such a massive
+volume of data presents significant challenges to the design of
+edge inference systems.
+As a promising scheme to address these challenges, taskoriented communication has gained significant attention in
+recent studies [3], [11], [12], [13]. Unlike conventional
+data-oriented communication, which is agnostic to the semantics and only communicates symbols or bits, task-oriented
+communication concentrates on delivering the task-relevant
+information for task accomplishment (e.g., image/scene classification [14] or visual question answering [15]). On the
+one hand, this design scheme eliminates the need to transmit raw data to the receiver by encoding the data into
+highly compact feature vectors, thus greatly reducing the
+communication overhead. On the other hand, by explicitly
+incorporating task-specific metrics and channel conditions into
+the encoding procedure, task-oriented design can preserve
+inference performance as much as possible, even under poor
+
+I
+
+1536-1276 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14024
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+channel conditions. Such a trade-off between task performance and communication overhead is widely considered in
+recent works of point-to-point task-oriented communication
+[16], [17]. Therein, deep learning-enabled joint source-channel
+coding (JSCC) schemes have been developed for various application scenarios, such as wireless image and text transmission
+[18], [19], [20].
+To achieve efficient and interpretable task-oriented communications, the information bottleneck (IB) based JSCC
+has been widely adopted in task-oriented communication [3],
+[21]. The original IB [22], [23], [24] aims to extract features that are informative to conduct inference tasks while
+minimizing task-irrelevant information to reduce communication overhead. By adjusting the IB principle to enhance
+the transmission reliability (e.g., maximizing an extra term
+of mutual information representing the achieved transmission
+rate), the transmitter can jointly extract and compress the taskrelevant information while preserving coded redundancy to
+resist channel uncertainty. This paves the way for designing
+efficient and interpretable task-oriented communication systems. In particular, the authors in [25] proposed an IB-based
+end-to-end edge AI inference framework to reduce communication cost by introducing sparsification to the extracted
+features while maintaining inference performance, and the
+authors in [26] extended this work by minimizing energy
+consumption and latency. Moreover, various types of IB have
+also been extensively studied [27], [28]. Particularly, the
+authors in [27] proposed a robust IB that integrates inference
+accuracy, compression, and transmission rate, followed by
+developing a discrete JSCC scheme with digital modulation
+to enhance the robustness of the edge AI inference systems. Distributed IB was proposed in [28] for distributed
+feature encoding to conduct multi-view edge AI inference
+tasks.
+Apart from the point-to-point scenario, task-oriented design
+for the downlink broadcast communication is still in its
+infancy. A few studies have investigated the task-oriented
+communications for the downlink broadcast scenario [29],
+[30], [31], [32], [33], [34]. Specifically, the authors in [29] proposed a JSCC-based wireless image broadcasting scheme for
+image reconstruction at the edge devices, while the authors in
+[30] developed a features-disentangled broadcasting approach,
+where only user-specific features are selected and broadcast.
+The work [31] considered a panoramic video transmission
+framework where users request diverse fields of view (FoVs).
+It exploited the correlation between consecutive video frames
+for semantic extraction and employed a rate-splitting transmission strategy to improve communication efficiency. Similarly,
+in [32], the authors investigated an energy-efficient semantic
+communication framework based on rate-splitting, where computation and communication resources are jointly optimized
+to minimize the total energy consumption. Moreover, the
+authors in [33] decomposed the broadcast encoding process
+into compression and fusion stages to improve communication
+efficiency with adaptation to inference tasks and channels. And
+the authors in [34] jointly design the uplink gathering and the
+downlink broadcasting, where a task-oriented training strategy
+is applied to decouple the training into separate stages. Both
+
+JSCC and task-oriented communication design are considered
+in [33] and [34] to only transmit task-relevant information.
+Besides, instead of training encoders and decoders in an
+end-to-end manner, the authors in [33] and [34] separate
+the broadcast encoding into stages, which refines the system
+design to support diverse downlink inference tasks without
+compromising the accuracy. However, their work primarily
+focuses on interference-free broadcast scenarios where, in each
+time slot, a transmitter exclusively sends information to a
+single receiver. More specifically, it assumes that each data
+sample has a singular label and will be classified by a specific
+intended receiver. In contrast, real-world applications often
+involve objects possessing multiple attributes, and various
+users may need to extract different pieces of information
+from the same object. For instance, in street video analysis,
+traffic departments are primarily concerned with vehicle flow,
+whereas autonomous vehicles require detailed status information of nearby vehicles. Therefore, investigating broadcast
+semantic communications becomes crucial to address these
+multifaceted requirements.
+In this paper, we address this issue by proposing a novel
+task-oriented feature extraction strategy inspired by Marton’s
+coding with rate splitting [35], [36]. Marton’s coding was
+initially proposed for channel coding, ignoring semantic meaning. However, we identify a strong analogy between its
+common and private message components and the characteristics of broadcast semantic communications with multiple
+tasks. By integrating the IB principle and Marton’s coding,
+we propose a JSCC approach where each input is encoded
+into a common feature vector and multiple private feature
+vectors. The common feature vector encodes shared information across tasks, while the private feature vectors focus on
+task-exclusive content. By conditioning the private encoders
+on the common vector, we achieve effective compression and
+reduce the dimensionality of task-specific features. This joint
+design of common and private encoders enables a better tradeoff between informativeness and communication cost. We
+summarize the main contribution as follows.
+• With consideration of the task commonality and diversity,
+we propose a task-oriented broadcast JSCC framework
+that integrates the IB principle and Marton’s coding
+with rate splitting. In our framework, the encoders and
+decoders are separately designed in two phases to jointly
+extract and transmit a common feature vector representing the task commonality and the private feature
+vectors representing the task diversity. Specifically, distinct downstream tasks in these systems frequently rely
+on shared semantic information while simultaneously
+requiring task-specific private semantic content.
+• We adopt the variational approximation method to optimize the proposed IB objectives in two training phases.
+We first introduce variational distributions to derive a
+variational upper bound. Then, we estimate the objectives
+with Monte Carlo sampling and train the encoders and
+decoders to optimize the IB objectives.
+• We evaluate the proposed task-oriented broadcast framework with publicly available real-world datasets. The
+results demonstrate that our method achieves the highest
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+inference accuracy when compared with the other baselines. Additionally, the proposed framework effectively
+balances all tasks’ performance with large SNR disparities, leading to a more robust system when facing various
+channel conditions.
+Notably, while rate-splitting has been employed to manage
+semantic streams in [31] and [32], our scheme represents
+a significant difference in several key aspects. Firstly, the
+works in [31] and [32] focused on traditional data recovery
+tasks aimed at reconstructing distinct source components (e.g,
+different FoVs within a panoramic stream) for different users,
+while our framework addresses a multi-task edge inference
+problem wherein heterogeneous users extract distinct semantic
+attributes from a single, shared source. This fundamental shift
+in objectives necessitates a distinct feature extraction strategy:
+Both schemes in [31] and [32] identify common features
+from the correlation across multiple source inputs, while our
+work exploits inter-task correlations within the same source.
+Finally, unlike the modular approaches in [31] and [32] that
+treat semantic extraction and rate-splitting transmission as
+separate stages, we propose a more elegant and integrated
+JSCC design. Specifically, we leverage the intrinsic structural alignment between the common-private semantic split
+and the codewords in Marton’s coding for broadcast channels. By directly mapping task-specific semantics to channel
+codewords, the extracted common and private features are
+inherently “channel-aware,” serving simultaneously as channel
+input vectors.
+The notation usage of this paper is summarized as follows.
+The boldface letters represent vectors, and the upper-case calligraphy letters represent sets. The upper-case letters represent
+the random variables. For j ∈ Z+ , we use the short hand
+notation X j for the j-tuples X j := (X1 , . . . , Xj ). pθ (·)
+denotes a distribution density parametrized by θ. Ep(·) [·] is the
+mathematical expectation with respect to the distribution p(·).
+We use H(·) and I(·; ·) to respectively denote the entropy and
+the mutual information. The Kullback-Leibler (KL) divergence
+is denoted as KL[·||·].
+The remainder of this paper is organized as follows.
+Section II introduces the preliminaries of task-oriented broadcast communications, Marton’s coding, and the IB principle.
+Section III elaborates on the system design and problem
+formulation of the proposed two-phase encoding procedure.
+In section IV, we derive the variational approximations of
+the IB objectives in each phase. In section V, experiments
+evaluate the performance of the proposed task-oriented broadcast system. The comparison with other benchmark methods
+demonstrates the effectiveness and superiority of our method.
+Finally, section VI concludes this paper.
+II. P RELIMINARIES
+A. Task-Oriented Broadcast Communications
+We consider a multi-task downlink edge AI inference system consisting of an edge transmitter and K edge devices
+as the receivers. In contrast to conventional broadcast communications, the edge inference system typically requires
+high inference performance rather than data rates. Directly
+
+14025
+
+transmitting raw data to the receiver may consume more
+communication resources, thereby degrading the inference
+performance. Moreover, since downlink edge devices may
+have different AI inference tasks, delivering raw data in
+bits or symbols requires orthogonal resource blocks, which
+further compromise the inference performance. Therefore, a
+task-oriented communication framework [3], [11] is adopted
+to support AI inference tasks. By embedding the goals of
+inference tasks into the system design, task-oriented communication only delivers task-relevant information to the
+edge devices, thus significantly improving communication
+efficiency.
+As shown in Fig. 1, the task-oriented framework takes a
+learning-based approach, where a pre-trained DNN is split
+into two subnets and deployed at the transmitter and receiver,
+respectively. At the edge transmitter, the feature extractor
+encodes the useful information of raw data x into a feature
+vector v. Then, the transmitter broadcasts the feature vector
+v to all the downlink edge devices over the wireless channel.
+Eventually, at each edge device, the on-device subnet attempts
+to infer the label ŷk of the k-th task based on the noisecorrupted feature vector v̂k . Note that rather than retrieving
+the original transmitted data x, task-oriented communication
+directly obtains the inference result ŷk . Therefore, these two
+subnets are usually jointly trained in an end-to-end manner,
+which makes the feature vector v into a highly compressed
+representation consisting of the task-relevant information.
+B. Marton’s Coding in Classical Broadcast Channel
+Consider the conventional two-user memoryless broadcast
+channel with private messages, which can be characterized
+by a probability transition function PV̂1 V̂2 |V (v̂1 , v̂2 |v) with a
+channel input V and two channel outputs V̂1 , V̂2 . The goal
+of communication is that the transmitter conveys two private
+messages M1 ∈ {1, . . . , 2nR1 } and M2 ∈ {1, . . . , 2nR2 },
+to receivers 1 and 2, respectively, where n is the channel
+blocklength and each message Mi is independently and uniformly distributed over the set Mi := {1, . . . , 2nRi }, with Ri
+denoting the transmission rate of receiver i, for i ∈ {1, 2}.
+The best known achievable rate region (R1 , R2 ) is achieved
+by Marton coding with rate splitting [35], [36]. The key
+idea is as follows: First, fix a probablity mass function
+(pmf) PUc U1 U2 (uc , u1 , u2 ) and split each mssage Mi to a
+common part Mi,c ∈ {1, . . . , 2nRi,c } and private part Mi,p ∈
+{1, . . . , 2nRi,p }, where Ri,c and Ri,p are called common and
+private rates of reciever i satisfying Ri = Ri,c + Ri,p . Then
+the transmiter econdes the common part (M1,c , M2,c ) into a
+cloud center codeword Ucn and the private part Mi,p into the
+private codeword Uin , and sends the channel input V n that is a
+function of (Ucn , U1n , U2n ). Finally, receiver i observers channel
+output V̂in and decodes the common part (M1,c , M2,c ) and the
+private part Mi,p . The corresponding achievable rate region is
+given below.
+R1 ≤ I(Uc , U1 ; V̂1 )
+
+(1a)
+
+R2 ≤ I(Uc , U2 ; V̂2 )
+
+(1b)
+
+R1 + R2 ≤ I(Uc , U1 ; V̂1 ) + I(U2 ; V̂2 |Uc ) − I(U1 ; U2 |Uc )
+(1c)
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14026
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+Fig. 1. Broadcast semantic communication with multi-task edge inference. For example, given a street video, receiver 1(e.g., traffic department) is primarily
+concerned with vehicle flow, whereas receiver K (e.g., autonomous vehicle) requires detailed status information of nearby vehicles.
+
+R1 + R2 ≤ I(Uc , U2 ; V̂2 ) + I(U1 ; V̂1 |Uc ) − I(U1 ; U2 |Uc )
+(1d)
+R1 + R2 ≤ I(Uc , U1 ; V̂1 ) + I(Uc , U2 ; V̂2 ) − I(U1 ; U2 |Uc )
+(1e)
+for some pmf PUc U1 U2 (uc , u1 , u2 ) and a function V =
+f (Uc , U1 , U2 ).
+Marton’s coding was initially proposed for channel coding
+of sending messages without semantic meaning. Interestingly,
+we identify a strong analogy between its common and private message components and the characteristics of broadcast
+semantic communications with multiple tasks. Specifically,
+distinct downstream tasks in these systems frequently rely on
+shared semantic information while simultaneously requiring
+task-specific private semantic content. Leveraging this inspiration, we propose a Marton’s coding-based JSCC scheme
+for broadcast semantic communications to jointly extract and
+deliver both common and private semantic information across
+noisy channels.
+C. Information Bottleneck
+The IB principle was first introduced in information theory
+[22]. The core idea behind IB is to compress the input variable
+X into a new variable V . The variable V should retain as
+much information as possible about the inference target Y ,
+while discarding the irrelevant information about X. Such V
+is obtained by maximizing the mutual information between
+V and Y while minimizing the mutual information between
+V and X. Mathematically, this is formulated as
+min
+
+p(V |X)
+
+− I(V ; Y ) + βI(X; V ),
+
+(2)
+
+where β ≥ 0 is an adjustable weight factor balancing the
+trade-off between the feature utility I(V ; Y ) and redundancy
+I(X; V ). However, implementing the IB principle in the
+edge inference system presents several challenges. First, the
+communication scenario involves many downlink devices that
+have different inference tasks. Repeatedly solving (2) for each
+task is inefficient and not scalable. Further, evaluating the
+mutual information terms in (2) is computationally intensive,
+especially in high-dimensional spaces, which makes IB even
+more difficult to apply in the edge inference system. In the
+following sections, we propose a Marton’s coding-based IB to
+support the design of the downlink multi-task edge inference
+
+system, and an effective approximation is also proposed to
+tackle the intractable mutual information terms.
+III. TASK -O RIENTED B ROADCAST BASED ON M ARTON
+C ODING AND R ATE S PLITTING
+In this section, we propose the system design of the downlink multi-task edge inference system, which incorporates the
+IB principle to improve the inference accuracy. We consider
+a similar AI inference system as shown in Fig. 1, where an
+edge transmitter encodes the raw data into feature vectors and
+broadcasts them to K edge devices over the wireless channel.
+The task-oriented communication framework is adopted to
+deliver encoded features and accomplish the inference tasks
+directly, instead of retrieving the raw data sent by the edge
+transmitter. Moreover, as mentioned above, the edge inference
+system in the downlink broadcast scenario has to serve many
+edge devices with multiple inference tasks. Therefore, inspired
+by Marton’s coding with rate splitting, we design an encoding
+method that separates the encoded features into a common
+feature vector and several private feature vectors. The correlation of different downlink tasks is leveraged to encode
+the common feature vector, which can be broadcast to all
+the devices. Besides the common feature vector, the private
+feature vectors are used as supplements and combined with
+the common feature vector to accomplish the inference tasks.
+A. System Model
+To formalize the task-oriented communication system
+model, we define the probabilistic graph model of the K-user
+multi-task downlink AI inference system as in Fig. 2. The data
+source generates data samples from a joint distribution p(x, y),
+where x is raw data, and y = [y1 , y2 , . . . , yM ]T consists of M
+target labels, each of which belongs to an edge device’s inference task. Given a dataset {x(i) }N
+i=1 of N independent and
+identically distributed (i.i.d.) data samples, the edge transmitter
+is responsible for extracting and broadcasting feature vectors
+sharing among inference tasks of all the edge devices, and
+each device aims to estimate its desire target labels. Since the
+users that estimate the same label can be viewed as a group
+and no interference exists among users within the same group,
+we assume K = M and each receiver k wishes to estimate
+the target label yk .
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+14027
+
+Fig. 2. Probabilistic graph model with two inference tasks.
+
+At the edge transmitter side, inspired by Marton’s coding
+scheme, we adopt DNN-based encoders to encode the raw
+data x into a common feature vector and K private feature
+vectors. The common feature vector is broadcast to all the edge
+devices, and the private feature vectors are individually transmitted to each device. At the edge device side, the received
+common and private feature vectors are then concatenated
+to infer the target label. We leverage a two-phase training
+framework, where each phase is designed to extract different
+feature vectors, to facilitate the multi-task edge inference.
+In Phase 1, the edge transmitter extracts the common
+feature vector, which encodes the information shared by all
+the inference tasks. The probabilistic model of the common
+feature encoder is denoted as pθ (uc |x), which is determined
+by a DNN deployed at the edge transmitter and parameterized
+by θ. pθ (uc |x) yields the common feature vector uc ∈ Rd .
+pθ (uc |x). Then, in Phase 2, a task-specific encoder fuses the
+raw data x and the common feature vector uc to extract a
+feature vector as the private feature vector, which encodes
+information exclusive for one specific inference task. The
+probabilistic model of the private feature encoder is represented as pθk (uk |uc , x), which is parameterized by θk and
+yields the private feature vector uk ∈ Rdk for the inference
+task of the k-th edge device. In the communication stage, the
+common feature vector uc is broadcast to all the devices. In
+contrast, the private feature vectors {uk }K
+k=1 are transmitted
+to each edge device with orthogonal communication resources
+(i.e., in a time-division or frequency-division manner). Both
+feature vectors are normalized before transmission, i.e.,
+√
+uc
+ūc = dP
+,
+||uc ||2
+p
+uk
+ūk = dk P
+, ∀k ∈ {1, . . . , K},
+(3)
+||uk ||2
+where P denotes the average transmit power budget. As
+for wireless communication, without loss of generality, we
+consider the additive white Gaussian noise (AWGN) channel
+because of its widespread usage in the existing literature [1],
+[16], [17]. The received signals at edge device k is given by
+ûc,k = ūc + nk ,
+ûk = ūk + n0k ,
+
+∀k ∈ {1, . . . , K},
+
+(4)
+
+where nk , n0k ∼ N (0, σk2 I) are independent additive white
+Gaussian noise at the k-th edge device with variance σk2 . The
+modulation, physical channel, and demodulation are considered as extended channel models represented by p(ûc,k |uc )
+and p(ûk |uk ). Note that these extended channel models are
+independent of encoders’ parameters θ and {θk }.
+After receiving the noise-corrupted common feature vector
+ûc,k and the private feature vector ûk , the k-th edge device
+fuses ûc,k and ûk to estimate the target label ŷk with a DNN
+based decoder modeled by pφk (yk |ûk , ûc,k ) with parameter
+φk . We summarize the overall probabilistic graphic model of
+a special case where K = 2 in Fig. 2.
+B. Problem Formulation
+Since the data sample x may contain very detailed information about the raw input, directly transmitting x requires
+a huge amount of communication resources. To efficiently
+convey information from the transmitter to all the devices,
+the encoders need to extract informative feature vectors for
+the inference tasks. Therefore, the IB principle is adopted
+for feature extraction, which can approximately support the
+encoders to extract minimal sufficient feature vectors of the
+input data x for the target labels [37]. Therein, two types of
+IB optimization problems are formulated. In Phase 1, for the
+common feature vector encoder pθ (uc |x), the IB optimization
+problem is designed to minimize LIB,c (θ), which is given by
+min LIB,c (θ) , −I(Y ; Uc ) + γI(X; Uc ),
+θ
+
+(5)
+
+where Y = [Y1 , . . . , YK ]T is the vector of target labels of all
+the devices’ inference tasks and γ ≥ 0 is an adjustable weight
+factor. Maximizing the first mutual information term I(Y ; Uc )
+in (5) yields such a uc that is useful for all the inference
+tasks. Therefore, the common feature vector uc should encode
+the correlation of different downlink inference tasks. Next, in
+Phase 2, after extracting the common feature vector uc , the
+task-specific encoders encode the input data x and uc into
+private feature vectors {u1 , . . . , uK }.1 The IB optimization
+1 To reduce encoding complexity and prevent the number of encoders
+from scaling with the user count, we enables encoder sharing among users
+with identical or similar tasks by exploiting the shared semantic information
+inherent in common features.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14028
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+problem is designed to minimize LIB,k (θ k ), which is given
+by
+min LIB,k (θ k ) , −I(Yk ; Ûk |Ûc,k ) + ηI(X; Uk |Uc ),
+
+A. Common Feature Extraction
+
+θk
+
+∀k ∈ {1, . . . , K},
+
+and Private Feature Extraction for the multi-task edge AI
+inference system is presented.
+
+(6)
+
+where η ≥ 0 is an adjustable weight factor. Note that
+the mutual information term in (6) is conditioning on the
+common features Uc and its noise-corrupted version Ûc,k .
+Such a conditional IB formulation guides the private features
+Uk to inform the target label Yk as much as possible while
+discarding the redundant information that has been captured
+by the common features Uc . Conditioning on Uc and Ûc,k , Uk
+can focus on encoding the task-relevant information of the k-th
+inference task. Note that the mutual information terms in (5)
+and (6) for high-dimensional data are highly intractable due to
+the high-dimensional integrals. In the next section, we adopt
+a variational approximation (VA) method to estimate LIB,c (θ)
+and LIB,k (θ k ).
+Remark 1: While standard IB frameworks typically focus
+on point-to-point transmission, our scheme addresses the
+complexities of multi-user broadcast scenarios. We decompose semantic information into common (U0 ) and private
+(U1 , . . ., UK ) features. This allows the system to exploit
+inter-task correlations, significantly reducing redundant computations compared to independent extraction methods. Furthermore, unlike disjoint designs in [30] and [31], where
+semantic extraction and transmission are treated as separate
+modules, our framework introduces an integrated cross-layer
+design. We align the hierarchy of the semantic features
+directly with the common and private message streams of
+Marton’s coding with rate-splitting. This synergy ensures that
+the semantic representation is inherently robust against signal
+interference in the broadcast downlink.
+Remark 2: In our proposed framework, the common and
+private features serve a dual role: they represent semantic
+information and function as channel codewords. In a broadcast
+channel, Marton’s coding with a common message is the
+best-known achievable scheme [36]. It necessitates a common
+message that is decoded by all users to facilitate the management of multi-user interference. Moreover, by extracting a
+common representation (U0 ) first, we “compress” the correlated information across tasks, allowing the private branches
+(Uk ) to focus only on the unique residual details. This reduces
+the total dimensionality required compared to a system where
+each user must transmit a full, independent feature set.
+IV. VARIATIONAL A PPROXIMATIONS
+A fundamental challenge in deriving multi-user VIB is
+the intractability of the joint distribution P (U0 , U1 , . . ., UK ).
+Unlike conventional approaches [28], [38] that assume independent marginals—which would fail to satisfy the correlation
+requirements of Marton’s coding—we propose a conditional
+encoding structure. By extracting private features conditioned
+on the common feature U0 , we ensure that the semantic codewords incorporate correlations to enlarge the achievable rate
+region of the broadcast channel. In the proposed system, a twophase training strategy including Common Feature Extraction
+
+Recall that pθ (uc |x) parameterized by θ denotes the conditional distribution of the common feature extraction process
+for all the tasks. With the distribution pθ (uc |x) being known,
+distributions p(uc ) and p(y|uc ) can be fully characterized by
+the Bayes rules, given by
+Z
+p(uc ) = p(x)pθ (uc |x)dx,
+Z
+p(x, y)pθ (uc |x)
+dx,
+(7)
+p(y|uc ) =
+p(uc )
+where p(x) is the marginal distribution of p(x, y). Note that
+pθ (uc |x) = pθ (uc |x, y) because uc and y are independent
+given x as defined in the probabilistic graph Fig. 2. Unfortunately, directly computing p(uc ) and p(y|uc ) via the Bayes
+rule is impossible due to the intractability of high-dimensional
+integrals. Therefore, we use the variational approximations
+to derive an upper bound for (5). Particularly, we introduce
+variational distributions rc (uc ) and pφ (y|uc ) parameterized
+by φ to approximate p(uc ) and p(y|uc ), respectively. Hence,
+the variational IB (VIB) objective is given as follows:
+LVIB,c (θ, φ) = Ep(y,uc ) [− log pφ (y|uc )]
++ γEp(x) [KL [pθ (uc |x)||rc (uc )]]
+
+= Ep(x,y) Epθ (uc |x) [− log pφ (y|uc )]
+
++ γKL [pθ (uc |x)||rc (uc )] ,
+(8)
+where the derivation of the VIB objective LVIB,c (θ, φ) is
+given in Appendix A. The second equality in (8) is valid
+because the first expectation in LVIB,c (θ, φ) is irrelevant to x.
+Thus, x can be introduced into the integrals of Ep(x,y,uc ) [·],
+and then marginalized. Similarly for the second expectation, y can be introduced into the integrals of Ep(x,y) [·],
+and then marginalized. Note that pθ (uc |x) = pθ (uc |x, y)
+as we mentioned above, therefore, we have p(x, y, uc ) =
+p(x, y)pφ (uc |x).
+To facilitate deep learning techniques in the proposed
+multi-task edge AI inference system, we formulate the
+distributions pθ (uc |x) and pφ (y|uc ) with learnable parameters θ and φ in DNNs, as other existing works [25],
+[28], [39]. A common method to parameterize pθ (uc |x)
+is utilizing the multivariate Gaussian distribution [39], i.e.,
+pθ (uc |x) = N (µc (x), Σc (x)), where the mean vector µc =
+[µc,1 , . . . , µc,dn]T ∈ Rd and othe diagonal covariance matrix
+2
+2
+Σc = diag σc,1
+, . . . , σc,d
+∈ Rd×d are determined by
+DNN-based functions µc (x; θ) and Σc (x; θ). Besides, the
+variational marginal distribution rc (uc ) is assumed to be a
+centered isotropic Gaussian distribution, i.e., N (0, I). Therefore, the KL divergence term in (8) is
+!
+d
+2
+X
+µ2c,i + σc,i
+−1
+KL [pθ (uc |x)||rc (uc )] =
+− log σc,i .
+2
+i=1
+(9)
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+Furthermore, as for the first term in (8), once the inference
+results of inference tasks are obtained based on the extracted
+feature uc via ŷ(uc ; φ) with a DNN parameterized by φ, the
+corresponding variational conditional distribution pφ (y|uc )
+can be formulated as pφ (y|uc ) ∝ exp(−l(y, ŷ(uc ; φ))),
+where l(·, ·) denotes the loss function characterizing the
+inference performance (e.g., the mean square error loss for
+regression or the cross-entropy loss for classification) with
+only the common feature vector uc . Moreover, to ensure the
+differentiability of the first term in (8) and to optimize the
+objective LVIB,c (θ, φ), we leverage the reparameterization
+trick [38] to sample uc from the learned distribution pθ (uc |x),
+i.e.,
+uc = µc + Σc c ,
+(10)
+n
+o
+2
+2
+where Σc = diag σc,1
+, . . . , σc,d
+denotes the covariance
+matrix and c is sampled from N (0, I). Therefore, by sampling a mini-batch of data {(x(b) , y(b) )}B
+b=1 from p(x, y), we
+can obtain an unbiased estimation of the gradient of (8) via
+Monte Carlo sampling method. Hence, we obtain the following
+empirical estimation of the VIB objective LVIB,c (θ, φ), given
+by
+LVIB,c (θ, φ)
+(
+B
+
+1 X  (b)
+l y , ŷ(u(b)
+≃
+c ; φ)
+B
+b=1
+d
+X
+
++γ
+
+i=1
+
+(b)
+
+(b)
+
+(µc,i )2 + (σc,i )2 − 1
+(b)
+− log σc,i
+2
+
+!)
+,
+
+(11)
+
+Note that during the DNN training of Phase 1, the common
+feature extractor θ and inference network φ are directly
+connected. In Phase 2, only the subnet of the trained feature
+extractor θ is connected to the input layer and the private
+feature extractor of the DNN in Phase 2.
+B. Private Feature Extraction
+Recall that the conditional distribution of the private feature extraction process of the k-th device pθk (uk |uc , x) is
+parameterized by θ k . However, as described in the previous
+section, due to high-dimensional integrals, directly computing
+p(yk |ûk , ûc,k ) and p(ûk |ûc,k ) is highly intractable. To address
+this issue, we introduce variational distributions rk (ûk |ûc,k )
+and pφk (yk |ûk , ûc,k ) parameterized by φk to approximate
+p(ûk |ûc,k ) and p(yk |ûk , ûc,k ), respectively. The VIB objective of private feature extraction is given in (12), shown at the
+bottom of the page, where the derivation of the VIB objective
+LVIB,k (θ k , φk ) is given in Appendix B. The second equality
+in (12) is valid because x and {v̂1 , . . . , yk−1 , yk+1 , . . . , yK }
+can be introduced into the integrals when calculating the
+
+14029
+
+expectation as discussed in (8). From the probabilistic graph
+Fig. 2, we remark that
+p(x, y, uc , uk , ûc,k , ûk )
+= p(x, y, uc )pθk (uk |x, uc )p(ûc,k |uc )p(ûk |uk ),
+(13)
+because uk is independent of y given {uc , x}, ûc,k is independent of uk given uc , and ûk is independent of ûc,k
+given uk . This is a direct result from the definition in the
+probabilistic graph Fig. (2), which can be verified with the
+D-separation criterion [40]. Similarly, we utilize a multivariate Gaussian distribution to parameterize pθk (uk |uc , x),
+i.e., pθk (uk |uc , x) = N (µk (uc , x), Σk (uc , x)), where the
+mean vector µk = [µk,1 , . . . , µk,dn]T ∈ Rd and o
+the diagonal
+2
+2
+covariance matrix Σk = diag σk,1
+, . . . , σk,d
+∈ Rd×d
+are determined by DNN-based functions µk (uc , x; θ k ) and
+Σk (uc , x; φk ). Besides, rk (ûk |ûc,k ) is assumed to be a centered isotropic Gaussian distribution, i.e., N (0, I).
+The private feature vector uk is normalized via (3)
+and transmitted to the k-th edge device, where the wireless channel model is defined in (4). The decoding result
+of the k-th task is obtained based on the received signal ûk , which is ŷk (ûk , ûc,k ; φk ). Then, the variational
+distributions can be formulated as pφk (yk |ûk , ûc,k ) ∝
+exp(−h(yk , ŷk (ûk , ûc,k ; φk ))), where h(·, ·) denotes the loss
+function characterizing the inference performance with both
+the received common feature vectors ûc,k and private feature
+vectors ûk . To ensure the differentiability of the first term in
+(12), we adopt the reparameterization trick to sample uk as
+well, i.e.,
+uk = µk + Σk k ,
+(14)
+n
+o
+2
+2
+where Σk = diag σk,1
+, . . . , σk,d
+denotes the covariance
+matrix and k is sampled from N (0, I). Therefore, by
+(b)
+sampling a mini-batch of data {(x(b) , y(b) , uc )}B
+b=1 from
+p(x, y, uc ), we can obtain an unbiased estimation of the
+gradient of (12) via the Monte Carlo sampling method. In
+addition, since the transmitted feature vectors in Phase 2 will
+be corrupted by the channel noise as defined in (4), in each
+forward propagation, we repeatedly sample L samples of uk
+from the private feature encoder pθk (uk |uc , x) and uc from
+the common feature encoder pθ (uc |x) with physical channel
+noise nk to improve training stability. Also, all gradients of
+the L samples are accumulated in backpropagation. Finally,
+the empirical estimation of the VIB objective LVIB,k (θ k , φk )
+is given by
+LVIB,k (θ k , φk )
+(
+B
+L
+
+1 X 1 X  (b)
+(b,l)
+(b,l)
+h yk , ŷk (ûk , ûc,k ; φk )
+≃
+B
+L
+b=1
+
+l=1
+
+
+
+LVIB,k (θ k , φk ) = Ep(yk ,ûk ,ûc,k ) − log pφk (yk |ûk , ûc,k ) + ηEp(x,uc ) [KL [pθk (uk |uc , x)||rk (uk |uc )]]
+
+
+
+
+
+pθk (uk |uc , x)
+= Ep(x,y,uc ) Epθk (uk |x,uc ) Ep(ûc,k |uc )p(ûk |uk ) − log pφk (yk |ûk , ûc,k ) + η log
+rk (uk |uc )
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+(12)
+
+14030
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
++η
+
+dk
+X
+
+(b)
+
+(b)
+
+(µk,i )2 + (σk,i )2 − 1
+2
+
+i=1
+
+!)
+(b)
+− log σk,i
+
+.
+
+(15)
+
+Now we complete the derivation of the variational approximation of Phase 1 and Phase 2 training. Note that the feature
+used to perform inference at the edge is ûc,k and ûk rather
+than the perfect feature vectors uc and uk , which demonstrates
+the robustness of the proposed task-oriented broadcast system
+against channel noise. In the following section, we will show
+the robustness and superiority of other aspects through numerical simulations.
+Remark 3: The variational approximations in (11) and
+(15) optimize lower bounds of LIB,c (θ) and LIB,k (θ k ),
+respectively. The exact approximation gap remains difficult
+to quantify for complex datasets with unknown prior distributions. In the context of our multi-user communication
+framework, the VIB objective serves as a tractable surrogate that effectively aligns the extracted semantics with the
+downstream tasks. A more granular theoretical analysis using
+synthetic, tractable distributions (e.g., Jointly Gaussian models) remains an interesting subject for future research.
+V. S IMULATION
+In this section, we will experimentally verify the effectiveness of the proposed Marton’s coding-based JSCC framework
+in the downlink multi-task edge inference system. First, we
+will introduce the parameter settings in the experiment, including the hyperparameters used for neural network training
+and the dataset used for training. Next, we set three SNR
+conditions—low, medium, and high—to present the test accuracy during the neural network training iterations. Finally,
+we compare our proposed method with two other methods
+under different SNR conditions to demonstrate the robustness
+and superior performance of our task-oriented communication
+design.
+A. Experiment Settings
+The dataset used in this experiment is the multi-label
+classification dataset MLRSNet [41]. In this dataset, each
+data sample (x, y) consists of an input x, which is an RGB
+image of size 3 × 256 × 256. These images are high-resolution
+satellite images captured from various locations on Earth. The
+original dataset contains a total of 109,161 images across 60
+classification categories.
+Since this dataset is a multi-label classification dataset, to
+make the experimental process more controllable and ensure
+that the neural network better fits the data, we limit the dataset
+size by randomly selecting 18 classification categories. These
+18 categories cover various urban infrastructures and natural
+landscapes, such as mountains, deserts, oceans, parks, residential areas, and streets. Furthermore, to balance the number of
+positive and negative samples in each category, we select only
+those samples in which at least three out of the 18 categories
+have a classification label of 1 (i.e., a positive example).
+Ultimately, we obtained a total of 71,284 samples, which
+are split into a training set and a test set in a 0.6:0.4 ratio,
+resulting in 42,756 training samples and 28,528 test samples.
+
+We define K = 3 classification tasks, corresponding to three
+downlink devices. Specifically, the first six categories out of
+the 18 are assigned to the first classification task, the next six
+to the second classification task, and the last six to the third
+classification task. This experimental design takes into account
+the rationality of task distribution in practical applications
+while ensuring efficient collaboration between tasks under the
+premise of maintaining overall system performance.
+The channel model between the edge transmitter and the
+edge devices is defined in Equation (4), where the communication quality is characterized by the SNR of each
+communication link. This channel model reflects the characteristics of actual wireless transmission and provides a theoretical
+basis for subsequent performance analysis. To comprehensively evaluate the performance of our proposed method, we
+select the following two schemes as baselines for comparison,
+exploring the performance advantages of our proposed system
+under different technical approaches:
+• DeepJSCC: This method is a deep learning-based
+approach that employs deep neural networks to directly
+encode input data samples into feature vectors for transmission [18], [25]. In this comparative experiment, we
+replace the information bottleneck loss function with a
+cross-entropy loss function and train the entire neural
+network in an end-to-end manner.
+• Digital BPG Encoding: This method utilizes the Better
+Portable Graphics (BPG) codec for Source coding and
+compression, combined with 5G Low-Density ParityCheck (LDPC) codes for channel coding, setting a
+theoretical upper bound on the transmission rate for
+digital communication. We considered 5G LDPC codes
+with a 1/2 coding rate under quadrature amplitude modulations (QAM) schemes. The goal of the digital BPG
+encoding method is to efficiently broadcast compressed
+images to edge devices for multi-task inference.
+• Rate-Splitting IB: Our proposed method is named RateSplitting IB in the comparative experiment, representing
+an information bottleneck-optimized edge inference system based on Marton’s coding and rate-splitting technology. This method aims to enhance inference accuracy
+using information bottleneck techniques and improve the
+robustness of the inference system under different SNR
+conditions.
+For each experimental scheme in the comparison, we
+primarily evaluate the overall inference performance of the
+system based on the final task inference accuracy. Specifically,
+an inference result is considered correct only if an edge device
+accurately infers all labels in its assigned task. Conversely, if
+at least one of the predicted labels is incorrect, the inference
+result is deemed incorrect. This evaluation criterion strictly
+reflects our high accuracy requirements for inference tasks.
+To ensure fairness in the experimental conditions for all
+comparison schemes, we adopt a similar deep neural network
+architecture across all experiments. It is particularly noteworthy that in the second comparison scheme, the Digital BPG
+Encoding method, since this approach directly transmits the
+compressed image data, the entire neural network is deployed
+at the edge devices to perform inference directly. In contrast,
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+in the other two methods—the DeepJSCC method and the
+Rate-Splitting IB method—we employ the common split neural network structure in task-oriented communication, where
+the neural network is divided into an encoder and multiple
+decoders. The encoder is deployed at the edge transmitting
+base station, while the decoders are deployed at the respective
+edge devices.
+The detailed settings for the experimental simulations are as
+follows: To simplify the experimental design, we fix the peak
+transmission power P to 1 and adjust the simulation signalto-noise ratio (SNR) by varying the noise power {σk2 } of each
+downlink channel. Furthermore, to better illustrate the robustness of our proposed system under different SNR conditions,
+we define the SNR ratio between different downlink channels
+as r and specify that
+r=
+
+SNRK
+SNR2
+= ... =
+SNR1
+SNRK−1
+
+(16)
+
+where SNRk represents the SNR of the communication link
+between the edge transmitting base station and the k-th edge
+device. Without loss of generality, we fix the SNR ratio
+between any two consecutively indexed edge devices to r
+and set SNR1 to 1 dB. By adjusting different values of r,
+we can evaluate the robustness of each experimental method
+under varying SNR differences. Moreover, in most practical
+application scenarios, since the relative distance between the
+edge devices and the edge transmitting base station remains
+stable, the actual value of parameter r can be predetermined
+through on-site measurement or estimation.
+B. DNN Architecture
+In the neural network architecture design, we primarily
+consider using the Residual Neural Network (ResNet) [42] as
+the fundamental framework. Specifically, we split ResNet18,
+which consists of 8 residual blocks and an initial convolutional
+layer for processing input, followed by a fully connected
+layer for classification output. Each residual block contains
+two convolutional layers with a kernel size of 3 × 3, and
+the input and output of the residual block are connected
+via a residual connection. This residual connection enhances
+the stability of deep neural network training. If the input
+and output feature sizes of a residual block are inconsistent,
+the residual connection includes an additional convolutional
+layer with a kernel size of 1 × 1 for downsampling the
+input features. Batch normalization (BatchNorm) is applied
+within the residual blocks to prevent gradient vanishing and
+accelerate model convergence. After batch normalization, the
+ReLU activation function is used to obtain nonlinear output
+features. Additionally, ResNet18 includes a max pooling layer
+with a kernel size of 3 × 3 after the initial convolutional layer,
+and an adaptive average pooling layer before the final fully
+connected layer to reduce feature dimensionality.
+In our designed architecture, the first four residual blocks of
+ResNet18, along with the preceding layers, primarily form the
+common feature encoder pθ (uc |x), which outputs the common
+feature vector uc. The dimensionality of the common feature
+vector d is set to 42 × 32 × 32. After extracting the common
+
+14031
+
+feature vector in the first training phase, in the second training
+phase, we use the 5th and 6th residual blocks of ResNet18
+to construct the private feature encoder pθk (uk |uc , x), which
+extracts the private feature vector. The dimensionality of the
+private feature vector dk is set to 8 × 16 × 16. During
+inference, we use the last two residual blocks of ResNet18
+to form the inference network pφk (yk |ûk, ûc, k). In both
+the private feature encoder pθk (uk|uc, x) and the inference
+network pφk (yk |ûk, ûc, k), we perform feature fusion by concatenating feature vectors. The ResNet-based architecture is
+widely utilized in the literature for its robust feature extraction
+and its optimal balance between depth and computational
+efficiency. This choice specifically aligns with the stringent
+energy and hardware constraints inherent in edge deployment
+scenarios, such as satellite-based remote sensing, where the
+implementation of ultra-deep models is often precluded by
+limited onboard processing resources.
+To ensure fair comparisons, we utilize the same backbone
+network and maintain equal the total dimensionality for the
+transmitted features across all evaluated schemes. Specifically,
+in the baseline methods where no distinction is made between
+common and private features, the dimensionality of the vector
+transmitted to each of the K downlink edge devices is set to
+d0 = 64×16×16, resulting in a total system overhead of Kd0 .
+In our proposed Rate-Splitting IB method, we strictly adhere
+to this budget by ensuring that the sum of the common feature
+dimensionality (d) and all private
+PK feature dimensionalities (dk )
+satisfies the constraint d + k=1 dk = Kd0 .
+In subsequent experiments, as defined in Equation (15),
+we perform repeated sampling L = 5 times during training
+under noisy conditions to enhance the statistical reliability of
+the inference results and provide more comprehensive data
+support for system performance evaluation. For the selection
+of hyperparameters γ and η, a grid search is conducted to
+optimize the proposed parameters γ and η over a logarithmically spaced range from [10−6 , 102 ]. The entire training
+process employs the Adam optimizer, with an initial learning
+rate set to 10−3 and a batch size of 128. For each experimental
+scheme, we use four GeForce RTX 3080 GPUs to perform
+Distributed Data Parallel (DDP) training. Unless otherwise
+specified, additional relevant simulation experiment parameter
+settings are summarized in Table I.
+C. Comparison Experiment
+We first compare the training performance of the three
+baseline methods mentioned above. We set the signal-tonoise ratio (SNR) ratio between multiple downlink channels
+to r = 1 and conduct training under three different SNR
+conditions: low, medium, and high. After training, we select
+the inference accuracy tested on the validation set during
+the first 100 training epochs and visualize the results in
+Figures 3 and 4. Due to the significant fluctuations in collected
+data during training, we apply the Savitzky-Golay filter to
+smooth the inference accuracy curves for each method on
+the validation set. Additionally, we use shaded regions of
+corresponding colors to indicate the ±0.5σ range, where σ
+is the standard deviation of the inference accuracy. From the
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14032
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+TABLE I
+PARAMETER S ETTINGS
+
+Fig. 4. Inference accuracy of test sets under different SNR ratios.
+
+Fig. 3. Inference accuracy of different test SNRs: 3 dB, 6 dB, and 10 dB
+from top to bottom.
+
+figures, it can be observed that, compared to the other two
+methods, our proposed information bottleneck-based training
+method exhibits more stable training behavior and consistently
+achieves higher inference accuracy throughout the training
+process.
+It is worth noting that there is a noticeable drop in inference
+accuracy between the first and second training phases. This is
+
+because the second training phase introduces additional neural
+network modules and more trainable parameters, which are
+randomly initialized and require several iterations to converge.
+Additionally, we observe that the inference accuracy on the
+validation set during phase 2 is slightly lower than in phase
+1. This is because phase 2 introduces communication noise
+nk , as defined in Equation (4). Furthermore, the figures also
+demonstrate that our designed Rate-Splitting IB method and
+the DeepJSCC method outperform the Digital BPG Encoding
+method. In certain SNR settings, the Digital BPG method may
+even fail, exhibiting highly unstable training behavior where
+the accuracy does not improve with increasing iterations. This
+finding suggests that task-oriented communication design is
+more suitable for edge inference systems. Splitting the neural
+network into encoder and decoder components and deploying
+them at the transmitter and receiver, respectively, can lead to
+better inference performance.
+After completing the training, we test the models trained
+under three different SNR conditions—3 dB, 6 dB, and
+10 dB—across a broader range of SNR conditions from
+0 to 12 dB. The test results are shown in Fig. 3, where
+the three rows from top to bottom correspond to models
+trained at 3 dB, 6 dB, and 10 dB, respectively. From the
+figure, we can observe that our proposed Rate-Splitting IB
+method consistently achieves the best performance across all
+test scenarios. Moreover, after employing the task-oriented
+communication approach, both the Rate-Splitting IB method
+and the DeepJSCC method exhibit relatively stable performance across different SNR conditions, without significant
+fluctuations. In contrast, the Digital BPG Encoding method
+is more prone to overfitting and is significantly affected
+by channel noise. Additionally, we note that the Digital
+BPG method performs best when the test SNR matches the
+training SNR. However, at other SNR levels, its inference
+performance degrades noticeably. This suggests that traditional
+source compression techniques may not be well-suited for
+robust inference under varying wireless conditions, whereas
+task-oriented communication-based methods can provide more
+reliable and consistent inference performance across different
+SNR environments.
+By adjusting the SNR ratio r between different downlink
+channels, we further evaluate the inference performance of our
+proposed method under varying SNR conditions. Specifically,
+we set r to 2 and 4, corresponding to SNR configurations
+of 1 dB, 2 dB, 4 dB and 1 dB, 4 dB, 16 dB, respectively,
+for training. The trained models are then tested across an
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+Fig. 5. Performance on image reconstruction task when training SN R =
+3 dB.
+
+SNR range from 0 to 11 dB. The final test results are
+presented in Fig. 4. Compared with the other two baseline
+methods, our proposed Rate-Splitting IB method achieves
+higher inference accuracy while transmitting the same amount
+of communication data. The feature vectors designed based
+on the information bottleneck principle can better encode
+the information relevant to the original classification task.
+Additionally, introducing a common feature encoder further
+enhances inference performance. We also observe that the
+inference performance of the system is better when r = 2
+than when r = 4. When r = 4, our proposed Rate-Splitting IB
+method exhibits some accuracy degradation in test conditions
+where the SNR is lower than the training SNR. This suggests
+that the system performs better when the SNR difference
+between downlink channels is smaller.
+In the r = 4 case, the third task always operates under
+high SNR conditions. As shown in the figure, the inference
+accuracy of task 3 fluctuates the most with varying test
+SNRs. In contrast, the inference performance of tasks 1
+and 2 remains relatively stable across different test SNRs.
+This highlights the significant impact of parameter settings
+on multi-task cooperative optimization in downlink multitask broadcasting scenarios. Furthermore, among the three
+inference tasks, task 1, despite having the worst channel
+conditions, demonstrates the most stable inference accuracy.
+On the other hand, task 3, which benefits from the best
+channel conditions, experiences the largest fluctuations in
+accuracy with varying test SNRs. This indicates that our
+proposed method effectively balances scenarios with large
+SNR disparities. When different downlink communication
+links have significantly different SNRs, our method prioritizes
+feature encoding for edge devices experiencing poorer SNR
+conditions, ensuring that these tasks achieve higher accuracy.
+This strongly demonstrates the robustness and stability of our
+Rate-Splitting IB method in diverse SNR environments.
+To further validate the multi-task scalability of the RateSplitting IB framework, we extend our experiments to more
+diverse multi-task scenarios involving simultaneous image
+reconstruction and semantic inference. Specifically, we integrated an additional downlink device dedicated to image
+reconstruction into the system, while ensuring that the rest
+of the model remains consistent with the aforementioned
+experimental settings. As demonstrated in Fig. 5, using the
+mean square error (MSE) metric, our framework achieves
+
+14033
+
+Fig. 6. Inference accuracies of the ablation study when training SN R =
+3 dB.
+
+Fig. 7. Inference accuracies of different ratio dd when training SN R =
+k
+3 dB.
+
+superior reconstruction fidelity compared to the baselines.
+This performance gain highlights the framework’s scalability toward other complex tasks in multi-task edge inference
+scenarios.
+D. Ablation Studies
+To validate the individual contribution of each phase, we
+perform an ablation study comparing the full Rate-Splitting
+IB framework against two variants restricted to Phase 1
+or Phase 2, respectively. To ensure a fair comparison, the
+total number of transmitted features is kept constant across
+all schemes, thereby maintaining an identical communication
+overhead. As illustrated in Fig. 6, the proposed method consistently achieves comparable or superior performance across
+all test scenarios relative to the single-phase baselines. These
+results confirm the effectiveness of the integrated approach and
+underscore the necessity of the two-phase training framework.
+Next, we investigate the dimensionality tradeoff between
+the two training phases. In general, the dimensionality tradeoff is governed by two primary factors: 1) Task Correlation:
+The optimal dimensionality allocation depends heavily on the
+degree of task correlation among users; 2) Channel Capacity:
+From the perspective of the Marton’s coding rate region, as
+expressed in (1), the rate allocation between common and
+private messages must adapt to the users’ channel conditions.
+In Fig. 7, we vary the ratio ddk of common to private feature
+dimensions while maintaining a fixed total dimensionality for
+each downlink device’s feature vector. We find that the overall
+performance across the three inference tasks improves as the
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14034
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+ratio decreases. Note that the reductions in r require higher
+transmission costs due to the increased dimensionality of
+private features, highlighting an inherent tradeoff between task
+accuracy and communication overhead. Notably, as the ratio
+continues to decrease, the inference performance degrades
+significantly. This observation aligns with our prior ablation
+studies, confirming the essential roles of both common and
+private feature components.
+
+
+KL [p(uc )||rc (uc )] = Ep(uc )
+
+
+p(uc )
+log
+.
+rc (uc )
+
+At last, we have
+LIB,c (θ) ≤ Ep(y,uc ) [− log pφ (y|uc )]
++ γEp(x,uc ) [log pθ (uc |x) − log rc (uc )]
+= Ep(y,uc ) [− log pφ (y|uc )]
++ γEp(x) [KL [pθ (uc |x)||rc (uc )]]
+= LVIB,c (θ, φ),
+
+VI. C ONCLUSION
+In conclusion, this paper proposed a task-oriented broadcast
+communication system based on a rate-splitting IB framework to support multi-task edge AI inference. By separating
+the encoded features into a common feature vector and
+multiple task-specific private feature vectors, the proposed
+two-phase design effectively captures the commonality and
+diversity among tasks. Variational approximation methods
+were employed to optimize the information bottleneck objectives for both phases, enabling compact and informative
+feature extraction while reducing communication overhead.
+Experimental evaluations on real-world datasets demonstrated
+that the proposed method achieves superior inference accuracy
+and robustness under diverse channel conditions, outperforming traditional digital compression and JSCC coding schemes.
+This validates the effectiveness and practicality of the proposed
+approach in multi-device edge AI systems. Future research
+directions include analyzing the theoretical gap of the variational IB objective in specific analytical regimes, as well
+as extending the proposed two-phase training framework to
+fading and more dynamic broadcast environments.
+
+(19)
+
+(20)
+
+where the inequality holds due to the non-negativity of the KL
+divergence terms in (18).
+A PPENDIX B
+D ERIVATION OF LVIB,k (θ, φ) IN (12)
+Recall that the definition of LIB,k (θ k ) is given in (6).
+Similar to the previous derivation, we have
+LIB,k (θ k ) = −I(Yk ; Ûk |Ûc,k ) + ηI(X; Uk |Uc )
+(b)
+
+≡ H(Yk |Ûk , Ûc,k ) + ηI(X; Uk |Uc )
+
+(21)
+
+where the equivalence (b) holds because the conditional
+entropy H(Yk |Uc ) is treated as constant in Phase 2, which
+can be dropped in the derivation. Then, we rewrite LIB,k (θ k )
+in terms of expectations, given by
+LIB,k (θ k )
+= Ep(yk ,ûk ,ûc,k ) [− log p(yk |ûk , ûc,k )]
++ ηEp(x,uk ,uc ) [log pθk (uk |uc , x) − log p(uk |uc )]
+
+
+= Ep(yk ,ûk ,ûc,k ) − log pφk (yk |ûk , ûc,k )
++ ηEp(x,uk ,uc ) [log pθk (uk |uc , x) − log rk (uk |uc )]
+
+
+− KL p(yk |ûk , ûc,k )||pφk (yk |ûk , ûc,k )
+
+A PPENDIX A
+D ERIVATION OF LVIB,c (θ, φ) IN (8)
+Recall that the definition of LIB,c (θ) is given in (5). Firstly,
+we have
+
+− ηKL [p(uk |uc )||rk (uk |uc )]
+
+(22)
+
+LIB,c (θ)
+
+where distributions pθk (uk |uc , x) and rk (uk |uc ) are the introduced variational distributions, and the KL divergence terms
+are respectively given by
+
+
+KL p(yk |ûk , ûc,k )||pφk (yk |ûk , ûc,k )
+
+
+
+p(yk |ûk , ûc,k )
+= Ep(ûk ,ûc,k ) Ep(yk |ûk ,ûc,k ) log
+,
+pφk (yk |ûk , ûc,k )
+KL [p(uk |uc )||rk (uk |uc )]
+
+
+
+p(uk |uc )
+= Ep(uc ) Ep(uk |uc ) log
+.
+(23)
+rk (uk |uc )
+
+= Ep(y,uc ) [− log p(y|uc )]
+
+Finally, we have
+
+LIB,c (θ) = −I(Y ; Uc ) + γI(X; Uc )
+(a)
+
+≡ H(Y |Uc ) + γI(X; Uc ),
+
+(17)
+
+where the equivalence (a) holds because the entropy H(Y) is
+treated as constant in Phase 1, which can be dropped in the
+derivation. Then, we rewrite LIB,c (θ) in terms of expectations,
+given by
+
++ γEp(x,uc ) [log pθ (uc |x) − log p(uc )]
+
+LIB,k (θ k )
+
+= Ep(y,uc ) [− log pφ (y|uc )]
+
+
+
+≤ Ep(yk ,ûk ,ûc,k ) − log pφk (yk |ûk , ûc,k )
+
++ γEp(x,uc ) [log pθ (uc |x) − log rc (uc )]
+− KL [p(y|uc )||pφ (y|uc )] − γKL [p(uc )||rc (uc )] ,
+
+(18)
+
+where distributions pφ (y|uc ) and rc (uc ) are the introduced
+variational distributions, and the KL divergence terms are
+respectively given by
+
+
+
+p(y|uc )
+,
+KL [p(y|uc )||pφ (y|uc )] = Ep(uc ) Ep(y|uc ) log
+pφ (y|uc )
+
++ ηEp(x,uk ,uc ) [log pθk (uk |uc , x) − log rk (uk |uc )]
+
+
+= Ep(yk ,ûk ,ûc,k ) − log pφk (yk |ûk , ûc,k )
++ ηEp(x,uc ) [KL [pθk (uk |uc , x)||rk (uk |uc )]]
+= LVIB,k (θ k , φk )
+
+(24)
+
+where the inequality holds due to the non-negativity of the KL
+divergence terms in (22).
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+WU et al.: JSCC FOR TASK-ORIENTED BROADCAST COMMUNICATIONS: AN INFORMATION BOTTLENECK APPROACH
+
+R EFERENCES
+[1]
+
+Y. Yang, Y. Wu, S. Ma, and Y. Shi, “Multi-task-oriented broadcast for
+edge AI inference via information bottleneck,” in Proc. IEEE Global
+Commun. Conf. (GLOBECOM), Dec. 2023, pp. 3142–3147.
+[2] K. B. Letaief, W. Chen, Y. Shi, J. Zhang, and Y. A. Zhang, “The roadmap
+to 6G: AI empowered wireless networks,” IEEE Commun. Mag., vol. 57,
+no. 8, pp. 84–90, Aug. 2019.
+[3] Y. Shi, Y. Zhou, D. Wen, Y. Wu, C. Jiang, and K. B. Letaief, “Taskoriented communications for 6G: Vision, principles, and technologies,”
+IEEE Wireless Commun., vol. 30, no. 3, pp. 78–85, Jun. 2023.
+[4] Y. Shi, K. Yang, T. Jiang, J. Zhang, and K. B. Letaief, “Communicationefficient edge AI: Algorithms and systems,” IEEE Commun. Surveys
+Tut., vol. 22, no. 4, pp. 2167–2191, 4th Quart., 2020.
+[5] J. Shao and J. Zhang, “Communication-computation trade-off in
+resource-constrained edge inference,” IEEE Commun. Mag., vol. 58,
+no. 12, pp. 20–26, Dec. 2020.
+[6] E. Li, L. Zeng, Z. Zhou, and X. Chen, “Edge AI: On-demand accelerating deep neural network inference via edge computing,” IEEE Trans.
+Wireless Commun., vol. 19, no. 1, pp. 447–457, Jan. 2020.
+[7] J. Shao and J. Zhang, “BottleNet++: An end-to-end approach for feature
+compression in device-edge co-inference systems,” in Proc. IEEE Int.
+Conf. Commun. Workshops (ICC Workshops), Jun. 2020, pp. 1–6.
+[8] M. Kountouris and N. Pappas, “Semantics-empowered communication
+for networked intelligent systems,” IEEE Commun. Mag., vol. 59, no. 6,
+pp. 96–102, Jun. 2021.
+[9] M. Furuya, R. Sterling, W. Bleha, and Y. Inoue, “D-ILA full resolution
+8K projector,” in Proc. SMPTE Annu. Tech Conf. Expo, Oct. 2009,
+pp. 1–9.
+[10] K. Rajashekara and S. Koppera, “Data and energy impacts of intelligent
+transportation—A review,” World Electr. Vehicle J., vol. 15, no. 6,
+p. 262, Jun. 2024.
+[11] D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 1, pp. 5–41, Jan. 2023.
+[12] D. Wen et al., “Task-oriented sensing, computation, and communication
+integration for multi-device edge AI,” IEEE Trans. Wireless Commun.,
+vol. 23, no. 3, pp. 2486–2502, Mar. 2024.
+[13] D. Wen, X. Jiao, P. Liu, G. Zhu, Y. Shi, and K. Huang, “Taskoriented over-the-air computation for multi-device edge AI,” IEEE
+Trans. Wireless Commun., vol. 23, no. 3, pp. 2039–2053, Mar. 2024.
+[14] X. Kang, B. Song, J. Guo, Z. Qin, and F. R. Yu, “Task-oriented image
+transmission for scene classification in unmanned aerial systems,” IEEE
+Trans. Commun., vol. 70, no. 8, pp. 5181–5192, Aug. 2022.
+[15] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+communications for VQA,” IEEE Wireless Commun. Lett., vol. 11,
+no. 3, pp. 553–557, Mar. 2022.
+[16] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+semantic communication systems,” IEEE Trans. Signal Process.,
+vol. 69, pp. 2663–2675, 2021.
+[17] M. Jankowski, D. Gunduz, and K. Mikolajczyk, “Wireless image
+retrieval at the edge,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+pp. 89–100, Jan. 2021.
+[18] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cognit.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[19] Z. Lyu, G. Zhu, J. Xu, B. Ai, and S. Cui, “Semantic communications
+for image recovery and classification via deep joint source and channel
+coding,” IEEE Trans. Wireless Commun., vol. 23, no. 8, pp. 8388–8404,
+Aug. 2024.
+[20] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint sourcechannel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+Process. (ICASSP), Calgary, AB, Canada, Apr. 2018, pp. 2326–2330.
+[21] Y. Wu, Y. Shi, S. Ma, C. Jiang, W. Zhang, and K. B. Letaief, “Toward
+effective and interpretable semantic communications,” IEEE Netw.,
+vol. 38, no. 6, pp. 55–62, Nov. 2024.
+[22] N. Tishby, F. C. N. Pereira, and W. Bialek, “The information bottleneck
+method,” 2000, arXiv:physics/0004057.
+[23] Y. Shi et al., “Machine learning for large-scale optimization in
+6G wireless networks,” IEEE Commun. Surveys Tut., vol. 25, no. 4,
+pp. 2088–2132, 4th Quart., 2023.
+[24] H. Yang, Y. Wu, D. Wen, Y. Zhou, and Y. Shi, “Structured IB:
+Improving information bottleneck with structured feature learning,” in
+Proc. AAAI-25, Sponsored Assoc. Advancement Artif. Intell., T. Walsh,
+J. Shah, and Z. Kolter, Eds., Philadelphia, PA, USA: AAAI Press, 2025,
+pp. 21922–21928.
+
+14035
+
+[25] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+[26] F. Pezone, S. Barbarossa, and P. Di Lorenzo, “Goal-oriented communication for edge learning based on the information bottleneck,” in Proc.
+IEEE Int. Conf. Acoust., Speech Signal Process. (ICASSP), Singapore,
+May 2022, pp. 8832–8836.
+[27] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+bottleneck for task-oriented communication with digital modulation,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+[28] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for multidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+vol. 22, no. 1, pp. 73–87, Jan. 2023.
+[29] M. Ding, J. Li, M. Ma, and X. Fan, “SNR-adaptive deep joint sourcechannel coding for wireless image transmission,” in Proc. IEEE Int.
+Conf. Acoust., Speech Signal Process. (ICASSP), Toronto, ON, Canada,
+Jun. 2021, pp. 1555–1559.
+[30] S. Ma et al., “Features disentangled semantic broadcast communication networks,” IEEE Trans. Wireless Commun., vol. 23, no. 6,
+pp. 6580–6594, Jun. 2024.
+[31] H. Gao et al., “Rate splitting multiple access-enabled adaptive panoramic
+video semantic transmission,” IEEE Trans. Wireless Commun., vol. 24,
+no. 11, pp. 9050–9068, Nov. 2025.
+[32] Z. Yang, M. Chen, Z. Zhang, and C. Huang, “Energy efficient semantic
+communication over wireless networks with rate splitting,” IEEE J. Sel.
+Areas Commun., vol. 41, no. 5, pp. 1484–1495, May 2023.
+[33] M. Gong, S. Wang, F. Ye, and S. Bi, “Compression before fusion:
+Broadcast semantic communication system for heterogeneous tasks,”
+IEEE Trans. Wireless Commun., vol. 23, no. 12, pp. 19428–19443, Dec.
+2024.
+[34] H. Hou, S. Bi, X. Li, and X. Lin, “Joint semantic information gathering
+and broadcasting for multi-task edge processing,” in Proc. IEEE/CIC
+Int. Conf. Commun. China (ICCC), Aug. 2024, pp. 60–65.
+[35] K. Marton, “A coding theorem for the discrete memoryless broadcast
+channel,” IEEE Trans. Inf. Theory, vol. IT-25, no. 3, pp. 306–311, May
+1979.
+[36] A. E. Gamal and Y.-H. Kim, Network Information Theory. Cambridge,
+MA, USA: Cambridge Univ. Press, 2012.
+[37] S. Kullback and R. A. Leibler, “On information and sufficiency,” Ann.
+Math. Statist., vol. 22, no. 1, pp. 79–86, 1951.
+[38] D. P. Kingma and M. Welling, “Auto-encoding variational Bayes,” in
+Proc. 2nd Int. Conf. Learn. Represent. (ICLR), Banff, AB, Canada,
+Y. Bengio, and Y. LeCun, Eds., 2014, pp. 1–14.
+[39] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” in Proc. 5th Int. Conf. Learn. Represent.
+(ICLR), Toulon, France, 2017, pp. 1–19.
+[40] C. M. Bishop, Pattern Recognition and Machine Learning (Information
+Science and Statistics), 5th ed. Cham, Switzerland: Springer, 2007.
+[41] X. Qi et al., “MLRSNet: A multi-label high spatial resolution
+remote sensing dataset for semantic scene understanding,” 2020,
+arXiv:2010.00243.
+[42] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for
+image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+(CVPR), Jun. 2016, pp. 770–778.
+
+Youlong Wu (Member, IEEE) received the B.S.
+degree in electrical engineering from Wuhan University, Wuhan, China, in 2007, the M.S. degree
+in electrical engineering from Shanghai Jiaotong
+University, Shanghai, China, in 2011, and the
+Ph.D. degree from Telecom ParisTech, Paris, France,
+in 2014. In December 2014, he worked as a
+Post-Doctoral Researcher with the Institute for
+Communication Engineering, Technical University
+Munich (TUM), Munich, Germany. In 2017, he
+joined the School of Information Science and Technology, ShanghaiTech University. He received the TUM Fellowship in 2014
+and was selected for Shanghai Pujiang Talent Program in 2018. His research
+interests include information theory and its applications, e.g., coded computing, task-oriented communications, and machine learning. He is also an
+Alexander von Humboldt Research Fellow.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+14036
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+Jingfeng Huang received the B.Eng. degree in network engineering from the University of Electronic
+Science and Technology of China, Chengdu, China,
+in 2022, and the M.Eng. degree in computer science
+from ShanghaiTech University, Shanghai, China,
+in 2025. His research interests include machine
+learning and optimization for task-oriented communications and edge AI inference in wireless
+networks.
+
+Yuanming Shi (Senior Member, IEEE) received the
+B.S. degree in electronic engineering from Tsinghua
+University, Beijing, China, in 2011, and the Ph.D.
+degree in electronic and computer engineering from
+The Hong Kong University of Science and Technology (HKUST) in 2015. Since September 2015, he
+has been with the School of Information Science and
+Technology, ShanghaiTech University, where he is
+currently a Full Professor. His research areas include
+wireless communications, artificial intelligence, and
+convex optimization. He is an IET Fellow. He was a
+recipient of the IEEE Marconi Prize Paper Award in Wireless Communications
+in 2016, the Young Author Best Paper Award by the IEEE Signal Processing Society in 2016, the IEEE ComSoc Asia–Pacific Outstanding Young
+Researcher Award in 2021, the Chinese Institute of Electronics First Prize in
+Natural Science in 2022, and China Institute of Communications First Prize
+in Natural Science in 2024. He is an Editor of IEEE T RANSACTIONS ON
+W IRELESS C OMMUNICATIONS, IEEE J OURNAL ON S ELECTED A REAS IN
+C OMMUNICATIONS, Journal of Communications and Information Networks,
+and Space Habitation.
+
+Shuai Ma (Member, IEEE) received the B.S. and
+Ph.D. degrees in communication and information
+systems from Xidian University, Xi’an, China, in
+2009 and 2016, respectively. From 2014 to 2015,
+he was a Visiting Scholar with the Department of
+Electrical and Computer Engineering, Texas A&M
+University, College Station, TX, USA. From 2016 to
+2019, he was an Associate Professor with the School
+of Information and Control Engineering, China University of Mining and Technology, Xuzhou, China.
+From 2019 to 2022, he worked as a Post-Doctoral
+Fellow with Telecom Paris, France. Since 2023, he has been an Associate
+Researcher with the Peng Cheng Laboratory, Shenzhen, China. His research
+interests include semantic communications, visible light communications, and
+network information theory.
+
+Kai Niu (Senior Member, IEEE) received the B.S.
+degree in information engineering and the Ph.D.
+degree in signal and information processing from
+Beijing University of Posts and Telecommunications (BUPT), Beijing, China, in 1998 and 2003,
+respectively. He is currently a Professor with the
+School of Artificial Intelligence, BUPT. His research
+interests include information theory, coding theory,
+and semantic communication. He has published
+more than 200 academic papers and proposed high
+performance construction algorithm of polar codes
+applied in 5G standard; and won the first prize of Natural Science of Science
+and Technology Award of the Chinese Institute of Electronics.
+
+Meixia Tao (Fellow, IEEE) received the B.S. degree
+in electronic engineering from Fudan University,
+Shanghai, China, in 1999, and the Ph.D. degree
+in electrical and electronic engineering from The
+Hong Kong University of Science and Technology
+in 2003. She is currently a Distinguished Professor with the School of Information Science and
+Electronic Engineering, Shanghai Jiao Tong University, China. Her current research interests include
+wireless edge learning, semantic communications,
+integrated communication-computing-sensing, AIbased channel modeling, and beamforming. She received the 2019 IEEE
+Marconi Prize Paper Award, the 2013 IEEE Heinrich Hertz Award for Best
+Communications Letters, the IEEE/CIC International Conference on Communications in China (ICCC) 2015 Best Paper Award, and the International
+Conference on Wireless Communications and Signal Processing (WCSP) 2022
+and 2012 Best Paper Awards. She also received the 2009 IEEE ComSoc
+Asia–Pacific Outstanding Young Researcher Award.
+
+Khaled B. Letaief (Fellow, IEEE) received the
+B.S. (Hons.), M.S., and Ph.D. degrees in electrical
+engineering from Purdue University in December
+1984, August 1986, and May 1990, respectively, and
+the Honorary Ph.D. degree from the University of
+Johannesburg, South Africa, in 2022.
+He is currently a globally recognized Leader
+in wireless communications and networks, with a
+research focus that spans artificial intelligence, integrated sensing and communication, mobile cloud
+and edge computing, federated learning, and 6G
+systems. His prolific contributions include over 700 publications, which have
+garnered more than 66 750 citations with an H-index of 113. He holds 15
+inventions, including 11 U.S. patents.
+Dr. Letaief is a fellow of Hong Kong Institution of Engineers. He is also
+a Distinguished Member of several esteemed organizations, including U.S.
+National Academy of Engineering and Hong Kong Academy of Engineering
+Sciences. His research excellence has earned him recognition as a Clarivate
+Highly Cited Researcher. He was named one of the top 30 Most Influential
+Scholars in AI and the Internet of Things. His accolades include numerous
+prestigious awards, such as the 2024 IEEE James Evans Avant Garde Award,
+2024 Distinguished Purdue University Alumni Award, 2022 IEEE Edwin
+Howard Armstrong Achievement Award, and 2021 IEEE Communications
+Society Best Survey Paper Award. He has also received the 2019 Joint
+Paper Award from the IEEE Communications Society and Information Theory
+Society, the 2016 IEEE Marconi Prize Award in Wireless Communications,
+and over 20 IEEE Best Paper Awards. Since 1993, he has been a Faculty
+Member at The Hong Kong University of Science and Technology (HKUST),
+where he has held multiple leadership roles, including a Senior Advisor to
+the President, the Acting Provost, the Head of the Electronic and Computer
+Engineering Department, and the Director of Hong Kong Telecom Institute
+of Information Technology. He was a Chair Professor and the Dean of
+Engineering at HKUST and, from 2015 to 2018, he was a Provost with Hamad
+Bin Khalifa University, Qatar, where he played a key role in establishing
+a research-intensive university in collaboration with renowned institutions
+like Northwestern University, Carnegie Mellon University, Cornell University,
+and Texas A&M University. He is celebrated for his dedicated service to
+professional societies and IEEE, having held numerous leadership positions,
+including the Division Director and a member of the IEEE Board of Directors,
+the Founding Editor-in-Chief of the esteemed IEEE T RANSACTIONS ON
+W IRELESS C OMMUNICATIONS, and the President of the IEEE Communications Society from 2018 to 2019, the leading global organization for
+communications professionals.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:51:50 UTC from IEEE Xplore. Restrictions apply.
+
+

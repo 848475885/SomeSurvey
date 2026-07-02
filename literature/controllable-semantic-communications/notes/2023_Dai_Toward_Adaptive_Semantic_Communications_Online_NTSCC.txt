@@ -1,0 +1,1585 @@
+                                                                                                                                                                                      1
+
+
+
+
+                                                Toward Adaptive Semantic Communications:
+                                               Efficient Data Transmission via Online Learned
+                                                Nonlinear Transform Source-Channel Coding
+                                              Jincheng Dai, Member, IEEE, Sixian Wang, Graduate Student Member, IEEE, Ke Yang, Graduate Student
+                                                      Member, IEEE, Kailin Tan, Graduate Student Member, IEEE, Xiaoqi Qin, Member, IEEE,
+                                                       Zhongwei Si, Member, IEEE, Kai Niu, Member, IEEE, and Ping Zhang, Fellow, IEEE
+
+
+                                                                                                                             EMANTIC communications are recently emerging as a
+                                                                                                                        S
+arXiv:2211.04339v3 [cs.IT] 24 May 2023
+
+
+
+
+                                            Abstract—The emerging field semantic communication is driv-
+                                         ing the research of end-to-end data transmission. By utilizing the                  new paradigm driving the in-depth fusion of information
+                                         powerful representation ability of deep learning models, learned               and communication technology (ICT) advances and artificial
+                                         data transmission schemes have exhibited superior performance
+                                         than the established source and channel coding methods. While,                 intelligence (AI) innovations [1]–[4]. Unlike traditional com-
+                                         so far, research efforts mainly concentrated on architecture and               munication design philosophy that focuses on accurately trans-
+                                         model improvements toward a static target domain. Despite their                mitting bits over a noisy communication channel [5], semantic
+                                         successes, such learned models are still suboptimal due to the                 communications are goal-oriented, which helps the transceiver
+                                         limitations in model capacity and imperfect optimization and                   identify the most valuable information more efficiently, i.e.,
+                                         generalization, particularly when the testing data distribution
+                                         or channel response is different from that adopted for model                   the information necessary to recover the purpose intended
+                                         training, as is likely to be the case in real-world. To tackle this,           by the transmitter. Performance assessment also goes beyond
+                                         in this paper, we propose a novel online learned joint source and              the common Shannon paradigm of guaranteeing the correct
+                                         channel coding approach that leverages the deep learning model’s               reception of each single transmitted bit, human perceptual
+                                         overfitting property. Specifically, we update the off-the-shelf pre-           loss [6]–[8] and machine task accuracy [9] are taken as the
+                                         trained models after deployment in a lightweight online fashion
+                                         to adapt to the distribution shifts in source data and environment             distortion, which is better aligned with the essential goal of
+                                         domain. We take the overfitting concept to the extreme, proposing              end-to-end communications [1].
+                                         a series of implementation-friendly methods to adapt the codec                    One roadmap to realize semantic communication is bridging
+                                         model or representations to an individual data or channel state                the source and channel parts together to boost the end-to-
+                                         instance, which can further lead to substantial gains in terms                 end content delivery. The paradigm aiming at the integrated
+                                         of the end-to-end rate-distortion performance. Accordingly, the
+                                         streaming ingredients include both the semantic representations                design of source and channel processing is joint source-
+                                         of source data and the online updated decoder model parameters.                channel coding (JSCC) [10], a classical topic in the informa-
+                                         The system design is formulated as a joint optimization problem                tion theory and coding theory. However, conventional JSCC
+                                         whose goal is to minimize the loss function, a tripartite trade-off            schemes [10]–[13] are limited by explicit probabilistic models
+                                         among the data stream bandwidth cost, model stream bandwidth                   and handcrafted designs, whose optimization is intractable for
+                                         cost, and end-to-end distortion. The proposed methods enable the
+                                         communication-efficient adaptation for all parameters in the net-              complex sources. They also ignore the semantic feature aspects
+                                         work without sacrificing decoding speed. Extensive experiments,                of source messages and cannot be optimized towards human
+                                         including user study, on continually changing target source data               perception or machine task directly. In contrast, the emerging
+                                         and wireless channel environments, demonstrate the effectiveness               semantic communication utilizes deep learning models to
+                                         and efficiency of our approach, on which we outperform existing                realize JSCC [14]–[21], which can be optimized for specific
+                                         state-of-the-art engineered transmission scheme (VVC combined
+                                         with 5G LDPC coded transmission).                                              end-to-end transmission objectives. For example, in the case
+                                                                                                                        of wireless image transmission, deep JSCC approaches have
+                                            Index Terms—Semantic communications, online learning, data                  been verified to surpass classical separation-based BPG source
+                                         stream, model stream, end-to-end rate-distortion trade-off.
+                                                                                                                        compression [22] combined with advanced low-density parity-
+                                                                                                                        check (LDPC) channel coding [23], especially for sources of
+                                                                   I. I NTRODUCTION                                     tiny dimensions, e.g., CIFAR dataset (32 × 32 pixels). To
+                                                                                                                        address the challenge of high resolution media transmission,
+                                           This work was supported in part by the National Natural Science Foundation   the optimization goal of JSCC system should be formulated
+                                         of China under Grant 62293481, Grant 92067202, Grant 62001049, Grant           as a trade-off between the reconstruction quality (end-to-end
+                                         62071058, and Grant 61971062, in part by the Beijing Natural Science
+                                         Foundation under Grant 4222012, in part by Program for Youth Innovative Re-    distortion) and the channel bandwidth cost (channel bandwidth
+                                         search Team of BUPT No. 2023QNTD02. (Corresponding authors: Jincheng           ratio). Following this, nonlinear transform source-channel cod-
+                                         Dai, Ping Zhang)                                                               ing (NTSCC) proposed in [24] has achieved content-aware
+                                           Jincheng Dai, Sixian Wang, Ke Yang, Kailin Tan, and Zhongwei Si are
+                                         with the Key Laboratory of Universal Wireless Communications, Ministry         variable-length JSCC via introducing an entropy model on
+                                         of Education, Beijing University of Posts and Telecommunications, Beijing      the semantic latent representations, which can significantly
+                                         100876, China (e-mail: daijincheng@bupt.edu.cn).                               improve the overall coding efficiency. This coding paradigm
+                                           Xiaoqi Qin, Kai Niu, and Ping Zhang are with the State Key Laboratory
+                                         of Networking and Switching Technology, Beijing University of Posts and        reveals the key aspects of semantic transmission: maximizing
+                                         Telecommunications, Beijing 100876, China.                                     reconstruction quality meets the human perception; whereas
+                                                                                                                                                 2
+
+
+
+minimizing wireless channel bandwidth cost benefits the ef-
+ficient transmission, i.e., channel bandwidth ratio-distortion
+(CBR-D) trade-off optimization.
+   Although existing end-to-end transmission approaches have
+proven to be successful in optimizing the end-to-end expected
+CBR-D trade-off over a source dataset and ergodic wireless
+channel responses, they are yet unlikely to be optimal for every
+test instance due to the limited model capacity and imperfect
+                                                                            Overfitting
+optimization. In essence, they assume that if a model performs             the Channel
+well on both training and validation datasets, it will likely                                    Baseline
+generalize well to new, unseen data and channel responses                                         Model
+
+during testing. However, this assumption does not always hold
+in practice. On the one hand, such an amortized model might
+not be good at capturing the data semantic feature and channel
+state for each instance, resulting in suboptimal transform and
+coding during the inference stage. On the other hand, the
+imperfect optimization and generalization will be especially
+severe when the testing data distribution or channel response
+is different from that adopted in the training stage. To tackle
+this, we explore a new online learned approach by optimizing       Fig. 1. We first adapt the baseline model Σ(X ,H) learned from the source data
+                                                                   set X and CSI set H to the given specific source domain Xk and CSI domain
+the network parameters or the semantic representations during      Hk , i.e., overfitted models Σ(Xk ,Hk ) . To address the problem of transmission
+the model inference stage, based on the current target source      over the time-varying wireless channel, we further design a channel-dependent
+                                                                                                                                              (i)
+data and wireless channel domain. In other words, we turn to       method to adapt the model Σ(Xk ,Hk ) to every specific CSI instance hk ∈
+optimize the CBR-D trade-off for substantial gains on every        Hk , resulting in the final overfitted model Σ         (i) .
+                                                                                                                  (Xk ,hk )
+data and channel state instance.
+   Some insights in traditional source compression codec can       to implement and can be incorporated in a number of different
+bring some inspirations [25]–[27]. Conventional image/video        architectures of semantic communications. In this paper, as a
+compressors follow the hybrid transform coding paradigm. For       representative case, we inject our online adaptation method
+example, HEVC [28] and VVC [29] jointly use discrete cosine        to the nonlinear transform source-channel coding (NTSCC)
+transform (DCT) and discrete sine transform (DST) to handle        based semantic communication system [24], to validate the
+different types of signals. Multiple transform selection (MTS)     effectiveness and efficiency. In contrast to previous works, our
+mechanism is introduced to VVC standard to select the most         system introduces an additional model stream alongside the
+appropriate transform locally aiming at the best rate-distortion   traditional data stream, which is utilized to update the JSCC
+trade-off. Inspired by the idea of signal-dependent transform in   decoder and synthesis transform parameters at the receiver. We
+traditional source compression methods, neural codecs are also     take into account the costs of sending the model updates such
+evolving toward the instance-adaptive paradigm. The subopti-       that the whole system design is formulated as an optimization
+mality of neural codecs has been studied extensively in terms      problem whose goal is to minimize the loss function that is a
+of the model inference suboptimality [30]. It has been shown       tripartite trade-off among the data stream bandwidth cost (R),
+that by online finetuning the encoder parameters or latent         model stream bandwidth cost (M ), and end-to-end distortion
+features from a well-trained model for a particular instance,      (D) terms. Our proposed method is lightweight, effective and
+substantial gain can be further obtained in the compression        intuitively appealing, which could be feasibly transplanted
+rate-distortion performance [31]–[36]. Some new methods are        to any existing deep learning based semantic communication
+recently developed to further improve the rate-distortion cost,    systems. Fig. 1 illustrates the key idea of our work briefly.
+e.g., a full-model instance-adaptive compression method was
+                                                                      Specifically, the contributions of this paper can be summa-
+proposed in [37], a neural syntax method was proposed in [38]
+                                                                   rized as follows.
+to realize data-dependent compression, etc. All these methods
+leverage neural network’s overfitting property, adapting the       (1) Online Learned NTSCC Framework: We make the first
+model to an individual source data sample.                             attempt to build a source and channel instance or domain
+   Inspired by the useful insights from traditional compression        adaptive semantic communication system based on the
+codecs and neural compression codecs, in this paper, we make           online learned NTSCC. Our innovative overfitting mecha-
+the first attempt to build a neural instance/domain adaptive           nism enables the whole NTSCC system to be much more
+joint source-channel coding architecture for end-to-end data           powerful and flexible for extracting more compact seman-
+transmission. We show that overfitted neural-enhancement on            tic representations, offering superior end-to-end bandwidth
+end-to-end communication systems is feasible and effective             ratio-distortion performance. We make variational analysis
+when combined with online learning. Accordingly, we propose            to interpret the origins of general model inference subop-
+online learned adaptive NTSCC, a novel framework that em-              timality, and clarify the rationale of our proposed source
+ploys online learning to overfit the instant source data sample        and channel overfitting paradigm.
+and channel state information (CSI). Our new method is easy        (2) Overfitting the Source: We design two simple yet efficient
+                                                                                                                                     3
+
+
+
+     ways to realize the source data instance or domain adaptive     image and video transmission problems [1], [24], [40]. Owing
+     NTSCC. These methods are of different ideas for adapting        to the powerful ability of representation learning, NTSCC
+     a given pre-trained model or semantic latent representation     can well extract the source semantic features and transmit
+     to an individual data sample or other content domain that       them over the wireless channels efficiently by using variable-
+     is different in appearance. We discuss the specific scenario    length deep JSCC techniques. This method not only achieves
+     for which each method is suitable. Our source overfitting       comparable or better performance than the SOTA engineered
+     mechanism online adapts a baseline model to each specific       source compression combined with advanced channel coding
+     scene to maximize communication efficiency.                     schemes, but also greatly surpasses plain auto-encoder based
+(3) Overfitting the Channel: We propose a plug-in CSI mod-           deep JSCC methods [14] that directly encode the raw source
+     ulation module inserted into pre-trained codec modules. It      data rather than its semantic features. In addition, NTSCC
+     enables the whole system to efficiently deal with different     shows great potential to achieve lower time complexity due
+     channel states with a single trained network. The proposed      to its efficient parallel computing with deep neural networks
+     scheme can not only adapt to different signal-to-noise ratio    (DNNs). The above superiority of NTSCC can well support
+     (SNR) under the block fading channel, but also provide          semantic communications. Therefore, in this paper, we choose
+     consistent and robust performance under diverse frequency       NTSCC to build the semantic communication system. Similar
+     selective fading channels, which makes our model agilely        to previous works, we take image or video I-frame (intra-coded
+     transferred over various channel states.                        frame) source as representative, but our work is extensible for
+(4) Performance Validation: We verify the effectiveness and          other source modalities.
+     efficiency of online learned NTSCC over video I-frame
+     sources and practical wireless channels. Extensive results      A. NTSCC based Semantic Communication System
+     indicate that our method can lead to substantial gains in the      The idea of NTSCC stems from the landmark work of Ballé
+     CBR-D performance without sacrificing decoding speed.           et al. on nonlinear transform coding (NTC) [41]–[43]. Given
+     Equivalently, achieving the same end-to-end transmission        the pristine data sample x, e.g., an image x modeled as a
+     performance, the proposed transceiver adaptation scheme         vector of pixel intensities x ∈ Rm , it is first transformed into
+     can save up to 45% bandwidth cost compared to the state-        semantic latent representation y using a DNN-based nonlinear
+     of-the-art (SOTA) engineered transmission scheme (VVC           analysis transform ga . In data compression tasks, y will be
+     combined with 5G LDPC coded transmission).                      quantized as discrete-valued latent representation ȳ, followed
+   The remainder of this paper is organized as follows. In Sec-      by entropy encoding [44] to convert ȳ into bit sequence. This
+tion II, we review the architecture and properties of NTSCC          bit sequence will be fed into entropy decoding to losslessly
+system, and analyze its suboptimality using the variational in-      reconstruct ȳ, and another nonlinear synthesis transform DNN
+ference. Next, in Section III, we present our source overfitting     module gs uses ȳ to reconstruct the decoded data x̂. ga and
+methods, including different ideas for online overfitting a given    gs are jointly optimized under the rate-distortion constraint. In
+pre-trained baseline model to an individual data sample or           communication systems, the above source compressive coding
+other content domain. In Section IV, we show our channel             paradigm relies heavily on advanced channel coding and signal
+overfitting methods, including details on a plugin-in channel        processing techniques to ensure the transmitted bit sequence
+modulation module to adapt a pre-trained model to the instant        to be losslessly recovered. This separation-based approach has
+channel state. Section V shows experimental results to quantify      been employed in many current communication systems, as the
+our performance gain, and some valuable discussions are also         binary representations of various source data can be seamlessly
+given. Finally, Section VI concludes this paper.                     transmitted over arbitrary wireless channels by changing the
+   Notational Conventions: Throughout this paper, lowercase          underlying channel code.
+letters (e.g., x) denote scalars, bold lowercase letters (e.g., x)      However, with increasing demands on low-latency wireless
+denote vectors. In some cases, xi denotes the elements of x,         data delivery applications such as extended reality (XR), the
+which may also represent a subvector of x as described in the        limits of the separation-based design begin to emerge. Current
+context. Bold uppercase letters (e.g., X) denote matrices, and       wireless data transmission systems suffer from time-varying
+Im denotes an m-dimensional identity matrix. ln(·) denotes           channel conditions, in which case the separation-based design
+the natural logarithm, and log(·) denotes the logarithm to base      leads to significant cliff-effect when the channel condition is
+2. px denotes a probability density function (pdf) with respect      below the level anticipated by the channel code [14]. Further-
+to the random variable x. In addition, E(·) denotes the sta-         more, the widely-used entropy coding is quite sensitive to the
+tistical expectation operation, and R denotes the real number        variational estimate of the marginal distribution of the source
+set. Finally, N (x|µ, σ 2 ) ≜ (2πσ 2 )−1/2 exp(−(x−µ)2 /(2σ 2 ))     latent representation. Small perturbations on this marginal can
+denotes a Gaussian function, and U(a − u, a + u) stands for a        lead to the catastrophic error propagation in entropy decoding
+uniform distribution centered on a with the range from a − u         [45]. In practice, the small perturbation is often caused by the
+to a + u.                                                            floating point round-off error [46]. This round-off operation
+                                                                     depends heavily on hardware and software platforms, and in
+                                                                     various data compression applications, the transceiver may
+           II. P RELIMINARIES AND M OTIVATION                        employ different platforms as stated in [46]. As a result, this
+   Built upon the variational auto-encoder (VAE) [39] archi-         non-determinism issue in transmitter vs. receiver will lead to
+tecture, NTSCC has shown superior performance on wireless            severe performance degradation.
+                                                                                                                                                           4
+
+
+
+   To address the above issues, our idea in NTSCC [24] is to               Source Space         Semantic Feature Space
+replace quantization and entropy coding by integrating source
+coding and channel coding as a trained DNN, resulting in deep
+JSCC to transmit the latent representation y directly. We have
+achieved better end-to-end transmission performance, and the
+system is robust to unpredictive wireless channels. The whole
+procedure of NTSCC is depicted in Fig. 2. The latent code y
+                                                                                            Rate Allocation
+is fed into both the analysis transform ha and the deep JSCC
+encoder fe . On the one hand, ha summarizes the distribution
+of mean values and standard derivations of y in the hyperprior                                                                                 EE
+z. The transmitter utilizes z to estimate the mean vector µ and
+the standard derivation vector σ, and use them to determine the
+                                                                                                                                               CE
+bandwidth to transmit the latent representation. On the other
+hand, fe encodes y as the channel-input sequence s ∈ Rk ,
+and the received sequence is ŝ = W (s), whose transition                     Communication
+probability is pŝ|s (ŝ|s). In this paper, we consider the general              Channel
+
+fading channel model such that the transfer function is ŝ =
+W (s|h) = h ⊙ s + n where ⊙ is the element-wise product, h                                                                                     CD
+denotes the CSI vector, and each component of the noise vector
+n is independently sampled from a Gaussian distribution, i.e.,                                                                                 ED
+n ∼ pn ≜ N (0, σn2 I), where σn2 is the noise power. At the
+receiver, ŝ is further fed into the deep JSCC decoder fd to
+reconstruct the latent representation ŷ, which is further used
+by the nonlinear synthesis transform gs to recover the source
+data x̂. The whole procedure of NTSCC system is
+     ga (·;ϕg )   fe (·;ϕf )     W (·|h)        fd (·;θf )   gs (·;θg )
+  x −−−−−→ y −−−−−→ s −−−−→ ŝ −−−−−→ ŷ −−−−−→ x̂
+                               ha (·;ϕh )       hs (·;θh )                                                         side information transmission link
+  with the latent prior y −−−−−→ z −−−−−→ {µ, σ} ,                                                                             (optional)
+                                                                (1)
+where (ϕ, θ) = (ϕg , ϕh , ϕf , θg , θh , θf ) encapsulate learnable       Fig. 2. The whole NTSCC architecture for semantic communications. The
+                                                                          transmitter should know the entropy model on z̄ to entropy encode (EE) and
+DNN parameters of each function. The system efficiency is                 channel encode (CE) it, that is modeled as a non-parametric factorized density
+measured by the channel bandwidth ratio (CBR) ρ = k/m.                    conditioned on ψ as (3). The receiver begins with channel decoding (CD) and
+                                                                          entropy decoding (ED) to recover the side information z̄, and then uses it to
+   The key idea of NTSCC lies in variable-length deep JSCC                decode ŷ. In addition, the side information z̄ is not necessary for the receiver
+guided by the latent prior on the semantic feature space. The             as analyzed in [24]. If z̄ is not transmitted, the decoding performance shows
+latent prior py|z (y|z) is obtained as                                    some degradation while the bandwidth cost is also reduced. On the whole,
+                                                                          the system bandwidth cost-distortion performance is comparable.
+                    Y                           1 1
+                                                     
+       py|z (y|z) =       N (yi |µi , σi2 ) ∗ U(− , ) (yi )
+                      i |
+                                                 2 2
+                                         {z          }      (2)              The optimizing problem of NTSCC is formulated following
+                                            pyi |z
+                                                                          the variational inference context [39], the posterior distribution
+                    with (µ, σ) = hs (z; θh ),                            pŝ,z̃|x is approximated using the variational density qŝ,z̃|x by
+where the convolutional operation “∗” with a standard uniform             minimizing their Kullback-Leibler (KL) divergence over the
+distribution is used to match the prior to the marginal such              data distribution px and the CSI distribution ph as the equation
+that the estimated rate − log py|z (y|z) is non-negative. The             (11) in [24]. Accordingly, the optimization of NTSCC system
+hyperprior z is usually transmitted over the digital link as              can be formally converted to the minimization of the expected
+side information due to its small cost, where the quantization            channel bandwidth cost, as well as the expected distortion of
+⌊·⌉ (rounding to integers) is needed as marked in Fig. 2.                 the reconstructed data versus the original, which leads to the
+A uniformly-noised proxy z̃ = z + o is used to replace                    optimization of the following R-D trade-off,
+the quantized representation ȳ = ⌊y⌉ during model training               LR-D (ϕ, θ, ψ) = Ex∼px Eh∼ph DKL (qŝ,z̃|x ∥pŝ,z̃|x ) ⇔ Ex∼px
+[43], where oj is sampled from U(− 12 , 12 ). The probability                                                                       
+of hyperprior  z̃ is calculated on the fully factorized density           Eh∼ph λ − ηy log py|z (y|z) − ηz log pz (z̃) + d(x, x̂) ,
+       Q                                                                            |              {z                   } | {z }
+pz = j pzj as                                                                                data stream channel bandwidth cost: R         distortion: D
+                                                                                                                                       (4)
+               Y                               1 1
+                                                    
+                                                                          where the Lagrange multiplier λ on the total channel band-
+     pz (z̃) =      pzj |ψ(j) (zj |ψ (j) ) ∗ U(− , ) (z̃j ), (3)
+               j |
+                                                2 2                       width cost determines the trade-off between the data stream
+                                                                          bandwidth cost R and the end-to-end distortion D. The scaling
+                                     {z             }
+                                      pzj
+                                                                          factors ηy and ηz control the relation between the estimated en-
+where ψ (j) encapsulates all the parameters of pzj |ψ(j) .                tropy and the allocated channel bandwidth, which are tied with
+                                                                                                                                                    5
+
+
+
+the source-channel codec capability and the wireless channel
+state. A larger ηy indicates a better performance on deep
+JSCC codec fe and fd , but incurs more channel bandwidth
+cost. Accordingly, ηy can be adjusted as a hyperparameter to                                our goal
+control the system R-D trade-off. ηz is not adjusted manually
+since explicit entropy coding and LDPC coding are selected
+to transmit the side information.
+   In practice, each embedding yi is a c-dimensional feature
+vector. The learned entropy model − log pyi |z (yi |z) indicates
+the summation of entropy along c dimensions of yi , thus, the
+information density distribution of y is captured. Accordingly,
+the bandwidth cost, such as the number of OFDM subcarriers,             Fig. 3. The relation of gaps in model inference. By overfitting the source and
+k̄i for transmitting yi can be determined as                            channel, we can upgrade the standard NTSCC system to the online learned
+                                                                        NTSCC system, thus making Gamo  ⋆ ≪G
+                                                                                                               amo .
+            k̄i = Q(ki ) = Q −ηy log pyi |z (yi |z) ,        (5)
+                                                                                              ∗
+                               |       {z
+                                           ki
+                                                  }                     However, the optimal qŝ,z̃|x should be derived under the given
+                                                                        x and h as
+where the learned entropy model pyi |z follows (2), Q denotes
+                                                                                        ∗
+a scalar quantization whose range includes 2q (q = 1, 2, . . . )                       qŝ,z̃|x = arg minDKL (qŝ,z̃|x ∥pŝ,z̃|x ),               (8)
+                                                                                                         q∈Q
+integers, and the quantization value set V = {v1 , v2 , . . . , v2q }
+is related to the scaling factor ηy and the Lagrange multiplier         which corresponds to the optimal parameters (ϕ∗ , θ ∗ , ψ ∗ ). As
+λ. Hence, the predetermined q bits should be transmitted as             illustrated in Fig. 3, it can be derived by
+extra side information to inform the receiver which bandwidth                                                   ∗
+                                                                          G = DKL (qŝ,z̃|x ∥pŝ,z̃|x ) = DKL (qŝ,z̃|x ∥pŝ,z̃|x ) +
+is allocated to every embedding yi . To adaptively map yi to                                              |        {z            }
+a k̄i -dimensional channel-input vector si , the dynamic neural                                            approximation gap: Gapp
+                                                                                                            ∗
+network structure [47] is introduced into Transformers [48] to            DKL (qŝ,z̃|x ∥pŝ,z̃|x ) − DKL (qŝ,z̃|x ∥pŝ,z̃|x ) = Gapp + Gamo .
+realize the deep JSCC codec fe and fd [24].                               |                         {z                        }
+                                                                                           amortization gap: Gamo
+                                                                                                                                          (9)
+                                                                        This indicates that the amortized posterior q over the entire
+B. Motivation of Online Learned Adaptive NTSCC                          source dataset and ergodic CSI still incurs the amortization gap
+                                                                        Gamo under the instant x and h. The above analysis demon-
+   In existing works, the loss function LR-D in (4) is optimized        strates that a neural-network-based semantic communication
+over a corpus of source data samples (such as a large amount            model is trained on the entire dataset and CSI set with the
+of images) and channel states in order to find optimal codec            target of achieving the best end-to-end R-D performance on
+function parameters Σ = (ϕ, θ, ψ). Although the models have             test data and CSI, i.e., we ideally expect Gamo = 0 ⇔ G =
+been trained over a large corpus of source and channel samples          Gapp . However, due to limited model capacity, optimization
+for finding out what should be ideally optimal codec functions          difficulties, and insufficient data and CSI, the model cannot in
+(ga , gs , ha , hs , fe , fd ) over the whole data set and ergodic      general achieve this goal. When the source data distribution or
+channel responses, we will show the codec functions can still           channel model differs from that in the training phase, model
+be improved for each single data sample and instant CSI. This           generalization will not be guaranteed even with the infinite
+suboptimality of NTSCC model can be interpreted from the                data and model capacity, and perfect optimization.
+inference suboptimality of VAE [30] as follows: the mismatch               We however note that a convenient feature of neural wireless
+between the true and approximate posterior. It has been proven          data transmission is a model or semantic latent representation
+that the inference gap includes two components: the approxi-            that can be easily finetuned on new data and CSI. A model can
+mation gap and the amortization gap. This approximation gap             for instance or domain be trained after deployment. Inspired by
+comes from the inability of the variational distribution family         this, as illustrated in Fig. 3, our goal is closing the amortization
+to exactly match the true posterior, and the amortization gap           gap Gamo by overfitting the source and channel such that the
+                                                                                               ⋆
+refers to the difference caused by amortizing the variational           resulting posterior qŝ,z̃|x of our online learned NTSCC model
+                                                                                                       ∗
+parameters over the entire training set, instead of optimizing          can approach the optimal qŝ,z̃|x    at every test instance. Thus the
+                                                                                                   ⋆
+for each training example individually.                                 new amortization gap Gamo is much smaller than Gamo . As such,
+   Specifically, in our NTSCC system, given the source data             we are effectively trying to solve the following optimization
+sample x and the instant CSI vector h, the inference gap G is           problem, given the instant x and h,
+
+                    G = DKL (qŝ,z̃|x ∥pŝ,z̃|x ),               (6)      (ϕ∗ , θ ∗ , ψ ∗ ) = arg min DKL (qŝ,z̃|x ∥pŝ,z̃|x )
+                                                                                                   ϕ,θ,ψ
+
+where qŝ,z̃|x is derived using the parameters (ϕ, θ, ψ) learned          = arg min LR-D (ϕ, θ, ψ, x, h) = arg min
+                                                                               ϕ,θ,ψ                              ϕ,θ,ψ
+under the entire training set, e.g.,                                                                                        (10)
+                                                                            λ − ηy log py|z (y|z) − ηz log pz (z̃) + d(x, x̂) ,
+    qŝ,z̃|x = arg minEx∼px Eh∼ph DKL (qŝ,z̃|x ∥pŝ,z̃|x ).     (7)         |                {z                  } | {z }
+                  q∈Q                                                                  data stream bandwidth cost: R           distortion: D
+                                                                                                                                                   6
+
+
+
+                          Latent Prior                                          H′ is a partial scene of H, e.g., the CSI set of a local area. In
+                                              Data Stream                       this section, we focus on solving the following problems,
+                                                                                    source instance adaptation: Σ(X ,H) ⇒ Σ(x,H′ ) ,          (11a)
+       update               update
+                                                                                    source domain adaptation: Σ(X ,H) ⇒ Σ(X ′ ,H′ ) .         (11b)
+            (a) Transmitter adaptation (Tx-adapt), online update ga and fe
+                                                                                Our models Σ(x,H′ ) and Σ(X ′ ,H′ ) are both incidentally
+                          Latent Prior
+                                                                                adapted to a local channel domain H′ since we assume the
+                                              Data Stream
+                                                                                exact CSI is only available at the receiver (CSIR) instead of
+                                                                                the transmitter. In this case, the transmitter cannot obtain the
+                                                                                exact CSI instance h ∈ H′ in real time. Thus, in our source
+                 update                  update                                 overfitting algorithms described following, the CSI vector h
+            (b) Transmitter adaptation (Tx-adapt), online update y and s        is sampled from the specific channel domain H′ known at the
+                                                                                transmitter. As for how to adapt our model to the exact CSI
+                                                                                vector, it will be discussed in the next section.
+                          Latent Prior
+                                              Data Stream
+                                                                                A. Transmitter Adaptation
+                                                                                   Given the source sample x and the baseline model (ϕ, θ, ψ)
+       update               update                                              learned on the entire dataset, our goal is adapting the transmit-
+                                                                                ter model parameters (ϕg , ϕf ) or the latent code and channel-
+                                             Model Stream                       input codeword (y, s) to every single data sample.
+   update                  Encoder                          Decoder                The key benefit of transmitter adaptation is achieving an
+                                                                                improved end-to-end transmission performance while keeping
+                          Model Prior                                           the predictive model fixed such that the computing time at
+                                                                                the receiver stays unchanged. The refined nonlinear analysis
+   update
+                                                                                transform ga or the latent code y provides a more compact
+        (c) Transceiver adaptation (TxRx-adapt), online update ga, fe, fd, gs   semantic representation of the source sample x, leading to
+                                                                                the superior end-to-end R-D performance. As a trade-off, the
+Fig. 4. Key ideas of overfitting the source in the online learned NTSCC.
+                                                                                transmitter incurs additional encoding time and computational
+                                                                                expense, while the decoding delay stays unchanged.
+                                                                                   This adaptation mode is suitable for situations where suffi-
+where LR-D (ϕ, θ, ψ, x, h) is the transmission R-D objective
+                                                                                cient transmitter side computational power is available (e.g.,
+for a particular x and h.
+                                                                                the media server, often located in a relatively well-provisioned
+                                                                                facility, such as the cloud), and the encoding delay is not
+                    III. OVERFITTING THE S OURCE                                a pressing issue. As a typical case, existing high-resolution
+                                                                                image/video wireless delivery depends critically on the band-
+  In this section, we present two methods to overfit a single                   width resource [49], and video content is known in advance at
+source data instance x (e.g. an image) or data from a specific                  the capable server side. In this case, the transmitter adaptation
+domain X ′ (e.g. a set of I-frames from video sequences in the                  paradigm can significantly enhance user quality of experience
+same scene). They stem from two different ideas:                                by utilizing server computation.
+                                                                                   For model adaptation, we aim at effectively solving the
+  • Transmitter adaptation (Tx-adapt): Given an instance x
+                                                                                following optimization problem. During the model inference
+    or a group of domain samples from X ′ , online update
+                                                                                time, for a single data instance x:
+    (ga , fe ) or (y, s) using gradient descent based on the
+    off-the-shelf pre-trained model.                                                       (ϕ⋆g , ϕ⋆f ) = arg min LR-D (ϕ, θ, ψ, x, h),        (12)
+                                                                                                            ϕg ,ϕf
+  • Transceiver adaptation (TxRx-adapt): Given a group of
+    domain samples from X ′ , online update (ga , fe , fd , gs )                where we adapt ga and fe while fixing the entropy model ha
+    using gradient descent based on the off-the-shelf pre-                      and hs . This design aims to reduce the model updating com-
+    trained model.                                                              plexity. In addition, if the side information z̄ is transmitted, our
+                                                                                method ensures that no model updates have to be transmitted
+   Fig. 4 presents the key idea of our proposed methods, where
+                                                                                to update hs at the receiver. Experiments can verify that our
+red lines mark the updated ingredients during model inference
+                                                                                simplified method achieves comparable performance as that of
+phase. In the following subsections, the instant CSI h will be
+                                                                                finetuning the whole transmitter model ϕ = (ϕg , ϕf , ϕh ). In
+sampled from a specific channel model H′ , we present how
+                                                                                this work, we solve this problem (12) in an iterative procedure
+to overfit the source data instance or a specific domain.
+                                                                                as that in [32]. We apply gradient descent on ϕg and ϕf to
+   Our goal is adapting the baseline model Σ(X ,H) learned
+                                                                                update the nonlinear analysis transform ga and the deep JSCC
+on the training dataset X and channel state domain H to the
+                                                                                encoder fe . The iterative parameter updating procedures are
+given specific source domain X ′ and channel domain H′ . In
+general, X ′ can be a subset of X or a related set to X , and                          ϕ(t)  (t−1)
+                                                                                        g = ϕg     − γ∇ϕg LR-D (ϕ, θ, ψ, x, h),               (13a)
+                                                                                                                                                         7
+
+
+
+ Algorithm 1: Tx Model Online Adaptation                                          Algorithm 2: Tx Code Online Adaptation
+  Input: Baseline model parameters (ϕ, θ, ψ) trained on                            Input: Baseline model parameters (ϕ, θ, ψ) trained on
+          training set, the data sample to be transmitted                                  training set, the data sample to be transmitted
+          x, the CSI vector h.                                                             x, the CSI vector h.
+  Output: The updated models ϕ⋆g and ϕ⋆f .                                         Output: The updated deep JSCC codeword s⋆ .
+1 procedure O NLINE U PDATE M ODELS (ϕ, θ, ψ, x, h)                              1 procedure O NLINE U PDATE L ATENTS (ϕ, θ, ψ, x, h, y)
+
+2
+                                     (0)
+     Initialize model parameters: ϕg ← ϕg ,                                      2    Initialize latent representation: y (0) ← y;
+        (0)
+      ϕf ← ϕf ;                                                                  3    for t = 1, 2, . . . , Ymax do
+                                                                                                                             fe (·;ϕf )        W (·|h)
+3    for t = 1, 2, . . . , Tmax do                                                4        Forward pass: y (t−1) −−−−−→ s −−−−→
+                                      (t−1)
+                               ga (·;ϕg     )
+                                                             (t−1)
+                                                       fe (·;ϕf      )                         fd (·;θf )       gs (·;θg )
+4         Forward pass: x −−−−−−−→ y −−−−−−−→                                               ŝ −−−−−→ ŷ −−−−−→ x̂ with the latent prior
+                                                                                                     ha (·;ϕh ) hs (·;θh )
+              W (·|h)     fd (·;θf )      gs (·;θg )                                        y (t−1) −−−−−→ z −−−−−→ {µ, σ};
+           s −−−−→ ŝ −−−−−→ ŷ −−−−−→ x̂ with the
+                           ha (·;ϕh ) hs (·;θh )                                  5        Compute loss LR-D according to (10);
+           latent prior y −−−−−→ z −−−−−→ {µ, σ};                                 6        Update y (t) using gradients ∇y LR-D as (14);
+5         Compute loss LR-D according to (10);
+                    (t)        (t)                                               7     return Updated latent representation
+6         Update ϕg and ϕf using gradients ∇ϕg LR-D
+                                                                                        y ⋆ ← y (Ymax ) .
+           and ∇ϕf LR-D as (13);
+                                                                                  8 procedure O NLINE U PDATE C ODE -
+                                                (T       )
+7     return Updated models ϕ⋆g ← ϕg max and                                         WORDS (ϕ, θ, ψ, x, h, s)
+              (T   )
+       ϕ⋆f ← ϕf max .                                                             9    Initialize deep JSCC codeword: s(0) ← s;
+                                                                                 10    for t = 1, 2, . . . , Smax do
+                                                                                 11         Forward pass:
+                                                                                                      W (·|h)        fd (·;θf )           gs (·;θg )
+        (t)     (t−1)                                                                       s(t−1) −−−−→ ŝ −−−−−→ ŷ −−−−−→ x̂;
+      ϕf = ϕf           − γ∇ϕf LR-D (ϕ, θ, ψ, x, h),                     (13b)   12        Compute loss LR-D according to (10);
+where γ denotes the learning rate. The final pipeline of Tx                      13        Update s(t) using gradients ∇s LR-D as (15);
+model adaptation is described in Algorithm 1.                                    14    return Updated deep JSCC codeword
+   Apparently, instance adaptation is an extreme case of do-                            s⋆ ← s(Smax ) .
+main adaptation, which provides better performance with the
+expense of more encoding time. In practice, we pursue for
+more efficient online adaptation, thus the Tx model adaptation
+                                                                                 gorithm 2. This latent representation and codeword adaptation
+in Algorithm 1 is often invoked only for several spare source
+                                                                                 technique reduces the number of updated parameters for lower
+samples from the same domain, e.g., a set of I-frames from
+                                                                                 complexity and decreased GPU peak memory, but it is only
+a single video whose content locates in the same scene. We
+                                                                                 applicable for instance adaptation, not for domain adaptation.
+also note that since the decoder parameters remain unchanged
+such that the performance improvements are limited. A more
+effective transceiver adaptation mode tailored for domain                        B. Transceiver Adaptation
+adaptation will be explored in the subsequent subsection.                           The above transmitter adaptation method is appealing since
+   Next, we introduce a more lightweight method to adapt the                     no additional information needs to be added to the wireless
+latent representation y and the deep JSCC codeword s for                         transmitted signal, and nothing changes on the receiver. How-
+instance adaptation only. This code adaptation method aims to                    ever, performance gains are relatively limited since the deep
+find more compact semantic representations directly without                      JSCC decoder fd and the nonlinear synthesis transform gs
+changing the encoder/decoder parameters. We apply gradient                       cannot be adapted. In this subsection, we present a method
+descent on y and s to update the semantic latent representation                  for transceiver full-model adaptation, which tailors the entire
+and the deep JSCC codeword, respectively. A special note is                      NTSCC model to a specific domain. Unlike previous methods,
+that the iterative updating procedure on these two terms should                  our adaptive NTSCC with the full-model adaptation involves
+be executed sequentially because s is generated from y by                        both data stream and model stream as the wireless transmitted
+using the function fe . The iterative updating procedure can be                  signal. The model stream is utilized to inform the receiving
+written as                                                                       end to update the model parameters of fd and gs . A noteworthy
+          y (t) = y (t−1) − γ∇y LR-D (ϕ, θ, ψ, x, h),                            point is that the transceiver full-model adaptation method is
+                                                                          (14)   particularly suited for domain adaptation, as the model stream
+          with t = 1, 2, . . . , Ymax .
+                                                                                 bandwidth cost associated with instance adaptation cannot be
+After t reaches Ymax , the procedure turns to update s, i.e.,                    effectively amortized and results in inefficient computational
+          s(t) = s(t−1) − γ∇s LR-D (ϕ, θ, ψ, x, h),                              complexity and high model stream bandwidth cost.
+                                                                          (15)      In this manner, the adapted model can be applied to other
+          with t = 1, 2, . . . , Smax .
+                                                                                 unseen samples within the same domain. Also, the full-model
+The total number of updating steps is Tmax = Ymax + Smax .                       online learning process only takes place at the transmitter, as
+The final pipeline of Tx code adaptation is described by Al-                     we assume the transmitter has a local copy of the pre-trained
+                                                                                                                                         8
+
+
+
+decoder models. This adaptation paradigm yields two kinds of            from zero-centered Gaussian with a shared variance σ 2 as
+tradeoffs:                                                                          Y                                 ∆ ∆
+                                                                                                                           
+                                                                                                    2
+                                                                           pδ (δ) =      N (δi |0, σ ) ∗ (∆ · U(− , )) (δi )
+                                                                                    i |
+                                                                                                                       2 2
+ 1) R-D-M trade-off: a tripartite trade-off among the averaged                                             {z              }
+                                                                                                           pδ i                 (17)
+    data stream bandwidth cost (R), model stream bandwidth
+    cost per domain (M ), and distortion (D) terms, formu-                          Y Z δi + ∆2
+    lating the end-to-end R-D-M loss. Consider a specific                         =             N (δi′ |0, σ 2 )dδi′ ,
+                                                                                      i       δi − ∆
+                                                                                                   2
+    source domain including N samples, the model stream is
+    transmitted only once, resulting in the actually averaged           where the uniform distribution convolution is utilized to relax
+    channel bandwidth cost of k = R + M/N , such that the               the prior such that the estimated model rate − log pδ (δ) stays
+    averaged CBR is ρ = k/m = (R + M/N )/m.                             non-negative. It can directly interpolate the discrete probability
+ 2) Performance-complexity trade-off: the more constrained              values pδi (δ̄i ) at the quantized values δ̄i that will be used
+    the domain adaptation, the greater potential gains from             when δ is transmitted over the digital link with entropy coding
+    adaptation. However, a more restrictive domain neces-               and channel coding, and ∆ in (17) indicates the quantization
+    sitates multiple updating processes at the transmitter and          bin width. If δ needs to be quantized for entropy coding, we
+    multiple transmission model updates, leading to increased           define the quantization function as that in [37] with N width-
+    encoding complexity and delay.                                      ∆ quantization bins, i.e.,
+                                                                        δ̄i = Q∆ (δi )
+   Transceiver full-model adaptation online updates a set of                     δ 
+                                                                                    i                 (N − 1)∆            (N − 1)∆ 
+global baseline model parameters (ϕ, θ, ψ) on a single source            = clip         · ∆, min = −             , max =              .
+data instance x. In practice, similar to that in the transmitter                   ∆                        2                2
+                                                                                                                                   (18)
+adaptation, we also fix the entropy model ha and hs to                  During model training, the gradient of Q∆ can be approx-
+reduce the adaptation complexity. This results in the updated           imated by the Straight-Through estimator (STE) [50]. Cor-
+parameters (ϕ⋆g , ϕ⋆f , θg⋆ , θf⋆ ), of which only θg⋆ and θf⋆ are      respondingly, we also leverage the uniformly-noised proxy
+transmitted over the wireless channel as the model stream.              δ̃ = δ + o with oi ∼ U(− ∆     ∆
+                                                                                                   2 , 2 ) to compute the model stream
+   Intuitively, a larger model steam bandwidth cost M offers            rate during online training. In this case, the model stream
+greater flexibility during model updating, potentially reducing         rate is evaluated by substituting δ̃ into the model prior pδ
+the amortization gap for improved overall R-D performance.              as − log pδ (δ̃) in the R-D-M loss (16).
+However, the actual performance, accounting for the model
+stream transmission cost, still requires further evaluation. As           Note that most model updates δi (or the quantized δ̄i ) center
+a result, developing an efficient model stream transmission             around zero, the zero-centered Gaussian model prior in (17)
+method along is both challenging and crucial. Inspired by the           indeed ensures the minimum model stream cost for all-zero
+residual coding idea, we transmit only the changes relative to          update, i.e., − log pδ (0). To reduce the model stream cost, we
+the baseline model δg = θg⋆ −θg and δf = θf⋆ −θf in practice.           can further generalize the standard Gaussian model prior as a
+To encode the model updates δ = (δg , δf ), we need to build            Gaussian mixed model (GMM) prior, which stems from [37].
+a model prior pδ (δ) to quantify the model rate. Accordingly,           In particular, we adopt the widely-used spike-and-slab prior
+the model rate is derived with − log pδ (δ). Adding this term           proposed in [51], the model prior pδ will be generated using
+to the R-D loss function in (10), we obtain the full-model              a weighted sum of two Gaussian distribution – a wide (slab)
+adaptive NTSCC objective:                                               Gaussian and a narrow (spike) Gaussian:
+                                                                                                       Y qslab (δi ) + αqspike (δi )
+  LR-D-M (ϕ, θ, ψ, δ, x, h)
+                                                                                       Y
+                                                                             qδ (δ) =      qδi (δi ) =                               (19)
+  = LR-D (ϕ, θ + δ̂, ψ, x, h) + β − ηδ log pδ (δ)
+                                                  
+                                                                                         i             i
+                                                                                                                    1+α
+                                          
+  = λ − ηy log py|z (y|z) − ηz log pz (z̃) + d(x, x̂)                   with
+                                          } | {z }               (16)
+                                                                                                                           ∆ 2
+     |                  {z
+                 data stream bandwidth cost: R   distortion: D
+                                                                          qslab (δi ) = N (δi |0, σ 2 ), qspike (δi ) = N (δi |0, (
+                                                                                                                             ) ), (20)
+                                                                                                                           6
+                                
+  +β           − ηδ log pδ (δ)          ,
+           |         {z        }                                        where α ≥ 0 is a hyperparameter to determine the height of
+       model stream bandwidth cost: M
+                                                                        the spiky Gaussian with respect to the wider slab. Given qδ ,
+where the scaling factor ηδ is tied with the capability of codec        the model prior pδ is derived as
+used to transmit δ, δ̂ denotes the reconstructed δ at the receiver                     Y                                
+end, and β controls the trade-off between the standard R-D loss                                                      ∆ ∆
+                                                                              pδ (δ) =     qδi (δi ) ∗ (∆ · U(− , )) (δi )
+and the model stream bandwidth cost. Minimization of LR-D-M                            i |
+                                                                                                                     2 2
+                                                                                                             {z          }
+in (16) ensures any cost in the model stream contributes to the                                              pδ i                 (21)
+R-D performance improvement.                                                           Y Z δi + ∆2
+  For the model prior pδ , any probability distribution function                     =              qδi (δi′ )dδi′ .
+                                                                                          i      δi − ∆
+                                                                                                      2
+can be selected, herein,Qwe naturally define pδ as a factorized
+model, i.e., pδ (δ) = i pδi (δi ), where every component is             The discrete model prior pδi (δ̄i ) is the pushforward of pδi by
+of the same parameter. Each pδi (δi ) is consistently generated         substituting δ̄i into (21), which equals to the mass of GMM
+                                                                                                                                                                                          9
+
+
+
+                                                                                                           Algorithm 3: TxRx Full-Model Online Adaptation
+                                    qspike                                          model prior p
+                                    qslab                                           GMM q                   Input: Baseline model parameters (ϕ, θ, ψ) trained on
+                                    GMM q                                           mass of q
+                                                                                                                    training set, model parameter quantizer Q∆ ,
+                                                                                                                    model prior pδ , the source dataset to be
+                                                                                                                    overfitted X , the CSI vector h.
+                                                                                                            Output: The updated encoder models ϕ⋆g and ϕ⋆f and
+                                                                                                                       quantized decoder model updates δ̄.
+                                                                                                          1 procedure O NLINE U PDATE M ODELS (ϕ, θ, ψ, x, h)
+  −1.5    −1.0   −0.5   0.0   0.5   1.0      1.5   −1.5   −1.0   −0.5   0.0   0.5       1.0         1.5                                               (0)
+                                                                                                          2    Initialize model parameters: ϕg ← ϕg ,
+            (a) GMM density                                      (b) model prior                                  (0)               (0)           (0)
+                                                                                                                ϕf ← ϕf , θg ← θg , θf ← θf ;
+Fig. 5. A visual example of our GMM density function. The density qslab is                                3    for t = 1, 2, . . . , Tmax do
+generated with σ = 1, and the quantization bin width is set to ∆ = 1 such                                 4         Quantize transmittable model parameters:
+that the standard deviation qspike is 61 . The height of the spiky is α = 5. Our                                         (t−1)     (t−1)
+model prior pδi provides a continuous function, each value pδi (δ̄i ) equals to                                       (θ̄g     , θ̄f     ) ← δ̄ + (θg , θf ), with
+the mass of GMM density qδi (δi ) in the quantization bin ∆ centered at δ̄i .                                         δ̄ = Q∆ (δ) and
+                                                                                                                              (t−1)      (t−1)
+                                                                                                                      δ = (θg         , θf     ) − (θg , θf );
+                                                                                                          5         Draw a batch of data samples x from the
+                                                                                                                      source domain X ;
+density qδi (δi ) in the quantization bin ∆ centered at δ̄i . By                                                    //specifically used for domain
+setting the standard deviation of the spike as ∆6 , we ensure the                                                        adaptation
+mass within the zero-centering bin [− ∆      ∆
+                                         2 , 2 ) cover 99.7% of                                                                                   (t−1)
+                                                                                                                                                                  fe (·;ϕf
+                                                                                                                                                                          (t−1)
+                                                                                                                                                                                  )
+                                                                                                                                           ga (·;ϕg     )
+the total mass (“3σ-criterion”). A visual illustration of GMM                                             6         Forward pass: x −−−−−−−→ y −−−−−−−→
+function and model prior is shown in Fig. 5.                                                                            W (·|h)
+                                                                                                                                             (t−1)
+                                                                                                                                      fd (·;θ̄f      )      gs (·;θ̄g(t−1) )
+                                                                                                                     s −−−−→ ŝ −−−−−−−→ ŷ −−−−−−−→ x̂ with
+   The introduce of spike Gaussian distribution enforces spar-                                                                           ha (·;ϕh ) hs (·;θh )
+sity on fd and gs model updates. A high spike weight (large                                                          the latent prior y −−−−−→ z −−−−−→ {µ, σ};
+α) results in almost negligible bandwidth cost for transmitting                                           7         Compute loss LR-D-M according to (16) by
+the zero-update model stream. By this means, the full-model                                                          setting δ̂ = δ̄ and the model rate proxy
+adaptation procedure can learn to make a binary decision: a                                                          − log pδ (δ̃);
+parameter is worth updating by using higher bandwidth cost,                                               8         Backpropagate using STE for Q∆ , and update
+                                                                                                                        (t)   (t)   (t)  (t)
+or it is not updated by transmitting the negligible zero-update                                                      (ϕg , ϕf , θg , θf ) using gradients
+sign. Note that the whole online learning process takes place                                                        (∇ϕg LR-D-M , ∇ϕf LR-D-M , ∇θg LR-D-M , ∇θf LR-D-M )
+in the transmitter since we assume the transmitter has a local                                                       as (13) and (22);
+copy of the decoder parameters, thus the above binary decision                                                                                               (T      )
+                                                                                                          9     return Updated models ϕ⋆g ← ϕg max and
+is also made inside the transmitter. When the entropy coding                                                            (T   )
+is applied on δ̄i , zero-update corresponds to a sequence of                                                     ϕ⋆f ← ϕf max , and quantized model updates δ̄.
+negligible ‘spent’ bits. This trick can efficiently reduce the
+unnecessary model stream bandwidth cost.
+   The iterative transmitter model parameter updating proce-
+                                                                                                                        IV. OVERFITTING THE C HANNEL
+dure is the same as (13) by replacing LR-D with LR-D-M , and
+the receiver model parameter updating procedures are written                                                In this section, we discuss how to adapt to the instant CSI
+as                                                                                                        h ∈ H′ such that the channel domain adapted model in the
+         θg(t) = θg(t−1) − γ∇θg LR-D-M (ϕ, θ, ψ, δ, x, h),                                    (22a)       previous Section III can be further upgraded to the instance
+                                                                                                          adapted model, i.e.,
+          (t)           (t−1)
+         θf = θf                − γ∇θf LR-D-M (ϕ, θ, ψ, δ, x, h).                             (22b)
+                                                                                                                                   Σ(x,H′ ) ⇒ Σ(x,h) ,                                (23a)
+Since the model stream bandwidth cost M is much smaller
+                                                                                                                                  Σ(X ′ ,H′ ) ⇒ Σ(X ′ ,h) .                           (23b)
+than the data stream bandwidth cost R, the transmission of
+model updates δ default to a classical digital communication                                              In can be observed that the value of instant h is a key factor
+link, which will be quantized, entropy coded, channel coded,                                              affecting the performance of deep JSCC codec. Under different
+and modulated as a digital symbol sequence m passing over                                                 channel states, different resource allocation strategies should
+the wireless channel W . This transmission process is assumed                                             be adopted to implicitly adjust source coding rate and channel
+to be reliable. Thus, the received δ̂ is the quantized version δ̄,                                        coding rate inside the JSCC codec. The vanilla NTSCC model
+and the model stream rate should be computed by substituting                                              [24] is trained under the objective (10) using different signal-
+the uniformly-noised proxy δ̃ into the model prior pδ , i.e.,                                             to-noise ratio (SNR) indicating different channel states. Re-
+− log pδ (δ̃), in the R-D-M loss function LR-D-M . The encoding                                           cently, an attention module was introduced into convolutional
+and decoding procedure of the transceiver full-model online                                               neural networks (CNN) to make deep JSCC SNR-adaptive
+learned NTSCC system is shown in Fig. 6. The whole online                                                 using a single model [20]. However, a simple average SNR
+adaptation procedure is defined formally in Algorithm 3.                                                  cannot fully capture all the characteristics of the channel state
+                                                                                                                                                                                                                                                                             10
+
+
+
+
+                 Baseline Model                   Model Prior                                       Shared Knowledge Base                                                                                   Model Prior                          Baseline Model
+                                                                                                (baseline model and model prior)
+
+
+
+                                                                         Channel Encoder &             Wireless Channel                                    Demodulation &
+                                                Entropy Encoder                                                                                                                                         Entropy Decoder
+                                                                            Modulation                                                                     Channel Decoder
+
+
+
+                                                                                                        Model Stream
+
+
+                                  Synthesis Transform              Deep JSCC Decoder
+
+                                                                                              ᲜTransmitter Receiver Მ
+
+                                  Analysis Transform                   Latent Prior                                                                                                                                    Synthesis Transform
+
+
+   Source Space                                                      Rate                                Data Stream                                                                                                                                         Source Space
+                                                                  Allocation
+
+                                                                   Deep JSCC Encoder                   Wireless Channel                                            Deep JSCC Decoder
+      Semantic Feature                                                                                                                                                                                                                                Semantic Feature
+          Space                                                                                                                                                                                                                                           Space
+
+Fig. 6. Visualization of encoding and decoding of our full-model online learned NTSCC system.
+
+                                                                                                                                                            Channel ModNet
+          SM module                                input
+                       FC | M×M
+
+
+                                     FC | M×M
+
+
+
+
+                                                                                                                           FC | M×M
+
+
+                                                                                                                                           FC | M×M
+
+
+                                                                                                                                                            FC | M×M
+
+
+                                                                                                                                                                            FC | M×M
+
+
+                                                                                                                                                                                            FC | M×M
+
+
+                                                                                                                                                                                                            FC | M×M
+                                                                                                          FC | N×M
+
+
+
+
+                                                                                                                                                                                                                            FC | M×N
+            FC | 1×M
+
+
+
+
+                                                                                                                                                                                                                                       Sigmoid
+                                                                                                                     SM
+
+
+                                                                                                                                      SM
+
+
+                                                                                                                                                      SM
+
+
+                                                                                                                                                                       SM
+
+
+                                                                                                                                                                                       SM
+
+
+                                                                                                                                                                                                       SM
+
+
+                                                                                                                                                                                                                       SM
+                                                                                      input token                                                                                                                                                             output token
+                                                                      output
+
+
+
+
+Fig. 7. Channel-dependent deep JSCC codec used for overfitting the CSI instance in our adaptive NTSCC system. FC denotes fully-connected network, and
+the following parameter marks the “input dimension × output dimension”. “⊙” denotes the element-wise product.
+
+
+
+h. To tackle this, a CA-JSCC scheme was proposed in [52] that                                                             aligned with practical systems, we assume the CQI available
+employs dual-attention mechanism to achieve adaptation over                                                               at the transmitter via a feedback link, which represents an
+multipath OFDM channels. Even though these methods have                                                                   averaged SNR along all transmitted symbols s. Thus, the
+proposed novel adaptation strategies, they are mostly based                                                               SM module input is SNRi = SNR at the transmitter. The
+on traditional convolutional auto-encoders. In this paper, we                                                             SM module transforms the input SNRi into an c-dimensional
+investigate a new channel-dependent mechanism specifically                                                                tensor smi as depicted in Fig. 7. In this manner, the arbitrary
+tailored for vision Transformers (ViTs) adopted in NTSCC,                                                                 target modulator can be realized by assigning a corresponding
+enabling the whole system automatically to adapt to h without                                                             SNR value. And the CSI h is therefore associated with the c-
+relying on gradient descent.                                                                                              dimensional tensor smi in each SM module. Then, the input
+   Our idea is introducing a plug-in module to modulate the                                                               c-dimensional feature will be fused with smi in the element-
+output of ViT-based deep JSCC encoder in NTSCC as shown                                                                   wise product.
+in Fig. 7. The proposed “Channel ModNet” is a plug-in module                                                                 Multiple SM modules are cascaded sequentially in a coarse-
+inserted as the last layer of deep JSCC encoder or the first                                                              to-fine manner, as shown in Fig. 7. The previously modulated
+layer of deep JSCC decoder. For different channel states h,                                                               features are fed into subsequent SM modules. In our design,
+we obtain different neural-syntax to generate a more specific                                                             the channel state modulation is comprehensively considered
+deep JSCC codec functions fe and fd .                                                                                     in a token-wise attention fashion. In this way, our channel-
+   In particular, the architecture of the proposed Channel                                                                dependent modulation method can notify the JSCC codec what
+ModNet for instant channel state h adaptation is depicted                                                                 the current channel state is. The proposed channel-dependent
+in Fig. 7. ModNet consists of 8 FC layers separated by 7                                                                  method can be applied to arbitrary wireless channel model,
+SNR modulation (SM) modules. SM is a three-layered FC                                                                     and the ModNet trained under a specific channel domain H′
+network with input being the channel SNR that corresponds to                                                              can provide better channel adaptation performance for the
+yi (denoted as SNRi ). As stated before, the receiver can obtain                                                          instances h ∈ H′ .
+the instant CSI h via channel estimation, thus the ModNet in
+the deep JSCC decoder fd can obtain the explicit SNRi for                                                                                                              V. E XPERIMENTAL R ESULTS
+each yi . Herein, SNRi is computed by averaging the channel                                                                  In this section, we first outline the experimental configu-
+symbol SNRs along the k̄i -dimensional sequence si . To be                                                                rations and evaluation protocol, followed by the presentation
+                                                                                                                                    11
+
+
+
+of source/channel overfitting evaluation results for the online      γ = 1×10−3 in both optimization procedures. It is possible to
+learned NTSCC. Also, we carry out a comprehensive ablation           update with more steps using the same or lower learning rate,
+study and provide analytical discussions to highlight the key        but our experiments have shown that negligible performance
+advantages and clarify some limitations of this work.                gain can be obtained.
+                                                                        4) Transceiver Adaptation Details: The TxRx-adaptation
+                                                                     scheme builds upon the aforementioned pre-trained 4 baseline
+A. Experimental Setup
+                                                                     models, we online update the parameters (ϕg , ϕf , θg , θf ) for
+   1) Datasets: Regarding the wireless video transmission, we        the R-D-M loss LR-D-M over each video sequence. To ensure
+adopt the Video Streaming Dataset 4K (VSD4K) dataset [36]            the average channel bandwidth cost of updated models close to
+for evaluation. The VSD4K dataset is composed of several 4K          the baseline, the R-D-M trade-off hyperparameter tuples (λ, β)
+30fps videos, including six popular video categories: game,          is set to (256, 4), (32, 4), (4, 1), and (2, 1), which correspond
+vlog, interview, sport, dance, and city. The first                   to the baseline models learned with λ = 256, 64, 16, 4,
+three categories are mainly single-scene but have multiple           respectively. For the decoder updating process, which will be
+points of view, while the latter contains various scenes and         transmitted to the receiver as the model stream, we set the
+large-scale motion. In this paper, we consider the I-frame           parameter quantization bin width as ∆ = 0.005 and utilize
+wireless transmission problem, i.e., the test set consists a group   the GMM prior, where σ in qslab is set to 0.05, and the spike
+of I-frame images from a single video of a specific category,        weight α = 1000. The number of updating steps is set to
+which is a subproblem of video transmission. We select a             Tmax = 10000, with the learning rate of γ = 1 × 10−5 for ga
+45s-length representative video from each category, subsample        and fe , and γ = 1 × 10−4 for gs and fd . We select the best
+each video by the first of four frames to create a dataset of I-     updated model based on the R-D-M loss for model inference.
+frames, and generate low-resolution videos of 480P, 720P, and           5) Comparison Schemes: Apart from the comparison with
+1080P using bicubic interpolation. Unless otherwise specified,       baseline NTSCC system, we also compare our online learned
+the following experiments will be carried out on 480P video          NTSCC with SOTA engineered wireless video transmission
+sources.                                                             systems. Specifically, we compare our approach with HEVC
+   2) Network Implementation: Note that the proposed source          (H.265) [28] and VVC (H.266) [29] for video compression
+and channel overfitting method are model agnostic that can           combined with 5G LDPC code [23] for channel coding. We
+be transplanted to any neural network based end-to-end trans-        use “+” operator to combine source coding and channel
+mission system, we employ NTSCC [24] as a representative             coding schemes for brevity. For VVC and HEVC, we use the
+architecture for online updating in this paper. As stated before,    official test model VTM-12.2 with intra profile and BPG soft-
+we do not transmit the side information z̄ to simplify the           ware to encode I-frames in the YUV444 mode, and calculate
+implementation of NTSCC. We use the DIV2K [53] image set             the PSNR in RGB. Additionally, the NTC source compression
+to train our baseline model, which contains 800 natural images       scheme proposed in [43] combined with 5G LDPC codes
+of 2K resolutions on average. The baseline model training            are also included in comparison. We adopt the released NTC
+procedure includes 6,000 epochs using Adam optimizer [54]            models based on mean and scale hyper-prior implemented by
+with the learning rate 1 × 10−4 . During model training, the         CompressAI [55]. To ensure a fair comparison, we crop all I-
+images are randomly cropped to 256 × 256 patches to form a           frames to multiples of 64 to avoid padding for neural codecs.
+batch of 8 patches. In all experiments, we train four baseline       The above simulations are implemented on the top of Sionna
+models with λ = 256, 64, 16, 4 respectively under the additive       [56], which is a open-source library for link-level simulations
+white Gaussian noise (AWGN) channel, where the scaling               of digital communication systems. Apart from these methods,
+factor ηy is set to 0.2 at SNR = 10dB and 0.4 at SNR = 0dB.          we also compare our online learned NTSCC with the emerging
+The mean squared error (MSE) is used as the distortion               neural deep JSCC transmission scheme [15]. The channel
+measurement to qualify the end-to-end image transmission             bandwidth cost counts up all the transmitting streams over
+performance. For subjective comparison, we further consider          the wireless channel, including both data and model in our
+perceptual quality optimization to better align with the human       full-model adaptation mode.
+vision in semantic communication system. The training details
+of NTSCC (Perceptual) are the same as that in [24].
+   3) Transmitter Adaptation Details: The Tx-adaptation              B. Objective Performance Analysis
+schemes comprise two main approaches, namely the online                 Fig. 8(a)–(h) show the averaged R-D performance under
+transmitter model updating and the transmitter code updating.        AWGN channels with SNR = 0dB (poor channel condi-
+The former can be applied either to every I-frame (i.e., instance    tion) and SNR = 10dB (good channel condition), respec-
+adaptation) or to every video sequence (i.e., domain adapta-         tively. In Fig. 8, the legend “NTSCC (TxRx-adapt)” denotes
+tion) within the VSD4K dataset. The latter is applicable only        NTSCC with our transceiver full-model domain adaptation,
+in the instance adaptive mode. Specifically, for the instance        and “NTSCC (Tx-adapt)” denotes our transmitter model in-
+adaptation, the transmitter model adaptation scheme updates          stance adaptation. For the classical separation-based schemes,
+(ga , fe ) for Tmax = 100 steps per I-frame with the learning        according to the adaptive modulation coding (AMC) mecha-
+rate γ = 1 × 10−4 . Regarding transmitter code adaptation,           nism, we need to traverse given combinations of LDPC coded
+we first update y for Ymax = 50 steps and then update s              modulation schemes to identify the highest-efficiency scheme
+for another Smax = 50 steps, where the learning rate is set to       under the reliable transmission constraint (block error rate ≤
+                                                                                                                                                                                                                                                                                                                                                                                                  12
+
+
+
+
+                                               game, AWGN channel 0dB                                                                               inter, AWGN channel 0dB                                                                     dance, AWGN channel 0dB                                                                                city, AWGN channel 0dB
+                         31                                                                                                                                                                                               30                                                                                                 29
+                                        VTM + 5G LDPC                                                                      27                  VTM + 5G LDPC                                                                              VTM + 5G LDPC                                                                                         VTM + 5G LDPC
+                         30             BPG + 5G LDPC                                                                                          BPG + 5G LDPC                                                              29              BPG + 5G LDPC                                                                                         BPG + 5G LDPC
+                                        NTC + 5G LDPC                                                                                          NTC + 5G LDPC                                                                              NTC + 5G LDPC                                                                      28                 NTC + 5G LDPC
+                                                                                                                           26                                                                                             28
+                         29
+                                                                                                                                                                                                                                                                                                                             27
+                                                                                                                           25                                                                                             27
+ PSNR (dB)
+
+
+
+
+                                                                                                   PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                                    PSNR (dB)
+                         28
+                                                                                                                                                                                                                          26                                                                                                 26
+                                                                                                                           24
+                         27
+                                                                                                                                                                                                                          25
+                                                                                                                           23                                                                                                                                                                                                25
+                         26                                             Deep JSCC                                                                                          Deep JSCC                                                                                    Deep JSCC                                                                                           Deep JSCC
+                                                                                                                                                                                                                          24
+                                                                        NTSCC                                                                                              NTSCC                                                                                        NTSCC                                                                                               NTSCC
+                         25                                                                                                22                                                                                                                                                                                                24
+                                                                        NTSCC (Tx-adapt)                                                                                   NTSCC (Tx-adapt)                               23                                            NTSCC (Tx-adapt)                                                                                    NTSCC (Tx-adapt)
+                                                                        NTSCC (TxRx-adapt)                                                                                 NTSCC (TxRx-adapt)                                                                           NTSCC (TxRx-adapt)                                                                                  NTSCC (TxRx-adapt)
+                         24                                                                                                21                                                                                             22                                                                                                 23
+                                 0.02   0.03       0.04 0.05 0.06 0.07            0.08   0.09                                              0.04          0.06      0.08       0.10      0.12                               0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10                                                                         0.04       0.06      0.08       0.10     0.12
+                                                     channel bandwidth ratio                                                                             channel bandwidth ratio                                                          channel bandwidth ratio                                                                                         channel bandwidth ratio
+
+                                                           (a)                                                                                                (b)                                                                                          (c)                                                                                                 (d)
+
+                                               game, AWGN channel 10dB                                                                             inter, AWGN channel 10dB                                                                     dance, AWGN channel 10dB                                                                               city, AWGN channel 10dB
+                                                                                                                                                                                                                          34                                                                                                 34
+                         34             VTM + 5G LDPC                                                                      32                  VTM + 5G LDPC                                                                              VTM + 5G LDPC                                                                                         VTM + 5G LDPC
+                                        BPG + 5G LDPC                                                                                          BPG + 5G LDPC                                                              33              BPG + 5G LDPC                                                                      33                 BPG + 5G LDPC
+                         33             NTC + 5G LDPC                                                                      31                  NTC + 5G LDPC                                                                              NTC + 5G LDPC                                                                                         NTC + 5G LDPC
+                                                                                                                                                                                                                                                                                                                             32
+                                                                                                                                                                                                                          32
+                         32                                                                                                30
+                                                                                                                                                                                                                                                                                                                             31
+ PSNR (dB)
+
+
+
+
+                                                                                                   PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                PSNR (dB)
+
+
+
+
+                                                                                                                                                                                                                                                                                                    PSNR (dB)
+                                                                                                                                                                                                                          31
+                         31                                                                                                29
+                                                                                                                                                                                                                                                                                                                             30
+                         30                                                                                                28                                                                                             30
+                                                                                                                                                                                                                                                                                                                             29
+                         29                                             Deep JSCC                                          27                                              Deep JSCC                                      29                                            Deep JSCC                                                                                           Deep JSCC
+                                                                                                                                                                                                                                                                                                                             28
+                                                                        NTSCC                                                                                              NTSCC                                                                                        NTSCC                                                                                               NTSCC
+                         28                                             NTSCC (Tx-adapt)                                   26                                              NTSCC (Tx-adapt)                               28                                            NTSCC (Tx-adapt)                                     27                                             NTSCC (Tx-adapt)
+                                                                        NTSCC (TxRx-adapt)                                                                                 NTSCC (TxRx-adapt)                                                                           NTSCC (TxRx-adapt)                                                                                  NTSCC (TxRx-adapt)
+                         27                                                                                                25                                                                                             27                                                                                                 26
+                          0.02              0.03        0.04      0.05       0.06           0.07                                        0.03      0.04       0.05     0.06       0.07   0.08                                                0.03         0.04       0.05              0.06                                                   0.03      0.04    0.05      0.06     0.07     0.08
+                                                     channel bandwidth ratio                                                                             channel bandwidth ratio                                                                     channel bandwidth ratio                                                                              channel bandwidth ratio
+
+                                                           (e)                                                                                                (f)                                                                                          (g)                                                                                                 (h)
+
+Fig. 8. PSNR performance versus the average channel bandwidth ratio (CBR) ρ over the AWGN channel at SNR = 0dB (bad channel condition, subfigures
+(a)–(d)) and SNR = 10dB (good channel condition, subfigures (e)–(h)). In this figure, our adaptive NTSCC systems are online updated toward each video
+sequence, which is sequence domain adaptation.
+
+
+                            200                                                                                                160                                                                                                 1.5                                                                                                 3.0
+                                                   NTSCC (TxRx-adapt)       NTC + 5G LDPC                                                           NTSCC (T(R(-adapt)          NTC + 5G LDPC                                                      NTSCC (TxRx-adapt)       NTC + 5G LDPC                                                              NTSCC (TxRx-adapt)        NTC + 5G LDPC
+                            175                    NTSCC (Tx-adapt)         VTM + 5G LDPC                                      140                  NTSCC (T(-adapt)            VTM + 5G LDPC                                                      NTSCC (Tx-adapt)         VTM + 5G LDPC                                              2.5             NTSCC (Tx-adapt)          VTM + 5G LDPC
+                                                                                                                                                                                                 PSNR (dB) gain versus NTSCC (↑)
+
+
+
+
+                                                                                                                                                                                                                                                                                                     PSNR (dB) gain versus NTSCC (↑)
+ CBR Percentage ver NTSCC (↓)
+
+
+
+
+                                                                                                   CBR Percentage over NTSCC (↓)
+
+
+
+
+                                                                                                                                                                                                                                   1.0
+                            150                                                                                                120                                                                                                                                                                                                     2.0
+                                                                                                                                                                                                                                   0.5                                                                                                 1.5
+                            125                                                                                                100
+                                                                                                                                                                                                                                                                                                                                       1.0
+                            100                                                                                                    80                                                                                              0.0
+                                                                                                                                                                                                                                                                                                                                       0.5
+                                75                                                                                                 60
+                                                                                                                                                                                                                               −0.5                                                                                                    0.0
+                                50                                                                                                 40                                                                                                                                                                                              −0.5
+                                                                                                                                                                                                                               −1.0
+                                25                                                                                                 20                                                                                                                                                                                              −1.0
+                                 0   game      dance       sport    inter      city      vlog
+                                                                                                                                    0    game      dance      sport    inter     city   vlog
+                                                                                                                                                                                                                               −1.5      game      dance   sport    inter      city          vlog
+                                                                                                                                                                                                                                                                                                                                   −1.5       game     dance    sport   inter     city   vlog
+
+
+                                     (a) CBR percentage, 0dB                                                                            (b) CBR percentage, 10dB                                                                           (c) PSNR gain, 0dB                                                                                  (d) PSNR gain, 10dB
+
+Fig. 9. Average CBR percentage and PSNR gains versus the baseline NTSCC semantic communication system over the AWGN channel at SNR = 0dB and
+SNR = 10dB, where “↓” on the Y-axis label denotes “lower is better”, and “↑” denotes “higher is better”.
+
+
+
+10−5 ). Accordingly, we adopt a 1/3 rate (2048, 6144) LDPC                                                                                                                                                        We further plot the PSNR gain or bandwidth saving of the
+code with 4QAM at SNR = 0dB, and a 2/3 rate (4096, 6144)                                                                                                                                                       six video sequences in Fig. 9. Here, we employ the widely-
+LDPC code with 16-ary quadrature amplitude modulation                                                                                                                                                          used Bjøntegaard Delta (BD) rate reduction algorithm [57]
+(16QAM) at SNR = 10dB. Results in Fig. 8 indicate that by                                                                                                                                                      for relative performance evaluation. The baseline scheme is
+using our proposed online overfitting mechanisms, we achieve                                                                                                                                                   NTSCC trained on the DIV2K dataset. Fig. 9(a) and 9(b) show
+considerable gains compared to the baseline NTSCC, and the                                                                                                                                                     the relative average CBR percentage over the baseline at the
+transceiver full-model adaptation results in higher performance                                                                                                                                                same PSNR under channel SNR 0dB and 10dB, respectively.
+gain than updating the transmitter only. Moreover, compared                                                                                                                                                    Fig. 9(c) and 9(d) show the average quality improvement in
+to the best performed engineered transmission system “VTM                                                                                                                                                      terms of PSNR over the baseline for each scheme. Specifically,
++ 5G LDPC”, our NTSCC (TxRx-adapt) shows comparable                                                                                                                                                            NTSCC with transceiver adaptation (TxRx-adapt) can save up
+or even better performance. As one typical scheme towards                                                                                                                                                      to 41% bandwidth cost, while NTSCC with only transmitter
+adaptive semantic communications, our online learned NTSCC                                                                                                                                                     adaptation (Tx-adapt) can save up to 13%. Among the six se-
+shows the potential becoming the emerging SOTA scheme                                                                                                                                                          quences in VSD4K, our NTSCC (TxRx-adapt) performs better
+for end-to-end wireless data transmission. The existing well-                                                                                                                                                  than all other systems for most categories (4/6). However, it
+known improvements of semantic communication are com-                                                                                                                                                          shows slightly worse performance on the sport and vlog
+pared with “BPG + 5G LDPC” [24] or on the tiny-scale image                                                                                                                                                     sequences. We attribute this performance loss to the presence
+dataset [14], [15], our performance gain is more meaningful                                                                                                                                                    of multiple shots and diverse scenarios in these two sequences,
+as the first end-to-end data transmission scheme overpassing                                                                                                                                                   which complicates the adaptation of the baseline NTSCC
+the SOTA coded transmission system (VTM + 5G LDPC) on                                                                                                                                                          model to the entire video sequence. To improve performance,
+high-resolution image/video datasets.                                                                                                                                                                          it is recommend to restrict the adaptation range to align with
+                                                                                                                                                                                                                                                                   13
+
+
+
+                 33                                                                                      100%                      game, AWGN channel 0dB                               100%                  game, AWGN channel 10dB
+
+
+
+
+                                                                                     ours to VTM + 5G LDPC
+                                                                                      % of users preferring
+                 32                                                                                           75%                                                                       75%
+                                                                                                              50%                                                                       50%
+                 31                                                                                                    VTM + 5G LDPC spends 241% more                                                   VTM + 5G LDPC spends 222% more
+                                                                                                              25% bandwidth cost and ours still preferred                               25%             bandwidth cost and ours still preferred
+
+                                                                                                                                                                                                        0.0372                                0.1197
+     PSNR (dB)
+
+
+
+                                                                                                                       0.043                                    0.1467
+                 30                                                                                            0%0.04     0.06    0.08    0.10    0.12   0.14     0.16    0.18   0.20
+                                                                                                                                                                                         0%0.02       0.04           0.06      0.08      0.10          0.12     0.14
+                                                                                                                                    channel bandwidth ratio                                                     channel bandwidth ratio
+                 29
+
+                 28                                                                                      100%                     dance, AWGN channel 0dB                               100%
+                                                                                                                                                                                                              dance, AWGN channel 10dB
+
+
+
+
+                                                                                     Ours to VTM + LDPC
+                                                                                     % of Users Preferring
+                 27                                                                                           75%                                                                        75%
+
+                                                                                                              50%                                                                        50%
+                                                                                                                       VTM + 5G LDPC spends 94% more                                           VTM + 5G LDPC spends 53% more
+                  5.0      7.5    10.0 12.5 15.0 17.5 20.0 22.5 25.0                                          25%      bandwidth cost and ours still preferred                           25%   bandwidth cost and ours still preferred
+                                      average channel SNR                                                               0.0427                               0.0829                                 0.0344                  0.0526
+                                                                                                               0%0.04      0.05    0.06     0.07      0.08      0.09     0.10    0.11
+                                                                                                                                                                                         0%
+                                                                                                                                                                                          0.03         0.04          0.05      0.06      0.07          0.08     0.09
+                                                                                                                                    channel      bandwidth ratio                                                channel bandwidth ratio
+                      VTM + 5G LDPC, Num_HARQ = 1   NTSCC (10dB model, w/o ModNet)
+                      VTM + 5G LDPC, Num_HARQ = 2   NTSCC (20dB model, w/o ModNet)
+                      VTM + 5G LDPC, Num_HARQ = 3   NTSCC (w/ ModNet)
+                      VTM + 5G LDPC                 NTSCC (TxRx-adapt, w/ ModNet)
+                                                                                                         100%                      inter, AWGN channel 0dB                              100%
+                                                                                                                                                                                                              inter, AWGN channel 10dB
+
+
+
+
+                                                                                     Ours to VTM + LDPC
+                                                                                     % of Users Preferring
+                                                                                                              75%                                                                        75%
+Fig. 10. PSNR performance versus the change of average SNR over the
+COST2100 5.3GHz indoor channel under the CBR constraint ρ ≤ 0.03. The                                         50%                                                                        50%
+two baseline NTSCC models are trained under this COST2100 fading channel                                          VTM + 5G LDPC spends 54% more                                                   VTM + 5G LDPC spends 29% more
+                                                                                                              25% bandwidth cost and ours still preferred                                25%      bandwidth cost and ours still preferred
+with average SNR = 10dB and average SNR = 20dB, respectively.
+                                                                                                                             0.0593                  0.0912                                                  0.0492             0.0635
+                                                                                                               0%0.05     0.06    0.07    0.08    0.09   0.10     0.11    0.12   0.13
+                                                                                                                                                                                         0%
+                                                                                                                                                                                          0.04           0.05           0.06          0.07        0.08          0.09
+                                                                                                                                    channel      bandwidth ratio                                                channel bandwidth ratio
+
+
+the obvious scene changes within a video sequence.
+   Next, we verifies the flexibility of our proposed plug-in                                             100%                       city, AWGN channel 0dB                              100%
+                                                                                                                                                                                                                city, AWGN channel 10dB
+Channel ModNet on adaptation to the instant channel state. We
+                                                                                     Ours to VTM + LDPC
+                                                                                     % of Users Preferring
+
+
+
+
+                                                                                                              75%                                                                        75%
+consider the widely-used COST2100 wireless fading channel
+                                                                                                              50%                                                                        50%
+model [58] for evaluation. CSI samples are collected in an                                                              VTM + 5G LDPC spends 133% more                                              VTM + 5G LDPC spends 96% more
+                                                                                                              25%       bandwidth cost and ours still preferred                          25%        bandwidth cost and ours still preferred
+indoor scenario at 5.3GHz bands. In this case, the transmitted
+                                                                                                                         0.0513                          0.1195                                            0.0417                             0.0816
+symbols s will pass over a frequency selective channel on the                                                  0   %      0.06    0.08     0.10      0.12       0.14     0.16    0.18
+                                                                                                                                                                                         0%
+                                                                                                                                                                                          0.03      0.04      0.05     0.06    0.07    0.08     0.09     0.10   0.11
+                                                                                                                                    channel bandwidth ratio                                                     channel bandwidth ratio
+OFDM grid. We transmit the I-frames of game video sequence
+over this channel.
+   Fig. 10 shows the channel adaptation results. It can be seen                          Fig. 11. User study results. As an anchor, the black diamond point denotes
+that NTSCC with ModNet (see the solid blue curve) performs                               the CBR cost of our adaptive NTSCC (TxRx-adapt) semantic communication
+better than the standard NTSCC model (without ModNet)                                    system optimized under perceptual loss. For each data point in the red line,
+                                                                                         its Y-axis shows what percentage of users prefer our scheme, and the X-axis
+trained at a given average SNR. It verifies the Channel ModNet                           is the CBR cost of VTM + 5G LDPC. The blue arrow highlights how much
+module can make NTSCC model aware of the instant token-                                  extra CBR cost VTM + 5G LDPC spends where still more than 50% of
+wise SNRs, which is more accurate than using a rough average                             participants prefer ours. The results are counted from 2953 ratings in total,
+                                                                                         with an average of 123 per data point.
+SNR among all embeddings.
+   Moreover, performance can be further improved by utilizing
+full-model adaptation based on the NTSCC with ModNet, as                                 latency. As a comparison, the TxRx-adapt NTSCC (red line
+illustrated by the red line in Fig. 10. This approach enables                            in Fig. 10) can provide competitive performance with one-shot
+both source domain adaptation and channel instance adapta-                               transmission.
+tion. Additionally, we also present a comparison with VTM +
+5G LDPC schemes using the same CSI samples collected from
+COST2100. The configurations of LDPC codes and QAM are                                   C. Visual Examples and User Study
+consistent with those in [15], and we take the envelope of                                 Since the quality metrics sometimes fail to account for many
+all combinations of coded transmission schemes as the final                              nuances of human perception, we therefore rely on human
+performance (black line in Fig. 10). Apparently, it cannot                               opinions collected in a thorough user study. We employ the
+provide satisfactory quality using one-shot transmission due to                          “two alternatives, forced choice” (2AFC) test for quantitative
+the cliff-effect. To align better with practical communication                           evaluation. As a widely-used approach in the perceptual visual
+system, we further adopt the hybrid automatic repeat request                             quality assessment [6], [60], [61], the user study interface
+(HARQ) with chase combining (CC) [59] to enhance the sys-                                shows human raters a group of three images in the same
+tem performance while our NTSCC schemes continues to use                                 column, where the middle image is always the original image,
+one-shot transmission. It can be seen that retransmissions bring                         and the other two are lossily generated from two different
+considerable PSNR gains especially for the high SNR region,                              methods. Then, we require raters to choose which image (left
+and the gain increases with the number of HARQ allowed.                                  or right) looks closer to the original. We adopt the NTSCC
+However, HARQ also introduces much higher transmission                                   (TxRx-adapt) model learned under perceptual loss [24] and
+                                                                                                                                                           14
+
+
+
+
+                                     VTM + 5G LDPC              Online learned NTSCC            Online learned NTSCC           Online learned NTSCC
+                                                                 (TxRx-adapt, Perceptual)          (TxRx-adapt, PSNR)              (Tx-adapt, PSNR)
+
+
+
+
+           704 × 1280                 0.0381 (0%) / 28.38          0.0327 (–14.2%) / 28.29       0.0330 (–13.4%) / 28.78         0.0355 (–6.8%) / 28.49
+
+
+             Original                  BPG + 5G LDPC                    Deep JSCC                    NTC + 5G LDPC                      NTSCC
+
+
+
+
+         R / PSNR (dB)              0.0358 (–6.0%) / 27.65         0.0414 (+3.5%) / 27.68        0.0420 (+10.2%) / 28.11         0.0348 (–8.7%) / 28.13
+
+Fig. 12. Examples of visual comparison. The first column shows the original image and its cropped patch. The second to the fifth column show the reconstructed
+images by using different transmission schemes over the AWGN channel at SNR = 0dB, where the metrics in parentheses indicate the model training target
+loss function (PSNR or perceptual loss). Red number and blue number indicate the percentage of bandwidth cost increase and saving compared to the “VTM
++ 5G LDPC” scheme.
+
+
+
+compare it to VTM + 5G LDPC with close or more CBR                                                            TABLE I
+cost. In particular, we randomly collect 10 I-frame images                          R-D-M TRADE - OFF AS A FUNCTION OF β, WHERE THE TOTAL CBR
+                                                                                                        ρ = (R + M/N )/m.
+for each video sequence transmitted over the AWGN channel
+at SNR = 0dB and SNR = 10dB. The entire rating process                                                         ρ              R/m            M/(mN )
+                                                                                             PSNR
+consists of several rounds in which all participants were asked                     β         (dB)       (total CBR)       (data CBR)       (model CBR)
+to vote on each of the 10 groups of images. If our NTSCC
+(TxRx-adapt) dominates, the CBR cost of VTM + 5G LDPC                                –       31.80         0.04967           0.04967              0
+will be increased in the next round until it receives more votes.                   16       33.13         0.04870           0.04860           0.00011
+User study results are given in Fig. 11. As we can see, our                          4       33.33         0.04853           0.04825           0.00027
+source and channel overfitting approach enables NTSCC to                             1       33.65         0.04885           0.04811           0.00073
+greatly outperform the SOTA VTM + 5G LDPC transmission                              0.1      34.35         0.05245           0.04867           0.00378
+scheme, especially for game and city sequences. It verifies                        0.01      35.21         0.07377           0.04549           0.02828
+that the proposed online learned NTSCC system can better
+support the human perceptual vision demands in wireless data
+transmission, which is aligned with the target of semantic
+                                                                                modulation order are determined, the number of transmitted
+communications.
+                                                                                symbols M can be calculated according to the estimated model
+    To intuitively demonstrate the effect of the proposed over-
+                                                                                stream entropy in (16), (21) and the selected AMC scheme.
+fitting method, we further pick visible results on transmitting
+                                                                                From this table, we observe that as the value of β decreases,
+the city video sequence in Fig. 12. From these results, we
+                                                                                the R-D terms start to dominate the R-D-M trade-off, resulting
+can observe that online learned NTSCC optimized under the
+                                                                                in improved R-D performance compared to the baseline model
+perceptual loss achieves much better visual quality than other
+                                                                                (in the first row of Table I) and an increased bandwidth cost
+schemes with lower channel bandwidth cost.
+                                                                                for the model stream. since the decoder is updated only once
+                                                                                to adapt to the game domain, the bandwidth cost of the
+D. Ablation Study                                                               model stream can be amortized over a substantial number
+   1) R-D-M Tradeoff: Table I provides an ablation study                        of I-frames. As a result, the model rate becomes negligible,
+concerning the impact of β in domain adaptation, which                          especially in the high β region. An appropriate selection of
+investigates the tripartite trade-off among the data stream                     β in the transceiver adaptation can contribute to a significant
+bandwidth cost (R), model stream bandwidth cost (M ), and                       improvement in reconstruction quality while also reducing the
+end-to-end distortion (D). Specifically, we demonstrate the                     total bandwidth cost k = R + M  N.
+distribution of total CBR cost using a fixed λ = 4 in a                            We extend our analysis by examining the impact of λ
+45s game sequence (including N = 372 I-frames) over the                         in domain adaptation. Fig. 13 depicts the model updating
+AWGN channel at SNR = 10dB. Herein, the model stream                            progress on the CBR-PSNR plot with various λ values and a
+cost M is counted according to the channel state and the AMC                    fixed β = 1. From the results, we observe that the significant
+mechanism, as that used for the traditional separation-based                    gains from domain adaptation are achieved during the early
+schemes in Fig. 8. When the LDPC coding rate and digital                        stages of model updating, within just hundreds of iterations,
+                                                                                                                                                                      15
+
+
+
+
+                           NTSCC
+                                                                                                      TABLE II
+                 34.0      NTSCC (Tx-adapt)                                  T RANSMISSION EFFICIENCY AND AVERAGED ENCODING / DECODING
+                           NTSCC (TxRx-adapt)                    λ=2                            LATENCY COMPARISON .
+                 33.5                           λ=1
+                                                                                                                          BD-ρ (%, ↓)         End-to-end latency
+                 33.0                                                      Transmission scheme
+                                                                                                                          0dB    10dB           Enc.        Dec.
+     PSNR (dB)
+
+
+
+
+                 32.5
+                                                                           BPG + 5G LDPC                                  13.1      1.1          3.8s             380ms
+                 32.0                                  Updating step       VTM + 5G LDPC                                  –1.2     –17.7         114s             430ms
+                                                        0         1000
+                 31.5                                   50        2000     NTC [43] + 5G LDPC                             22.9     11.2         27ms              60ms
+                                                        100       4000
+                 31.0                                   200       6000     Deep JSCC [15]                                 42.3     46.4         17ms              25ms
+                                                        300       8000
+                 30.5                                   500       10000    NTSCC [24]                                      0         0       t0 = 25ms            15ms
+                   0.035   0.040    0.045 0.050 0.055 0.060     0.065      Tx-adapt, instance                             –9.0     –9.0           t1              15ms
+                                      channel bandwidth ratio              TxRx-adapt, domain                            –19.2     –16.4       t2 or t0           15ms
+                                                                            1 The Tx-adapt encoding time t is associated with the total number of
+                                                                                                          1
+Fig. 13. Online learning on the game video under AWGN channel at SNR =        instance adaptation steps. As a reference, it takes about 29.7s for Tx
+10dB. Each dot shows performance under different updating steps.              model updating in Algorithm 1 with Tmax = 100 steps and 18.3s for
+                                                                              updating latents in Algorithm 2 with Ymax = Smax = 50 steps.
+                                                                            2 The TxRx-adapt online learned NTSCC system requires online updating
+                                                                              full-model parameters before inference. As a reference, it takes about
+and the performance continues to improve moderately during                    t2 = 2.2h for Tmax = 10000 steps. After updating, the subsequent
+online updating. Additionally, optimizing for different λ values              encoding latency is same as the standard NTSCC, i.e., t0 = 25ms.
+can cause the R-D-M curve to move in different directions, but
+the final R-D-M performance point seems independent of the                                     2.25
+starting point from baseline model, as seen in the highlighted
+                                                                                               2.00
+λ = 1 and λ = 2 curves. This phenomenon suggests that,
+given the model stream weight β, the maximum reduction in                                      1.75                                          Updating steps
+                                                                                               1.50                                           0          1000
+the amortization gap on the receiver has almost been reached.                                                     13min of online updating
+                                                                              PSNR gain (dB)
+
+                                                                                                                                              50         2000
+To further reduce the amortization gap, the only approach is                                   1.25                                           100        4000
+                                                                                                                                              200        6000
+to limit the range of the adaptation domain.                                                   1.00                                           300        8000
+                                                                                                                                              500        10000
+   2) Performance-Complexity Tradeoff: We present the aver-                                               40s of online updating
+                                                                                               0.75
+age end-to-end processing latency and the coding efficiency of
+considered coded transmission schemes on the 480p VSD4K                                        0.50
+                                                                                                               6min of online updating
+dataset in Table II. This includes coding latency and the BD-                                  0.25                                          NTSCC (TxRx-adapt)
+                                                                                                          9s of online updating              NTSCC (Tx-adapt)
+ρ (“↓” means smaller is better), which measures bandwidth                                      0.00
+ratio savings at the equivalent quality, “+/−” signs indicate                                         0      20       40      60      80      100     120
+                                                                                                                      online updating time (min)
+more/fewer bandwidth cost than baseline [57]. All experiments
+are conducted using PyTorch 1.9.0, with the Inter Xeon Gold               Fig. 14. The PSNR gain versus standard NTSCC over time during model
+6226R CPU (mainly for arithmetic codec) and one RTX 3090                  updating. Each dot shows performance under different updating steps.
+GPU (for model updating and inference, and LDPC codec).
+   Results show that learned end-to-end data transmission
+schemes (e.g., Deep JSCC and NTSCC) run much faster than                  updating is completed. If the updating process is unacceptable
+classical layered designed schemes. This makes emerging end-              for delay-sensitive applications (e.g., live video delivery), we
+to-end data transmission schemes particularly suitable for low-           recommend reverting to the baseline model for a while before
+latency applications such as live video delivery, which requires          the updating process is completed. In this way, one can ensure
+real-time encoding on the client side. We then discuss the                low end-to-end latency and achieve additional gains from
+online learning schemes. Essentially, they enhance the coding             domain adaptation in the same time.
+efficiency of end-to-end data transmission schemes by lever-                 Another advantage of the domain adaptation paradigm is
+aging computation at the transmitter. For the instance adapt              that online fine-tuned model can converge more rapidly if the
+scheme, it requires tens of seconds of additional encoding time           test-time content is relatively consistent, such as the scenarios
+per frame for updating codes or encoder model, in exchange                including a fixed-location camera, cityscapes, live broadcasts,
+for 9% bandwidth saving compared to the standard NTSCC.                   or video conferences. In Fig. 14, we plot the detailed PSNR
+The instance adapt paradigm can potentially support wireless              gain versus the baseline over the online training time on the
+image/video delivery services, where encoding can be run in               game sequence. As seen in this figure, about 50% of the gain
+parallel and in advance.                                                  can be achieved after updating for less than 1 minute, and 80%
+   For the TxRx domain adaptation scheme, in order to achieve             of the gain can be attained with about 10 minutes of updating.
+improved coding efficiency, it is necessary to perform online             Since this is a “one-time” cost amortized across all the video
+updating of the full-model parameters and transmit the model              frames, the additional training cost is negligible compared to
+stream to the receiver before initiating the encoding process.            the channel bandwidth saving benefits it brings, especially for
+Consequently, there will be a delay before the full-model                 long videos.
+                                                                                                                                                                 16
+
+
+
+                                                                                                    40
+                34.5
+                                                                                                           480p
+                34.0                                                                                38                  720p
+                33.5
+                                                                                                    36
+
+
+
+
+                                                                                        PSNR (dB)
+    PSNR (dB)
+
+
+
+
+                33.0
+                                                                                                                                            1080p
+                32.5                                                                                34
+
+                32.0                                                                                                                  VTM + 5G LDPC
+                                                                                                    32                                NTSCC
+                31.5                                                                                                                  NTSCC (Tx-adapt)
+                                                                                                                                      NTSCC (TxRx-adapt)
+                31.0                                                                                30
+                       0   5   10     15    20 25       30    35    40       45                      0.0      0.5        1.0       1.5         2.0         2.5
+                                             time (s)                                                         average channel bandwidth cost (MHz)
+
+                           NTSCC baseline trained on diverse DIV2K dataset
+                           NTSCC adapt to another 1s game video                   Fig. 16. PSNR performance of transmitting the game video at difference
+                           NTSCC adapt to another 5s game video                   resolutions over the AWGN channel at SNR = 10dB, where the average
+                           NTSCC adapt to another 15s game video                  bandwidth cost is computed within 100ms according to the 5G OFDM con-
+                           NTSCC adapt to this 45s video                          figurations: 14 OFDM symbols@1ms with the subcarrier bandwidth 15KHz.
+
+
+Fig. 15. Case study: live video delivery. We downloaded a new 45s video of          •  Second, the small additional complexity caused by model
+the same game from YouTube and used it to simulate a live video delivery
+scenario, where the video content to be encoded cannot be known in advance.            adaptation involves only at the transmitter. There is no
+The bandwidth costs of different schemes are adjusted to be the same.                  extra complexity at the receiver, which is friendly to most
+                                                                                       content delivery tasks with the request of low decoding
+                                                                                       latency. It is aligned with the evolution idea of both
+   3) Results for Unseen Data: To evaluate the performance                             traditional and neural video codec.
+of our full-model adaptation method on unseen data, we
+                                                                                     In summary, as mentioned in Section I, almost all tradi-
+downloaded a new 45s video from YouTube as test sequence,
+                                                                                  tional source compressors follow the hybrid transform coding
+which contains the same game as the game sequence in
+                                                                                  paradigm to evolve, e.g., mode selection in HEVC [28] and
+the VSD4K dataset. We use the new video as unseen data
+                                                                                  VVC [29]. Accordingly, the idea of signal-dependent trans-
+to simulate a live video delivery scenario, where the video
+                                                                                  form in traditional source compression methods inspires us
+content to be encoded cannot be known in advance. In other
+                                                                                  to upgrade the deep learning based semantic communication
+words, the online learning can only utilize previously collected
+                                                                                  system to a content-channel-dependent adaptive mode. The
+video content. The results in Fig. 15 demonstrate that the
+                                                                                  marriage of deep learning method and traditional coding idea
+proposed online learning method can yield significant perfor-
+                                                                                  can bring significant performance improvement.
+mance gains compared to the baseline, even when the training
+                                                                                     Based on previous works about semantic communications
+set consists of a short video sequence with a duration of only
+                                                                                  [14]–[20], [24], [62], [63], and the work in this paper, we
+1s. Moreover, the models adapt to another game video can still
+                                                                                  think that the advantages of neural network based end-to-end
+approximate the performance of the best models adapted to
+                                                                                  semantic communication system are three folds:
+this precise video. This observation indicates that the proposed
+                                                                                     • First, the excellent content and semantics adaptivity of
+method exhibits good robustness to previously unseen data
+from the same category, as the model assimilates domain-                               neural network is superior to signal processing based tra-
+specific knowledge through the online learning process.                                ditional models since the network parameters are learned
+   4) Result for Various Video Resolution: We further report                           based on lots of practical source and channel data sam-
+the performance on the game video of different resolutions in                          ples while the models in the SOTA coded transmission
+Fig. 16. These results validate the stability of quality improve-                      standards are handcrafted based on prior knowledge.
+ments achieved using our proposed overfitting mechanism. The                         • Second, the neural network can well represent and utilize
+
+proposed online learned NTSCC shows superior performance                               source and channel features, which makes the semantic
+over the SOTA VTM + 5G LDPC scheme, particularly for                                   communication system can be optimized toward both hu-
+high-resolution video I-frames.                                                        man view perception and machine vision tasks. However,
+                                                                                       the existing source and channel coding standards only
+                                                                                       pursue high performance toward the objective quality
+E. Results Discussion
+                                                                                       assessment indices, e.g., PSNR.
+  Regarding the above experimental results and ablation study,                       • Third, the R-D optimization guided neural network train-
+we can draw two conclusions:                                                           ing and adaptive switching for semantic communication
+  • First, our online overfitting mechanism enables semantic                           is quite effective and efficient. As analyzed in this paper, a
+    communication system to efficiently adapt to both source                           single model to deal with all the source data with diverse
+    content and wireless channel state. It can greatly reduce                          structures and varying wireless channel states is ineffi-
+    the model amortization gap, which finally contributes to                           cient obviously. Therefore, the adaptively learning and
+    the system performance gain.                                                       switching according to source data and channel state is a
+                                                                                                                                                             17
+
+
+
+      necessary solution to enhance the R-D performance for                         [8] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter,
+      all deep learning based semantic communication systems.                           “GANs trained by a two time-scale update rule converge to a local nash
+                                                                                        equilibrium,” Advances in Neural Information Processing Systems, vol.
+      In addition, compared with the adaptive coding paradigm                           30, 2017.
+      used in traditional source and channel coding where one                       [9] L. Duan, J. Liu, W. Yang, T. Huang, and W. Gao, “Video coding
+      appropriate coding mode is selected from the predefined                           for machines: A paradigm of collaborative compression and intelligent
+                                                                                        analytics,” IEEE Transactions on Image Processing, vol. 29, pp. 8680–
+      mode pool with limited number of options, this paper                              8695, 2020.
+      leverages the overfitting property of neural network to                      [10] M. Fresia, F. Perez-Cruz, H. V. Poor, and S. Verdu, “Joint source and
+      adapt to arbitrary coding mode. Hence, the proposed                               channel coding,” IEEE Signal Processing Magazine, vol. 27, no. 6, pp.
+                                                                                        104–113, 2010.
+      adaptive semantic communication system is much more                          [11] A. Guyader, E. Fabre, C. Guillemot, and M. Robert, “Joint source-
+      flexible to be tailored for specific source and channel                           channel turbo decoding of entropy-coded sources,” IEEE Journal on
+      instance with lower complexity.                                                   Selected Areas in Communications, vol. 19, no. 9, pp. 1680–1696, 2001.
+                                                                                   [12] N. Ramzan, S. Wan, and E. Izquierdo, “Joint source-channel coding
+   In a nutshell, our overfitting method has efficiently catalyzed                      for wavelet-based scalable video transmission using an adaptive turbo
+semantic communication system to provide more promising                                 code,” EURASIP Journal on Image and Video Processing, vol. 2007,
+                                                                                        pp. 1–12, 2007.
+results. It is a necessary approach for all learning-based end-                    [13] C. Chen, L. Wang, and F. CM Lau, “Joint optimization of protograph
+to-end communication system to further boost performance,                               LDPC code pair for joint source and channel coding,” IEEE Transactions
+which is indeed aligned with the evolution route of both                                on Communications, vol. 66, no. 8, pp. 3255–3267, 2018.
+                                                                                   [14] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+traditional and neural video codec [64].                                                channel coding for wireless image transmission,” IEEE Transactions on
+                                                                                        Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,
+                      VI. C ONCLUSION                                                   2019.
+                                                                                   [15] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+   In this paper, we have proposed an online learned end-to-                            coding of images with feedback,” IEEE Journal on Selected Areas in
+end data transmission paradigm by well leveraging the deep                              Information Theory, vol. 1, no. 1, pp. 178–193, 2020.
+learning model’s overfitting property. Our adaptive NTSCC                          [16] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission
+                                                                                        with deep joint source-channel coding,” IEEE Transactions on Wireless
+system can for instance or domain be updated after deploy-                              Communications, vol. 20, no. 12, pp. 8081–8095, 2021.
+ment, which leads to substantial gains on the bandwidth ratio-                     [17] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless image re-
+distortion performance. In this way, the emerging semantic                              trieval at the edge,” IEEE Journal on Selected Areas in Communications,
+                                                                                        vol. 39, no. 1, pp. 89–100, 2020.
+communication is further upgraded to the adaptive semantic                         [18] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+communication system. Specifically, we have proposed several                            channel coding of text,” in Proceedings of the IEEE International
+lightweight methods to update the learned data transmission                             Conference on Acoustics, Speech and Signal Processing. IEEE, 2018,
+                                                                                        pp. 2326–2330.
+models. The ingredients of wireless transmitted stream include                     [19] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+both the semantic representations of source data and the                                joint source-channel coding,” in Proceedings of the International
+updated decoder model parameters. Accordingly, we have                                  Conference on Machine Learning. PMLR, 2019, pp. 1182–1192.
+                                                                                   [20] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+formulated the new optimization problem whose goal is min-                              image transmission using deep source channel coding with attention
+imizing the loss function that is a tripartite trade-off among                          modules,” IEEE Transactions on Circuits and Systems for Video
+data stream rate, model stream rate, and end-to-end distortion                          Technology, vol. 32, no. 4, pp. 2315–2328, 2021.
+                                                                                   [21] T.-Y. Tung and D. Gündüz, “Deepwive: Deep-learning-aided wireless
+terms. Results have verified the substantial gains of the online                        video transmission,” IEEE Journal on Selected Areas in Communica-
+learned NTSCC system, whose performance has surpassed                                   tions, vol. 40, no. 9, pp. 2570–2583, 2022.
+the SOTA engineered coded transmission systems. As a new                           [22] Fabrice Bellard, “BPG image format.,” URL: https://bellard.org/bpg/.
+                                                                                   [23] Tom Richardson and Shrinivas Kudekar, “Design of low-density parity
+paradigm, our model adaptation methods have the potential to                            check codes for 5g new radio,” IEEE Communications Magazine, vol.
+catalyze semantic communication upgrading to a new era.                                 56, no. 3, pp. 28–34, 2018.
+                                                                                   [24] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+                              R EFERENCES                                               transform source-channel coding for semantic communications,” IEEE
+                                                                                        Journal on Selected Areas in Communications, vol. 40, no. 8, pp. 2300–
+ [1] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K.        2316, 2022.
+     Wong, and C.-B. Chae, “Beyond transmitting bits: Context, semantics,          [25] Z. Gu, W. Lin, B. Lee, and C. Lau, “Low-complexity video coding based
+     and task-oriented communications,” IEEE Journal on Selected Areas in               on two-dimensional singular value decomposition,” IEEE Transactions
+     Communications, vol. 41, no. 1, pp. 5–41, 2023.                                    on Image Processing, vol. 21, no. 2, pp. 674–687, 2011.
+ [2] P. Zhang, W. Xu, H. Gao, K. Niu, and et al., “Toward wisdom-                  [26] C. Lan, J. Xu, W. Zeng, G. Shi, and F. Wu, “Variable block-sized signal-
+     evolutionary and primitive-concise 6G: A new paradigm of semantic                  dependent transform for video coding,” IEEE Transactions on Circuits
+     communication networks,” Engineering, vol. 8, pp. 60–73, 2022.                     and Systems for Video Technology, vol. 28, no. 8, pp. 1920–1933, 2017.
+ [3] H. Xie, Z. Qin, G. Y. Li, and B.-W. Juang, “Deep learning enabled             [27] S. Puri, S. Lasserre, and P. Le Callet, “Annealed learning based block
+     semantic communication systems,” IEEE Transactions on Signal Pro-                  transforms for HEVC video coding,” in 2016 IEEE International
+     cessing, vol. 69, pp. 2663–2675, 2021.                                             Conference on Acoustics, Speech and Signal Processing (ICASSP).
+ [4] J. Dai, P. Zhang, K. Niu, S. Wang, Z. Si, and X. Qin, “Communication               IEEE, 2016, pp. 1135–1139.
+     beyond transmitting bits: Semantics-guided source and channel coding,”        [28] G. J Sullivan, J.-R. Ohm, W.-J. Han, and T. Wiegand, “Overview of the
+     IEEE Wireless Communications, early access, 2022.                                  high efficiency video coding (HEVC) standard,” IEEE Transactions on
+ [5] C. E. Shannon, “A mathematical theory of communication, 1948,” Bell                Circuits and Systems for Video Technology, vol. 22, no. 12, pp. 1649–
+     System Technical Journal, vol. 27, no. 3, pp. 3–55, 1948.                          1668, 2012.
+ [6] R. Zhang, P. Isola, A. A Efros, E. Shechtman, and O. Wang, “The               [29] B. Bross, J. Chen, J.-R. Ohm, G. J Sullivan, and Y.-K. Wang, “Devel-
+     unreasonable effectiveness of deep features as a perceptual metric,” in            opments in international video coding standardization after avc, with an
+     Proceedings of the IEEE Conference on Computer Vision and Pattern                  overview of versatile video coding (VVC),” Proceedings of the IEEE,
+     Recognition, 2018, pp. 586–595.                                                    vol. 109, no. 9, pp. 1463–1493, 2021.
+ [7] K. Ding, K. Ma, S. Wang, and E. P Simoncelli, “Image quality                  [30] C. Cremer, X. Li, and D. Duvenaud, “Inference suboptimality in
+     assessment: Unifying structure and texture similarity,” arXiv preprint             variational autoencoders,” in International Conference on Machine
+     arXiv:2004.07728, 2020.                                                            Learning. PMLR, 2018, pp. 1078–1086.
+                                                                                                                                                           18
+
+
+
+[31] G. Lu, C. Cai, X. Zhang, L. Chen, W. Ouyang, D. Xu, and Z. Gao,              [55] Jean Bégaint, Fabien Racapé, Simon Feltman, and Akshay Pushparaja,
+     “Content adaptive and error propagation aware deep video compression,”            “CompressAI: a PyTorch library and evaluation platform for end-to-end
+     in European Conference on Computer Vision. Springer, 2020, pp. 456–               compression research,” arXiv preprint arXiv:2011.03029, 2020.
+     472.                                                                         [56] J. Hoydis, S. Cammerer, F. A. Aoudia, A. Vem, N. Binder, G. Marcus,
+[32] J. Campos, S. Meierhans, A. Djelouah, and C. Schroers, “Content                   and A. Keller, “Sionna: An open-source library for next-generation
+     adaptive optimization for neural image compression,” arXiv preprint               physical layer research,” arXiv preprint arXiv:2203.11854, 2022.
+     arXiv:1906.01223, 2019.                                                      [57] G. Bjontegaard, “Calculation of average PSNR differences between RD-
+[33] Y. Yang, R. Bamler, and S. Mandt, “Improving inference for neural                 curves,” VCEG-M33, 2001.
+     image compression,” Advances in Neural Information Processing                [58] L. Liu, C. Oestges, J. Poutanen, K. Haneda, P. Vainikainen, F. Quitin,
+     Systems, vol. 33, pp. 573–584, 2020.                                              F. Tufvesson, and P. De Doncker, “The cost 2100 mimo channel model,”
+[34] T. Guo, J. Wang, Z. Cui, Y. Feng, Y. Ge, and B. Bai, “Variable rate image         IEEE Wireless Communications, vol. 19, no. 6, pp. 92–99, 2012.
+     compression with content adaptive optimization,” in Proceedings of           [59] A. Ahmed, A. Al-Dweik, Y. Iraqi, H. Mukhtar, M. Naeem, and
+     the IEEE/CVF Conference on Computer Vision and Pattern Recognition                E. Hossain, “Hybrid automatic repeat request (HARQ) in wireless
+     Workshops, 2020, pp. 122–123.                                                     communications systems and standards: A contemporary survey,” IEEE
+[35] J. Kim, Y. Jung, H. Yeo, J. Ye, and D. Han, “Neural-enhanced                      Communications Surveys & Tutorials, vol. 23, no. 4, pp. 2711–2752,
+     live streaming: Improving live video ingest via online learning,” in              2021.
+     Proceedings of the Annual conference of the ACM Special Interest Group       [60] F. Mentzer, G. D Toderici, M. Tschannen, and E. Agustsson, “High-
+     on Data Communication on the applications, technologies, architectures,           fidelity generative image compression,” Advances in Neural Information
+     and protocols for computer communication, 2020, pp. 107–125.                      Processing Systems, vol. 33, 2020.
+[36] J. Liu, M. Lu, K. Chen, X. Li, S. Wang, Z. Wang, E. Wu, Y. Chen,             [61] E. Agustsson, M. Tschannen, F. Mentzer, R. Timofte, and L. V. Gool,
+     C. Zhang, and M. Wu, “Overfitting the data: Compact neural video                  “Generative adversarial networks for extreme learned image compres-
+     delivery via content-aware feature modulation,” in Proceedings of the             sion,” in Proceedings of the IEEE International Conference on Computer
+     IEEE/CVF International Conference on Computer Vision, 2021, pp.                   Vision, 2019, pp. 221–231.
+     4631–4640.                                                                   [62] S. Wang, J. Dai, S. Yao, K. Niu, and P. Zhang, “A novel deep learning
+[37] T. Van Rozendaal, I. A.M. Huijben, and T. S. Cohen, “Overfitting                  architecture for wireless image transmission,” in 2021 IEEE Global
+     for fun and profit: Instance-adaptive data compression,” arXiv preprint           Communications Conference (GLOBECOM). IEEE, 2021, pp. 1–6.
+     arXiv:2101.08687, 2021.                                                      [63] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+[38] D. Wang, W. Yang, Y. Hu, and J. Liu, “Neural data-dependent transform             image transmission with adaptive rate control,” in ICASSP 2022-
+     for learned image compression,” in Proceedings of the IEEE/CVF                    2022 IEEE International Conference on Acoustics, Speech and Signal
+     Conference on Computer Vision and Pattern Recognition, 2022, pp.                  Processing (ICASSP). IEEE, 2022, pp. 5193–5197.
+     17379–17388.                                                                 [64] S. Ma, X. Zhang, C. Jia, Z. Zhao, S. Wang, and S. Wang, “Image and
+[39] D. P Kingma and M. Welling, “Auto-encoding variational bayes,” arXiv              video compression with neural networks: A review,” IEEE Transactions
+     preprint arXiv:1312.6114, 2013.                                                   on Circuits and Systems for Video Technology, vol. 30, no. 6, pp. 1683–
+[40] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and P. Zhang,          1698, 2019.
+     “Wireless deep video semantic transmission,” IEEE Journal on Selected
+     Areas in Communications, vol. 41, no. 1, pp. 214–229, 2023.
+[41] J. Ballé, P. A Chou, D. Minnen, S. Singh, N. Johnston, E. Agustsson,
+     S. J. Hwang, and G. Toderici, “Nonlinear transform coding,” IEEE
+     Journal of Selected Topics in Signal Processing, vol. 15, no. 2, pp.
+     339–353, 2020.
+[42] J. Ballé, V. Laparra, and E. P. Simoncelli, “End-to-end optimized
+     image compression,” in Proceedings of the International Conference
+     on Learning Representations, 2016.
+[43] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational
+     image compression with a scale hyperprior,” in Proceedings of the
+     International Conference on Learning Representations, 2018.
+[44] I. H Witten, R. M Neal, and J. G Cleary, “Arithmetic coding for data
+     compression,” Communications of the ACM, vol. 30, no. 6, pp. 520–540,
+     1987.
+[45] J. Rissanen and G. Langdon, “Universal modeling and coding,” IEEE
+     Transactions on Information Theory, vol. 27, no. 1, pp. 12–23, 1981.
+[46] J. Ballé, N. Johnston, and D. Minnen, “Integer networks for data
+     compression with latent-variable models,” in International Conference
+     on Learning Representations, 2018.
+[47] Y. Han, G. Huang, S. Song, L. Yang, H. Wang, and Y. Wang, “Dynamic
+     neural networks: A survey,” arXiv preprint arXiv:2102.04906, 2021.
+[48] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N Gomez,
+     Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” Advances in
+     neural information processing systems, vol. 30, 2017.
+[49] J. Jiang, V. Sekar, and H. Zhang, “Improving fairness, efficiency, and
+     stability in http-based adaptive video streaming with festive,” IEEE/ACM
+     Transactions on Networking, vol. 22, no. 1, pp. 326–340, 2014.
+[50] Y. Bengio, N. Léonard, and A. Courville, “Estimating or propagating
+     gradients through stochastic neurons for conditional computation,” arXiv
+     preprint arXiv:1308.3432, 2013.
+[51] V. Ročková and E. I George, “The spike-and-slab lasso,” Journal of the
+     American Statistical Association, vol. 113, no. 521, pp. 431–444, 2018.
+[52] H. Wu, Y. Shao, K. Mikolajczyk, and D. Gündüz, “Channel-adaptive
+     wireless image transmission with ofdm,” IEEE Wireless Communica-
+     tions Letters, vol. 11, no. 11, pp. 2400–2404, 2022.
+[53] E. Agustsson and R. Timofte, “Ntire 2017 challenge on single image
+     super-resolution: Dataset and study,” in Proceedings of the IEEE
+     conference on computer vision and pattern recognition workshops, 2017,
+     pp. 126–135.
+[54] D. P Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+     arXiv preprint arXiv:1412.6980, 2014.
+

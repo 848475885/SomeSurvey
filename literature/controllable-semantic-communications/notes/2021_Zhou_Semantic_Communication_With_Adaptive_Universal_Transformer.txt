@@ -1,0 +1,473 @@
+                                                                                                                                                                               1
+
+
+                                           Semantic Communication with Adaptive Universal
+                                                          Transformer
+                                                          Qingyang Zhou, Rongpeng Li, Zhifeng Zhao, Chenghui Peng, and Honggang Zhang
+
+                                            Abstract—With the development of deep learning (DL), natural      sentences over changing communication channels and signal-
+                                         language processing (NLP) makes it possible for us to analyze and    to-noise ratio (SNR). So, we feel necessary to design a new
+                                         understand a large amount of language texts. Accordingly, we         semantic communication system that can flexibly deal with the
+                                         can achieve a semantic communication in terms of joint semantic
+                                         source and channel coding over a noisy channel with the help         semantic differences and adaptively adjust itself according to
+                                         of NLP. However, the existing method to realize this goal is to      the changed channel conditions. In the latest two papers [1]
+                                         use a fixed transformer of NLP while ignoring the difference         [2], Xie et al. propose a new semantic communication system
+                                         of semantic information contained in each sentence. To solve         based on transformer with fixed attention structure, which
+arXiv:2108.09119v3 [cs.CL] 29 Nov 2021
+
+
+
+
+                                         this problem, we propose a new semantic communication system         obtains greatly improved performance in the low SNR region.
+                                         based on Universal Transformer. Compared with the traditional
+                                         transformer, an adaptive circulation mechanism is introduced         Inspired by them, we design a novel semantic communication
+                                         in the Universal Transformer. Through the introduction of the        system based on Universal Transformer (UT) by introducing
+                                         circulation mechanism, the new semantic communication system         adaptive circulation mechanism that breaks the fixed structure
+                                         can be more flexible to transmit sentences with different semantic   of conventional transformer [12]. Universal Transformer is
+                                         information, and achieve better end-to-end performance under         capable of giving loop play to its own circulation mechanism,
+                                         various channel conditions.
+                                                                                                              and respond to different semantic information through differ-
+                                            Index Terms—Semantic communication, deep learning, trans-         ent cycles, so that the semantic communication system can be
+                                         former, end-to-end communication.                                    more adaptive in handling different communication situations.
+
+                                                               I. I NTRODUCTION                                 II. S EMANTIC C OMMUNICATION S YSTEM M ODEL AND
+                                                                                                                                   M ECHANISM
+                                         W        ITHIN more than 70 years since Shannon established
+                                                  information theory, scholars’ study mainly focused on
+                                         the first level of communication about how to accurately             A. Problem Description
+                                         and effectively transmit symbols from the transmitter to the            As shown in Fig. 1, taking into account the shared common
+                                         receiver. However, in recent years, with the astonishing devel-      knowledge of both transmitter and receiver, the semantic
+                                         opment of artificial intelligence, natural language processing       transmitter can map a sentence with context information,
+                                         (NLP) and other supporting technologies, the intelligent level       s, into a complex symbol stream, x, and then transmits it
+                                         of communication system and its cognitive ability to the             through the physical communication channel such as AWGN
+                                         outside world are constantly enhanced, which provides the            (additive white Gaussian noise) channel or Rayleigh fading
+                                         promising possibility to carry out the second level of semantic      channel under certain propagation situation. The received
+                                         communication. Accordingly, semantic communication has               symbol stream, y, is decoded at the semantic receiver, and
+                                         been attracting ever-growing interests as a potential trend in       restored to the target sentence through common knowledge.
+                                         the field of next-generation mobile communications.                  The transmitter and receiver can be designed using deep neural
+                                            Compared with the traditional communication, semantic             networks (DNNs) jointly, for which NLP enables DNNs to
+                                         communication points to greater advantages and wider appli-          train an end-to-end model for transmitting information with
+                                         cation scenarios. Within the semantic communication environ-         variable-length sentences in different languages.
+                                         ment, the information sender can better understand the purpose          For the semantic communication system, we define the
+                                         of transmission, simplify the transmitted data and eliminate the     inputting sentences, s = [w1 ,w2 ,. . . ,wL ], where wL represents
+                                         transmission of redundant information. Moreover, according           the L-th word in the sentences. The whole communication
+                                         to the prior knowledge and the received context information          system consists of two sections, namely the semantic section
+                                         within the communication process, the receiver can carry             and the channel section. The semantic section contains seman-
+                                         out an intelligent error correction as well as an appropriate        tic encoder and semantic decoder to extract and recover the
+                                         recovery of the received information, so as to make the              semantic information from the transmitted symbols. Similarly,
+                                         transmission of the message more compressive and accurate.           the channel section contains channel encoder and channel
+                                            Thanks to the rapid development of deep learning enabled          decoder to guarantee the robust transmission of semantic sym-
+                                         natural language processing techniques, the time is coming           bols over the physical communication channel. The encoded
+                                         to deepen the concrete research on semantic communication.           symbol stream can be represented by
+                                         Referring to [2]-[7], we first analyze various typical structures
+                                         of existing semantic communication. We find that the existing                                 x = Cα (Sβ (s))                      (1)
+                                         semantic communication systems, compared with the tradi-
+                                         tional communication systems, have really achieved several           where x ∈ CL×K is the complex channel vector for trans-
+                                         advantages more or less. However, all of them have unchanged         mission, K is the number of symbols for each word, Sβ (·) is
+                                         structures in the face of semantic differences in different          the semantic encoder with the parameter set β and Cα (·) is
+                                                                                                                                                                  2
+
+
+
+                                                                                                   Algorithm 1 ACT halting mechanism
+                               Shared Common Knowledge
+                                                                                                   Input:3D tensor Input x
+                                                                                                   Input:threshold 0 ≤ T ≤ 1
+                                                                                                   Input:Maximum number of cycles m
+                          Channel         x              y     Channel
+                                 
+                        Encoding C                                    
+                                                             Decoding C1
+                                                                                                   Initialization:Initialize cumulative halting score h, Remainder
+                                              Wireless
+                                              Channel                                              value R, cumulative number of cycles N
+ s         Semantic                                                            Semantic      Sˆ
+                                                                                                   Output:3D tensor y
+                   
+         Encoding S                                                                   
+                                                                             Decoding S-1         Output:ponder cost ρ
+                                                                                                   1: While: h <T and N <m do
+            Semantic Transmitter                                Semantic Receiver
+                                                                                                   2: Compute current step halting score p = fϕ (x)
+Fig. 1. The general framework of semantic communication system.                                    3: Mask for Inputs which have not halted A = p, set elements
+                                                                                                   less than 1 in A to 1, elements greater than 1 to 0 J
+                                                                                                   4: Mask for Inputs which halted at this step B = h+p A, set
+the channel encoder with the parameter set α. If x is sent, the                                    elements less than T in B to 0, elements greater than T to 1
+signal received at the receiver will be                                                            5: Mask for inputs
+                                                                                                                  J which haven’t halted, and didn’t halt this
+                                        y = hx + n                                           (2)   step A = h+p A, set elements less than T in A to 1 and
+                        L×K
+                                                                                                   elements greater than T to 0
+where y ∈ C           is the corresponding complex channel
+output vector, h ∈ C is the channel gain that remains                                                   J the halting probability for this step to the halting h =
+                                                                                                   6: Add
+                                                                                                   h+p A
+constant throughout the transmission, and n ∈ CL×K is                                              7: Compute
+independent and identically distributed circularly symmetric                                                 Jremainders for the inputs which halted at this step
+                                                                                                   R = R+B (1-h)
+complex Gaussian noise vector with zero mean and variance                                          8: Add the
+δ 2 . When we consider only AWGN channel, the channel will                                                   Jremainders to those inputs which halted at this step
+                                                                                                   h = h+B R
+be set as y = x + n.                                                                               9: Update the number of cycles N = N+A+B
+    Furthermore as shown in Fig. 1, the transmitted symbols can
+be restored through the channel decoder and semantic decoder.
+                                                                                                   10:       J the weight to be applied to the output W =
+                                                                                                     J Compute
+                                                                                                   p A+R B
+The finally decoded signal can be represented as                                                   11: Apply the Block on J   the Input x J
+                                                                                                                                          = F(x)
+                                                −1
+                                      ŝ = S−1
+                                            γ (Cδ (y))                                       (3)   12: Update output y = y (1-W)+x W
+                                                                                                   13: End while
+where ŝ is the recovered sentence, C−1 δ (·) is the channel                                       14: ρ = R + N
+decoder with the parameter set δ and S−1γ (·) is the semantic                                      15: Return y,ρ
+decoder with the paramter set γ.
+   The optimal goal of the designed semantic communication
+system is to minimize the semantic errors while reducing the                                       1, fϕ (·), we can get the halting score of the current input
+totally necessary number of symbols to be transmitted, in order                                    vector, p. According to the halting score, we can calculate the
+to keep the linguistic meaning between s and ŝ unchanged. We                                      Remainder value, R, mask for the input which is still running
+intend to set up the semantic and channel encoding jointly                                         and has stopped, A and B. Then make the input update through
+based on a new DNN framework.                                                                      the block, F(·). Repeat the above steps until the cumulative
+                                                                                                   halting score, h, exceeds the threshold or the number of cycles
+B. Proposed Model and Mechanism                                                                    N reaches the maximum number preset. Finally return the
+   Compared with the existing semantic communication ap-                                           output result of the block and the ponder cost, ρ, which is
+proaches, we take advantage of UT [12] to extract the semantic                                     consisted of R and N. More details about ACT can be found in
+features from the texts to be transmitted. Different from the                                      [13]. After adding ACT halting mechanism, the loss function
+recently booming transformer with fixed number of multiple                                         of the whole system can be written as
+layers, UT introduces circulation mechanism in the structure of                                                         Ltotal = Lorigin + ρ                    (4)
+transformer. In sequential sentence processing system, certain
+sentences are usually more ambiguous than the others. What’s                                       Based on the original loss function, Lorigin , the gradient of ρ
+more, in the process of information transmission, noise and                                        is back propagated at the same time. By training the original
+interference will also be received. It is therefore reasonable to                                  blcok and act model together, the whole system can learn to
+allocate more computing resources to those sentences with                                          choose the appropriate time to exit the cycle in the face of
+more complex semantic information and the corresponding                                            different situations without affecting the system performance.
+symbols that are seriously disturbed by noise. On the other                                           Accordingly, the new semantic communication system is
+hand, Adaptive Computation Time (ACT) [13] is a mechanism                                          built up as illustrated in Fig 2. In concrete, the transmitter
+for dynamically modulating the number of computational steps                                       consists of a semantic encoder to extract the semantic features
+needed to process each input symbol, which are based on a                                          and a channel encoder to generate the symbols to facilitate
+scalar halting probability predicted by the model at each step.                                    the transmission subsequently. The semantic encoder includes
+   The concrete ACT halting mechanism is described in Al-                                          Universal Transformer encoder and the channel encoder using
+gorithm 1. Firstly, by a dense layer with output dimension                                         dense layers with different units. The propagation channel is
+                                                                                                                                                                                                             3
+
+
+
+                                                                                                                                                             Output Sequence
+                                                                                                   CSI
+
+                                                                                                                                                                   Softmax
+
+
+
+                                                                                                                                                                             Recurrent
+
+
+
+
+                                                                                                                                                                                               For T steps
+                                                                                                                                                                              Decoder
+
+
+
+
+                                                                                                         Wireless Channel
+                                                                                                                                             Transition Function                 Block
+
+
+
+
+                                                                                                                            Dense Layer
+                                                                                     Dense Layer
+                       Recurrent
+                                                                                                                                             Multihead Attention
+                       Encoder
+
+
+
+
+                                                                       For T steps
+                                      Transition Function
+                       Block
+                                                                                                                                          Multihead Self-Attention                        ACT Model
+                                   Multihead Self-Attention
+
+                                                                  ACT Model
+
+
+                                                                                                                                          Embed Target Symbols
+                                     Embed Input Symbols
+                                                          Adaptive Universal                                                                                                          Adaptive Universal
+                                                         Transformer Encoder                                                                                                         Transformer Decoder
+
+                                        Input Sequence                                                                                       Target Sequence
+
+
+
+Fig. 2. The proposed adaptive UT structure for the semantic communication system.
+
+
+Algorithm 2 Train the whole semantic communication system                                                                      through the embedding layer to get the vector representation
+1: Initialization:Initialize the weights W and bias b                                                                          of the sentence. Through the semantic encoder, the semantic
+2: Input:The transmitted sentence s                                                                                            coding result, M, is determined by the semantic features of the
+3: Transmitter:                                                                                                                sentence. Then, M is encoded into symbols x via the channel
+    Semantic encoder : Sβ (s) → M                                                                                              encoder to deal with the noise from the physical channel. After
+    Channel encoder : Cα (M) → x                                                                                               passing through the physical channel, the receiver receives the
+4: Transmit x over the channel                                                                                                 distorted symbols, y, which are further decoded by the channel
+5: Receiver:                                                                                                                   decoder layer. Afterwards, the transmitted sentences are re-
+    Channel decoder : Cσ (y) → M̂                                                                                              stored by the semantic decoder layer. Finally, in order to get a
+    Semantic decoder : Sγ (M̂) → ŝ                                                                                            better transmission result, we compare the difference between
+6: Compute loss function L.                                                                                                    the transmitted sentence, s, and the recovered sentence ŝ, and
+7: Train α, β, γ, σ by Gradient descent                                                                                        optimize the whole system by the stochastic gradient descent
+8: Output:The whole network Sβ (·), Cα (·), C−1        −1
+                                               σ (·), Sγ (·)                                                                   (SGD) approach according to the loss function Ltotal .
+
+                                                                                                                                                          III. N UMERICAL R ESULTS
+interpreted as one neural layer in the model. Similarly, the                                                                      In this Section, we compare the proposed method with
+receiver is composited with a channel decoder for symbol                                                                       the existing semantic communication algorithms and the tra-
+detection and a semantic decoder for text estimation and                                                                       ditional joint source coding and channel coding approaches
+recovery. The channel decoder includes dense layers with                                                                       under the AWGN channel and Rayleigh fading channel re-
+different units and the semantic decoder includes Universal                                                                    spectively, where we assume channel state information (CSI)
+Transformer decoder.                                                                                                           is available from the feedback ACK signal for all considered
+   Cross-entropy (CE) is used as the loss function to measure                                                                  schemes.
+the difference between s and ŝ, which can be formulated as
+LCE (s, ŝ, α, β, γ, δ) =
+     X                                                                                                                         A. Simulation Settings
+   −      (q(wl )log(p(wl )) + (1 − q(wl ))log(1 − p(wl ))) (5)                                                                   The adopted linguistic dataset is the standard proceedings
+     l=1
+                                                                                                                               of the European Parliament [8], which consists of around 2.0
+where q(wl ) is the probability that the l-th word, wl , appears in                                                            million sentences and 53 million words. The dataset is pre-
+the transmitted sentence s, and p(wi ) is the predicted probabil-                                                              processed into lengths of sentences with 4 to 30 words.
+ity that the i-th word, wi , appears in the estimated sentence ŝ.                                                                In this numerical experiment, the maximum number of
+Since the CE can measure the difference between the sentence                                                                   cycles allowed of UT, m, is set to 5, the therehold, T, is set to
+s and ŝ, through reducing the loss value of CE, semantic                                                                      0.9, learning rate for Algorithm 1 is set to 10−4 , and learning
+communication system can learn to recover the transmitted                                                                      rate for Algorithm 2 is set to 10−6 . The detailed settings
+information influenced by the noise and interference. The final                                                                of the proposed networks are shown in Table I. We use the
+loss function can be formulated as                                                                                             typical transformer consisted of fixed three layers for the joint
+                                                                                                                               design of semantic coding and channel coding as the baseline
+                          Ltotal = LCE + ρ                                                               (6)
+                                                                                                                               [2] [3]. The traditional approach employs source coding and
+By reducing the value of the loss function, Ltotal , the whole                                                                 channel coding schemes separately, which applies fixed-length
+system learns to use the appropriate number of cycles while                                                                    coding (5-bit) for source coding, and Turbo coding [9] or
+ensuring the accuracy of information transmission.                                                                             Reed-Solomon (RS) coding for channel coding [10]. In par-
+   The training process of the whole system is given in                                                                        ticular, turbo encoding rate is 1/3 and turbo decoding method
+Alogorithm 2. First, initialize the weights W and bias b of                                                                    is Max-Log-MAP algorithm with 5 iterations. Furthermore,
+the whole neural networks. Then we input the sentence, S,                                                                      the widely recognized evaluation metrics in natural language
+                                                                                                                                                                                                       4
+
+
+
+         1.0                                                                   1.0
+                                                                                                                                                  1
+
+
+         0.8                                                                   0.8
+
+                                                                                                                                                 0.1
+
+         0.6                                                                   0.6
+  BLEU
+
+
+
+
+                                                                        BLEU
+                     UT                                                                                                                                                                 UT
+
+
+
+
+                                                                                                                                         SER
+                     Transformer                                                                                                                                                        Transformer
+                                                                                                                                                0.01
+                     Turbo                                                                                                                                                              Turbo
+         0.4                                                                   0.4
+                     RS                                                                                                                                                                 RS
+                                                                                         UT
+                                                                                         Transformer
+         0.2                                                                   0.2       Turbo                                                 0.001
+                                                                                         RS
+
+
+         0.0                                                                   0.0
+               0     2     4       6    8   10    12   14     16   18                0    2      4     6   8    10   12   14   16   18         1E-4
+                                                                                                                                                       0   2   4   6    8   10    12   14   16    18
+                                       SNR (dB)                                                            SNR(dB)
+                                                                                                                                                                       SNR (dB)
+
+
+ Fig. 3. BLEU score versus SNR in AWGN chan- Fig. 4. BLEU score versus SNR in Rayleigh fading Fig. 5. SER score versus SNR in AWGN channel.
+ nel.                                        channel.
+
+
+processing, namely BLEU (bilingual evaluation understudy)                                                      communication system with UT shows a better performance
+[11] and Symbol Error Ratio (SER) are used to measure the                                                      than the semantic communication system with transformer.
+performance.                                                                                                   The introduction of adaptive circulation mechanism in the
+                                                                                                               semantic communication system make the whole system more
+                         TABLE I                                                                               flexible to deal with the situation of varying physical channel
+     THE SETTING OF SEMANTIC COMMUNICATION SYSTEM                                                              with different SNR, being adaptve to different SNR to make
+                                       Layer Name               Units            Activation                    transmission adjustments, so as to improve the communication
+                   Transmitter
+                                        Embeding                 128               None                        performance. We can also observe that there exists an error
+                                       UT Encoder           128 (8 heads)          Linear                      floor for all the transformer based mechanisms, but this
+                    (Encoder)
+                                         Dense                   256               ReLu
+                                         Dense                    16               ReLu                        phenomenon don’t happen in traditional approaches. We notice
+                    Channel              AWGN                   None               None                        that neural networks based solutions are suboptimal in high
+                                         Dense                   256               ReLu                        SNR region as mentioned in [14]. Since this kind of error
+                    Receiver             Dense                   128               ReLu
+                   (Decoder)           UT Decoder           128 (8 heads)          Linear                      is hard to encounter in conventional neural networks (with
+                                       Predication           Dictionary           Softmax                      probability less than 10−4 ), it is really hard to get suitable
+                                         Dense                    1               Sigmod                       examples to train the neural network. Thus semantic encoding
+                   ACT Model
+                                         Dense                    1               Sigmod
+                                                                                                               & decoding mechanism in the region of high SNR shows
+                                                                                                               diminishing effects, which generates an avoidable error floor
+                                                                                                               for the semantic communication system. How to improve
+B. Numerical Results                                                                                           semantic coding performance in high SNR region with data
+   Fig. 3 and Fig. 4 show the relationship between the BLEU                                                    imbalance is an interesting theme for future research direction.
+score and SNR under the same number of transmitted symbols
+                                                                                                                 Fig. 6 displays the impact of the number of symbols per
+over AWGN and Rayleigh fading channel respectively, where
+                                                                                                               word on the BLEU score and the SER respectively. As the
+the traditional non-semantic approaches use 64-QAM for the
+                                                                                                               number of symbols per word grows, the BLEU score and SER
+modulation. In Fig. 3 among the traditional baselines, Turbo
+                                                                                                               increase significantly due to the increasing distance between
+coding performs better than RS coding. Obviously, Rayleigh
+                                                                                                               constellations. The greater the number of symbols per word
+fading channel has stronger negative influence than AWGN
+                                                                                                               means the more noise-tolerant is each word. We can also
+channel for both traditional methods and the DNN based
+                                                                                                               observe that the improvement becomes marginal with the
+methods. In AWGN channel, when SNR is greater than or
+                                                                                                               increasing of symbols per word. It means that we can use fewer
+equal to 8dB, Turbo coding can achieve almost 100% word
+                                                                                                               symbols to represent one word in the process of transmission
+accuracy, but RS coding performs much worse than Turbo
+                                                                                                               with relatively small performance loss. On the other hand,
+coding at the same SNR. All the DNN based approaches
+                                                                                                               one way to increase the BLEU score in low SNR region is to
+(i.e., transformer and UT) achieve better results than the
+                                                                                                               increase the number of symbols for each word.
+traditional ones. In particular, the semantic communication
+based on UT obtains a better word accuracy than the semantic                                                      Noise level in training is another critical parameter for
+communication with transformer. We can also observe that                                                       training the transformer and the effects can be seen in the
+when SNR = 4 dB, both the semantic communication with                                                          Fig. 7. When training is carried out in high SNR region with
+either UT or transformer can achieve almost 100% word                                                          high noise level (i.e.10 dB), UT performs better even the noise
+accuracy in terms of BLEU score under the AWGN channel                                                         level is high, but it can not correctly transmit the sentence in
+(Fig 3(a)), which implies it is hard for us to use BLEU to                                                     low SNR region. When training is carried out in low SNR
+distinguish the performance of the two approaches. So it’s                                                     region (i.e. 0dB), UT performs better since the noise level
+helpful to further introduce SER to make accurate distinction                                                  is low, but when SNR increase to the high region, it can not
+between the proposed semantic communication with UT and                                                        transmit the sentence as similarly accurate as UT trained in the
+the existing semantic communication with transformer.                                                          previous case. Hence , we choose to train UT in a manner with
+   Fig. 5 demonstrates the relationship between the SER and                                                    SNR changing randomly between 0-10dB, which ensures the
+SNR. As we can see from the curves in Fig. 5, the semantic                                                     accuracy of information transmission meanwhile guarantees
+                                                                                                                                                                                                                                                       5
+
+
+
+        1.0                                                                1                                                                       5.0                                             1
+                                                                                                                    0-10dB                                                                                                         UT
+                                                                                                                    10dB                                                                                                           3*3 Transformer
+                                                                                                                    0dB                                                                                                            6*6 Transformer
+                                                                                                                                                   4.5
+        0.8
+                                                                          0.1                                                                                                                     0.1
+
+
+
+
+                                                                                                                               circulation times
+                                                                                                                                                   4.0
+
+        0.6
+                                                                                                                                                   3.5
+ BLEU
+
+
+
+
+                                                                  SER
+
+
+
+
+                                                                                                                                                                                          SER
+                                                                         0.01                                                                                                                    0.01
+
+        0.4                                                                                                                                        3.0
+
+                      16
+                      32
+                                                                        0.001                                                                                                                   0.001
+                      8                                                                                                                            2.5
+        0.2
+
+
+                                                                                                                                                   2.0
+
+        0.0                                                             1E-4                                                                                                                    1E-4
+              0   2        4   6     8   10   12   14   16   18                 0   2   4   6    8   10   12   14    16   18                             0   2   4   6     8   10    12                 0   2   4   6     8   10   12   14   16   18
+
+                                   SNR (dB)                                                     SNR(dB)                                                          SNR(dB)                                                SNR (dB)
+
+
+ Fig. 6. BLEU versus the number Fig. 7. The impact of different train- Fig. 8. The relationship between com- Fig. 9. The semantic communication
+ of symbols used for in one word in ing SNR for semantic communication putational complexity and SNR for system based on DNNs with different
+ semantic communication.            system.                            semantic communication system.        layers.
+
+
+
+the ability to eliminate strong noise.                                                                                              can better adapt to various channel conditions. It is the first
+   Fig. 8 shows the fluctuation of the number of cycles required                                                                    attempt to adopt Universal Transformer for the semantic com-
+by the whole system in the face of sentences with different                                                                         munication system, responsive to the difference of semantic
+complexity in different SNR. In order to meet the preset                                                                            information contained in different sentences. Although there
+threshold for the confidence of the final output sentences, UT                                                                      exists a SER error floor and the corresponding improvement
+will increase the number of cycles of sentences when faced                                                                          becomes marginal when the level of SNR exceeds certain
+with more complex sentences, so as to ensure the accurate                                                                           value, we believe that our results can be a promising start for
+transmission of information. Similarly, when the channel un-                                                                        paving the way towards the era of semantic communications.
+der low SNR, the transmitted information will be seriously
+disturbed by noise. In the case of the same cycle times, the                                                                                                                        R EFERENCES
+confidence of the information can no longer meet the preset                                                                          [1] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+threshold, so UT will correspondingly increase the cycle times                                                                           semantic communication systems,” IEEE Trans. on Signal Processing,
+of the information in the semantic layer during information                                                                              vol. 69, pp. 2663–2675, 2021.
+                                                                                                                                     [2] H. Xie and Z. Qin, “A lite distributed semantic communication system
+processing, so as to ensure the accuracy of the transmission.                                                                            for internet of things,” IEEE Journal on Selected Areas in Communica-
+   Besides using UT to improve the performance of seman-                                                                                 tions, vol. 39, no. 1, pp. 142–153, 2020.
+tic communication system, we can consider to increase the                                                                            [3] C. E. Shannon and W. Weaver, “The mathematical theory of com-
+                                                                                                                                         munication,” Urbana: University of Illinois Press, vol. 96, 1949.
+attention layers for the original structure of the conventional                                                                      [4] H. Ye, L. Liang, G. Y. Li, and B.-H. Juang, “Deep learning-based end-to-
+transformer. As illustrated in Fig. 9, the conventional trans-                                                                           end wireless communication systems with conditional gans as unknown
+former with increased layers (i.e. transformer with 6*6 layers)                                                                          channels,” IEEE Trans. on Wireless Communications, vol. 19, no. 5, pp.
+                                                                                                                                         3133–3143, 2020.
+performs a little bit better in low SNR region, however in high                                                                      [5] D. Tse and P. Viswanath, Fundamentals of Wireless Communications.
+SNR region, there is almost no performance improvement. It                                                                               Cambridge University Press, 2005.
+may be due to the reason that when in low SNR region, using                                                                          [6] S. Dörner, S. Cammerer, J. Hoydis, and S. Ten Brink, “Deep learning
+                                                                                                                                         based communication over the air,” IEEE Journal of Selected Topics in
+the lower number of layers (i.e. transformer with 3*3 layers)                                                                            Signal Processing, vol. 12, no. 1, pp. 132–143, 2017.
+is enough to eliminate the noise influence. Redundant layers                                                                         [7] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+will not improve the performance of the system, and even the                                                                             channel coding of text,” in 2018 IEEE International Conference on
+                                                                                                                                         Acoustics, Speech and Signal Processing (ICASSP). IEEE, 2018, pp.
+whole system may have over-fitting phenomenon because of                                                                                 2326–2330.
+the increased parameter complexity. Surely, the approach of                                                                          [8] P. Koehn et al., “Europarl: A parallel corpus for statistical machine
+increasing the layers improve the system performance at the                                                                              translation,” in MT Summit, vol. 5. Citeseer, 2005, pp. 79–86.
+                                                                                                                                     [9] C. Heegard and S. B. Wicker, Turbo Coding. Springer Science &
+cost of increasing the number of the parameters, by which the                                                                            Business Media, 2013, vol. 476.
+difficulty of convergence is increased as well. On the contrary,                                                                    [10] I. S. Reed and G. Solomon, “Polynomial codes over certain finite fields,”
+through the using of UT, we can improve the performance                                                                                  Journal of the Society for Industrial and Applied Mathematics, vol. 8,
+                                                                                                                                         no. 2, pp. 300–304, 1960.
+of the system without increasing the number of parameters,                                                                          [11] K. Papineni, S. Roukos, T. Ward, and W.-J. Zhu, “BLEU: a method for
+meanwhile the system can better adapt to a variety of changing                                                                           automatic evaluation of machine translation,” in Proceedings of the 40th
+channel conditions. This can be a promising way to improve                                                                               Annual Meeting for Computational Linguistics, 2002, pp. 311–318.
+                                                                                                                                    [12] M. Dehghani, S. Gouws, O. Vinyals, J. Uszkoreit, and Ł. Kaiser, “Uni-
+the performance of semantic communication system.                                                                                        versal transformers,” in Seventh International Conference on Learning
+                                                                                                                                         Representations (ICRL 2019), May 2019., 2018.
+                                              IV. C ONCLUSION                                                                       [13] A. Graves, “Adaptive computation time for recurrent neural networks,”
+                                                                                                                                         arXiv preprint arXiv:1603.08983, 2016.
+   This Letter proposed a new semantic communication system                                                                         [14] Y. Jiang, S. Kannan, H. Kim, S. Oh, H. Asnani, and P. Viswanath,
+based on adaptive Universal Transformer. By combining the                                                                                “Deepturbo: Deep turbo decoder,” in 2019 IEEE 20th International
+circulation mechanism with transformer, the semantic com-                                                                                Workshop on Signal Processing Advances in Wireless Communications
+                                                                                                                                         (SPAWC). IEEE, 2019, pp. 1–5.
+munication system becomes more flexible and powerful, and
+

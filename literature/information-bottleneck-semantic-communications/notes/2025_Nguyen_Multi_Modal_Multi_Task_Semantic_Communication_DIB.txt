@@ -1,0 +1,6381 @@
+1
+
+Distributed Information Bottleneck Theory for
+Multi-Modal Task-Aware Semantic Communication
+
+I. I NTRODUCTION
+Recent development of mobile communication systems,
+especially 6G, is moving beyond the traditional goal of simply
+improving the data transportation performance, such as data
+rates or delivery latency, but focuses on ubiquitous intelligence, a shift toward supporting highly diversified and personalized services for a vast array of users and devices [2]. Unlike
+traditional communication systems that focus on symbol-level
+accuracy, 6G aims to deliver tailored services that adapt to
+the specific functional and task-aware needs of the receiver.
+Within this landscape, semantic communication has emerged
+as a promising solution. By prioritizing the transmission of
+task-relevant information and “semantic meaning” delivery, it
+has the potential to significantly improve the communication
+efficiency and enable Quality-of-Experience (QoE)-enhanced
+A preliminary version of this paper was presented at IEEE International
+Conference on Communications (ICC), Montreal, Canada, June 2025 [1].
+Yujie Zhou, Cheng Peng, Rulong Wang, and Yong Xiao are with the
+School of Electronic Information and Communications, Huazhong University
+of Science and Technology, Wuhan 430074, China. Yong Xiao is also
+with Peng Cheng Laboratory, Shenzhen, China, and Pazhou Laboratory
+(Huangpu), Guangzhou, China (e-mail: {zhouyujie2357, m202372990, rulongwang, yongxiao}@hust.edu.cn).
+Yingyu Li is with the School of Mechanical Engineering and Electronic
+Information, China University of Geosciences, Wuhan 430074, China (e-mail:
+liyingyu29@cug.edu.cn).
+Guangming Shi is with the Peng Cheng Laboratory, Shenzhen 518055,
+China (e-mail: gmshi@xidian.edu.cn).
+Ping Zhang is with the State Key Laboratory of Networking and Switching
+Technology, Beijing University of Posts and Telecommunications, Beijing,
+China (email: pzhang@bupt.edu.cn).
+
+80
+
+6.0e+07
+
+75
+70
+
+4.0e+07
+
+FLOPs
+
+Abstract—Semantic communication shifts the focus from bitlevel accuracy to task-relevant semantic delivery, enabling efficient and intelligent communication for next-generation networks. However, existing multi-modal solutions often process all
+available data modalities indiscriminately, ignoring that their
+contributions to downstream tasks are often unequal. This not
+only leads to severe resource inefficiency but also degrades
+task inference performance due to irrelevant or redundant
+information. To tackle this issue, we propose a novel task-aware
+distributed information bottleneck (TADIB) framework, which
+quantifies the contribution of any set of modalities to given tasks.
+Based on this theoretical framework, we design a practical coding
+scheme that intelligently selects and compresses only the most
+task-relevant modalities at the transmitter. To find the optimal
+selection and the codecs in the network, we adopt the probabilistic
+relaxation of discrete selection, enabling distributed encoders to
+make coordinated decisions with score function estimation and
+common randomness. Extensive experiments on public datasets
+demonstrate that our solution matches or surpasses the inference quality of full-modal baselines while significantly reducing
+communication and computational costs.
+
+PA-MPJPE (mm)
+
+arXiv:2510.04000v3 [cs.IT] 31 Dec 2025
+
+Yujie Zhou, Cheng Peng, Rulong Wang, Yong Xiao, Yingyu Li, Guangming Shi, Ping Zhang
+
+65
+60
+
+2.0e+07
+
+55
+50
+
+1
+
+2
+
+3
+
+4
+
+5
+
+# of Data Modalities
+
+6
+
+7
+
+0.0e+00
+
+1
+
+2
+
+3
+
+4
+
+5
+
+# of Data Modalities
+
+6
+
+7
+
+Fig. 1: Performance improvement and computational overhead w.r.t. modalities on MM-Fi. The more modalities involved (from left to right), the higher
+the computational cost. However, the corresponding inference performance
+does not increase monotonically when redundant/difficult-to-learn/irrelevant
+modalities (e.g., RGB image and LiDAR) are added.
+
+personalized service to meet the unique objectives of individual users [3], [4].
+Despite its promise, most existing research in semantic
+communication focuses on developing specific models or
+source encoding schemes for signals with a single modality,
+such as video [5], image [6], or voice signals [7]. This narrow
+approach hampers the widespread application of semantic
+communication systems, as many emerging use cases, such
+as autonomous driving, immersive communication, and industrial digital twins, require the processing of multiple data
+modalities at the same time. While some recent works have
+explored the multi-modal semantic communication [8]–[12],
+they often focus on the joint processing of datasets with all the
+available modalities without distinction, ignoring the fact that
+the contributions of different data modalities to each specific
+task are generally different. For instance, a navigation task in
+autonomous driving may heavily rely on visual and radar data
+while treating the audio signal as relatively less important; conversely, a voice-assistant task may require mainly the acoustic
+signal. Moreover, processing and compressing all available
+modalities indiscriminately may undermine the core resourceefficiency benefits of semantic communication, leading to
+unnecessary computational overhead and excessive energy
+consumption at the edge [13]. Furthermore, recent results even
+suggest that including irrelevant or redundant modalities of
+data can, in some cases, cause decision-making ambiguity,
+which may result in degraded performance, as the system
+must filter through conflicting or distracting information when
+executing specific tasks [14], [15].
+To shed more light on the impact of processing various
+combinations of data modalities on the performance of tasks,
+we consider a multi-modal semantic communication system in
+which the semantic encoder can observe various combinations
+
+2
+
+of seven distinct data modalities, including RGB images and
+depth maps, as well as non-visual signals such as infrared,
+LiDAR, mmWave, and WiFi CSI, collected when a human user
+conducts different positions, and the main task at the receiver
+is to accurately estimate the position based on the signals sent
+by the encoder. We evaluate the task performance and computational efficiency based on procrustes-aligned mean perjoint position error (PA-MPJPE) and floating-point operations
+(FLOPs) during inference, respectively. Our experimental results reveal a nuanced relationship between data diversity and
+task accuracy. Initially, integrating additional data modalities
+in position estimation leads to accuracy improvement. However, once the total number of considered modalities exceeds
+a specific threshold, i.e., over four data modalities, the overall
+accuracy begins to decline. Furthermore, this increase in data
+modalities triggers a substantial increase in computational
+demand, i.e., over 2.5 times increase in FLOPs when the
+number of modalities exceeds 4, suggesting that indiscriminate
+processing of all available modalities not only undermines
+resource efficiency but can also introduce decision ambiguity,
+leading to sub-optimal task performance. Currently, there is
+still a lack of a unified framework that can evaluate how
+different modalities contribute to various task requirements.
+Developing such a framework is essential to bridge this gap,
+enabling the encoder to intelligently identify and process only
+the most critical modalities for a receiver’s intended tasks,
+thereby truly fulfilling the 6G promise of efficient, taskoriented intelligence for everything.
+Motivated by this observation, in this paper, we investigate
+the multi-modal task-aware semantic communication from an
+information-theory perspective. In particular, we propose a
+novel theoretical framework based on distributed information
+bottleneck (DIB), called task-aware DIB (TADIB), to quantify
+the specific contributions of any given set of data modalities
+for a specific task requirement. Our proposed framework
+allows the semantic encoder to determine the minimal sufficient information required from the optimal combination of
+modalities of data to satisfy a specific task’s requirements.
+In this way, the encoder can intelligently filter and process
+only the most critical data subsets, ensuring optimal resource
+allocation and task performance at the receiver.
+We briefly summarize the main contribution of this paper
+as follows:
+(1) Theoretical framework for modality selection: We propose the task-aware distributed information bottleneck
+(TADIB) framework, which generalizes classical DIB
+theory by introducing an optimized modality selection
+mechanism as a new degree of freedom in the raterelevance tradeoff. This provides a theoretical foundation
+for identifying the minimal sufficient set of modalities
+required for specific tasks, enabling efficient multi-modal
+semantic communication under resource constraints.
+(2) Tractable optimization: We develop a probabilistic relaxation of TADIB (pTADIB), which transforms the discrete
+modality-task selection into a probabilistic form. This
+allows joint end-to-end optimization of selection policies
+and semantic codecs via gradient-based methods, using
+score function estimation and common randomness to
+
+coordinate decisions across distributed devices. We also
+provide a theoretical analysis proving the equivalence
+between the primal TADIB and its probabilistic form.
+(3) Empirical validation: Extensive experiments on public
+multi-modal multi-task datasets demonstrate the effectiveness of TADIB. Compared to state-of-the-art baselines
+(e.g., VDDIB and DLSC), TADIB achieves comparable
+or better inference quality while reducing the number
+of active modality-task links by up to 70.4% and the
+communication rate by up to 43.6%. Moreover, TADIB
+significantly reduces per-epoch training time by up to
+90.6% compared to full-participation DIB-based methods, verifying its practical efficiency.
+
+II. R ELATED W ORK
+Recent research in semantic communication has shifted
+focus from data reconstruction to the recovery of task-relevant
+information at the receiver. While foundational works [16]–
+[18] primarily address single-modal, single-task scenarios, the
+field is rapidly evolving to handle more complex, realistic
+settings involving multiple modalities and tasks. Initial efforts in multi-modal semantic communication [8]–[10] often
+operate under a non-cooperative paradigm, where each task
+independently processes its own multi-modal dataset. More
+recent studies [11], [12] advance this by investigating joint or
+cooperative multi-tasking across distributed devices. However,
+a common and limiting assumption persists across much of
+this literature: that all available data modalities from all transmitters are essential for every receiver’s task. This approach
+leads to the indiscriminate processing and transmission of full
+modality sets, which contradicts the core efficiency promise of
+semantic communication. This oversight creates critical gaps.
+Processing and transmitting all modalities irrespective of their
+task relevance leads to unnecessary computational overhead,
+excessive energy consumption, and sub-optimal use of limited
+channel capacity [13]. And as discussed in our introduction
+and supported by experimental evidence (e.g., Fig. 1), including redundant or irrelevant modalities can introduce decisionmaking ambiguity and actually degrade task performance.
+Some works have begun to address resource constraints. For
+instance, [13] considers modality selection, but is limited
+to a single-task context and does not account for inter-task
+correlations or the collective link occupancy in multi-task
+scenarios. Furthermore, many DL-based solutions [8]–[10]
+prioritize inference quality without theoretical guarantees on
+the optimal rate-relevance trade-off. While other approaches
+like [19] tackle rate adaptation from a physical-layer channel
+coding perspective, their focus is orthogonal to the fundamental problem of source-level, task-aware redundancy elimination
+across multiple modalities. Our work bridges this gap by
+proposing TADIB designed explicitly for optimal modality
+selection and coding in multi-modal multi-task semantic communication. It provides a principled method to identify and
+transmit only the most task-relevant information from the
+most critical modality subsets, guaranteeing both efficiency
+and performance.
+
+3
+
+III. BACKGROUNDS AND P RELIMINARIES
+A. Distributed Information Bottleneck
+1) Development Sequence: The Tishby’s information bottleneck (IB) is first proposed in [20]. It is grounded in RD
+theory [21]. Unlike the data reconstruction emphasized by the
+RD-based lossy compression, IB focuses on recovering the
+hidden meaning or semantics in the data under a rate limit. In
+which the meaning is introduced as a relevant hidden variable
+according to the raw data. It extracts the relevant information
+of targets (meaning) from raw signals to yield representations
+that are minimally informative about raw signals and maximally informative about targets, in which the informativeness
+is measured by MI. The current work [22] indicates that IB
+is essentially a remote source coding problem in which the
+distortion is measured under logarithmic.
+Work [23] extends IB theory to distributed scenarios as
+DIB, which involve multiple transmitters and a receiver. This
+extension is rigorous, which follows the classical result [24],
+[25] to characterize the optimal rate-relevance tradeoff region.
+IB-based coding can be implemented efficiently. The work
+[26] establishes the deep variational IB (VIB), which utilizes
+variational techniques and deep learning-based parameterization schemes to achieve IB. By applying the powerful gradient
+backpropagation in the learning paradigm, the feasibility of IB
+has been greatly enhanced. This also illustrates that leveraging
+DIB to establish multi-modal multi-task semantic communication systems is promising: it is theoretically grounded in
+information theory and can be efficiently implemented by DL.
+2) DIB for Semantic Communication: DIB offers an
+information-theoretic framework that naturally aligns with
+semantic communication goals. Note that semantic communication aims to transmit task-relevant meaning rather than
+raw data. DIB realizes this goal by seeking a compressed
+representation that maximally preserves information about a
+task target signal while being minimally informative about
+the raw observation. This rate-relevance tradeoff, balancing
+representation compactness against predictive power, captures
+the core efficiency goal of semantic communication: minimizing communication cost without sacrificing task performance.
+Recent works [16], [27]–[29] have noticed this connection and
+developed a branch of semantic communication based on DIB.
+3) A Quick Review of DIB: In the remainder of this part,
+we provide a review of the DIB theory. The classical IB aims
+to find the optimal way to extract a representation Z from
+a random variable X that preserves the relevant information
+about a task-relevant signal Y . This is framed as minimizing
+the rate, namely, the MI between X and Z, I(X; Z), while
+maximizing the MI between Z and Y , I(Z; Y ), equivalently,
+minimizing the conditional entropy H(Y |Z) by I(Z; Y ) =
+H(Y ) − H(Y |Z) with a stationary source entropy H(Y ).
+The DIB extends the above theoretical framework to scenarios involving multiple encoders, each has a set of locally
+observed data samples. A standard DIB consists of K encoders
+and a single decoder for recovering the target signal Y ,
+where each encoder converts its local observation Xk to a
+
+low-dimensional and low-rate feature Zk . With a Lagrangian
+multiplier β ≥ 0, we expect encoders to satisfy the following
+n
+minp(zk |xk ) LDIB [p(zk |xk )]
+o
+X
+(1)
+:= H(Y |ZK ) + β
+(H(Y |Zk ) + I(Xk ; Zk )) ,
+k∈K
+
+where ZK = {Z1 , ..., ZK } and β corresponds to the weighting
+factor. H(·|·) is the conditional entropy (CE). This expression
+implicitly controls the sum-rate I(XK ; ZK ) to be less than a
+certain value, as this objective, in the form of a Lagrangian, has
+transformed the rate constraint into the control of the multiplier
+β. This corresponds to the result of [23], [25].
+B. Notations
+We first clarify the main notations used in this paper. Calligraphic letters (e.g., X ) denote sets or functionals, uppercase
+letters (e.g., X) represent random variables or constants, and
+lowercase letters (e.g., x) represent elements of sets. Boldface
+letters (e.g., x or X) emphasize vector structures. We denote
+the cardinality of a set X by |X |. The distribution induced by
+a random variable X is denoted by PX , and its probability
+density function (pdf) or probability mass function (pmf) by
+pX . The Kullback-Leibler (KL) divergence between two distridP
+] where
+butions P and Q is given by DKL (P ∥Q) ≜ EP [log dQ
+P ≪ Q. The mutual information (MI) between random variables X and Z is defined as I(X; Z) ≜ DKL (PXZ ∥PX PZ ).
+The notation [N ] abbreviates the index set {1, ..., N }. Sometimes, we explicitly write a vector in component form, e.g.,
+x = (x1 , ..., xN ) = (xn )n∈[N ] = (xn )N
+n=1 = (xn )n . These
+notations are all equivalent. Throughout, the last form is usually used to simplify the expression if the index representation
+element, e.g., n, is clear from the context.
+IV. S YSTEM M ODEL AND P ROBLEM F ORMULATION
+We consider a multi-modal task-aware semantic communication system, as illustrated in Fig. 2, in which a set of
+different modalities of data M, generated by an implicit
+semantic information source, can be observed by the encoder
+and the main objective of the system is to perform a set of T
+downstream tasks, denoted as T , based on the semantics of the
+source recovered by the decoder. Let Xm be the mth modality
+of data that can be observed by the encoder. We use XM(t)
+to denote the raw data associated with a subset of modalities
+M(t) for M(t) ⊆ M. Let Yt be the semantics (target signal)
+that is required at the receiver end to perform task t for t ∈ T .
+We also use YT to denote the desired set for the receiver to
+perform a set T of downstream tasks.
+As observed from the motivation example in our Introduction, different data modalities do not contribute equally
+to the performance of each task, and a carefully selected
+subset of modalities is often sufficient to achieve the desired
+quality when serving the downstream tasks at the receiver.
+Therefore, in this paper, we focus on the task-aware semantic
+extraction and recovery problem in a resource-constrained
+semantic communication system. In this case, for a set of tasks
+T , the semantic encoder will select a subset of modalities of
+
+4
+
+Modality
+Selection
+
+Observation
+
+Encoder
+
+Channel
+
+Decoder
+
+Transmitters
+
+Receivers
+
+Fig. 2: Overview of a general multi-modal task-aware semantic communication system.
+
+its observed data to be compressed into a set of semantic representations sent to the channel. The compressed representations
+need to be not only efficient for physical channel transmission
+but also sufficient for the decoder to recover the required target
+signals to perform the downstream tasks.
+Suppose there exists a modality selection operation υ that
+can output the subset of modalities of data that is sufficient for extracting
+the required
+semantics for tasks T , i.e.,
+F
+F
+M(T ) = t M(t) where represents the disjoint union, that
+is, if multiple tasks (e.g., T tasks) select the same modality,
+this modality w.r.t. different tasks will appear T times in
+M(T ) (rather than only once). In this case, we often call
+M(T ) the set of selected modality-task links. Each element
+is a link (pair) of modalities and tasks. We then define the
+stochastic encoder and decoder for the task-aware semantic
+communication system as follows:
+Definition 1. For an arbitrary set of data XM(T ) generated
+from a set of semantic sources with semantics YT , we define a
+encoder f as a mapping that outputs a representation ZM(T )
+from input XM(T ) , i.e., f : XM(T ) → ZM(T ) . We also
+define a decoder g as a mapping that outputs a set of recovered
+semantics ŶT based on the representation ẐM(T ) received
+from the channel, i.e., g : ẐM(T ) → ŶT .
+The above problem can be directly formulated using the
+DIB theory, an information-theoretical framework focusing
+on extracting the minimally sufficient statistical representation
+from distributed data sources, i.e., modalities, that maximize
+the information between the representation and the targeted
+downstream tasks. More formally, we can formulate the taskaware semantic encoding and decoding problem as follows:
+Xn
+min
+LTA [υ, f, g] :=
+H(Yt |ZM(t) )
+υ,f,g:M(T )∈A
+
++β
+
+t∈T
+
+X
+
+H(Yt |Zm,t ) + I(Xm ; Zm,t )
+
+o (P1 )
+,
+
+m∈M(t)
+
+where υ denotes the selection operation, f denotes the encoder,
+and g denotes the decoder. g can be fully determined if the
+exact forms of encoder f and data distributions are given
+[27, Appendix A]. As thus, we often omit g for convenience,
+e.g., LTA [υ, f ] = LTA [υ, f, g(f, υ)] = LTA [υ, f, g]. Besides,
+A is the feasible region of the selected set M(T ) given by
+physical resource constraints. The conditional entropy (CE)
+H(Yt |ZM(t) ) measures the multi-modal quality for task t, and
+the CE H(Yt |Zm,t ) measures the single-modal one. The MI
+I(Xm ; Zm,t ) measures the single-modal rate.
+This expression unifies selection with coding as optimizable
+variables, extending (1) to multi-modal multi-task cases. Since
+it is based on DIB, the modality-fused ZM(t) can be depicted
+with a low information rate while maintaining high semantic
+recovery quality.
+
+It can be observed that solving this problem (P1 ) is quite
+challenging due to the following reasons. First, finding the
+optimal set of links M(T ) w.r.t. υ for solving tasks is difficult
+since there is still lacking a general metric for measuring the
+relevance between raw data and tasks. Second, multiple data
+modalities and tasks are usually scattered in a decentralized
+resource-constrained network. This increases the difficulty
+of evaluating the metric, as coordination among distributed
+devices is required, where there does not exist an “oracle” that
+can access all devices’ raw data and tasks. Third, calculating
+the terms at the RHS of the expression and ideal decoder g
+in terms of f is practically infeasible, since the exact joint
+distributions of sources are unknown in realistic cases, and
+only accessible via finite empirical samples.
+In the following sections, we will first establish a metric
+to optimally evaluate the contribution made by the modality
+corresponding to the task. Then, we specify how to choose
+the optimal set in the general case of a distributed network
+with resource constraints based on the metric. Subsequently,
+we perform a computationally tractable transformation of
+this original problem based on variational approximation and
+parameterization to derive an algorithmic solution.
+V. TASK - AWARE M ODALITY C ONTRIBUTION M ETRIC
+To select the appropriate modalities of data to process
+according to the requirements of downstream tasks at the
+receiver, we need first to develop a metric to measure the
+relevance/contribution of different modalities of data for T .
+A. General Definition of Task-Modality Score
+In this paper, we propose a novel metric, called the taskmodality score, to quantify the volume of information that can
+be provided by a subset of modalities of data for downstream
+tasks.
+Definition 2. Given a set of modality-task links M(T )
+corresponding to υ, the relevance metric R : A → R is a
+set-to-scalar function, defined as
+R (M(T )) = min LTA [υ, f, g].
+f,g
+
+(2)
+
+The lower the value of R, the higher the data-task relevance
+captured by the set of modality-task links M(T ) ∈ A for
+downstream tasks T .
+The definition of R is straightforward and optimal to (P1 ):
+if we select the set M(T )⋆ that has the minimal value of
+R(M(T )) over all sets satisfying the constraint, then we
+achieve the optimum of (P1 ). This is due to the commutativity
+of minimum, i.e.,
+min
+
+M(T ),f,g
+
+LTA = min min LTA = min R(M(T )),
+M(T ) f,g
+
+M(T )
+
+(3)
+
+5
+
+where υ is replaced by its induced M(T ) equivalently.
+Note that our proposed R(·) is fundamentally different from
+the existing solution that measures the contribution of each
+data modality based on the marginal contribution. Previous
+works [1], [13], [27] typically adopt a two-phase approach:
+they first assign each individual modality-task link a relevance
+value based on pre-defined metrics, then select the top-k links
+with the highest values to form the final selected set. This
+type of scheme, however, suffers from several fundamental
+limitations that lead to sub-optimality. First, they evaluate
+the contribution of each modality for a task independently,
+ignoring the complex interactions among different modalities
+and tasks. This means that to some extent, they estimate the
+average benefit of choosing the link rather than the maximum
+benefit of the selected set that include this one. Second, they
+often rely on heuristic/pre-defined metrics that lack theoretical
+guarantees for optimality. Note that the optimal subset should
+be induced by the original objective (P1 ) itself, rather than
+by artificially pre-defined metrics. Our proposed metric R(·)
+overcomes these limitations by directly evaluating the overall
+contribution of the selected set to the entire task set, ensuring
+optimality as shown in (3).
+B. Applying the Score for Multi-modal Multi-task Dataset
+While Definition 2 establishes the theoretical optimality of
+R(·), its direct calculation on realistic multi-modal multi-task
+datasets faces the challenge that the true joint distributions of
+data and tasks are unknown. To make this metric a general
+tool for measuring task-modality relationships in a wide of
+practical applications, we take an approximation that bridges
+information theory with data-driven learning system. Applying
+the score to a dataset involves two key approximations, which
+we formally detail in the following Section VII and VIII. Here,
+let us directly preview the results and show how to calculate
+the task-modality score on datasets.
+t
+Let a dataset of task t be Dt := {(Xti , Yti )}N
+i=1 with |Dt | =
+Nt samples. Then,
+Proposition 1. For a set of modality-task links M(T ) w.r.t.
+υ on datasets {Dt }t∈T , its corresponding task-modality score
+R (M(T )) is empirically estimate by
+R (M(T )) ≈ min
+
+ϕ,φ,ψ
+
+Xn
+t∈T
+
+N
+
+−
+
+t
+1 X
+i
+log qϕt (yti |zM(t)
+)
+Nt i=1
+
+N
+
++β
+
+X
+m∈M(t)
+N
+
+t
+1 X
++
+log
+Nt i=1
+
+t
+1 X
+i
+−
+log qφt (yti |zm,t
+)
+Nt i=1
+
+(4)
+
+i
+o
+pψm,t (zm,t
+|xim,t )
+,
+P
+Nt
+j
+1
+i
+j=1 pψm,t (zm,t |xm,t )
+Nt
+
+where parameters ϕ := (ϕt )t , φ := (φt )t , ψ := (ψt )t are
+corresponding to optimizable codec f and g defined in (P1 ).
+The approximation is exact at the limit Nt → ∞ for all t ∈ T .
+Proof. It follows from the key results in Section VII and VIII,
+esp., Proposition 2 and expressions (22)-(24).
+Generality and benefits: The approximation in Proposition 1
+provides a general-purpose tool for evaluating the contribution
+
+of any modality subset to a set of tasks, using only finite
+samples from the dataset. This is applicable to a wide range of
+complex multi-modal and multi-task scenarios. For instance, in
+autonomous driving, one can assess whether LiDAR, camera,
+or radar data are most relevant for obstacle detection or trajectory prediction. Thus, by only processing the relevant data
+modalities, we can better meet the requirements of low latency
+and high reliability. This flexibility aligns with the original
+motivation: to transmit only the most relevant information
+for tasks, thereby saving communication and computation
+resources while maintaining inference quality.
+Dependence on samples and parameters: The empirical
+estimate of R(M(T )) in Proposition 1 depends critically on
+two factors: the sample size Nt and the parameter optimization
+over ϕ, φ, ψ. First, the estimate is asymptotically unbiased: as
+Nt → ∞ for each task t, the law of large numbers ensures
+that the empirical averages converge to the true expectations.
+With finite data, the estimate exhibits variance that can affect
+the reliability of modality comparisons. Second, the inner
+minimization over codec parameters is non-convex and subject to the limitations of gradient-based optimization. If the
+parameterized function families (e.g., neural networks) do not
+contain the optimal codecs, or if the optimization fails to reach
+the global minimum due to local optima or inadequate training,
+the estimated score becomes an upper bound of the true
+minimal R. This means that in practice, we are evaluating an
+upper bound of the task-modality relevance, which, however,
+may still be effective for comparative selection if the bias is
+consistent across different modality sets. These dependencies
+underscore the importance of sufficient data and effective
+optimization in making the score a reliable guide for modality
+selection. In the experimental phase, we pointed out that the
+estimation relying on data and parameters remains valid.
+Limitations and the need for scalable optimization: Despite
+its generality, directly applying Proposition 1 to find the optimal modality-task set M(T )⋆ = arg minM(T ) R(M(T )) is
+computationally prohibitive. The number of possible modalitytask sets grows exponentially with the number of modalities
+and tasks: for M modalities and T tasks, there are 2M T possible selections. Evaluating R for each candidate set requires
+solving an inner optimization over codec parameters (ϕ, φ, ψ),
+which is expensive even for a single set. This exhaustive search
+is clearly infeasible for practical systems where M and T
+can be large. Therefore, we need a scalable and coordinated
+method that can efficiently identify the minimal-score selection
+without enumerating all possibilities. Moreover, in distributed
+networks, modalities and tasks are often scattered across different devices, further complicating centralized computation.
+How to address limitations in general distributed cases: To
+address the above, the following sections develop a distributed
+optimization framework that jointly learns the selection policy
+and the codecs in a single end-to-end process. Instead of
+evaluating R for every possible set, we introduce a probabilistic relaxation that transforms the discrete selection into
+a continuous optimization problem. This approach not only
+bypasses the combinatorial explosion but also aligns with
+the decentralized nature of real-world multi-modal networks.
+We detail this in following sections, where we show how to
+
+6
+
+Task-aware modality selection for task 1
+Unimodal
+Encoder 1
+
+...
+
+Unimodal
+Encoder M
+
+Decoder 1
+Receiver 1
+
+Transmitter 1
+Unimodal
+Encoder 1
+Unimodal
+Encoder M
+
+Decoder T
+Receiver T
+
+Transmitter K
+Task-aware modality selection for task T
+
+Fig. 3: Task-aware modality selection in general distributed networks. Modalities (tasks) are distributed at different transmitters (receivers).
+
+efficiently find the minimizer of R(·) in a network setting.
+VI. I N -N ETWORK TASK - AWARE M ODALITY S ELECTION
+We now specify how to perform the task-aware modality selection in a general distributed network based on the proposed
+metric R(·). We first refine the above multi-modal task-aware
+semantic communication system model in such a network,
+as illustrated in Fig. 3, then present an approach to find the
+minimizer of R.
+A. Network Setting
+Distributed transmitters and receivers: Different modalities
+are observed at different transmitters. We use K := {1, ..., K}
+to denote the set of transmitters. Each transmitter k ∈ K
+observes its own multi-modal data Xk , consisting of M
+different modalities, represented as Xk := (Xk1 , ..., XkM ). All
+such Xk recover the total data X := (X1 , ..., XK ). Each
+transmitter’s data is unique, though potentially correlated, and
+yields a joint distribution PX = PX1 ...XK . In this case,
+the aforementioned complete modality set M is given by
+M := {(k, m) : k ∈ K, m ∈ [M ]} with |M| = KM . Also,
+the modality component Xm is now represented as Xkm . We
+also use T := {1, ..., T } to denote the set of receivers, where
+we assume that each receiver focuses on a single task and
+different receivers focus on different tasks.
+Distributed semantic encoding: Each transmitter holds its
+m
+respective encoder fkm : Xkm × T → Zk,t
+, to extract the lowdimensional feature of the locally observed data modality m
+that captures the most-relevant information for the receiver t
+to perform its intended task. In this case, the aforementioned
+m
+representation Zm,t is now specified as Zk,t
+. For every m ∈
+m
+[M ], we introduce such a mapping fk at k. All such encoders
+form the encoder f := {fkm }m,k .
+Modality-task link selection, distributed selectors, and link
+limits: We say a modality-task link, i.e., (k, m, t), is selected
+if the transmitter k provides the feature of the modality m for
+the receiver’s task t. Formally, we introduce a binary indicator
+function ak,m,t to denote the selection, where ak,m,t = 1
+if (k, m, t) is selected, and ak,m,t = 0 otherwise. E.g., all
+the transmitters are capable of communicating with all the receivers simultaneously, then the maximum number of selected
+modality-task links is KM T . In so doing, we explicitly have
+a := M(T ) := {(k, m, t) : ak,m,t = 1}, and corresponding
+
+KM T -dimensional vectors XM(T ) := (ak,m,t Xkm )k,m,t and
+m
+ZM(T ) := (ak,m,t Zk,t
+)k,m,t .
+However, due to the limited channel capacity and computational capability, only a subset of these links are available:
+|M(T )| < KM T . We now define the feasible region A of
+M(T ) in this setting. We consider the following generally
+practical case: Each transmitter k can only provide a subset
+Mk of its modality-based features to all receivers,
+X
+|Mk | ≤ Ek ⇔
+ak,m,t ≤ Ek ,
+(5)
+m,t
+
+where Ek ≤ M T is the number of selected links at k. We
+introduce a selector υk for the transmitter k to decide links
+for all given tasks t ∈ Tk ⊆ T that access k, where the selected
+links do meet the above: Given k, Mk = υk (Tk ) that satisfies
+X
+Mk = {(k, m, t) : ak,m,t = 1,
+ak,m,t ≤ Ek }. (6)
+m,t
+
+Besides, each receiver t can only access a subset of transmitters Kt ⊆ K to obtain features
+for its task, i.e.,
+X
+max ak,m,t ≤ Et ,
+(7)
+|Kt | ≤ Et ⇔
+k
+
+m
+
+where Et ≤ K is the number of selected transmitters at t. In
+this case, the maximum operation over m at k implies that the
+k-th transmitter is selected if any modality m of k is selected.
+This constraint is valid that due to the data privacy concerns,
+the receiver typically cannot access the transmitter’s raw data.
+As a result, the transmitter’s modality information remains
+inaccessible, like a black box, to the receiver, accessible only
+through the transmitter itself. We also introduce a selector υt
+for the receiver t to decide Kt for task t. Given t, Kt = υt (K)
+that satisfies
+X
+Kt = {k : ak,m,t = 1,
+max ak,m,t ≤ Et }.
+(8)
+k
+
+m
+
+Also, in terms of all {Kt }t , we can formally define Tk of
+k: Tk := {t : this k ∈ Kt , ∀t ∈ T }. Now, with all the
+established selectors υ := (υk , υt ), we can finally derive the
+set M(T ) in terms of Tk and Mk by υ, which corresponds
+to the selection operation we defined in the general system
+model. To summarize, we instantiate the feasible region A of
+M(T ) in (P1 ) as the above constraints (5) and (7).
+Communication channel and rate limits: The selected features ZM(T ) are assumed to be transmitted to the receivers
+via communication channels. Throughout, we consider the
+standard error-free channels with the channel capacity limits,
+this means that ẐM(T ) = ZM(T ) under a sum-rate limit,
+i.e.,R ≥ I(XM(T ) ; ZM(T ) ), which is implicitly controlled
+by the multiplier β-controlled trade-off in (P1 ) following (1)
+[23, Proposition 2].
+Semantic decoding: Each receiver t ∈ T aims to execute its
+respective semantic inference task by a fused representation
+ZM(t) , which is essentially a sub-vector of ZM(T ) corresponding to a fixed t. It attempts to recover its target Yt via a
+decoder gt : ZM(t) → Yt . Let the recovered target be Ŷt . All
+such decoders form the decoder g := {gt }t .
+As aforementioned, the goal is to recover the true YT =
+(Yt )t∈T as precisely as possible via ŶT = (Ŷt )t∈T under the
+above limits. We should find the optimal selectors and codecs
+to achieve this goal.
+
+7
+
+B. Finding the Optimal Set in Probability
+While theoretically optimal, calculating the metric R for
+each possible set is extremely intractable. In the rest of this
+section, we develop a computationally feasible approximation
+via probability tools. Enumeration is feasible to obtain a⋆ :=
+arg mina R(a) for small K and T , however with unaffordable
+computation costs if the number of devices becomes large: the
+cardinality of A grows exponentially, i.e., |A| = 2KM T . We
+should find a more efficient way to obtain the optimal set.
+Note that the selection is decided prior to the transmission
+of features. We can randomize the full a as its random variable
+counterpart A following an initial distribution PA . In so doing,
+our goal transforms to finding the optimal distribution PA⋆ that
+assigns probability mass close to one to that optimal a⋆ , i.e.,
+arg mina R(a) ⇒ arg minPA EPA [R(A)].
+
+(9)
+
+This transformation has several advantages. Since task and
+data distributions are arbitrary, the uniqueness of a⋆ can not be
+guaranteed. For example, if X1 , ..., XK are iid (independent
+and identically distributed), then any a ∈ A is optimal. In this
+case, it is unfaithful for selectors to return a deterministic a,
+while returning a randomized A can capture all the optimal
+a ∈ supp(A) = A . More importantly, instead of directly solving the intractable mina R(a), this randomized version, i.e.,
+minPA EPA [R(A)], can be directly addressed by conducting
+gradient-based methods on PA . In the remainder of this paper,
+we refer to PA as the selection policy corresponding to a.
+C. Vectorized Representation of Modality-Task Links
+Let us introduce a representation vector of a as the boldface
+counterpart a in {0, 1}KM T in terms of the indicator ak,m,t ,
+which puts 1 for selected links and 0 for unselected ones. By
+using such a vector, we can express more clearly how the links
+we chosen affect the original problem quantitatively.
+Let us clarify its composition step by step. Each selector υt
+at receiver-side yields the selected set Kt . Then, we define a
+vector corresponding to Kt , i.e.,
+at := (max ak,m,t )K
+k=1 ,
+m
+
+(10)
+
+where max over m at k marginalizes the modality information
+that is not selected by the receiver t. This at denotes all transmitters selected by the receiver t, which is K-dimensional.
+Then, for transmitter-side υk , we also define
+ak := (ak,m,t )M
+m=1 .
+
+(11)
+
+This ak denotes all modalities selected by the transmitter k
+for the task t, which is M -dimensional.
+For this task t, we can fully express the selected modalitytask links as KM -dimensional vector by the Kronecker product of at and ak , i.e., ak,t := ak ⊗ at , that is,
+ak,t = (a1,1,t , ..., a1,M,t , a2,1,t , ..., aK,M,t ),
+
+(12)
+
+with the fact that ak,m,t = ak,m,t maxm ak,m,t .
+Enumerating all the tasks t ∈ T , we finally obtain a KM T dimensional representation vector a for a, i.e.,
+a = ⊕Tt=1 ak,t = (ak,m,t )k,m,t ,
+
+(13)
+
+where ⊕ denotes the concatenation operation. In terms of the
+above notations, we can rewrite the constraint as
+X
+max ak,m,t ≤ Et ⇔ ∥at ∥ ≤ Et ,
+(14)
+k
+
+m
+
+X
+
+ak,m,t ≤ Ek ⇔ ∥
+
+(k)
+t ak,t ∥ ≤ Ek ,
+
+P
+
+(15)
+
+m,t
+
+where a(k) represents a sub-vector of a from M (k − 1)+1-th
+dimension to M k-th dimension and ∥ · ∥ denotes the ℓ1 norm.
+We also obtain the randomized version of vectors by replacing
+the lowercase letters with uppercase ones.
+D. Cooperative Selection Policy for Distributed Network
+The selectors of distributed devices are also distributed. We
+cannot directly access such a global distribution PA . We have
+to express this PA by all distributed selectors. This means that
+PA should be decomposed into components, each of which can
+be computed locally on each device (transmitter or receiver).
+In this case, we let PA be cooperative, satisfying the following,
+Definition 3. We say policy PA is cooperative if there exists
+an auxiliary variable U such that
+QT
+QK
+PAAT U = PU t=1 PAt |U k=1 PA(k) |Ak U ,
+(16)
+k,t
+
+t
+
+where AT := (At )t and Akt is the k-th component of At . We
+use a set PA to denote all the PA satisfying (14) and (15),
+i.e., falling into the feasible region A ⊆ A.
+Intuitively, this property is explained as follows. We expect
+that each selector can locally decide its selection via a shared
+(random) observation, e.g., a common time frame. Specifically,
+we assume a common random variable U ∼ PU on all devices,
+independent of data. Each At behaves following PAt |U . This
+means that each υt decides Q
+At with a common U . Also, each
+K
+Ak,t follows PAk,t |At U = k=1 PA(k) |Ak U . This means that
+t
+k,t
+each υk provides modalities for each task t independently by
+observing the request signals from receivers and this common
+random signal U . Gathering all the local decisions, we finally
+have the global set of modality-task links A.
+In other words, this implies a type of conditional independence: given the shared information, the local decision can be
+made individually. In terms of Definition 3, we can establish
+the problem of randomized optimal set search, corresponding
+to (P1 ), formally as
+min
+
+PA :PA ∈PA
+
+EPA [R(A)].
+
+(17)
+
+Remark 1. This shared variable corresponds to a type of prior
+information, common randomness (CR) [30], often considered
+in distributed coordination. CR implicitly exists in our problem
+formulation. In the pioneer DIB [23, Theorem 1], this CR has
+been introduced and used as a time-sharing variable. When we
+apply the CR-based coordination, we expect that all selectors
+know each other’s decisions when this common U is observed.
+Remark 2. CR can be arbitrarily designed. A common degradation case is that when we set it to a constant (no additional
+information is shared among devices), the conditional independence on U is replaced by the stronger independence: Each
+
+8
+
+selector decides its selection independently. Even under such
+assumptions, we can still prove that this randomization method
+can reach the optimal set. This will be formally discussed in
+Section IX.
+Remark 3. CR can be implemented via some well-established
+methods in practical distributed networks. For example, (i)
+Synchronized clocks with seed agreement: Devices can use
+loosely synchronized network time (e.g., via NTP or GPS) and
+a pre-agreed pseudorandom generator seed to derive common
+random samples per communication round. It is lightweight
+and does not require continuous broadcasting. (ii) We can also
+admit a coordinator to broadcast random samples to all devices
+periodically.
+E. Transformed Objective
+In the preceding, we introduced a probability relaxation (17)
+to search for the optimal set. Nevertheless, this expression does
+not reflect the coupling between LTA and A. We formally show
+it in the following.
+Recall that υ denotes the selection operation. Then, we set
+its randomized version to υp distinctively, which decides A
+with PA ∈ PA . Expanding (17), we obtain the probabilistic
+TADIB (pTADIB) problem:
+min
+
+EPA [R(A)] ⇔
+
+min
+
+LpTA [υp , f ],
+
+(P2 )
+
+A. Variational Decoding
+Any ideal decoder gt perceives its respective modalityfused representation ZM(t) (equivalently, Ak,t ◦ Zt ), to return
+the best prediction for Yt based on the representation. This
+gt , inducing the conditional probability PYt |Ak,t ◦Zt , and its
+m , can be fully
+local unimodal version gk,t , inducing PYt |Zk,t
+determined by a Markov chain [27, Appendix A] if data and
+encoders are given. However, directly calculating such terms
+via high-dimensional integrals is highly difficult [23], [27].
+m ,
+We use variational distributions, QYt |Ak,t ◦Zt and QYt |Zk,t
+to approximate the CE terms in RHS of LTA that depend on
+decoders by extending the approach [26].
+Proposition 2. The following bounds hold given any k and t,
+m
+(i) An upper bound holds for H(Yt |Zk,t
+):
+m
+m , QY |Z m )],
+H(Yt |Zk,t
+) ≤ EPZ m [H(PYt |Zk,t
+(20)
+t
+k,t
+k,t
+R
+where H(PY |Z , QY |Z ) := − p(y|z) log q(y|z)dy.
+(ii) An upper bound holds for H(Yt |Ak,t ◦ Zt ) given Ak,t :
+
+H(Yt |Ak,t ◦ Zt )
+≤ EPZt |Ak,t [H(PYt |Ak,t ◦Zt , QYt |Ak,t ◦Zt )].
+
+(21)
+
+Proof. For details, please see Appendix A.
+
+Note that PA is cooperative. We do a decomposition as
+
+Based on Theorem 1 and Proposition 2, we can establish a
+variational bound LpVTA [υp , f, g] ≥ LpTA [υp , f ] with a simple
+replacement: we relax the LHS of (20) and (21) to the RHS.
+In LpVTA [υp , f, g], we use g to emphasize all the variational
+decoders by default. The additional “V” in “pVTA” refers to
+“variational”.
+
+Theorem 1. The probabilistic LpTA [υp , f ] can be rewritten
+into a cooperative form with PA ∈ PA , i.e.,
+
+B. Probability Parameterization
+
+PA :PA ∈PA
+
+υp ,f :PA ∈PA
+
+where
+
+
+LpTA [υp , f ] := EPA LTA [υp , f ] .
+
+(18)
+
+LpTA [υp , f ]
+hX
+
+i
+= EPU
+EPAk,t |U H(Yt |Ak,t ◦ Zt ) + β⟨Ak,t , LIB,t ⟩ ,
+t
+
+(19)
+
+
+m
+where EPAk,t |U [·] = EPAt |U EPAk,t |At U [·] , Zt := (zk,t
+)m,k ,
+⟨·, ·⟩ is the inner product, and LIB,t is a vector-valued
+function
+
+m
+m
+such that LIB,t := H(Yt |Zk,t
+)+I(Xkm ; Zk,t
+) m,k . It is KM dimensional and has the same shape as Ak,t (12). Also, we
+let ◦ stand for Hadamard product (element-wise product).
+Proof. For details, please see Appendix A.
+Remark 4. In fact, the expression (19) is essentially a rewrite
+of LTA that introduces randomness and is also re-described
+using a vector structure. If we choose A always being a certain
+specific a, then we recover the primal LTA .
+VII. VARIATIONAL C ODING AND P ROBABILITY
+PARAMETERIZATION
+We now turn to the third challenge, given a fixed a. This
+corresponds to estimating the intractable R(a). To this end,
+we introduce variational decoders and computable bounds for
+information terms of LTA . Then, we realize all optimizable
+distributions as neural networks, including the policy PA .
+
+Parameterization techniques enable optimizing tractable parameters in a typical finite-dimensional R-linear space, rather
+than processing the function itself, which is often difficult. In
+this part, we parameterize υp , f , and g, respectively, by deep
+neural networks (DNNs). Let NN (·) be a DNN. We detail the
+selection policy and coding modules as follows.
+1) Selection: All the selectors must cooperatively generate
+an A from the υp -induced probability Pθ;A|U where we define
+T
+θ := (θk )K
+k=1 ⊕ (θt )t=1 . We now describe the structure of this
+policy following Definition 3. The parameterized selector υk
+is denoted by υθk , which induces different Pθ ;A(k) |Ak U for
+k
+t
+k,t
+different task t with a unified θk . The parameterized selector
+υt is υθt , which induces Pθt ;At |U . CR U is pre-defined. Note
+that all such distributions are essentially discrete.
+Take Pθt as an example. When we directly implement pθt ,
+i.e., the conditional probability mass of Pθt , by σ(NN (·; θt )),
+where σ denotes softmax, the dimension of this DNN’s output
+is exponentially large according to the dimension of at due to
+that it must be capable of describing all possible 0-1 vectors
+at . More precisely, this holds if for every possible realization
+at , we use a corresponding dimension of the output to store its
+mass. That is, we leverage a simple categorical distribution to
+represent Pθt . Realizing pθt by this scheme requires an output
+dimension on the order of O(2K ). The high space complexity
+
+9
+
+causes this simple DNN modeling to fail at large- or mediumscale device communication.
+To fully tackle this issue in selection parameterization, we
+apply a type of structural decomposition. We carefully design
+a DNN for pθt in the following process. We implement a DNN
+NN (·; θt ) whose input is u ∼ U and whose output is a nonnormalized R-vector πt , which is Et +K-dimensional. This πt
+can be divided into two sub-vectors: the first Et -dimensional
+part πt,num and also the second K-dimensional part πt,prob . The
+number of selected transmitters ∥at ∥ is decided by the mass
+σ(πt,num ). After given ∥at ∥, we can generate at following a
+probability corresponding to a joint distribution that yields a
+∥at ∥-times without-replacement sampling from σ(πt,prob ). We
+can represent this joint distribution as σ ×∥at ∥ (πt,prob ). For any
+value at , its mass is exactly a product of σ(πt,num )(at ) and
+σ ×∥at ∥ (πt,prob )(at ) according to (probability) product rule.
+This construction can be analogized and understood as that
+we construct a “point process” by using a DNN. The number
+of points (transmitters) is first determined, then their positions
+(indices) are decided. Pθt can be regarded as a joint distribution over all points. This means that we introduce a structural
+random prior to Pθt to reduce the space complexity O(2K ) to
+O(K), where an exponential compression is achieved.
+In the preceding, Pθt is used to show how to use DNN to establish each t-th receiver-side selector. For the transmitter-side,
+we perform a similar treatment with a Ek + M -dimensional
+vector. We omit this redundant part.
+2) Coding: The parameterized encoder is denoted by fψ ,
+where we define ψ := (ψkm )m,k . That is, for a modality m at
+a transmitter k, we assign it individual parameters ψkm . For a
+given task t, we have the unimodal encoder for a modality-task
+m |X m .
+link (k, m, t) as fψkm (·, t), which induces Pψkm ;Zk,t
+k
+Each unimodal encoder is implemented as a standard
+Gaussian encoder [23], [27]. In other words, we utilize
+NN (·, ·; ψkm ) to generate N (z|µ, Σ) (we omit all superscripts
+and subscripts for convenience), in which the DNN’s input
+is (x, t) and the output is (µ, Σ). µ is mean vector and Σ
+is covariance matrix. Σ is usually diagonal, we can obtain
+its vectorized version by multiplying its RHS by a uniform
+vector 1 as Σ1. √
+We apply the reparameterization trick to draw
+z, i.e., z = µ + Σ1 ◦ ϵ with ϵ ∼ N (0, I), to allow gradient
+backpropagation [26].
+The parameterized decoder is denoted by gϕ,φ . The multimodal decoder that acts on the fused representation is denoted
+by gϕt for task t, inducing the variational Qϕt ;Yt |Ak,t ◦Zt . For
+transmitter k ’s modality m, the unimodal decoder is denoted
+m . It means that for different
+by gφt , which induces Qφt ;Yt |Zk,t
+modalities, we adopt a common φt for efficient computation.
+m
+For any k and m, gφt acts on the local modality feature zk,t
+and the index k and m, i.e., gφt (·; k, m). Finally, we realize
+decoders by standard DNNs.
+VIII. J OINT O PTIMIZATION OF S ELECTION AND C ODING
+Note that if we aim to find the optimal selection of modalitytask links through R, we must also find corresponding optimal
+codecs implied in the metric R. This implies a strong coupling
+between selection and coding. Therefore, the joint optimization of selection and coding is a natural choice.
+
+In this section, we implement an algorithm to optimize both
+simultaneously. In so doing, through (3), we obtain the optimal
+selection as well as the solution to the original problem (P1 ).
+In this regard, we establish the empirical objective of LpVTA
+for the parameterized modules with finite samples. Then, we
+minimize it with gradient-based methods.
+A. Empirical Objective
+1) Dataset Settings: For any task t ∈ T , all available
+labeled data are depicted as Dt := {(xi1,t , ..., xiK,t , yti )}N
+i=1 ,
+where all samples are iid and xik,t := (xm,i
+)
+.
+In
+which,
+we
+k,t m
+add a subscript t at each xik,t to emphasize that the sample
+belongs to the dataset specific to a task t. We assume a unified
+data sample size |Dt | = N for any t ∈ T . Then, LpVTA can
+be estimated by these labeled data D1 , ..., DT empirically.
+2) Empirical Estimation: We estimate three key terms in
+LpVTA as follows. At any t, for any k ∈ Kt , with 1 ≤ i, j ≤ N ,
+we directly estimate the MI term integrated in LIB,t .
+
+
+m
+pψkm (zk,t
+|xm
+k )
+m
+m
+I(Xk ; Zk,t ) = EPX m Z m log
+m |xm )]
+k
+k,t
+EPX m [pψkm (zk,t
+k
+k
+(22)
+m,i m,i
+N
+pψkm (zk,t |xk,t )
+1 X
+log 1 PN
+.
+≈
+m,i m,j
+N i=1
+m
+j=1 pψ (zk,t |xk,t )
+N
+
+k
+
+We also estimate cross-entropy terms
+m , QY |Z m )]
+EPZ m [H(PYt |Zk,t
+t
+k,t
+k,t
+
+N
+
+≈−
+
+1 X
+m,i
+log qφt (yti |zk,t
+; k, m).
+N i=1
+
+(23)
+
+Given Ak,t , we have
+EPZt |Ak,t [H(PYt |Ak,t ◦Zt , QYt |Ak,t ◦Zt )]
+N
+
+≈−
+
+1 X
+log qϕt (yti |Ak,t ◦ zti ).
+N i=1
+
+(24)
+
+Since samples in Dt are iid, our empirical approximations,
+i.e., (22)-(24), are asymptotically unbiased. In particular, the
+m
+crucial MI term I(Xkm ; Zk,t
+) is successfully estimated without
+variational or contrastive log-ratio bounds [31] since the parameterized conditional p(z|x) is explicitly given in this case.
+We can approximate the marginal p(z) = Ex∼p(x) [p(z|x)] ≈
+PN
+1
+i
+i=1 p(z|x ) with Dt . In practice, we often use a miniN
+batch of Dt to compute empirical estimations for efficiency.
+Combine (22)-(24) to derive the empirical version,
+min
+
+θ,ψ,ϕ,φ:Pθ;A ∈PA
+N
+
+:=
+
+L̂pVTA (θ, ψ, ϕ, φ)
+T
+
+hX
+
+1 X
+EPU
+EPθ;Ak,t |U − log qϕt (yti |Ak,t ◦ zti ) (P3 )
+N i=1
+t=1
+i
+i
++ β⟨Ak,t , L̂IB,t ⟩ ,
+
+where L̂IB,t is the empirical LIB,t with (22) and (23). We have
+the analogue of (3) also in the empirical setting, i.e.,
+min L̂pVTA = min min L̂pVTA ≈ min EPθ;A [R(A)]. (25)
+
+θ,ψ,ϕ,φ
+
+θ
+
+ψ,ϕ,φ
+
+θ
+
+10
+
+B. Gradient-based Optimization
+It is challenging to directly backpropagate the gradients of
+all parameters in addressing (P3 ) using conventional gradient
+descent methods, even when reparameterization techniques are
+used to design encoders. This difficulty arises because of the
+peculiarities of Pθ;A . It is a discrete distribution and we cannot
+directly apply a differentiable propagation of gradients due to
+sampling. Let us detailedly discuss the update of parameters
+in the following.
+1) The Update of θ: Note that L̂pVTA (·) is essentially a
+PN
+function of θ. Let us abbreviate N1 i=1 − log qϕt (yti |Ak,t ◦
+
+i
+zti ) + β⟨Ak,t , L̂IB,t ⟩ as L̂t (Ak,t ) and omit ψ, ϕ, φ. Then, we
+can transform the gradient w.r.t. θ into a score function, namely
+the gradient of a log-likelihood,
+i.e.,
+h X
+i
+∇θ L̂pVTA (θ) = EPU
+∇θ pθ (ak,t |u)L̂t (ak,t )
+t,ak,t
+
+= EPU
+
+h X
+
+i
+pθ (ak,t |u)∇θ log pθ (ak,t |u)L̂t (ak,t )
+
+t,ak,t
+
+≈ ∇θ
+
+N T
+1 XX
+
+N i=1 t=1
+|
+
+(26)
+log pθ (aik,t |ui )L̂t (aik,t ),
+{z
+
+empirical estimation of log-likelihood
+
+}
+
+where the last approximation follows the Gibbs sampling, i.e.,
+for every sample i, we assign realizations of U and ak,t as ui
+and aik,t . Estimation (26) is unbiased and is also called policy
+gradient following classical policy optimization [32].
+2) The Update of Other Parameters: Unlike the above
+complex transformations for θ, the reparameterization trick
+[26] introduced in Section VII-B enables the gradients of
+parameters ψ, ϕ, φ being directly calculated via backprop [33].
+C. The Impact of Constrained Feasible Region
+In the preceding, we usually assume the variational distribution of selectors being in PA by default. But the parameterized
+Pθ;A ∈
+/ PA usually holds, since DNN-based distributions are
+randomly initialized. In this general case, supp(A) may fail to
+meet constraints (14) and (15) in training, e.g, it is possible for
+any transmitter k to have more than Ek times task inference
+requests through its selector. E.g., Ek + 1 receivers request the
+same transmitter k to solve different tasks at the same time,
+which violates the constraint (15) if υk assigns each task t a
+modality. To tackle this, we add a random choice mechanism
+at transmitter-side that if the transmitter k receives Ek′ > Ek
+times requests from receivers, then it will uniformly sample
+Ek requests from these Ek′ ones to execute.
+This addtional mechanism for addressing the concerns of
+the constraint seems to introduce a mismatch that the set
+of modality-task links A ∼ Pθ;A we choosen is somehow
+different from the real selected set A′ after modification. We
+investigate this mismatch in detail and point out that the policy
+gradient still maintains the correct direction.
+Specifically, the mechanism generates a stochastic mapping
+with a kernel PA′ |A , which is a naturally non-parameterizable
+conditional without exact forms, where the output A′ is regular
+that satisfies (14) and (15). This means that we construct a new
+Peθ;A′ = EPθ;A [PA′ |A ] ∈ PA which is always regular with the
+externalized transition probability to be in the feasible region.
+
+We replace Pθ;A with its regular version to recalculate the
+policy gradient as (26), i.e.,
+hX
+i
+∇θ L̂pVTA (θ) = ∇θ EPU
+peθ (a′ |u)L̂t (a′ )
+t,a′
+
+= EPU
+
+h X
+
+p(a′ |a)pθ (a|u)∇θ log pθ (a|u)L̂t (a′ )
+
+t,a′ ,a
+N
+
+≈ ∇θ
+
+i
+(27)
+
+T
+
+1 XX
+log pθ (ai |ui )L̂t (ai,′ ),
+N i=1 t=1
+
+where we omitted the P
+subscripts k, t of ak,t for convenience.
+In which, peθ (a′ |u) = a p(a′ |a)pθ (a|u) is basically derived
+from Peθ;A′ = EPθ;A [PA′ |A ] with the fact that A′ ↔ A ↔ U
+for any t. The last approximation is also vaild due to the Gibbs
+sampling, while the difference is that besides pθ (a|u), we also
+empirically estimate the transition probability p(a′ |a).
+By comparing (27) with (26), we observe that the empirical
+estimation of log-likelihood is basically the same, except that
+L̂t acts on the regularized version a′ rather than the primal a.
+This proves our claim that the policy gradient still maintains
+the correct direction. This is also the reason why we use policy
+gradient, which works well when the workflow involves a nonparameterizable PA|A′ , while these cases, nevertheless, cannot
+be tackled by traditional reparameterization, just as we do for
+other parameters.
+D. Training and Inference Procedure
+Combining the above, we summarize the way to obtain the
+optimal set of modality-task links as well as the corresponding
+codecs in Algorithm 1 (training) and Algorithm 2 (inference).
+In Algorithm 1, we solve the probabilistic relaxation of the
+primal (P1 ). We get the optimal policy θ⋆ and corresponding
+codecs ψ ⋆ , ϕ⋆ , φ⋆ . By sampling a⋆ from Pθ⋆ ;A|U in Algorithm
+2, we achieve the numerical solution of (P1 ). In Step 3, the
+synchronizing mechanism generates a common randomness
+(CR) sample u ∼ PU through synchronized signals such
+as time-sharing. This ensures all devices share the same
+auxiliary variable u for coordinated selection decisions. For
+degenerate cases, we can also set u to be a constant. In Step 5,
+every receiver t independently samples its transmitter selection
+vector at from the conditional distribution Pθt ;At |U =u . This
+receiver-side selection determines which transmitters k with
+akt = 1 will be requested to provide features. The selection
+satisfies the receiver-side constraint (14), i.e., ∥at ∥ ≤ Et .
+For general cases discussed in Section VIII-C, the condition
+handling mechanism can be seamlessly integrated by replacing
+the gradient update (26) with its regularized version (27). In
+Step 8, each selected transmitter k (with akt = 1) samples
+(k)
+its modality selection vector ak,t from Pθ ;A(k) |Ak ,U . This
+k
+t
+k,t
+transmitter-side selection determines which modalities m with
+(k),m
+ak,t
+= 1 will be encoded and transmitted to receiver t.
+The cooperative policy structure (Definition 3) enables each
+transmitter to make decisions based on both the receiver’s
+request Akt (the k-th component of at ) and the common
+randomness u. In Step 10, for each selected modality m
+(k),m
+with ak,t
+= 1, a data sample xm
+k,t is drawn from the
+
+11
+
+Algorithm 1: Training Procedure of pTADIB
+Input: datasets {Dt }t∈T , batch size B.
+Output: optimized parameters θ, ψ, ϕ, and φ.
+1 initialize υp;θ , fψ , gϕ,φ ;
+2 while not converged do
+3
+yield CR u ∼ PU from synchronizing mechanisms,
+e.g., time-sharing;
+4
+for each receiver t ∈ T in parallel do
+5
+randomly select at ∼ Pθt ;At |U =u ;
+6
+request low-rate representations from
+transmitters characterized by at ;
+7
+for each transmitter k with akt = 1 in parallel
+do
+(k)
+8
+randomly select ak,t ∼ Pθ ;A(k) |Ak =1,U =u ;
+k
+
+9
+10
+
+11
+
+12
+
+13
+14
+
+15
+
+16
+17
+18
+19
+
+k,t
+
+t
+
+(k),m
+
+for each modality m with ak,t = 1 do
+synchronously sample xm
+k,t from
+m,i N
+m
+Dk,t := {xk,t }i=1 of Dt ;
+m
+given xm
+encode zk,t
+k,t as
+q
+
+m
+m
+m
+= fψkm (xm
+zk,t
+k,t , t) = µk,t + Σk,t 1◦ϵ,
+where ϵ ∼ N (0, I);
+m
+send all unimodal features zk,t
+|a(k),m =1 to
+k,t
+the receiver t;
+receive all features as ak,t ◦ zt ;
+infer ŷt from the fused representation via
+ŷt ∼ qϕt (Yt |ak,t ◦ zt );
+(k),m
+each unimodal decoder with ak,t = 1 infers
+m
+the local prediction ŷk,t
+via
+m
+m
+ŷk,t
+∼ qφt (Yt |zk,t
+; k, m);
+
+collect all above data as a sample;
+if B-batch samples are collected then
+compute L̂pVTA with this mini-batch;
+update parameters θ, ψ, ϕ, and φ through
+techniques in Section VIII-B;
+
+m
+corresponding modality dataset Dk,t
+. To ensure consistent gradient estimation across all tasks, the sampling from distributed
+datasets is synchronized, meaning that for each sample index
+i, all tasks t use the i-th sample from their respective local
+datasets that aligns with a same label yti . In Steps 10-15, the
+encoding and decoding processes are executed. Each encoder
+m
+fψkm generates the stochastic feature zk,t
+using the reparameterization trick, enabling gradient backpropagation through
+the sampling operation. After all features are transmitted to
+receiver t, the multimodal decoder gϕt produces the fused
+prediction ŷt from Ak,t ◦zt . Additionally, each unimodal local
+m
+decoder gφt generates local predictions ŷk,t
+from individual
+m
+features zk,t . These local decoders serve as regularization
+terms in the objective (19), encouraging encoders to preserve
+task-relevant information in each unimodal feature independently, following the DIB principle [23]. In Steps 16-18, a
+mini-batch of B samples is collected by repeating Steps 316 B times. The empirical objective L̂pVTA defined in (P3 ) is
+then computed using this mini-batch, approximating the full
+dataset expectation. In Step 19, all parameters θ, ψ, ϕ, and
+
+Algorithm 2: Inference Procedure of pTADIB
+Input: trained encoders, decoders, and selectors.
+Output: predictions {ŷt }t∈T .
+// Phase 1: Modality Selection
+1 yield CR u ∼ PU ;
+2 decide a ∼ Pθ;A|U =u induced by all selectors;
+// Phase 2: Semantic Communication
+3 while true do
+4
+for each receiver t ∈ T in parallel do
+5
+request low-dimensional representations from
+transmitters characterized by at ;
+6
+for each transmitter k with akt = 1 in parallel
+do
+7
+locally observe its raw data xk with
+synchronization;
+(k),m
+8
+for each modality m with ak,t = 1 do
+m
+m
+9
+encode zk,t given xk of xk ;
+10
+
+11
+12
+
+m
+send all unimodal features zk,t
+|a(k),m =1 to
+k,t
+the receiver t;
+receive all features as Ak,t ◦ Zt ;
+infer the prediction ŷt via
+ŷt ∼ qϕt (Yt |Ak,t ◦ zt );
+
+φ are updated jointly using gradient-based optimization. For
+selection parameters θ, the policy gradient method (26) or (27)
+is applied to handle the discrete sampling operation. For codec
+parameters ψ, ϕ, and φ, standard backpropagation is used
+thanks to the reparameterization trick. The backpropagation is
+initiated at each receiver t in parallel, with gradients flowing
+back through the decoders, encoders, and selectors.
+The inference procedure is summarized in Algorithm 2.
+In Step 1, a single CR sample u ∼ PU is drawn once at
+the beginning using synchronized signals across all devices.
+In Step 2, based on this fixed u, all selectors cooperatively
+determine a deterministic selection a from the trained policy
+Pθ;A|U =u . This can be done by taking the mode or expectation
+of the conditional distribution given u. Once determined, this
+selection a remains fixed throughout the inference phase,
+maintaining stable communication links between receivers
+and their selected transmitters with selected modalities. This
+deterministic selection does not compromise optimality: if the
+trained policy Pθ;A|U concentrates its probability mass on
+optimal selections, then the derived a is still optimal (see
+Theorem 2). During the continuous inference loop, each receiver t requests features only from transmitters and modalities
+specified by a, and each transmitter k encodes and transmits
+only the requested modalities. The receiver then fuses the
+received features Ak,t ◦ Zt using the trained multimodal
+decoder gϕt to produce predictions ŷt . Note that Algorithm
+2 does not involve the local unimodal decoders gφt , which
+are only used during training as regularization to support
+the derivation of optimized encoders, decoders, and selectors,
+following the work [23]. Finally, we emphasize that CR U is
+low-dimensional (e.g., 24-48 dimensions in our experiments)
+and needs to be generated only once per scheduling window
+(e.g., per epoch in training, or per session in inference). The
+
+12
+
+communication overhead for distributing U (if required) is
+negligible versus the feature data transmission. Furthermore,
+in many standardized wireless protocols (e.g., 5G NR, WiFi 6),
+time-synchronized frames are already used for medium access,
+which can be naturally repurposed for CR alignment.
+IX. F URTHER A NALYSIS AND D ISCUSSION
+A. Optimal Rate-Relevance Tradeoff
+From the perspective of the network information theory
+[23], [25], we know that the primal (P1 ) achieves the optimal
+rate-relevance tradeoff, i.e., the lowest communication cost
+(sum-rate) at a given level of relevance between the true Yt
+and the recovered Ŷt under a logarithmic loss.
+However, this property may not always hold [23, Remark 4],
+especially in the considered multi-modal multi-task scenario,
+where each raw unimodal data may rely on multiple tasks. It is
+exactly because the optimum under strict conditions is not usually achieved that we introduce a new degree of freedom, i.e.,
+the task-aware selection of modality to control communication
+links to further remove data redundancy among modalities to
+reduce communication and computation costs. This elaborate
+control allows a more efficient feature transmission than DIB.
+We will empirically verify this statement in the next section.
+B. Relations among Objectives
+We summarize the relations among optimization objectives
+of (P1 )-(P3 ) in the following. This guarantees our probabilistic
+relaxation converges to the primal deterministic optimum.
+Theorem 2. For objectives LTA , LpTA , LpVTA , and L̂pVTA
+with a unified β ≥ 0 at any feasible solution of L̂pVTA , i.e.,
+υp;θ , fψ , gϕ,φ , the following holds
+a.e.
+
+lim L̂pVTA (θ, ψ, ϕ, φ) = LpVTA [υp;θ , fψ , gϕ,φ ]
+
+N →∞
+
+(28)
+
+≥ LpTA [υp;θ , fψ ].
+Besides, their minimums satisfy
+min
+
+a.e.
+
+lim L̂pVTA =
+
+θ,ψ,ϕ,φ N →∞
+
+min
+
+υp;θ ,fψ ,gϕ ,gloc;φ
+
+≥ min LpTA = min LTA .
+υp ,f
+
+LpVTA
+(29)
+
+υ,f,g
+
+Proof. For details, please see Appendix B.
+Remark 5. By introducing some mild assumptions, the asymptotic behavior from the empirical L̂pVTA to the expected LpVTA
+can be more precisely characterized: the convergence rate is
+O( √1n ), which corresponds to the concentration behavior in
+probability. Due to being beyond the scope of this paper, a
+detailed discussion is omitted here. For details, please see [34,
+Chapter 3].
+Remark 6. This theorem ensures that our transformation and
+approximation minimally hurt the achievement of the minimizer of the primal (P1 ), while enhancing its tractability. The
+crucial last equality in (29) strongly supports this point. Note
+that the CR U is not mentioned in the theorem. It means that
+no matter how we define CR U , it does not affect the validity
+of the probability relaxation.
+
+C. Selection for A Flexible Rate-Relevance Tradeoff
+We study properties of optimal selection arg mina R(a) in
+this part. We indicate that we can only claim the existence
+of optimal selection at the capacity limits of all receivers
+and transmitters, i.e., |Kt | = Et for all receivers t ∈ T and
+|Mk | = Ek for all transmitters k ∈ K in a degenerate case
+that β → 0. For general cases, the optimal selection may not
+exist. Formally,
+Proposition 3. Without the rate limit, i.e., β → 0, there always
+exists a selection υ ⋆ that is optimal corresponding to (P1 ) with
+|Kt⋆ | = Et for any t ∈ T and |M⋆k | = Ek for any k ∈ K.
+Proof. For details, please see Appendix C.
+Corollary 1. Without the rate limit, i.e., β → 0, there always
+exists a selection policy υp⋆ that is optimal corresponding to
+P (k),⋆
+(P2 ) with ∥a⋆t ∥ = Et for any t ∈ T and ∥ t ak,t ∥ = Ek
+for any k ∈ K.
+Proof. It directly follows from (29) and Proposition 3.
+Remark 7. In the case β → 0, communication costs essentially
+captured by MI are ignored. That is, evaluating relevance-rate
+tradeoff from (P1 ) degenerates to evaluating task relevance between transmitters’ modalities and receivers only. This results
+that the more modalities are provided for a receiver, the better
+the performance evaluated by (P1 ), because communication is
+free. In the general case β > 0, Proposition 3 and Corollary
+1 do not hold. It indicates that the optimal selection does not
+necessarily exist on the boundary; it may also be located within
+the interior since the non-degenerate tradeoff works. This also
+illustrates that TADIB is more flexible than DIB since the
+selection participates in the tradeoff. An interesting extreme
+case is that even if we relax constraints, i.e., communication
+links and computation capabilities, Ek and Et , to infinity, the
+optimal participation may not be the full participation either.
+We show the existence of this case in Fig. 13-14.
+Remark 8. If hard constraints (14) and (15) are explicitly
+given, we can find υp⋆ through our carefully constructed
+pTADIB. But sometimes in practice, we only have a tendency
+that, given a level of inference quality, we hope that all
+devices have as few modality-task links as possible with
+others for efficient transmission. Since the simpler network
+connection topology implies lower complexity of scheduling,
+synchronization, and communication at the physical system
+level. In this case, we use the general multsiplier rule [35] to
+let the count of a, i.e., |a|, as a penalty to the optimization
+objective with a multiplier γ to form a three-way tradeoff
+among rate, relevance, and the number of links. We show the
+example in Fig. 11-12.
+X. P ERFORMANCE E VALUATION
+A. Experimental Setup
+1) Dataset: Two datasets are used to evaluate (p)TADIB:
+the simple AV-MNIST dataset [36], and the recent public MMFi dataset [37].
+AV-MNIST Dataset: This dataset is established by aligning
+the MNIST handwritten digit images with the FSDD spoken
+
+13
+
+digit audio samples. MNIST contains 70000 28×28 gray-scale
+images of digits (0-9). FSDD contains 3000 audio recordings
+of spoken digits (0-9) from different speakers, sampled at 8000
+Hz. We pair each MNIST image with an FSDD audio sample
+of the same digit label in (0-9). Due to the data size mismatch
+between FSDD and MNIST, we introduce data augmentation
+(e.g., Gaussian noise, random gain, time/frequency masking)
+to the audio to ensure a one-to-one correspondence. Each entry
+in this dataset consists of a normalized MNIST image and a
+Mel-spectrogram representation of an augmented FSDD audio
+sample with the identical label.
+MM-Fi Dataset: It is a public multi-modal non-intrusive 4D
+human dataset with 27 daily or rehabilitation action categories,
+scales up to 152986 entries, and synchronizes 5 non-intrusive
+sensing modalities including RGB-D frames, point cloud from
+mmWave Radar and LiDAR, and WiFi channel state information (CSI) data.
+2) Modality & Task: For AV-MNIST, we develop a semantic communication system involving 3 transmitters and 3 receivers. Every transmitter has 3 modalities while each receiver
+has its specific task. We customize 3 types of modalities for
+experiments on AV-MNIST. Type-A is the magnitude of the
+2D Fast Fourier Transform (FFT) of the cropped image, where
+the primal gray-scale image is cropped to a 14×14 patch of its
+center. Type-B is the Mel-spectrogram representation of the
+audio with 16 Mel bands, using an FFT window of 2048 and
+a hop length of 256. Type-C is the vectorized random noise.
+The 1-st transmitter’s observed data is X1 := (X C , X C , X A ),
+the 2-nd one’s data is X2 := (X C , X A , X B ), and the 3-rd
+X3 := (X A , X B , X C ). We write these vectors into a matrix
+form, i.e.,
+   A B C
+X ,X ,X
+X3
+X2  = X C , X A , X B 
+(30)
+X1
+XC, XC, XA
+where we artificially add redundancy and repetitive modalities
+to control and track the behavior of the optimal selection. Also,
+we customize 3 types of tasks for different receivers. The first
+receiver needs to distinguish the parity of handwritten digits,
+which is a classification task with 2-classes. The second needs
+to identify whether digits have a ring structure (0, 4, 6, 8, 9 or
+not) with 6-classes. The third needs to accomplish the typical
+0-9 recognition with 10-classes.
+For MM-Fi, we also develop a semantic communication
+system involving 4 transmitters and 3 receivers. Every transmitter has 4 modalities while each receiver has its specific
+task. We customize 8 types of modalities (A-H), where AG correspond respectively to view-1 of infra-red, view-2 of
+infra-red, depth, RGB, LiDAR, mmWave, and WiFi-CSI, all
+of which are inherent entries of the dataset. In addition, H is
+the vectorized random noise. We have a similar matrix as (30)
+to represent local observations,
+   B C F
+
+X , X , X , XH
+X4
+X3  X G , X E , X F , X H 
+ = D E F
+
+(31)
+X2  X , X , X , X H 
+X1
+X A, X B , X C , X H
+We naturally have 3 types of tasks from MM-Fi’s data annotation. The first receiver needs to predict 3D human pose key
+
+points with a form in R17×3 , which is regarded as a regression
+task. The second needs to categorize 27 daily or rehabilitation
+actions corresponding to these data entries (27 classes). Data
+are collected from 4 different scenes. The third one needs to
+identify from which scenario the data comes (4 classes).
+3) Model: We realize a simple feed-forward network (FFN)
+as a unified base model for encoders, decoders, and selectors
+on both datasets. This model consists of two residual blocks.
+The first block projects the input to 512 dimensions, and the
+second to 256 dimensions, each followed by a ReLU activation
+and layer normalization. The final layer is linear with the target
+output dimension. The regularization mechanism for selection
+is applied as in (27) by default.
+4) Baseline: We compare the proposed TADIB against the
+following representative baselines:
+• Typical DL-based semantic communication (DLSC) [8]–
+[10]: DLSC is designed to minimize learning risk without
+rate concerns.
+• VDDIB [27]: A typical DIB-based solutions for multimodal multi-task cases with full participation.
+• RS-DIB: A typical DIB-based solution with random
+participation in the feasible region.
+• MI-DIB (TADIB-prev): Our preliminary work [1], which
+uses the sub-optimal MI-based relevance metric with topk selection.
+DLSC applies deterministic encoding and full participation.
+It is used to compare and verify the effectiveness of IB-based
+methods in rate reduction. The rest are leveraged to verify the
+effectiveness of the newly introduced key variable, namely
+selection, and they both apply the typical DIB objective (1) to
+multiple tasks. Among all baselines, only RS-DIB can fit the
+link constraints. All baselines are realized by the base model.
+5) Metric: Relevance, characterized by negative cross entropy (N-CE), is set to a common metric for all tasks, which
+is the logarithmic loss [22]. Top-1 Accuracy is set to the taskspecific metric for classification, while mean per joint position
+error (MPJPE) and procrustes analysis-MPJPE (PA-MPJPE)
+are also set to the task-specific metrics for the MM-Fi’s human
+pose estimation. CE terms are easy to estimate in classification
+but difficult in regression. In this regard, we adopt mean square
+error (MSE) instead of CE for regression, since the two, MSE
+and CE, are equivalent under the Gaussian assumption [38].
+Finally, sum-rate, i.e., the total communication rate, is set to
+measure the communication overhead besides (14) and (15).
+6) Default Training Hyper-Parameter: Training rounds are
+set to 2000 epochs, with a batch size of 20. The learning rate
+of coding is set to 1e-4. The learning rate of selection is set
+to 5e-5. Therefore, the learning rate ratio r between selection
+and coding is set to 1/2 by default. The multiplier β is set to
+1e-3. Et in (14) is set to 2 for all t ∈ T . Ek in (15) is set
+to 4 for all k ∈ K. The above two are valid since for both
+datasets, Et is up to 3, for AV-MNIST, Ek is up to 9, and for
+MM-Fi, it is up to 12. In doing so, the corresponding limit on
+the number of modality-task links is 8 for both datasets, i.e.,
+|a| ≤ 8. Moreover, the output dimension of encoders is set
+to 24 for AV-MNIST and 48 for MM-Fi. CR is initialized in
+prior as a 24-dimensional normal distribution for AV-MNIST
+and a 48-dimensional one for MM-Fi.
+
+14
+
+TABLE I: Performance comparison on (a) AV-MNIST and (b) MM-Fi datasets (95% confidence intervals). All metrics include sum-rate
+(nat), N-CE (nat), Top-1 Acc (%), and MPJPE/PA-MPJPE (mm). Besides, t1, t2, and t3 denote tasks 1, 2, and 3, respectively.
+
+(a)
+
+(b)
+
+metric/method
+
+pTADIB
+
+∼ (no CR)
+
+RS-DIB
+
+MI-DIB
+
+VDDIB
+
+DLSC
+
+under limits
+
+✓
+
+✓
+
+✓
+
+✗
+
+✗
+
+✗
+
+sum-rate
+N-CE
+
+166.78±0.96
+-0.39±0.05
+
+185.42±1.54
+-0.72±0.05
+
+141.76±1.08
+-0.70±0.03
+
+199.97±1.36
+-0.34±0.01
+
+190.11±1.18
+-0.30±0.02
+
+788.43±1.89
+-0.10±0.01
+
+t1:Top-1Acc
+t2:Top-1Acc
+t3:Top-1Acc
+
+98.60±1.89
+99.39±2.17
+96.50±1.59
+
+97.50±1.61
+93.50±3.64
+87.75±4.52
+
+87.20±2.49
+86.20±3.95
+92.60±1.70
+
+97.22±0.48
+98.27±0.41
+97.17±0.59
+
+98.29±1.29
+98.39±1.06
+98.60±1.46
+
+98.79±1.05
+98.39±1.19
+98.60±1.20
+
+under limits
+
+✓
+
+✓
+
+✓
+
+✗
+
+✗
+
+✗
+
+sum-rate
+N-CE
+
+311.43±2.34
+-0.17±0.02
+
+421.49±9.70
+-0.40±0.04
+
+67.78±2.12
+-2.58±0.01
+
+329.46±2.24
+-0.21±0.02
+
+447.32±1.91
+-0.19±0.02
+
+1479.38±153.43
+-0.13±0.01
+
+t1:MPJPE
+t1:PA-∼
+t2:Top-1Acc
+t3:Top-1Acc
+
+107.53±3.12
+58.35±1.16
+100.00±0.00
+100.00±0.00
+
+104.91±6.41
+64.96±4.74
+92.75±11.24
+95.25±9.94
+
+137.72±4.80
+94.90±0.89
+16.01±15.93
+100.00±0.00
+
+109.12±4.32
+59.03±2.26
+100.00±0.00
+100.00±0.00
+
+120.66±5.27
+63.60±1.04
+100.00±0.00
+100.00±0.00
+
+99.21±5.86
+56.29±2.47
+100.00±0.00
+100.00±0.00
+
+(a) on AV-MNIST
+
+TABLE II: Physical training time, the number of active links, and computational cost on (a) AV-MNIST and (b) MM-Fi datasets. Training time is
+measured in seconds per epoch (s/epoch). The number of active modalitytask links is averaged over 10 independent runs. The average computational
+cost is measured by FLOPs.
+
+(b) on MM-Fi
+-0.5
+-1.0
+-1.5
+
+-2.0
+
+N-CE
+
+N-CE
+
+-1.0
+
+-3.0
+
+2
+
+PoM -DIB
+RS-DIB
+TADIB
+DLSC
+
+-4.0
+0
+
+-2.0
+-2.5
+2
+
+PoM -DIB
+RS-DIB
+TADIB
+DLSC
+
+-3.0
+-3.5
+
+2
+
+10
+
+0
+
+10
+
+10
+
+2
+
+10
+
+Fig. 4: Rate-relevance tradeoff (sum-rate vs N-CE).
+(a) on AV-MNIST
+
+(b) on MM-Fi
+
+-1
+-2
+-4
+
+-3
+-4
+-5
+-6
+
+N-CE
+
+N-CE
+
+-2
+
+-!0
+- = 1e-4
+- = 1e-3
+- = 1e-2
+- = 1e-1
+
+200
+
+-6
+-8
+-10
+
+400
+
+600
+
+(a) AV-MNIST
+
+method
+
+-!0
+- = 1e-4
+- = 1e-3
+- = 1e-2
+- = 1e-1
+
+500
+
+1000
+
+1500
+
+Fig. 5: Training dynamics on information plane (sum-rate vs N-CE).
+
+7) Platform: We conduct our experiments on a workstation
+with an NVIDIA GeForce RTX 5090 GPU and an Intel(R)
+Core(TM) i9-14900KF CPU. The experimental code is implemented using Python 3.9.23, CUDA 13.0, and PyTorch 2.2.2.
+B. Numerical Results
+Performance superior to baselines: In Table I, we compare
+the performance of pTADIB and baselines on the two datasets.
+The first three, i.e., pTADIB, pTADIB without CR, and RSDIB, are realistic. They all meet the hard constraints of links
+(14) and (15). Their average number of selected modality-task
+links fits the limits |a| ≤ 8. While the last three, i.e., MI-DIB,
+VDDIB, and DLSC, do not meet the requirements. The number of links they use far exceeds the prescribed capacity limit,
+as shown in Table II. The inference quality of pTADIB, both
+in terms of the global metric N-CE and task-specific metrics
+
+pTADIB
+∼ (no CR)
+MI-DIB
+VDDIB
+
+(b) MM-Fi
+
+time
+
+links
+
+cost
+
+time
+
+links
+
+cost
+
+1.64
+2.20
+11.69
+17.52
+
+8.00
+7.10
+18.00
+27.00
+
+18107392
+16618086
+34655232
+49548288
+
+5.12
+5.10
+22.15
+24.87
+
+5.00
+4.86
+24.00
+48.00
+
+62012856
+47395983
+124070400
+239804928
+
+(Top-1 Acc and MPJPE/PA-MPJPE), is comparable to that
+of the full versions, i.e., VDDIB and DLSC. Moreover, while
+meeting (14) and (15), its communication overhead is actually
+lower than that of both, demonstrating significant superiority.
+Compared to RS-DIB, pTADIB shows the substantial advantage of the deployment of an optimizable selection policy.
+Simple random selection always lets its corresponding coding
+scheme converge to a sub-optimal point or even collapse, e.g.,
+at task 2 of MM-Fi. While in pTADIB, each task performs
+well. Compared to the version without CR (a constant U ),
+pTADIB achieves a better tradeoff between rate and relevance
+by introducing a useful CR signal. Compared to MI-DIB,
+pTADIB meets the hard limits while outperforming the method
+that uses a pre-defined metric, which proves the effectiveness
+of the optimal relevance metric. We also observe that the
+traditional DL-based semantic communication, represented by
+DLSC, consumes large communication resources due to the
+lack of rate control, but only achieves analogous results to IBbased solutions, pTADIB and VDDIB, in inference quality.
+The sum-rate of DLSC is characterized by the sum of the
+entropy of low-dimensional outputs of encoders, since it applies deterministic encoders typically rather than the stochastic
+one of IB-based coding solutions, whose estimation is based
+on NPEET. Also, we provide a comprehensive comparison of
+training time, the number of active links, and computational
+cost in Table II. We demonstrate that by optimally controlling
+links, pTADIB significantly reduces training time compared
+to other IB-based methods, saving up to 90% of training time
+per epoch. The computational cost also reflects the advantage
+of TADIB in inference speed.
+
+15
+
+2/1
+
+4/1
+
+(a)
+
+sum-rate
+N-CE
+
+174.43 187.97 183.25 165.08 140.42 142.47 143.13
+-0.72 -0.67 -0.61 -0.45 -0.92 -0.96 -0.95
+
+(b)
+
+sum-rate
+N-CE
+
+93.92
+-0.40
+
+72.71
+-0.26
+
+47.60
+-1.81
+
+49.31
+-1.88
+
+52.50
+-1.98
+
+53.12
+-1.87
+
+76.75
+-0.31
+
+2
+
+0.00
+
+0.70
+
+0.68
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.62
+
+0.70
+
+0.00
+
+2
+
+0.00
+
+0.68
+
+0.70
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+Modality
+Receiver 1 of MM-Fi
+
+Transmitter
+
+10
+
+r = 1/16
+r = 1/8
+r = 1/4
+r = 1/2
+r = 1/1
+r = 2/1
+r = 4/1
+
+-5
+-10
+0
+
+500
+
+0
+-10
+
+r = 1/16
+r = 1/8
+r = 1/4
+r = 1/2
+r = 1/1
+r = 2/1
+r = 4/1
+
+-20
+-30
+-40
+
+1000
+
+1500
+
+2000
+
+0
+
+500
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+1.00
+
+0.02
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+4
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+1.00
+
+0.00
+
+1.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+Modality
+
+0.60
+
+0.66
+
+0.00
+
+2
+
+0.00
+
+0.56
+
+0.68
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+Modality
+Receiver 3 of MM-Fi
+4
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+1.00
+
+1.00
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+Modality
+
+Modality
+
+Fig. 7: Converged A with CR. The average number of links: 8 for AV-MNIST,
+5 for MM-Fi.
+1000
+
+1500
+
+2000
+
+Transmitter
+
+3
+
+0.80
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.66
+
+0.60
+
+1
+
+0.00
+
+0.18
+
+0.18
+
+1
+
+2
+
+3
+
+3
+
+0.82
+
+0.00
+
+0.00
+
+2
+
+0.44
+
+0.36
+
+0.44
+
+1
+
+0.30
+
+0.32
+
+0.28
+
+1
+
+2
+
+3
+
+Modality
+Receiver 1 of MM-Fi
+
+Transmitter
+
+Rate relevance tradeoff: In Fig. 4(a) and (b), we explore raterelevance curves on the two datasets. Note that the better raterelevance tradeoff means that given the same communication
+cost, better inference quality is achieved, or given the same
+inference quality, less communicate rate is required. DLSC
+does not involve a rate control variable like β. It is thereby
+represented as a fixed point in the two sub-figures. Other
+methods apply a range of β from 0 to 1 to control their communication rates. Then, we collect the converged value of the
+“sum-rate”-“N-CE” pair at each sampled β ∈ [0, 1] to roughly
+depict the tradeoff curve between the two. It is observed that
+pTADIB achieves the ideal rate-relevance curve characterized
+by VDDIB under hard limits by introducing a new degree of
+freedom, i.e., selection. In MM-Fi, its performance is even
+better than that of pTADIB (the further to the upper left, the
+better), which fully matches our discussion in Section IX-A.
+While RS-DIB, which lacks an update mechanism of selection,
+performs much worse. It does not even work on the complex
+MM-Fi, corresponding to its crash on task 2 as shown in
+Table I. This contrast strongly supports the effectiveness of
+the cooperative selection policy presented in Section VI-D.
+Training dynamics varying with the multiplier β: Fig. 5(a)
+and (b) sketch the training trajectories of pTADIB on the
+information plane varying with the value of β. Each point
+on any trajectory corresponds to the value of “sum-rate”-“NCE” pair at an iteration step. It means that each trajectory
+corresponds to one complete training dynamics. It is observed
+that each trajectory finally converges to a stationary point.
+The tail of the trajectory holds denser markers than the head,
+which directly reflects the convergence dynamics. Also, we
+find that these trajectories converge to different points, in
+which β explicitly controls the update direction. Specifically, β
+decreases from 1e-1 to 0. The trajectories for these different β
+values exhibit distinctly different behaviors. In (a), when β →
+0, the value of rate increases monotonically. While β = 1e-4
+or 1e-3, the information flow exhibits the classical behavior,
+i.e., the rate value increases then decreases while the relevance
+
+Receiver 2 of AV-MNIST
+
+Receiver 1 of AV-MNIST
+
+Fig. 6: Convergence of log-likelihood defined in (26) (log-likelihood vs
+iteration round).
+
+Transmitter
+
+0
+
+log-likelihood
+
+log-likelihood
+
+5
+
+4
+
+Transmitter
+
+(b) on MM-Fi
+
+20
+
+3
+
+Modality
+Receiver 2 of MM-Fi
+
+4
+
+0.16
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.34
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+0.26
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.44
+
+0.00
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+Receiver 3 of AV-MNIST
+3
+
+0.68
+
+0.00
+
+0.00
+
+2
+
+0.32
+
+0.38
+
+0.40
+
+1
+
+0.00
+
+0.00
+
+0.48
+
+1
+
+2
+
+3
+
+Modality
+Receiver 2 of MM-Fi
+
+Transmitter
+
+(a) on AV-MNIST
+10
+
+Receiver 3 of AV-MNIST
+
+Transmitter
+
+1/1
+
+0.00
+
+Transmitter
+
+1/2
+
+0.74
+
+4
+
+0.52
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.26
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.12
+
+0.00
+
+0.00
+
+1
+
+0.86
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+Modality
+Receiver 3 of MM-Fi
+
+Transmitter
+
+1/4
+
+0.68
+
+Transmitter
+
+1/8
+
+Transmitter
+
+metric/ratio 1/16
+
+Receiver 2 of AV-MNIST
+
+Receiver 1 of AV-MNIST
+3
+
+Transmitter
+
+TABLE III: Overall performance of pTADIB varying with learning rate ratio
+from 1/16 to 4/1 on (a) AV-MNIST and (b) MM-Fi datasets.
+
+4
+
+0.00
+
+0.28
+
+0.00
+
+0.00
+
+3
+
+0.00
+
+1.00
+
+0.00
+
+0.00
+
+2
+
+0.36
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.26
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+Fig. 8: Converged A without CR. The average number of links: 7.1 for AVMNIST, 4.86 for MM-Fi.
+
+monotonically increases, which is previously indicated in [23],
+[39]. If we proceed to pose a greater rate penalty by increasing
+β, then the rate value of the trajectory will degenerate into a
+monotonically decreasing state. In Fig. 5(b), we also observe
+a similar phenomenon but with more irregular oscillations. It
+shows that different values of β correspond to different types
+of training dynamics. The phenomena are basically consistent
+with the pioneering work [23]. This further illustrates that our
+extended IB solution, i.e., pTADIB, involving selection as a
+new variable to tackle hard limits, still fully inherits the good
+properties of IB, achieving effective rate-relevance tradeoff.
+Convergence of iterative policy update and parameter
+sensitivity analysis: In the rest of this section, we elaborate
+on the behaviors of the optimizable selection policy. In Fig.
+6(a)-(b), we detail the convergence of the log-likelihood (26),
+controlled by the learning rate ratio r, which is the ratio
+between the learning rate of selection policy update and
+semantic coding. It is observed that all curves start from a
+low negative value, then grow to a positive value, and finally
+drop to zero if the ratio is sufficiently large, or converge to a
+certain positive value. The rapid growth in the early stage of
+
+16
+
+0.05
+
+2
+
+0.00
+
+0.50
+
+0.25
+
+3
+
+3
+
+0.85
+
+0.60
+
+0.15
+
+2
+
+0.20
+
+0.80
+
+0.50
+
+0.00
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.00
+
+0.10
+
+0.00
+
+2
+
+0.00
+
+0.75
+
+0.40
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.95
+
+0.90
+
+0.05
+
+2
+
+0.00
+
+0.80
+
+0.50
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.65
+
+0.35
+
+0.00
+
+2
+
+0.00
+
+0.60
+
+0.70
+
+1
+
+0.00
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.71
+
+0.81
+
+0.00
+
+2
+
+0.00
+
+0.74
+
+0.65
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+0.00
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.80
+
+0.80
+
+0.00
+
+2
+
+0.00
+
+0.65
+
+0.80
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.61
+
+0.61
+
+0.00
+
+2
+
+0.00
+
+0.65
+
+0.74
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+1
+
+3
+
+3
+
+0.80
+
+0.50
+
+0.10
+
+2
+
+0.10
+
+0.70
+
+0.40
+
+0.00
+
+0.10
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.95
+
+0.95
+
+0.00
+
+2
+
+0.10
+
+0.75
+
+0.45
+
+1
+
+0.00
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.65
+
+0.75
+
+0.00
+
+2
+
+0.00
+
+0.65
+
+0.60
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.61
+
+0.65
+
+0.00
+
+2
+
+0.00
+
+0.48
+
+0.74
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+1
+
+1
+
+Modality
+
+0.10
+
+0.05
+
+0.05
+
+3 0.10
+
+0.10
+
+0.05
+
+0.15
+
+3 0.30
+
+0.30
+
+0.30
+
+0.25
+
+2 0.25
+
+0.15
+
+0.25
+
+0.15
+
+2 0.20
+
+0.20
+
+0.40
+
+0.30
+
+2 0.00
+
+0.05
+
+0.20
+
+0.15
+
+1 0.20
+
+0.15
+
+0.10
+
+0.05
+
+1 0.30
+
+0.10
+
+0.30
+
+0.25
+
+1 0.25
+
+0.05
+
+0.25
+
+0.10
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.75
+
+1.00
+
+0.45
+
+0.35
+
+2 0.05
+
+0.00
+
+0.05
+
+0.00
+
+2 0.85
+
+0.20
+
+1.00
+
+0.15
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.65
+
+0.40
+
+0.15
+
+0.10
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.60
+
+1.00
+
+0.40
+
+0.25
+
+2 0.05
+
+0.00
+
+0.05
+
+0.00
+
+2 0.95
+
+0.00
+
+0.95
+
+0.00
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.85
+
+0.20
+
+0.10
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.95
+
+1.00
+
+0.20
+
+0.00
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+2 0.95
+
+0.00
+
+1.00
+
+0.05
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 1.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+4 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 1.00
+
+1.00
+
+0.00
+
+0.00
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+2 1.00
+
+0.00
+
+1.00
+
+0.00
+
+2 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 1.00
+
+0.03
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+Modality
+Receiver 2 at iteration 120
+
+Modality
+
+Modality
+Receiver 3 at iteration 120
+
+Modality
+Receiver 2 at iteration 240
+
+Modality
+Receiver 3 at iteration 240
+
+Modality
+Receiver 2 at iteration 360
+
+Modality
+Receiver 1 at iteration 2000
+
+1
+
+Transmitter
+
+0.30
+
+Transmitter
+
+Transmitter
+
+0.30
+
+Modality
+Receiver 1 at iteration 360
+
+Modality
+Receiver 3 at iteration 2000
+
+Modality
+
+0.15
+
+Modality
+Receiver 1 at iteration 240
+
+Modality
+Receiver 3 at iteration 360
+
+1
+
+3 0.10
+
+Receiver 3 at iteration 0
+4 0.15
+
+Modality
+Receiver 1 at iteration 120
+
+Modality
+Receiver 3 at iteration 240
+
+Modality
+Receiver 2 at iteration 2000
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 2000
+
+Modality
+
+2
+
+Modality
+Receiver 3 at iteration 120
+
+Modality
+Receiver 2 at iteration 360
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 360
+
+1
+
+1
+
+Modality
+Receiver 2 at iteration 240
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 240
+
+1
+
+0.25
+
+Modality
+Receiver 2 at iteration 120
+
+Transmitter
+
+Transmitter
+
+1
+
+0.30
+
+0.00
+
+Transmitter
+
+0.15
+
+2
+
+0.10
+
+1
+
+0.05
+
+Transmitter
+
+0.40
+
+1
+
+Modality
+Receiver 1 at iteration 120
+
+0.20
+
+0.05
+
+Modality
+Receiver 3 at iteration 360
+
+Transmitter
+
+3
+
+0.25
+
+0.30
+
+Receiver 2 at iteration 0
+4 0.00
+
+Modality
+Receiver 2 at iteration 2000
+
+Modality
+
+Modality
+Receiver 3 at iteration 2000
+
+Transmitter
+
+3
+
+0.25
+
+0.15
+
+0.10
+
+Transmitter
+
+2
+
+0.30
+
+1
+
+2
+
+0.20
+
+Transmitter
+
+1
+
+0.35
+
+0.05
+
+0.15
+
+Transmitter
+
+0.00
+
+0.70
+
+0.55
+
+4 0.20
+
+Transmitter
+
+0.10
+
+0.45
+
+0.70
+
+Transmitter
+
+0.10
+
+1
+
+2
+
+3
+
+Transmitter
+
+0.10
+
+0.35
+
+Transmitter
+
+0.55
+
+0.20
+
+Receiver 1 at iteration 0
+
+Transmitter
+
+0.25
+
+0.40
+
+Transmitter
+
+2
+
+3
+
+Transmitter
+
+0.25
+
+Transmitter
+
+0.35
+
+Transmitter
+
+0.35
+
+Receiver 3 at iteration 0
+
+Transmitter
+
+3
+
+Receiver 2 at iteration 0
+
+Transmitter
+
+Transmitter
+
+Receiver 1 at iteration 0
+
+Modality
+
+Fig. 9: Convergence of randomized selection A on AV-MNIST. Corresponding
+rate: 165.08; N-CE: -0.45. The average number of links (converged): 8.
+
+Fig. 10: Convergence of randomized selection A on MM-Fi. Corresponding
+rate: 78.17; N-CE: -0.35. The average number of links (converged): 5.
+
+training shows the effectiveness of policy gradient. It shows
+that the update of the cooperative selection policy matches
+the overall optimization goal. The converged selection policies
+also exhibit different characteristics with the differences in
+ratios. If the log-likelihood converges to zero, a deterministic
+policy PA|U conditioned on CR is obtained. This is directly
+derived from (26) to let log p(a|u) = 0. This also demonstrates
+that if this term converges to a positive value, we have a
+stochastic version with CR. Both types of policies work well
+as shown in Table III. Additionally, we illustrate that there
+exists an optimal ratio r, which is 1/2 on AV-MNIST and 1/8
+on MM-Fi. We also find that using random selection at a ratio
+of 4/1 can achieve nearly optimal inference quality on MMFi. This reveals the highly nonlinear influence of the learning
+rate ratio on optimality. In which, the value of N-CE always
+
+converges to around -0.3 or -1.9 while the value of sum-rate
+always converges to around 80 or 50 on MM-Fi, which means
+that the selection and its corresponding coding jump between
+the optimal solution and the sub-optimal one due to different
+learning rate ratios. The convergence of the log-likelihood only
+partially indicates selection convergence, as this log-likelihood
+also approaches zero when the loss value vanishes for every
+type of selection. Secondly, we present the convergence of the
+selection and the favorable properties it exhibits.
+The benifit of CR for policy convergence: In the preceding
+Table I, we have compared the performance of pTADIB with
+and without CR. Here, we further illustrate the benefit of CR
+on the convergence of the optimizable selection policy. In the
+rest of this paper, the selection vector a is visualized as a
+stack of color blocks. Specifically, as shown in Fig. 7, each
+
+17
+
+0.40
+
+2
+
+0.00
+
+0.10
+
+0.05
+
+3
+
+3
+
+0.30
+
+0.05
+
+0.45
+
+2
+
+0.05
+
+0.30
+
+0.20
+
+0.10
+
+0.05
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.50
+
+0.05
+
+0.00
+
+2
+
+0.00
+
+0.35
+
+0.00
+
+0.05
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.60
+
+0.10
+
+0.00
+
+2
+
+0.05
+
+0.10
+
+0.00
+
+1
+
+0.05
+
+0.10
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.50
+
+0.00
+
+0.10
+
+2
+
+0.00
+
+0.35
+
+0.00
+
+1
+
+0.05
+
+0.05
+
+0.05
+
+1
+
+2
+
+3
+
+3
+
+0.61
+
+0.03
+
+0.00
+
+2
+
+0.23
+
+0.29
+
+0.13
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+0.05
+
+0.10
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.90
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.15
+
+0.00
+
+1
+
+0.05
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+0.81
+
+0.00
+
+0.03
+
+2
+
+0.06
+
+0.13
+
+0.03
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+1
+
+3
+
+3
+
+0.15
+
+0.20
+
+0.10
+
+2
+
+0.30
+
+0.15
+
+0.15
+
+0.25
+
+0.10
+
+0.25
+
+1
+
+2
+
+3
+
+3
+
+0.25
+
+0.10
+
+0.05
+
+2
+
+0.00
+
+0.55
+
+0.05
+
+1
+
+0.10
+
+0.00
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.40
+
+0.00
+
+0.00
+
+2
+
+0.05
+
+0.45
+
+0.05
+
+1
+
+0.05
+
+0.05
+
+0.10
+
+1
+
+2
+
+3
+
+3
+
+0.90
+
+0.00
+
+0.00
+
+2
+
+0.03
+
+0.13
+
+0.03
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+1
+
+1
+
+Modality
+
+0.35
+
+0.30
+
+0.15
+
+3 0.30
+
+0.35
+
+0.35
+
+0.25
+
+3 0.35
+
+0.20
+
+0.20
+
+0.25
+
+2 0.30
+
+0.25
+
+0.30
+
+0.35
+
+2 0.40
+
+0.20
+
+0.30
+
+0.30
+
+2 0.35
+
+0.15
+
+0.50
+
+0.40
+
+1 0.50
+
+0.20
+
+0.45
+
+0.55
+
+1 0.25
+
+0.25
+
+0.35
+
+0.30
+
+1 0.50
+
+0.30
+
+0.55
+
+0.35
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.05
+
+0.05
+
+0.30
+
+0.35
+
+4 0.00
+
+0.05
+
+0.05
+
+0.05
+
+4 0.00
+
+0.10
+
+0.10
+
+0.00
+
+3 0.05
+
+0.05
+
+0.00
+
+0.00
+
+3 0.10
+
+0.10
+
+0.15
+
+0.15
+
+3 0.05
+
+0.05
+
+0.05
+
+0.05
+
+2 0.10
+
+0.05
+
+0.10
+
+0.15
+
+2 0.30
+
+0.20
+
+0.45
+
+0.50
+
+2 0.20
+
+0.25
+
+0.20
+
+0.15
+
+1 0.10
+
+0.05
+
+0.15
+
+0.15
+
+1 0.10
+
+0.00
+
+0.05
+
+0.05
+
+1 0.15
+
+0.20
+
+0.25
+
+0.20
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.15
+
+0.00
+
+0.35
+
+0.40
+
+4 0.05
+
+0.05
+
+0.30
+
+0.35
+
+4 0.00
+
+0.05
+
+0.10
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.05
+
+0.00
+
+0.00
+
+0.05
+
+3 0.10
+
+0.10
+
+0.05
+
+0.10
+
+2 0.05
+
+0.00
+
+0.00
+
+0.05
+
+2 0.15
+
+0.00
+
+0.05
+
+0.00
+
+2 0.25
+
+0.15
+
+0.30
+
+0.10
+
+1 0.05
+
+0.00
+
+0.00
+
+0.05
+
+1 0.05
+
+0.10
+
+0.10
+
+0.05
+
+1 0.00
+
+0.00
+
+0.10
+
+0.05
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.10
+
+0.00
+
+0.45
+
+0.30
+
+4 0.05
+
+0.10
+
+0.55
+
+0.20
+
+4 0.05
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.05
+
+0.10
+
+0.05
+
+0.05
+
+3 0.10
+
+0.00
+
+0.00
+
+0.05
+
+2 0.00
+
+0.05
+
+0.00
+
+0.00
+
+2 0.05
+
+0.00
+
+0.00
+
+0.00
+
+2 0.05
+
+0.85
+
+0.05
+
+0.05
+
+1 0.05
+
+0.05
+
+0.05
+
+0.10
+
+1 0.05
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+4 0.35
+
+0.03
+
+0.16
+
+0.10
+
+4 0.90
+
+0.03
+
+0.00
+
+0.00
+
+4 0.06
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.00
+
+0.00
+
+3 0.00
+
+0.00
+
+0.03
+
+0.03
+
+2 0.00
+
+0.16
+
+0.16
+
+0.00
+
+2 0.03
+
+0.06
+
+0.00
+
+0.00
+
+2 0.03
+
+0.87
+
+0.06
+
+0.00
+
+1 0.03
+
+0.03
+
+0.03
+
+0.03
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+1 0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+1
+
+2
+
+3
+
+4
+
+Modality
+Receiver 2 at iteration 120
+
+Modality
+
+Modality
+Receiver 3 at iteration 120
+
+Modality
+Receiver 2 at iteration 240
+
+Modality
+Receiver 3 at iteration 240
+
+Modality
+Receiver 2 at iteration 360
+
+Modality
+Receiver 1 at iteration 2000
+
+1
+
+Transmitter
+
+0.40
+
+Transmitter
+
+Transmitter
+
+0.40
+
+Modality
+Receiver 1 at iteration 360
+
+Modality
+Receiver 3 at iteration 2000
+
+Modality
+
+0.20
+
+Modality
+Receiver 1 at iteration 240
+
+Modality
+Receiver 3 at iteration 360
+
+1
+
+3 0.30
+
+Receiver 3 at iteration 0
+4 0.20
+
+Modality
+Receiver 1 at iteration 120
+
+Modality
+Receiver 3 at iteration 240
+
+Modality
+Receiver 2 at iteration 2000
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 2000
+
+Modality
+
+2
+
+Modality
+Receiver 3 at iteration 120
+
+Modality
+Receiver 2 at iteration 360
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 360
+
+1
+
+1
+
+Modality
+Receiver 2 at iteration 240
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 at iteration 240
+
+1
+
+0.20
+
+Modality
+Receiver 2 at iteration 120
+
+Transmitter
+
+Transmitter
+
+1
+
+0.30
+
+0.20
+
+Transmitter
+
+0.10
+
+2
+
+0.45
+
+1
+
+0.30
+
+Transmitter
+
+0.35
+
+1
+
+Modality
+Receiver 1 at iteration 120
+
+0.20
+
+0.10
+
+Modality
+Receiver 3 at iteration 360
+
+Transmitter
+
+3
+
+0.15
+
+0.15
+
+Receiver 2 at iteration 0
+4 0.05
+
+Modality
+Receiver 2 at iteration 2000
+
+Modality
+
+Modality
+Receiver 3 at iteration 2000
+
+Transmitter
+
+3
+
+0.05
+
+0.25
+
+0.15
+
+Transmitter
+
+2
+
+0.15
+
+1
+
+2
+
+0.30
+
+Transmitter
+
+1
+
+0.45
+
+0.60
+
+0.20
+
+Transmitter
+
+0.20
+
+0.25
+
+0.40
+
+4 0.15
+
+Transmitter
+
+0.30
+
+0.45
+
+0.65
+
+Transmitter
+
+0.20
+
+1
+
+2
+
+3
+
+Transmitter
+
+0.25
+
+0.45
+
+Transmitter
+
+0.20
+
+0.40
+
+Receiver 1 at iteration 0
+
+Transmitter
+
+0.20
+
+0.40
+
+Transmitter
+
+2
+
+3
+
+Transmitter
+
+0.35
+
+Transmitter
+
+0.35
+
+Transmitter
+
+0.40
+
+Receiver 3 at iteration 0
+
+Transmitter
+
+3
+
+Receiver 2 at iteration 0
+
+Transmitter
+
+Transmitter
+
+Receiver 1 at iteration 0
+
+Modality
+
+Fig. 11: Convergence of A with the sparse prior on AV-MNIST. Corresponding rate: 135.71; N-CE: -0.70. The average number of links (converged): 3.44.
+
+Fig. 12: Convergence of A with the sparse prior on MM-Fi. Corresponding
+rate: 75.99; N-CE: -0.35. The average number of links (converged): 3.15.
+
+row, presenting an iteration round, maintains 3 chunks. Each
+chunk represents all available modalities from transmitters for
+a specific task of a receiver. The value of color coding for
+a modality corresponds to the marginal probability mass of
+selecting that modality for the specific task. Hence, the value
+range is from 0 to 1. With the definition of A in Section VI-B,
+we can equivalently consider each row as corresponding to a
+“mixed” selection ā in the expectation sense, i.e., ā := E[A].
+Combining Fig. 7 and 8, we compare the convergence of the
+optimizable selection with and without CR. It is observed
+that with CR, the selection converges to a stable distribution
+where the non-zero masses are high up to 1, indicating the
+low uncertainty of selection. While without CR, the selection
+converges to a relatively flat distribution, in which the average
+of non-zero mass is less than 0.5, indicating high uncertainty.
+
+Also, note that the number of links selected without CR is
+less than the limit 8, while with CR, it exactly meets the
+limit. This means that without CR, the selection policy tends
+to be conservative to avoid violating the hard limits. The
+both drawbacks of high uncertainty and conservative selection
+stem from the lack of coordination among devices, which also
+leads to sub-optimal performance of the version without CR
+as shown in Table I.
+Visualization of policy convergence: The convergence of the
+optimizable selection is represented in Figs. 9 and 10. The
+two are under hard limits with Et = 2 and Ek = 4. Starting
+from a random initial distribution, ā gradually converges to a
+stationary distribution. Although we point out in the preceding
+that PA|U could converge to a deterministic policy at the
+default ratio 1/2, due to the inherent randomness of U in
+
+18
+
+1.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+3
+
+1.00
+
+1.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.02
+
+0.02
+
+0.98
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+3
+
+1.00
+
+1.00
+
+0.00
+
+2
+
+0.00
+
+1.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+Modality
+Receiver 2 of MM-Fi
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 of MM-Fi
+
+Transmitter
+
+1.00
+
+Receiver 3 of AV-MNIST
+
+4
+
+1.00
+
+0.00
+
+1.00
+
+0.00
+
+3
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+Modality
+
+Modality
+Receiver 3 of MM-Fi
+
+Transmitter
+
+3
+
+Receiver 2 of AV-MNIST
+
+Transmitter
+
+Transmitter
+
+Receiver 1 of AV-MNIST
+
+4
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+3
+
+0.00
+
+1.00
+
+1.00
+
+0.00
+
+2
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+0.00
+
+0.00
+
+0.00
+
+0.00
+
+1
+
+2
+
+3
+
+4
+
+Modality
+
+Modality
+
+Fig. 13: Converged A with no limits at β=1e-3. For AV-MNIST, rate: 172.27;
+N-CE: -0.15. For MM-Fi, rate: 78.17; N-CE: -0.36.
+
+1.00
+
+1.00
+
+2
+
+1.00
+
+1.00
+
+1.00
+
+1
+
+0.98
+
+0.66
+
+1.00
+
+1
+
+2
+
+3
+
+3
+
+1.00
+
+1.00
+
+1.00
+
+2
+
+1.00
+
+1.00
+
+1.00
+
+1
+
+0.98
+
+0.64
+
+1.00
+
+1
+
+2
+
+3
+
+4
+
+0.00
+
+0.00
+
+0.98
+
+0.00
+
+3
+
+0.92
+
+1.00
+
+1.00
+
+0.94
+
+2
+
+1.00
+
+0.96
+
+0.94
+
+0.96
+
+1
+
+1.00
+
+1.00
+
+1.00
+
+1.00
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+3
+
+1.00
+
+1.00
+
+1.00
+
+2
+
+1.00
+
+1.00
+
+1.00
+
+1
+
+1.00
+
+0.64
+
+1.00
+
+1
+
+2
+
+3
+
+Modality
+Receiver 2 of MM-Fi
+
+Transmitter
+
+Transmitter
+
+Modality
+Receiver 1 of MM-Fi
+
+Transmitter
+
+1.00
+
+Receiver 3 of AV-MNIST
+
+4
+
+0.00
+
+0.00
+
+0.68
+
+0.00
+
+3
+
+0.84
+
+0.88
+
+0.88
+
+0.86
+
+2
+
+0.98
+
+0.94
+
+0.94
+
+0.90
+
+1
+
+1.00
+
+1.00
+
+1.00
+
+1.00
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+Modality
+Receiver 3 of MM-Fi
+
+Transmitter
+
+3
+
+Receiver 2 of AV-MNIST
+
+Transmitter
+
+Transmitter
+
+Receiver 1 of AV-MNIST
+
+4
+
+0.00
+
+0.00
+
+1.00
+
+0.00
+
+3
+
+0.86
+
+0.98
+
+1.00
+
+0.92
+
+2
+
+1.00
+
+1.00
+
+1.00
+
+1.00
+
+1
+
+1.00
+
+1.00
+
+1.00
+
+0.98
+
+2
+
+3
+
+4
+
+1
+
+Modality
+
+Fig. 14: Converged A with no limits at β → 0. For AV-MNIST, rate: 1690.59;
+N-CE: -0.08. For MM-Fi, rate: 4592.59; N-CE: -0.14.
+
+training, this leads to the non-degenerate marginal PA . As
+shown in Fig. 9, the converged selection is mixed, namely,
+every possible selection has a mass lower than 1. Also, we can
+easily measure the effectiveness of the converged selection on
+AV-MNIST. Recall the setting in (30), i.e.,
+ A B C
+X ,X ,X
+X C , X A , X B 
+(32)
+XC, XC, XA
+where X A corresponds to image information, X B corresponds
+to audio information, and finally X C corresponds to independent noises. We can easily confirm that the effective modalities
+are X A and X B . This exactly corresponds to the convergent
+selection expectation, i.e., the last row of Fig. 9, which drops
+all noise terms X C . This is in line with our expectations
+and once again strongly illustrates the effectiveness of the
+selection optimization. In Fig. 10, a similar phenomenon is
+observed, but at this time, A is deterministic and degenerate:
+the probability mass of choosing these modalities equals
+1. Besides, it is worth noticing that in every iteration, the
+expected selection number (the sum of type masses) is 8
+
+for AV-MNIST, which exactly falls at the boundary of our
+limits. In contrast, the expected value of MM-Fi is less than
+8 (converging to 5), which reveals the high data redundancy
+of the real dataset MM-Fi.
+Three way tradeoff among rate, relevance, and the number
+of modality-task links: Fig. 11 and 12 allow full participation
+and adopt the sparse prior discussed in Remark 8. They depict
+the convergence of the optimizable selection, albeit with soft
+link limits. It can be verified from the expected values of the
+first line, i.e., the initial stage, that the AV-MNIST expected
+value is 8.4 and the MM-Fi expected value is 14.35, both
+of which are greater than the 8 we set. However, the modal
+selection that eventually converges to is highly sparse with
+the AV-MNIST expected value 3.44 and the MM-Fi expected
+value 3.15, which is due to the application of the sparse
+regularization with γ = 0.1. This indicates that by introducing
+the additional multiplier γ, the rate-relevance tradeoff under
+modality-aware constraints can be successfully extended to a
+three-way tradeoff of rate-relevance-selection, thereby allowing for intellicise semantic communication networking.
+Verification of optimal selection at no physical limits: We
+now verify our statement in Remark 7, which indicates that
+at β > 0, even when there exist no physical constraints, the
+optimal selection does not degrade into full participation. This
+claim is empirically demonstrated as illustrated in Fig. 1314. In this case, a few modalities that are beneficial for task
+inference are selected, all the useless noise modalities are not
+included. In contrast, if we set β → 0 as illustrated in Fig. 14,
+free communication and unlimited computing power make the
+convergence selection approach full participation.
+XI. C ONCLUSION
+This paper proposes the TADIB framework for multi-modal
+multi-task semantic communication, which defines a new
+modality-task score and introduces a new scheme to jointly
+optimize modality selection alongside semantic coding based
+on DIB theory. By transforming discrete selection into a
+probabilistic form and leveraging common randomness for
+cross-device coordination, this distributed framework achieves
+a flexible modality-aware rate-relevance tradeoff. It can reduce
+the overhead of unnecessary transmission and computation of
+redundant data significantly, while maintaining high inference
+quality under physical limits. Besides theoretical guarantees,
+extensive experimental results also illustrate the effectiveness
+of TADIB across different tasks and datasets.
+A PPENDIX A
+P ROOF OF T HEOREM 1 AND P ROPOSITION 2
+Proof of Theorem 1. By introducing an auxiliary U matching
+Definition 3, we directly decompose LpTA [υp , f ] as
+h
+
+
+
+i
+EPA LTA [υp , f ] = EPU EPA|U LTA [υp , f ]
+= EPU
+
+T
+hX
+
+
+i
+EPAk,t |U H(Yt |Ak,t ◦ Zt ) + β⟨Ak,t , LIB,t ⟩ ,
+
+t=1
+
+which is our desired result.
+
+(33)
+
+19
+
+Proof of Proposition 2. For (i), we have
+Z
+q(y|z)
+I(Z; Y ) ≥ dydzp(y, z) log
+p(y)
+Z
+Z
+= dydzp(y, z) log q(y|z) − dyp(y) log p(y)
+= H(Y ) − Ez∼PZ [H(PY |Z , QY |Z )],
+(34)
+where the first inequality holds due to the non-negativity of
+DKL (·∥·), i.e.,
+Z
+p(y|z)
+dzdy = EPZ [DKL (PY |Z ∥QY |Z )] ≥ 0.
+p(z)p(y|z)log
+q(y|z)
+(35)
+Note that H(Y |Z) = H(Y ) − I(Y ; Z). We obtain the result
+m
+stated in (i) by replacing Z with Zk,t
+and Y with Yt .
+For (ii), following the preceding inequality (34), we replace
+Z with Ak,t ◦ Zt and Y with yt to yield
+H(Yt |Ak,t ◦ Zt ) ≤ EPAk,t ◦Zt [H(PYt |Ak,t ◦Zt , QYt |Ak,t ◦Zt )].
+(36)
+We can finally obtain the result stated in (ii) by taking the law
+of the unconscious statistician to replace the expectation over
+Ak,t ◦ Zt with the expectation over Zt |Ak,t .
+A PPENDIX B
+P ROOF OF T HEOREM 2
+We first give a technical lemma, then we prove Theorem 2.
+Lemma 1. If PA is Dirac and admits the constraint, then
+PA ∈ PA .
+Proof of Theorem 2. In (28), the almost everywhere convergence holds due to the strong law of large numbers, and the
+inequality holds due to Proposition 2. In (29), the inequality
+can be derived analogously to [23, Lemma 1].
+In the rest of the proof, we show that the last equality of
+(29) always holds. To show minυp ,f LpTA = minυ,f,g LTA , we
+only need to show minPA EPA [R(A)] = mina R(a) due to
+the equivalence expressed in (3).
+We first prove minPA EPA [R(A)] ≤ minPA EPA [R(A)]
+and then prove minPA EPA [R(A)] ≥ mina R(a).
+The minimizer of R(a) can induce its corresponding optimal selection a⋆ . We can construct a Dirac distribution at a⋆ ,
+⋆
+⋆
+denoted as PeA
+. We claim PeA
+∈ PA due to Lemma 1. This
+⋆
+shows that R(a ) is a special case of EPA [R(A)] by taking
+⋆
+⋆
+⋆
+PA = PeA
+. Let PA
+be optimal over PA and PeA
+may not be
+⋆
+⋆
+⋆
+identical to PA , we claim EPA [R(A)] ≤ R(a ). Also, with
+a certain 1 ≥ p ≥ 0,
+PA
+
+= pR(a⋆ ) + (1 − p)R(a′ )
+
+(37)
+
+⋆
+where for simplicity, we consider a case that PA
+with its
+⋆
+′
+support at a and a only. Then the following holds
+′
+
+In this case, we can directly have pV W (v, w) = pV (v)pW (w),
+which implies the independence between V and W . Extending
+the
+QT above
+QK conclusion to the Dirac PA , it follows that PA =
+, which is in PA with an arbitrary U if it is
+t=1
+k=1 PA(k)
+k,t
+feasible.
+A PPENDIX C
+P ROOF OF P ROPOSITION 3
+Proof. If we assume that one selection M(T ) is feasible that
+M(T ) ∈ A and is optimal with |M(T )| = C ⋆ where C ⋆ ≤
+KM T is the link limit that we take equality on all constraints
+|Mk | = Ek and |Kt | = Et , then we trivially have the result.
+Otherwise, we set M(T ) ∈ A as the optimal selection
+with |M(T )| = C < C ⋆ . In the rest, we show that we
+can always find a selection with |M(T )| = C + 1 that is
+optimal. Recursively, we can have the extended version in A
+with |M(T )| = C ⋆ by adding the missing links to obtain the
+claimed result.
+We now consider an additional link (k ′ , m′ , t′ ) that is not
+in aprev := M(T ), and set anew := aprev ∪ {(k ′ , m′ , t′ )}. Then,
+LTA [υ(anew ), f ] = LTA [υ(aprev ), f ]
++ H(Yt′ |ZM(t′ )∪{(k′ ,m′ ,t′ )} ) − H(Yt′ |ZM(t′ ) )
+
+⋆
+
+EPA⋆ [R(A)] − R(a ) = (1 − p)(R(a ) − R(a )) ≥ 0. (38)
+This also holds for general supports that have finite counts. It
+follows that EPA⋆ [R(A)] ≥ R(a⋆ ).
+
+(40)
+
+′
+′
+′
++ β(H(Yt′ |Zkm′ ,t′ ) + I(Xkm′ ; Zkm′ ,t′ )).
+′
+
+Set fkm′ (·; t′ ) as a constant (vector) encoder for (k ′ , m′ , t′ ) to
+eliminate the information dependence on the new link, i.e.,
+H(Yt′ |ZM(t′ )∪{(k′ ,m′ ,t′ )} ) − H(Yt′ |ZM(t′ ) ) = 0,
+
+(41)
+
+and at β = 0,
+′
+
+′
+
+′
+
+β(H(Yt′ |Zkm′ ,t′ ) + I(Xkm′ ; Zkm′ ,t′ )) = 0,
+
+(42)
+
+LTA [υ(anew ), f ′ ] = LTA [υ(aprev ), f ],
+
+(43)
+
+That is,
+′
+where f is an extended version of f with fkm′ (·; t′ ) ≡ c. We
+now choose f to be the minimizer of LTA [υ(aprev ), f ] as f ⋆ ,
+
+′
+
+then note that aprev is assumed to be optimal, we have
+min LTA [υ(a), f ] = min LTA [υ(aprev ), f ]
+f,a
+
+f
+
+= LTA [υ(aprev ), f ⋆ ]
+= LTA [υ(anew ), f ⋆,′ ]
+
+EPA⋆ [R(A)] = min EPA [R(A)]
+
+⋆
+
+Proof of Lemma 1. Let random variables V, W follow a joint
+distribution PV W , which is Dirac at (v0 , w0 ), i.e., its probability mass function satisfies
+(
+1 if (v, w) = (v0 , w0 ),
+(39)
+pV W (v, w) =
+0 else.
+
+(44)
+
+≥ min LTA [υ(anew ), f ]
+f
+
+≥ min LTA [υ(a), f ].
+f,a
+
+This shows that the extended selection anew is also optimal
+satisfying minf LTA [υ(anew ), f ] = minf,a LTA [υ(a), f ].
+We repeat the above construction to achieve the extended
+selection anew at the capacity limit with |M(T )| = C ⋆ to
+derive the result.
+
+20
+
+R EFERENCES
+[1] C. Peng, Y. Zhou, R. Wang, Y. Xiao, Y. Li, and G. Shi, “Multi-user
+information bottleneck for semantic-aware communication,” in ICC 2025
+- IEEE International Conference on Communications, 2025.
+[2] Y. Xiao, G. Shi, and P. Zhang, “Towards agentic AI networking in 6G: A
+generative foundation model-as-agent approach,” IEEE Communications
+Magazine, vol. 63, no. 9, September 2025.
+[3] G. Shi, Y. Xiao, Y. Li, and X. Xie, “From semantic communication to
+semantic-aware networking: Model, architecture, and open problems,”
+IEEE Communications Magazine, vol. 59, no. 8, pp. 44–50, 2021.
+[4] Y. Xiao, Z. Sun, G. Shi, and D. Niyato, “Imitation learning-based
+implicit semantic-aware communication networks: Multi-layer representation and collaborative reasoning,” IEEE Journal on Selected Areas in
+Communications, vol. 41, no. 3, pp. 639–658, 2022.
+[5] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and P. Zhang,
+“Wireless deep video semantic transmission,” IEEE Journal on Selected
+Areas in Communications, vol. 41, no. 1, pp. 214–229, 2023.
+[6] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+image transmission using deep source channel coding with attention
+modules,” IEEE Transactions on Circuits and Systems for Video Technology, vol. 32, no. 4, pp. 2315–2328, 2022.
+[7] Z. Weng et al., “Deep learning enabled semantic communications
+with speech recognition and synthesis,” IEEE Transactions on Wireless
+Communications, vol. 22, no. 9, pp. 6227–6240, 2023.
+[8] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multiuser semantic communications,” IEEE Journal on Selected Areas in
+Communications, vol. 40, no. 9, pp. 2584–2597, 2022.
+[9] G. He, S. Cui, Y. Dai, and T. Jiang, “Learning task-oriented channel allocation for multi-agent communication,” IEEE Transactions on Vehicular
+Technology, vol. 71, no. 11, pp. 12 016–12 029, 2022.
+[10] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified
+multi-task semantic communication system for multimodal data,” IEEE
+Transactions on Communications, vol. 72, no. 7, pp. 4101–4116, 2024.
+[11] M. Gong et al., “Compression before fusion: Broadcast semantic communication system for heterogeneous tasks,” IEEE Transactions on
+Wireless Communications, vol. 23, no. 12, pp. 19 428–19 443, 2024.
+[12] A. H. Razlighi, M. H. Tillmann, E. Beck, C. Bockelmann, and A. Dekorsy, “Cooperative and collaborative multi-task semantic communication
+for distributed sources,” arXiv preprint arXiv:2411.02150, 2024.
+[13] H. Gao, G. Yu, Y. He, and Y. Liu, “Semantic feature scheduling and
+rate control in multi-modal distributed network,” IEEE Transactions on
+Wireless Communications, vol. 23, no. 12, pp. 19 199–19 214, 2024.
+[14] Z. Lu, “A theory of multimodal learning,” Advances in Neural Information Processing Systems, vol. 36, 2024.
+[15] X. Peng, Y. Wei, A. Deng, D. Wang, and D. Hu, “Balanced multimodal
+learning via on-the-fly gradient modulation,” in Proceedings of the
+IEEE/CVF conference on computer vision and pattern recognition, 2022,
+pp. 8238–8247.
+[16] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE Journal
+on Selected Areas in Communications, vol. 40, no. 1, pp. 197–211, 2021.
+[17] S. Xie, S. Ma et al., “Robust information bottleneck for task-oriented
+communication with digital modulation,” IEEE Journal on Selected
+Areas in Communications, vol. 41, no. 8, pp. 2577–2591, 2023.
+[18] H. Li, J. Shao, H. He, S. Song, J. Zhang, and K. B. Letaief, “Tackling
+distribution shifts in task-oriented communication with information
+bottleneck,” arXiv preprint arXiv:2405.09514, 2024.
+[19] Y. He, G. Yu, and Y. Cai, “Rate-adaptive coding mechanism for
+semantic communications with multi-modal data,” IEEE Transactions
+on Communications, vol. 72, no. 3, pp. 1385–1400, 2024.
+[20] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” arXiv preprint physics/0004057, 2000.
+[21] Z. Goldfeld and Y. Polyanskiy, “The information bottleneck problem and
+its applications in machine learning,” IEEE Journal on Selected Areas
+in Information Theory, vol. 1, no. 1, pp. 19–38, 2020.
+[22] A. Zaidi, I. Estella-Aguerri, and S. Shamai, “On the information
+bottleneck problems: Models, connections, applications and information
+theoretic views,” Entropy, vol. 22, no. 2, p. 151, 2020.
+[23] I. E. Aguerri and A. Zaidi, “Distributed variational representation learning,” IEEE transactions on pattern analysis and machine intelligence,
+vol. 43, no. 1, pp. 120–138, 2019.
+[24] D. Slepian and J. Wolf, “Noiseless coding of correlated information
+sources,” IEEE Transactions on Information Theory, vol. 19, no. 4, pp.
+471–480, 1973.
+
+[25] T. A. Courtade and T. Weissman, “Multiterminal source coding under
+logarithmic loss,” IEEE Transactions on Information Theory, vol. 60,
+no. 1, pp. 740–761, 2014.
+[26] A. A. Alemi et al., “Deep variational information bottleneck,” in 5th
+International Conference on Learning Representations, ICLR 2017,
+Toulon, France, 2017. OpenReview.net, 2017.
+[27] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for
+multidevice cooperative edge inference,” IEEE Transactions on Wireless
+Communications, vol. 22, no. 1, pp. 73–87, 2022.
+[28] S. Mai, Y. Zeng, and H. Hu, “Multimodal information bottleneck:
+Learning minimal sufficient unimodal and multimodal representations,”
+IEEE Transactions on Multimedia, vol. 25, pp. 4121–4134, 2023.
+[29] D. Gündüz, Z. Qin, I. E. Aguerri et al., “Beyond transmitting bits:
+Context, semantics, and task-oriented communications,” IEEE Journal
+on Selected Areas in Communications, vol. 41, no. 1, pp. 5–41, 2022.
+[30] P. W. Cuff et al., “Coordination capacity,” IEEE Transactions on
+Information Theory, vol. 56, no. 9, pp. 4181–4206, 2010.
+[31] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “Club: A contrastive log-ratio upper bound of mutual information,” in International
+conference on machine learning. PMLR, 2020, pp. 1779–1788.
+[32] R. S. Sutton, D. McAllester, S. Singh, and Y. Mansour, “Policy gradient methods for reinforcement learning with function approximation,”
+Advances in neural information processing systems, vol. 12, 1999.
+[33] D. E. Rumelhart et al., “Learning representations by back-propagating
+errors,” nature, vol. 323, no. 6088, pp. 533–536, 1986.
+[34] R. Vershynin, High-dimensional probability: An introduction with applications in data science. Cambridge university press, 2018, vol. 47.
+[35] F. Clarke, Functional analysis, calculus of variations and optimal
+control. Springer, 2013, vol. 264.
+[36] V. Vielzeuf, A. Lechervy, S. Pateux, and F. Jurie, “Centralnet: a multilayer approach for multimodal fusion,” in Proceedings of the European
+conference on computer vision (ECCV) workshops, 2018, pp. 0–0.
+[37] J. Yang et al., “Mm-fi: Multi-modal non-intrusive 4d human dataset for
+versatile wireless sensing,” in NeurIPS 2023, New Orleans, LA, USA,
+December 10 - 16, 2023, 2023.
+[38] S. Yu, X. Yu, S. Løkse, R. Jenssen, and J. C. Prı́ncipe, “Cauchy-schwarz
+divergence information bottleneck for regression,” in The Twelfth International Conference on Learning Representations, ICLR 2024, Vienna,
+Austria, May 7-11, 2024. OpenReview.net, 2024.
+[39] N. Tishby and N. Zaslavsky, “Deep learning and the information
+bottleneck principle,” in 2015 ieee information theory workshop (itw).
+Ieee, 2015, pp. 1–5.
+
+

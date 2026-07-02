@@ -1,0 +1,869 @@
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Information Bottleneck Guided
+Joint Source-Channel Coding with HARQ
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC) | 979-8-3503-6836-9/25/$31.00 ©2025 IEEE | DOI: 10.1109/WCNC61545.2025.10978742
+
+Haoxuan Zhang, Lunan Sun, Caili Guo, Senior Member, IEEE and Yang Yang, Member, IEEE
+
+Abstract—Deep joint source-channel coding (JSCC) with hybrid automatic repeat request (HARQ) for image transmission
+has attracted increasing attention due to its flexibility and
+high efficiency. Existing researches mainly focus on minimizing
+the distortion of mutiple retransmissions while ignoring the
+redundancy in retransmitted signal and such redundancy may
+lead bandwidth waste and reconstruction quality degradation.
+In this paper, we propose an information bottleneck (IB) guided
+deep JSCC with HARQ system (HARQ-IBJSC), which aims
+at improving the reconstruction quality by compressing the
+redundancy in retransmitted signal. In particular, we first design
+a new IB objective for deep JSCC with HARQ system, which
+simultaneously reduces redundancy in the retransmitted signal
+and minimizes image transmission distortion. Since the mutual
+information terms in the designed IB objective is intractable, we
+then derive a differentiable lower bound on the IB objective and
+use the bound as the loss function of HARQ-IBJSC. Experimental
+results show that the proposed HARQ-IBJSC system can increase
+PSNR by up to 1 dB.
+Index Terms—Information bottleneck, joint source-channel
+coding, HARQ
+
+I. I NTRODUCTION
+With the rapid development of modern communications,
+deep learning (DL) has been utilized in communication systems to improve the flexibility and efficiency of traditional
+communication architectures [1], [2]. In particular, integrating
+DL enabled joint source-channel coding (JSCC) [3], [4] has
+attracted increasing attention as a promising alternative to the
+conventional shannon separate source-channel coding (SSCC)
+method [5]. Benefiting from the fitting capability of neural
+networks, deep JSCC can automatically learn key information
+from the data and outperform traditional SSCC in terms of
+perceived visual quality [3], [6]. However, when the channel
+condition is harsh, deep JSCC may still fail due to the severely
+fading and noise interference [7], [8].
+To improve the reliability of deep JSCC, a few recent studies
+introduced hybrid automatic repeat request (HARQ) into deep
+JSCC to enhance the reconstruction quality by exploiting
+This work was supported by the Fundamental Research Funds for the Central Universities (No.2021XD-A01-1), National Natural Science Foundation of
+China (No.62371070), National Key Research and Development Program of
+China (2023YFB2904201) and Beijing Natural Science Foundation (L222043)
+Haoxuan Zhang, Lunan Sun and Yang Yang are with the Beijing Key
+Laboratory of Network System Architecture and Convergence, School of
+Information and Communication Engineering, Beijing University of Posts and
+Telecommunications, Beijing 100876, China (Email: zhx0719@bupt.edu.cn;
+sunlunan@bupt.edu.cn; yangyang01@bupt.edu.cn).
+Caili Guo is with the Beijing Laboratory of Advanced Information Networks, School of Information and Communication Engineering, Beijing
+University of Posts and Telecommunications, Beijing 100876, China (Email:
+guocaili@bupt.edu.cn).
+
+retransmitted encoder information [7], [8]. In particular, the
+authors in [7] first proposed an deep JSCC with HARQ
+system (HARQ-JSCC) using autoencoder. They considered
+the sentence transmission and minimized the transmission
+mean squared error (MSE) of multiple retransmissions. The
+proposed HARQ-JSCC outperforms deep JSCC and SSCC
+based HARQ that combines Huffman coding with low density
+parity check codes (LDPC). The authors in [8] proposed a new
+HARQ-JSCC system with single encoder and improved the
+reconstruction quality of HARQ-JSCC through the integration
+of a self-attention module.
+Overall, existing works on HARQ-JSCC aim at minimizing
+the distortion of multiple retransmissions. However, existing
+methods ignore the redundancy in the retransmitted signal,
+which may lead to the transmission of overlapping information in the retransmission link. To compress the redundant
+information, the authors in [9] introduced an informationtheoretic principle for neural networks, termed as information
+bottleneck (IB). With the guidance of IB, neural networks are
+able to extract information relevant to the target task while
+compress information irrelevant to the target task.
+The main contribution of this work is an IB guided HARQJSCC system (HARQ-IBJSC). The proposed HARQ-JSCC introduced a new form of IB, which employs the received information to eliminate retransmission redundancy, thus improving
+reconstruction quality. To the best of authors’ knowledge, this
+is the first work that applies IB into HARQ-JSCC system.
+In particular, we establish a new IB objective for HARQJSCC system, which simultaneously compresses redundancy
+in the retransmitted signal and minimizes image transmission
+distortion. Since the mutual information terms in the designed
+IB objective is intractable, we derive a differentiable lower
+bound on the IB objective and use the bound as the loss
+function of HARQ-IBJSC. Experimental results show that the
+propoesd HARQ-IBJSC can increase PSNR by up to 1 dB.
+The rest of this paper is organized as follows. In Section
+II, the system model and the loss function of existing works
+are described. The proposed HARQ-IBJSC is presented in
+Section III. Experimental results are shown in Section IV. Final
+conclusions are drawn in Section V.
+II. S YSTEM M ODEL
+In this section, we first describe the HARQ-JSCC system
+model for image transmission. Then, we discuss the loss
+function of the existing works as well as their limitations.
+
+979-8-3503-6836-9/25/$31.00 ©2025 IEEE
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+�
+
+Joint Source Channel
+Encoder1 ��� (∙)
+
+�1
+
+Communication
+channel
+
+Transmission Link
+
+�1
+
+ACK/NACK
+
+�2
+
+Communication
+channel
+
+Retransmission Link
+Joint Source Channel
+Encoder2 ��� (∙)
+
+�1
+
+Joint Source Channel
+Decoder1 ��� (∙)
+
+�2
+
+Joint Source Channel
+Decoder2 ��� (∙)
+
+�2
+
+Fig. 1: An illustration of the JSCC with HARQ system.
+A. System Model
+As shown in Fig. 1, we consider a point-to-point image
+transmission system, which consists of two transmission links,
+denoted as transmission link and retransmission link. An input
+image with size H (Height) × W (Width) × C (Channel) is
+represented as a vector x ∈ Rn , where R represents the set
+of real numbers and n = H × W × C . The joint source
+channel encoder (referred to as the encoder) in transmission
+link encodes x and the encoding function Eφ1 : Rn → Ck
+leads to a vector of complex-valued channel input symbol z1 ∈
+Ck , where k is the size of channel input symbol. The encoding
+process can be expressed as:
+z1 = Eφ1 (x) ,
+
+(1)
+
+where φ1 is the parameter set of the encoder neural network
+and C denotes the set of complex numbers. To satisfy the
+average power constraint at the encoder, k1 E (z1 z1∗ ) ≤ 1 is
+imposed, where z1∗ denotes the conjugate transpose of z1 .
+z1 is transmitted over a noisy channel represented by the
+function η : Ck → Ck . We consider two widely used channel
+models: (i) the additive white Gaussian noise (AWGN) channel, and (ii) the Rayleigh fading channel. For the AWGN
+channel, the channel output symbol ẑ1 ∈ Ck received by the
+joint source-channel decoder (referred to as the decoder) can
+be expressed as:
+ẑ1 = ηn (z1 ) = z1 + ω,
+
+(2)
+
+where the vector ω ∈ Ck consists of independent identically
+
+distributed (i.i.d.) samples with the distribution CN 0, σ 2 I .
+σ 2 is the noise power and CN (·, ·) denotes a circularly
+symmetric complex Gaussian distribution. For the Rayleigh
+fading channel, ẑ1 can be expressed as:
+ẑ1 = ηh (z1 ) = hz1 + ω,
+
+(3)
+
+where h ∼ CN (0, I) is the channel gain.
+The decoder in the transmission link uses a decoding
+function Dθ1 : Ck → Rn to map ẑ1 into the reconstruction of
+x, x̂1 ∈ Rn , as follows:
+x̂1 = Dθ1 (ẑ1 ) = Dθ1 (η (Eφ1 (x ))) ,
+
+(4)
+
+where θ1 is the parameter set of the decoder neural network.
+
+When the decoder in the transmission link fails to decode
+ẑ1 correctly or the quality of x̂1 is poor, the receiver will sent
+negative acknowledged (NAK) signal to the transmitter. After
+receiving a NAK signal, the encoder in retransmission link
+encodes x again and the encoding function Eφ2 : Rn → Ck
+leads to a vector of complex-valued channel input symbol
+z2 ∈ Ck . z2 is transmitted over a channel with the same
+channel conditions as the transmission link channel. The
+channel output symbol ẑ2 is expressed as:
+ẑ2 = η (z2 ) = η (Eφ2 (x )) .
+
+(5)
+
+The decoder in retransmission link concatenates ẑ2 to ẑ1 ,
+and uses a decoding function Dθ2 : C2k → Rn to map the
+combined symbol into the reconstruction of x, x̂2 ∈ Rn , as
+follows:
+x̂2 = Dθ2 (ẑ1 , ẑ2 ) = Dθ2 (η (Eφ1 (x )) , η (Eφ2 (x ))) ,
+
+(6)
+
+where x̂2 ∈ Rn is an reconstruction of the original image x
+and θ2 is the parameter set of the decoder neural network in
+retransmission link.
+B. Loss Function
+Akin to [6], the image size n, the channel input size k
+and R = k/n are treated as the source bandwidth, the
+channel bandwidth and bandwidth ratio, respectively. Under
+a certain R, the existing HARQ-JSCC works primarily aim at
+minimizing the transmission distortion as follows:
+L = Ep(x,x̂1 ,x̂2 ) [d (x, x̂1 ) + d (x, x̂2 )],
+
+(7)
+
+where p (x, x̂1 , x̂2 ) represents the joint probability distribution
+of x and x̂1 , x̂2 , and d (·, ·) is the distortion between x and
+x̂1 , x̂2 .
+However, existing methods fail to consider the correlation
+of ẑ1 and z2 , which may transmit the overlapping semantic
+information in the retransmission link, thus introducing information redundancy.
+Therefore, to make this framework more efficient in reconstructing images, two issues need to be addressed. (i) How
+to measure the correlation of ẑ1 and z2 ? (ii) How to use ẑ1
+to guide the encoding process of the retransmission link to
+eliminate redundancy while improving reconstruction quality?
+To solve the above problems, we propose a new form of IB
+objective for HARQ-JSCC system.
+III. IB G UIDED HARQ-JSCC
+This section first introduces the proposed IB objective for
+HARQ-JSCC system. To obtain a tractable and differentiable
+form of IB objective, we then derive the estimations on mutual
+information terms used in IB objective.
+A. IB objective
+The considered HARQ-JSCC system is shown in Fig. 2,
+and it mainly consists of two encoders Eφ1 (·) and Eφ2 (·),
+two decoders Dθ1 (·) and Dθ2 (·), a channel block η(·), and a
+mutual information estimator Eγ (·).
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+IGDN
+
+Deonv5-3-2↑
+
+IGDN
+
+IGDN
+
+Deonv5-192-2↑
+
+Deonv5-192-2↑
+
+Deonv5-192-2↑
+
+(1)
+
+�e
+
+(2)
+
+�e
+
+...
+
+(�)
+
+�e
+
+�1
+
+�(�; �1 , �2 )
+
+Deonv5-3-2↑
+
+IGDN
+
+Deonv5-192-2↑
+
+IGDN
+
+�2
+
+Deonv5-192-2↑
+
+Joint Source
+Source Channel
+Channel Decoder2
+Decoder2 �
+���
+Joint
+��
+IGDN
+
+�2
+
+Mutual Information
+Estimator ��
+Deonv5-192-2↑
+
+Power
+Normalization
+
+GDN
+
+Conv5-128-2↓
+
+GDN
+
+Conv5-192-2↓
+
+Conv5-192-2↓
+
+GDN
+
+Conv5-192-2↓
+
+Joint Source Channel Encoder2 ���
+
+�1
+
+Joint Source Channel Decoder1 ���
+
+Concatenate
+
+�1
+
+Communication
+channel
+
+Power
+Normalization
+
+GDN
+
+Conv5-128-2↓
+
+GDN
+
+Conv5-192-2↓
+
+GDN
+
+Conv5-192-2↓
+
+�
+
+Conv5-192-2↓
+
+Joint Source Channel Encoder1 ���
+
+Communication
+channel
+
+ACK/NACK
+
+�2
+
+Fig. 2: An illustration of our proposed IB guided JSCC with HARQ system.
+Since IB principle can guide the system to compress information redundancy while ensuring high transmission quality
+[10], this work proposes an IB guided HARQ-JSCC objective,
+which is given by
+max
+
+φ1 ,φ2 ,θ1 ,θ2 ,γ
+
+d (x, x̂1 ) + I (x; ẑ1 , ẑ2 ) − βI (x; z2 |ẑ1 ) ,
+
+(8)
+
+where β is the hyperparameter, d (·, ·) is the distortion between
+x and x̂1 , and I (·, ·) is the mutual information. The first
+term in (8) is used to improve the image reconstruction
+performance of the transmission link by jointly updating φ1
+and θ1 . The second term is used to encourage ẑ2 contains
+effective information to improve the quality of the reconstruction. The third term is used to compress redundancy in z2 ,
+thus encouraging z2 preserves more key information related
+to x that is not captured by ẑ1 . However, (8) cannot be
+applied to HARQ-IBJSC system directly, since the mutual
+information terms I (x; ẑ1 , ẑ2 ) and I (x; z2 |ẑ1 ) in (8) are
+mathematically intractable. To circumvent this challenge, we
+derive the variational lower bound on I (x; ẑ1 , ẑ2 ) and estimate
+the upper bound on I (x; z2 |ẑ1 ) instead.
+B. Estimation of I (x; ẑ1 , ẑ2 )
+Instead of maximizing the intractable true value of
+I (x; ẑ1 , ẑ2 ), we derive its variational lower bound and proceed
+to maximize this lower bound. According to the definition of
+mutual information and entropy, we have [11]
+I (x; ẑ1 , ẑ2 ) = H(x) − H(x|ẑ1 , ẑ2 )
+= Ep(x,ẑ1 ,ẑ2 ) log p(x|ẑ1 , ẑ2 ) + H(x).
+
+p(x, ẑ1 , ẑ2 ) = p(x)p(ẑ1 |x)p(ẑ2 |x).
+
+(11)
+
+To approximate log r(x|ẑ1 , ẑ2 ), we imply a decoder Dθ2 :
+C2k → Rn to decode the concatenation of ẑ1 and ẑ2 into the
+reconstructed x̂1 . Then, according to [12], the reconstruction
+loss is used to implement Ep(x)p(ẑ1 |x)p(ẑ2 |x) [log r(x|ẑ1 , ẑ2 )]
+and we can calculate the variational lower bound on
+I (x; ẑ1 , ẑ2 ) as
+I (x; ẑ1 , ẑ2 ) ≥ Lrecon (Dθ2 (ẑ1 , ẑ2 ) , x )
+N
+
+
+2
+1 X
+(i) (i)
+Dθ2 ẑ1 , ẑ2
+− x (i) ,
+=
+N i=1
+2
+(i)
+
+(12)
+
+(i)
+
+where x (i) represents the i-th image, ẑ1 and ẑ2 represents
+the corresponding i-th noisy symbol, and ∥·∥2 denotes the l2
+norm.
+C. Estimation of I (x; z2 |ẑ1 )
+Since obtaining a direct upper bound on the I (x; z2 |ẑ1 ) is
+intractable, we first reformulate it based on the chain rule for
+mutual information
+
+(9)
+I (x; z2 |ẑ1 ) = I (x; ẑ1 , z2 ) − I (x; ẑ1 ) .
+
+Since H(x) is constant with given source and using the fact
+that the Kullback Leibler divergence is always positive, we
+have that
+I(x; ẑ1 , ẑ2 ) = Ep(x,ẑ1 ,ẑ2 ) [log r(x|ẑ1 , ẑ2 )]
++ DKL [p(x, ẑ1 , ẑ2 )∥r(x|ẑ1 , ẑ2 )]
+≥ Ep(x,ẑ1 ,ẑ2 ) [log r(x|ẑ1 , ẑ2 )],
+
+where r(x|ẑ1 , ẑ2 ) is the variational approximation of the
+true posterior p(x, ẑ1 , ẑ2 ) and DKL is the Kullback Leibler
+divergence. Since there exists Markov chain x → z1 → ẑ1
+and x → z2 → ẑ2 , the joint probability p(x, ẑ1 , ẑ2 ) can be
+modelled as
+
+(10)
+
+(13)
+
+Given that Eφ1 is well-trained by minimizing d (x, x̂1 ), it
+is fixed during the training process of the retransmission
+link. Therefore, p(x, ẑ1 ) = p(ẑ1 |z1 )p(z1 |x)p(x) is a definite
+probability distribution, which implies I (x; ẑ1 ) is a constant.
+We next derive the upper bound of I (x; ẑ1 , z2 ). We present
+the following theorem.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+Theorem 1. The upper bound of the mutual information
+I (x; ẑ1 , z2 ) can be expressed as
+IUP (x; ẑ1 , z2 ) := Ep(x,ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )]
+− Ep(x) Ep(ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )].
+
+(14)
+
+Proof. To show that IUP (x; ẑ1 , z2 ) is an upper bound of
+I (x; ẑ1 , z2 ), we calculate the gap ∆ between them:
+∆ := IUP (x; ẑ1 , z2 ) − I (x; ẑ1 , z2 )
+= Ep(x,ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )] − Ep(x,ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )
+− log p(x)] − Ep(x) Ep(ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )]
+= Ep(x) [log p(x)] − Ep(x) Ep(ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )]
+= Ep(x) [log p(x) − Ep(ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )]]
+= Ep(x) [log[Ep(ẑ1 ,z2 ) [p(x|ẑ1 , z2 )]]
+− Ep(ẑ1 ,z2 ) [log p(x|ẑ1 , z2 )]] ≥ 0.
+(15)
+The last step holds according to Jensen’s inequality. This
+completes the proof of Theorem 1.
+However, the conditional probability p(x|ẑ1 , z2 ) is intractable. According to the Theorem 3.2 in [13], a variational
+distribution q(x|ẑ1 , z2 ) is used to approximate p(x|ẑ1 , z2 ).
+Consequently, a variational IUP term (IvUP ) is defined by:
+IvUP (x; ẑ1 , z2 ) := Ep(x,ẑ1 ,z2 ) [log q(x|ẑ1 , z2 )]
+− Ep(x) Ep(ẑ1 ,z2 ) [log q(x|ẑ1 , z2 )].
+
+(16)
+
+Let
+the number of independent sample pairs
+n N denote o
+N
+(i) (i) (i)
+x , ẑ1 , z2
+, where x(i) represents the i-th image,
+i=1
+(i)
+(i)
+ẑ1 and z2 represents the corresponding i-th symbol. Then
+
+IvUP (x; ẑ1 , z2 ) can be further estimated by the Monte Carlo
+method as
+N
+
+IvUP (x; ẑ1 , z2 ) =
+
+1 X
+(i) (i)
+log q(x(i) |ẑ1 , z2 )
+N i=1
+
+N N
+1 XX
+(i) (i)
+− 2
+log q(x(j) |ẑ1 , z2 ).
+N i=1 j=1
+
+(17)
+
+Similar to (12), we use a mutual information estimator Eγ :
+C2k → Rn to decode the concatenation of ẑ1 and z2 into the
+reconstructed x̂e . Hence, (17) can be implemented through
+reconstruction loss [12]
+N
+
+
+
+2
+1 X
+(i) (i)
+− x (i)
+IvUP (x; ẑ1 , z2 ) =
+Eγ ẑ1 , z2
+N i=1
+2
+N N
+
+
+2
+1 XX
+(i) (i)
+− 2
+Eγ ẑ1 , z2
+− x (j ) .
+N i=1 j=1
+2
+
+(18)
+
+We can calculate the IB objective for HARQ-JSCC system
+with (12) and (18).
+
+Algorithm 1 IB guided HARQ-JSCC
+Input: Dataset(X ); SNR of η(·); Training epochs for transmission
+link Elink1 ; Training epochs for Eφ2 Elink2 ; Training epochs for
+Dθ2 and Eγ Eest ; Hyperparameter β.
+Output: Learned Eφ1 , Eφ2 , Dθ1 , Dθ2 and Eγ .
+(0)
+(0)
+1: Initialize Eφ1 and Dθ1 :φ1 , θ1 ← φ1 , θ1
+2: for t = 1, 2,
+n ..., E
+olink1 do
+N
+
+Sample x(i)
+from Dataset: x ∼ p (x);
+i=1
+4:
+Calculate
+ 
+2
+PN
+(i)
+Llink1 (φ1 , θ1 ) = N1
+− x (i)
+i=1 Dθ1 ẑ1
+2
+5:
+Update φ1 , θ1 ← arg min Llink1 (φ1 , θ1 )
+6: end for
+(0)
+(0)
+7: Initialize Eφ2 , Dθ2 and Eγ : φ2 , θ2 , γ ← φ2 , θ2 , γ (0)
+8: for t = 1, 2, ..., Elink2 do
+9:
+for t = 1, 2,
+n ..., E
+oest do
+3:
+
+N
+
+from Dataset: x ∼ p (x);
+Sample x(i)
+i=1
+11:
+Calculate
+
+
+2
+PN
+(i)
+(i)
+− x (i)
+Lest1 (θ2 ) = N1
+i=1 Dθ2 ẑ1 , ẑ2
+2
+
+
+2
+PN
+(i)
+(i)
+Lest2 (γ) = N1
+− x (i)
+i=1 Eγ ẑ1 , z2
+2
+12:
+Update θ2 ← arg min Lest1 (θ2 )
+13:
+Update γ ← arg min Lest2 (γ)
+14:
+end for n
+oN
+from Dataset: x ∼ p (x);
+15:
+Sample x(i)
+i=1
+16:
+Calculate
+
+
+2
+PN
+(i)
+(i)
+Llink2 (φ2 ) = N1
+− x (i)
+,
+ẑ
+D
+ẑ
+θ
+2
+2
+1
+i=1
+2
+
+
+2
+(i)
+(i)
+β PN
+−N
+− x (i)
+i=1 Eγ ẑ1 , z2
+2
+
+2
+P
+PN
+(i)
+(i)
++ Nβ2 N
+− x (j )
+,
+z
+E
+ẑ
+γ
+2
+1
+i=1
+j=1
+2
+17:
+Update φ2 ← arg min Llink2 (φ2 )
+18: end for
+10:
+
+D. Training process
+The entire training process of the IB guided HARQ-JSCC
+system can be divided into three steps.
+Step 1: Eφ1 and Dθ1 are jointly trained using d (x, x̂1 )
+as loss function to improve the reconstruction quality of the
+transmission link.
+Step 2: Eφ1 , Dθ1 and Eφ2 are fixed. Dθ2 and Eγ are alternately trained using loss function (12) to calculate accurate
+mutual information estimation.
+Step 3: Dθ2 and Eγ are fixed. Eφ2 is trained using (18)
+as loss function to improve the reconstruction quality of the
+retransmission link.
+IV. E XPERIMENTAL R ESULTS
+A. Experiment Setup
+1) Datasets and Metric: We use 2975 images sampled from
+Cityscape dataset [14] to train our model, and 1525 images
+are used for the test. Before training and testing, all images
+are center-cropped and resized to 128 × 256 pixels. We use
+two widely used image quality metrics, PSNR and SSIM to
+measure the reconstruction quality.
+2) Baseline systems: We compare our system with existing
+state-of-the-art separated design systems as well as the DLbased JSCC baseline. For the separated design systems, we
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+(a) PSNR performance over the AWGN channel
+
+(b) MS-SSIM performance over the AWGN channel
+
+(c) PSNR performance over the Rayleigh fading channel
+
+(d) PSNR performance over the AWGN channel with different β
+
+Fig. 3: The quality metric of reconstructed images under different configurations in different SNRs.
+consider the popular image codec BPG combined with a
+practical LDPC code (marked as BPG+LDPC). For the DLbased JSCC system, we consider the standard deep JSCC
+system proposed in [3] and the recently developed HARQJSCC system [7].
+3) Training details: In all experiments, the channel input
+dimension of DL-based JSCC system k is set to 128, which is
+corresponding to the source bandwidth R = 0.083. To make
+a fair comparison, the settings and structure of the encoder
+and decoder neural networks used in JSCC and HARQ-JSCC
+are the same with those used in HARQ-IBJSC. Each model is
+trained using Adam optimizer with a learning rate of 1 × 10−4
+and a batch size of 12.
+B. Experimental results
+Fig. 3(a) and Fig. 3(b) show the quality of reconstructed
+images on the AWGN channel under various channel SNRs
+in terms of the average MS-SSIM and PSNR repectively.
+For the BPG + LDPC system, we employ a 1/2 rate LDPC
+
+code with 4-QAM digital modulation system and the bits
+per pixel (BPP) R ∈ [0.025, 0.04, 0.063, 0.1]. For the DLbased system, we train these systems for a specific channel
+SNR value, denoted as SNRtrain , and then evaluating the
+performance of these systems on the test images for varying
+SNR values, denoted as SNRtest . As shown in Fig. 3(a), the
+HARQ-IBJSC system can outperform the JSCC system and
+HARQ-JSCC system by a large margin for all SNRtest . In
+particular, the HARQ-IBJSC system can achieve performance
+gains of over 0.5 dB compared with HARQ-JSCC at an
+SNR of 10 dB. At a SNR of −10 dB, the performance
+gain is further enhanced to 1 dB, which demonstrates that
+HARQ-IBJSC capture more key information essential for image reconstruction and exhibits greater robustness to channel
+variations. As for classical separated design system, HARQIBJSC outperforms the BPG + LDPC system in the low SNR
+region, while showing comparable performance in the high
+SNR regions. Moreover, the BPG + LDPC system suffers
+severely performance degradation, also known as cliff effect,
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+2025 IEEE Wireless Communications and Networking Conference (WCNC)
+
+(a) Original
+
+(b) BPG + LDPC
+
+(c) JSCC
+
+(d) HARQ-JSCC
+
+(e) HARQ-IBJSC
+
+Fig. 4: Reconstructed images from different source channel coding systems over 5dB AWGN channel. The DL-based systems
+are optimized for PSNR.
+when SNRtest is smaller than a certain value.
+Fig. 3(c) shows the quality of reconstructed images on the
+slow Rayleigh fading channel under various channel SNRs in
+terms of the average PSNR. As shown in Fig. 3(c), while the
+performance of the DL-based system drops compared to the
+AWGN channel, the performance gain of HARQ-IBJSC is still
+better than the baseline system. In addition, under the same
+SNRtest , HARQ-IBJSC achieves up to 1 dB performance
+improvement on the Rayleigh channel, surpassing the gains
+observed on the AWGN channel. This proves our system
+is robust to channel variations and harsh communication
+environment.
+Fig. 3(d) shows the results of HARQ-IBJSC with various
+beta to further demonstrate the reconstruction performance and
+robustness of the HARQ-IBJSC. In particular, we vary beta
+between 0 and 0.1 to impose different constraint on the amount
+of redundancy between z2 and ẑ1 . All systems are trained
+under the same SNRtrain = −5 dB. According to Fig. 3(d), the
+performance of HARQ-IBJSC is close to HARQ-JSCC when
+β = 0. This is because that the loss of HARQ-IBJSC descends
+to the summation of MSE which is similar with that of HARQJSCC. However, when β is larger than 0, HARQ-IBJSC
+shows better reconstruction performance compared to HARQJSCC. This demonstrates the effectiveness of our designed IB
+objective. In addition, when β = 1 × 10−3 , the performance
+of HARQ-IBJSC is better than that when β = 1 × 10−4 . This
+demonstrates that the proper compression of the redundancy
+between z2 and ẑ1 is helpful for improving the reconstruction
+quality and robustness to channel variations.
+Fig. 4 presents visualization examples of reconstructed
+images, showcasing the performance of our proposed HARQIBJSC. The DL-based system are trained under SNRtrain = 5
+dB and test under the same SNR, which is corresponding
+to the BPP R = 0.1. As shown in Fig. 4, we can observe
+the detail of the reconstructed images clearly, such as license
+plate, pedestrian and the edge of the road. This is because with
+the guidance of the designed IB objective, HARQ-IBJSC can
+preserve crucial semantic information, thus achieving richer
+and more photo-realist textures than the other systems.
+V. C ONCLUSION
+In this work, we have proposed an IB guided HARQJSCC system, which aims at improving the reconstruction
+quality by compressing redundancy in retransmitted signal.
+
+Specifically, we have proposed a new IB objective for HARQJSCC system, which simultaneously reduces redundancy in
+the retransmitted signal and minimizes image transmission
+distortion. To optimize the proposed objective, we have derived
+a differentiable lower bound on the IB objective and use the
+bound as the loss function of HARQ-IBJSC. Experimental
+results showed that the proposed HARQ-IBJSC system can
+significantly improve the robustness to the channel variation
+and increase the reconstruction quality.
+R EFERENCES
+[1] Z. Qin, H. Ye, G. Y. Li, and B.-H. F. Juang, “Deep learning in physical
+layer communications,” IEEE Trans. Wireless Commun., vol. 26, no. 2,
+pp. 93–99, Apr. 2019.
+[2] Y. Yang, C. Guo, F. Liu, L. Sun, C. Liu, and Q. Sun, “Semantic
+communications with artificial intelligence tasks: Reducing bandwidth
+requirements and improving artificial intelligence task performance,”
+IEEE Ind. Electron. Mag., vol. 17, no. 3, pp. 4–13, Sept. 2023.
+[3] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sept. 2019.
+[4] C. Liu, C. Guo, Y. Yang, and N. Jiang, “Adaptable semantic compression
+and resource allocation for task-oriented communications,” IEEE Trans.
+Cogn. Commun. Netw., pp. 1–1, Oct. 2023.
+[5] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+Techn. J., vol. 27, no. 3, pp. 379–423, 1948.
+[6] D. Burth Kurka and D. Gunduz, “Successive refinement of images with
+deep joint source-channel coding,” arXiv e-prints, pp. arXiv–1903, 2019.
+[7] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+for sentence semantic transmission with harq,” IEEE Trans. Commun.,
+vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[8] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+control in semantic communication with incremental knowledge-based
+harq,” IEEE Open Journal of the Communications Society, vol. 3, pp.
+1076–1089, Jul. 2022.
+[9] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” arXiv preprint physics/0004057, Apr. 2000.
+[10] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+information bottleneck guided joint source and channel coding for image
+transmission,” IEEE J. Sel. Areas Commun., Aug. 2023.
+[11] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” in International Conference on Learning Representations, Apr. 2016.
+[12] X. Chen, Y. Duan, R. Houthooft, J. Schulman, I. Sutskever, and
+P. Abbeel, “Infogan: Interpretable representation learning by information
+maximizing generative adversarial nets,” Advances in neural information
+processing systems, vol. 29, Jun. 2016.
+[13] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “CLUB: A
+contrastive log-ratio upper bound of mutual information,” in Proc. Int.
+Conf. Mach. and Learn., 2020, pp. 1779–1788.
+[14] M. Cordts, M. Omran, S. Ramos, T. Rehfeld, M. Enzweiler, R. Benenson, U. Franke, S. Roth, and B. Schiele, “The cityscapes dataset
+for semantic urban scene understanding,” in Proceedings of the IEEE
+conference on computer vision and pattern recognition, Dec. 2016, pp.
+3213–3223.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:53:30 UTC from IEEE Xplore. Restrictions apply.
+
+

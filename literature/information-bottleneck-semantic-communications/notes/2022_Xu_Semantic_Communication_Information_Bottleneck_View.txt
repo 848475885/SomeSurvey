@@ -1,0 +1,1747 @@
+1
+
+Semantic Information Recovery in Wireless
+Networks
+Edgar Beck , Graduate Student Member, IEEE, Carsten Bockelmann , Member, IEEE,
+
+arXiv:2204.13366v4 [cs.IT] 12 Jun 2023
+
+and Armin Dekorsy , Senior Member, IEEE
+
+Abstract—Motivated by the recent success of Machine Learning (ML) tools in wireless communications, the idea of semantic
+communication by Weaver from 1949 has gained attention. It
+breaks with Shannon’s classic design paradigm by aiming to
+transmit the meaning of a message, i.e., semantics, rather than
+its exact version and thus allows for savings in information rate.
+In this work, we extend the fundamental approach from Basu
+et al. for modeling semantics to the complete communications
+Markov chain. Thus, we model semantics by means of hidden
+random variables and define the semantic communication task
+as the data-reduced and reliable transmission of messages over a
+communication channel such that semantics is best preserved.
+We cast this task as an end-to-end Information Bottleneck
+problem, allowing for compression while preserving relevant
+information most. As a solution approach, we propose the MLbased semantic communication system SINFONY and use it for
+a distributed multipoint scenario: SINFONY communicates the
+meaning behind multiple messages that are observed at different
+senders to a single receiver for semantic recovery. We analyze
+SINFONY by processing images as message examples. Numerical
+results reveal a tremendous rate-normalized SNR shift up to 20
+dB compared to classically designed communication systems.
+Index Terms—Semantic communication, wireless communications, wireless networks, infomax, information bottleneck, information theory, machine learning, task-oriented.
+
+I. I NTRODUCTION
+
+W
+
+HEN Shannon laid the theoretical foundation of the
+research area of communications engineering back in
+1948, he deliberately excluded semantic aspects from the
+system design [1], [2]. In fact, the idea of addressing semantics
+in communications arose shortly after Shannon’s work in [2],
+but it remained largely unexplored. Since then, the design
+focus of communication systems has been on digital errorfree symbol transmission. In recent years, it has become clear
+that semantics-agnostic communication limits the achievable
+efficiency in terms of bandwidth, power, and complexity tradeoffs. Notable examples include wireless sensor networks and
+broadcast scenarios [3].
+Owing to the great success of Artificial Intelligence (AI)
+and, in particular, its subdomain Machine Learning (ML), ML
+tools have been recently investigated for wireless communications [4], [5], [6]. Now, ML with its ability to extract features
+This work was partly funded by the Federal State of Bremen and the
+University of Bremen as part of the Human on Mars Initiative, and by the
+German Ministry of Education and Research (BMBF) under grant 16KISK016
+(Open6GHub).
+The authors are with the Gauss-Olbers Space Technology Transfer Center
+c/o Department of Communications Engineering, University of Bremen,
+28359 Bremen, Germany (e-mail: {beck, bockelmann, dekorsy}@ant.unibremen.de).
+
+appears to be a proper means to realize a semantic design.
+Further, we note that the latter design is supported and possibly
+enabled by the 6G vision of integrating AI and ML on all
+layers of the communications system design, i.e., by an MLnative air interface.
+Motivated by these new ML tools and driven by unprecedented needs of the next wireless communication standard
+6G in terms of data rate, latency, and power, the idea of
+semantic communication has received considerable attention
+[2], [7], [8], [9], [10], [11]. It breaks with the existing classic
+design paradigms by including semantics in the design of
+the wireless transmission. The goal of such a transmission is,
+therefore, to deliver the required data from which the highest
+levels of quality of information may be derived, as perceived
+by the application and/or the user. More precisely, semantic
+communication aims to transmit the meaning of a message
+rather than its exact version and hence allows for compression
+and coding to the actual semantic content. Thus, savings in
+bandwidth, power, and complexity are expected.
+A. Related Work
+The notion of semantic communication traces back to
+Weaver [2] who reviewed Shannon’s information theory [1]
+in 1949 and amended considerations w.r.t. semantic content
+of messages. Oftentimes quoted is his statement that “there
+seem to be [communication] problems at three levels” [2]:
+A. How accurately can the symbols of communication be
+transmitted? (The technical problem.)
+B. How precisely do the transmitted symbols convey the
+desired meaning? (The semantic problem.)
+C. How effectively does the received meaning affect conduct
+in the desired way? (The effectiveness problem.)
+Since then semantic communication was mainly investigated
+from a philosophical point of view, see, e.g., [12], [13].
+The generic model of Weaver was revisited by Bao, Basu et
+al. in [14], [15] where the authors define semantic information
+source and semantic channel. In particular, the authors consider a semantic source that “observes the world and generates
+meaningful messages characterizing these observations” [15].
+The source is equivalent to conclusions, i.e., “models” of the
+world, that are unequivocally drawn following a set of known
+inference rules based on observation of messages. In [14],
+the authors consider joint semantic compression and channel
+coding at Level B with the classic transmission system, i.e.,
+Level A, as the (semantic) channel. In contrast, [15] only
+deals with semantic compression and uses a different definition
+
+2
+
+of the semantic channel (which we will make use of in
+this article): It is equal to the entailment relations between
+“models” and “messages”. By this means, the authors are able
+to derive semantic counterparts of the source and channel coding theorems. However, as the authors admit, these theorems
+do not tell how to develop optimal coding algorithms and
+the assumption of a logic-based model-theoretical description
+leads to “many non-trivial simplifications” [14].
+In [16], the authors follow a different approach in the
+context of Natural Language Processing (NLP) defining semantic similarity as a semantic error measure to quantify the
+distance between the meanings of two words. Based on this
+metric, communication of a finite set of words is modeled as a
+Bayesian game from game theory and optimized for improved
+semantic transmission over a binary symmetric channel.
+Recently, drawing inspiration from Weaver, Bao, Basu et
+al. [2], [14], [15] and enabled by the rise of ML in communications research, Deep Neural Network (DNN) - based NLP
+techniques, i.e., transformer networks, were introduced in Auto
+Encoders (AE) for the task of text and speech transmission
+[17], [18], [19], [20]. The aim of these techniques is to learn
+compressed hidden representations of the semantic content of
+sentences to improve communication efficiency, but exact recovery of the source (text) is the main objective. The approach
+improves performance in semantic metrics, especially at low
+SNR compared to classical digital transmissions.
+Not considering Weaver’s idea of semantic communication
+in particular, the authors in [21] show for the first time that
+task-oriented communications (Level C) for edge cloud transmission can be mathematically formulated as an Information
+Bottleneck (IB) optimization problem. Moreover, for solving
+the IB problem, they introduce a DNN-based approximation
+and show its applicability for the specific task of edge cloud
+transmission. The terminus “semantic information” is only
+mentioned once in [21] referring to Joint Source Channel
+Coding (JSCC) of text from [17] using recurrent neural
+networks. In [17], the authors observe that sentences that
+express the same idea have embeddings that are close together
+in Hamming distance. But they use cross entropy between
+words and estimated words as the loss function and use the
+word error rate as the performance measure, which both do
+not reflect if two sentences have the same meaning but rather
+that both are exactly the same.
+As a result, semantic communication is still a nascent field:
+It remains still unclear what this term exactly means and
+especially its distinction from Joint Source Channel Coding
+(JSCC) [17], [22]. As a result, many survey papers aim to
+provide an interpretation, see, e.g., [7], [8], [9], [10], [11]. We
+will revisit this issue in Sec. II.
+B. Main Contributions
+The main contributions of this article are:
+• Motivated by the approach of Bao, Basu et al. [14],
+[15], we adopt the terminus of a semantic source. Inspired by Weaver’s notion, we bring it to the context
+of communications by considering the complete Markov
+chain including semantic source, communications source,
+
+transmit signal, communication channel, and received
+signal in contrast to both [14], [15]. Further, we also
+extend beyond the example of deterministic entailment
+relations between “models” and “messages” based on
+propositional logic in [14], [15] to probabilistic semantic
+channels.
+• We define the task of semantic communication in the
+sense that we perform data compression, coding, and
+transmission of messages observed such that the semantic
+Random Variable (RV) at a recipient is best preserved.
+Basically, we implement joint source-channel coding of
+messages conveying the semantic RV, but not differentiating between Levels A and B. We formulate the
+semantic communication design either as an Information
+Maximization or as an Information Bottleneck (IB) optimization problem [23], [24], [25].
+– Although the approach pursued here again leads to
+an IB problem as in [21], our article introduces a new
+classification and perspective of semantic communication and different ML-based solution approaches.
+Different from [21], we solve the IB problem maximizing the mutual information for a fixed encoder
+output dimension that bounds the information rate.
+– The publication presented here differs also both in
+the interpretation of what is meant by semantic
+information and in the objective of recovering this
+semantic information from approaches to semantic
+communication presented in the literature like, e.g.,
+[19], [26].
+• Finally, we propose the ML-based semantic communication system SINFONY for a distributed multipoint
+scenario in contrast to [21]: SINFONY communicates
+the meaning behind multiple messages that are observed
+at different senders to a single receiver for semantic
+recovery. Compared to the distributed scenario in [27],
+[28], we include the communication channel.
+• We analyze SINFONY by processing images as an example of messages. Notably, numerical results reveal a
+tremendous rate-normalized SNR shift up to 20 dB compared to classically designed communication systems.
+In the following, we reinterpret Weaver’s philosophical considerations in Sec. II-A paving the way for our proposed
+theoretical framework in Sec. II. Finally, in Sec. III and IV, we
+provide one numerical example of semantic communication,
+i.e., SINFONY, and summarize the main results, respectively.
+II. A F RAMEWORK FOR S EMANTICS
+A. Philosophical Considerations
+Despite the much-renewed interest, research on semantic
+communication is still in its infancy and recent work reveals
+a differing understanding of the word semantics. In this work,
+we contribute our interpretation. To motivate it, we shortly
+revisit the research birth hour of communications from a
+philosophical point of view: Its theoretical foundation was laid
+by Shannon in his landmark paper [1] in 1948.
+He stated that “Frequently the messages have meaning; that
+is they refer to or are correlated according to some system with
+
+3
+
+certain physical or conceptual entities. These semantic aspects
+of communication are irrelevant to the engineering problem.”
+In fact, this viewpoint abstracts all kinds of information one
+may transmit, e.g., oral and written speech, sensor data, etc.,
+and lays also the foundation for the research area of Shannon
+information theory. Thus, it found its way into many other
+research areas where data or information is processed, including Artificial Intelligence (AI) and especially its subdomain
+Machine Learning (ML).
+Weaver saw this broad applicability of Shannon’s theory
+back in 1949. In his comprehensible review of [1], he first
+states that “there seem to be [communication] problems at
+three levels” [2] already mentioned in Sec. I-A. These three
+levels are quoted in recent works, where Level C is oftentimes
+referred to as goal-oriented communication instead [8].
+But we note that in his concluding section, he then questions
+this segmentation: He argues for the generality of the theory at
+Level A for all levels and “that the interrelation of the three
+levels is so considerable that one’s final conclusion may be
+that the separation into the three levels is really artificial
+and undesirable”.
+It is important to emphasize that the separation is rather
+arbitrary. We agree with Weaver’s statement because the most
+important point that is also the focus herein is the definition
+of the term semantics, e.g., by Basu et al. [14], [15]. Note
+that the entropy of the semantics is less than or equal to
+the entropy of the messages. Consequently, we can save
+information rate by introducing meaning or context. In fact, we
+are able to add arbitrarily many levels of semantic details to
+the communication problem and optimize communications for
+a specific semantic background, e.g., an application or human.
+B. Semantic System Model
+1) Semantic Source and Channel: Now, we will define
+our information-theoretic system model of semantic communication. Fig. 1 shows the schematic of our model. We
+assume the existence of a semantic source, described as a
+z ×1
+hidden target multivariate Random Variable (RV) z ∈ MN
+z
+from a domain Mz of dimension Nz distributed according
+to a probability density or mass function (pdf/pmf) p(z).
+To simplify the discussion, we assume it to be discrete and
+memoryless.1
+This approach is similar to that of [14], [15]: In [14], [15],
+the semantic source2 is described by “models of the world”.
+In [15], a semantic channel then generates messages through
+entailment relations between “models” and “messages”. We
+will call these “messages” source signal and define it to be
+1 For the remainder of the article, note that the domain of all RVs M
+may be either discrete or continuous. Further, we note that the definition of
+entropy for discrete and continuous RVs differs. For example, the differential
+entropy of continuous RVs may be negative whereas the entropy of discrete
+RVs is always positive [29]. Without loss of generality, we will thus assume
+all RVs either to be discrete or to be continuous. In this work, we avoid
+notational clutter by using the expected value operator: Replacing the integral
+by summation over discrete RVs, the equations are also valid for discrete RVs
+and vice versa.
+2 Note that in [15] the semantic information source is defined as a tuple
+(z, s, p(z, s), L). In this original notation, z is the model, s the message,
+p(z, s) the joint distribution of z and s, and L is the deterministic formal
+language.
+
+s ×1
+as it is usually observed and enters the
+a RV s ∈ MN
+s
+communication system. In classic Shannon design, the aim is
+to reconstruct the source s as accurately as possible at the
+receiver side. Further, we note that the authors in [15] considered the example of a semantic channel with deterministic
+entailment relations between z and s based on propositional
+logic. In this article, we go beyond this assumption and consider probabilistic semantic channels modeled by distribution
+p(s|z) that include the entailment in [15] as special cases, i.e.,
+p(s|z) = δ(s−f (z)) where δ(·) is the Dirac delta function and
+f (·) is any generic function. Our viewpoint is motivated by the
+recent success of pattern recognition tools that advanced the
+field of AI in the 2010s and may be used to extract semantics
+[5].
+Our approach also extends models as in [19]. There, the
+authors design a semantic communication system for the
+transmission of written language/text similar to [17] using
+transformer networks. In contrast to our work, [19] does not
+define meaning as RV z. The objective in [19] is to reconstruct
+s (sentences) as well as possible, rather than the meaning (RV
+z) conveyed in s. Optimization is done w.r.t. to a loss function
+consisting of two parts: Cross entropy between language input
+s and output estimate ŝ, as well as a scaled mutual information
+term between transmit signal x and receive signal y. After
+optimization, the authors measure semantic performance by
+some semantic metric L(s, ŝ).
+We now provide an example to explain what we understand
+under a semantic source z and channel p(s|z): Let us assume
+a biologist who has an image of a tree. The biologist wants to
+know what kind of tree it is by interpreting the observed data
+(image). In this case, the semantic source z is a multivariate
+RV composed of a categorical RV with M tree classes. For
+any realization (sample value) zi of the semantic source, the
+semantic channel p(s|z) then outputs with some probability
+one image si of a tree conveying characteristics of z, i.e., its
+meaning. Note that the underlying meaning of the same sensed
+data (message) can be different for other recipients, e.g.,
+humans or tasks/applications, i.e., in other semantic contexts.
+Imagine a child, i.e., a person with different characteristics
+(personality, expertise, knowledge, goals, and intentions) than
+the biologist, who is only interested if he/she can climb up this
+tree or whether the tree provides shade. Thus, we include the
+characteristics of the sender and receiver in RV z and consider
+it directly in compression and encoding.
+Compared to [14], we, therefore, argue that we also include
+level C by semantic source and channel since context can
+be included on increasing layers of complexity. First, a RV
+z1 might capture the interpretation, like the classification of
+images or sensor data. Moving beyond the first semantic layer,
+then a RV z2 might expand this towards a more general goal,
+like keeping a constant temperature in power plant control. In
+fact, we can add or remove context, i.e., semantics and goals,
+arbitrarily often according to the human or application behind,
+and we can optimize the overall (communication) system w.r.t.
+z1 , z2 , . . . , zi , respectively.
+As a last remark, we note that we basically defined probabilistic semantic relationships, and it remains the question of
+how exactly they might look. In our example, the meaning
+
+4
+
+pθ (y|s)
+Semantic Source
+
+z
+
+z ∼ p(z)
+
+Semantic Channel
+
+Encoder
+
+s
+
+x
+
+pθ (x|s) = δ(x − µθ (s))
+
+p(s|z)
+
+Communication
+Channel p(y|x)
+y
+Semantic
+
+z
+
+Interpretation
+
+Classic Decoder
+
+s
+
+p(z|s)
+
+Estimate ẑ
+
+z
+
+pθ (s|y)
+
+Semantic Decoder
+qφ (z|y)
+
+Fig. 1. Block diagram of the considered semantic system model.
+
+of the images needs to be labeled into real-world data pairs
+{si , zi } by experts/humans, since image recognition lacks
+precise mathematical models. This is also true for NLP [19]:
+How can we measure if two sentences have the same meaning,
+i.e., how does the semantic space look like? In contrast, in
+[15], the authors are able to solve their well-defined technical
+problem (motion detection) by a model-driven approach. We
+can thus distinguish between model and data-driven semantics,
+which both can be handled within Shannon’s information
+theory.
+2) Semantic Channel Encoding: After the semantic source
+and channel in Fig. 1, we extend upon [14] by differentiating between “message”/source signal s and transmit signal
+Tx ×1
+. Our challenge is to encode the source signal
+x ∈ MN
+x
+s onto the transmit signal vector x for reliable semantic
+communication through the physical communication channel
+Rx ×1
+is the received signal vector. We
+p(y|x), where y ∈ MN
+y
+assume the encoder pθ (x|s) to be parametrized by a parameter
+vector θ ∈ RNθ ×1 . Note that pθ (x|s) is probabilistic here,
+but assumed to be deterministic in communications with
+pθ (x|s) = δ(x − µθ (s)) and encoder function µθ (s).
+In summary, in contrast to both [14], [15], we consider
+the complete Markov chain z ↔ s ↔ x ↔ y including
+semantic source z, communications source s, transmit signal
+x and receive signal y. By this means, we distinguish from
+[15] which only deals with semantic compression, and [14]
+which is about joint semantic compression and channel coding
+(Level B). In [14], the authors consider the classic transmission
+system (Level A) as the (semantic) channel (not to be confused
+with the definition of the semantic channel in [15] which we
+make use of in this publication).
+At the receiver side, one approach is maximum a posteriori
+decoding w.r.t. RV s that uses the posterior pθ (s|y), being
+deduced from prior p(s) and likelihood pθ (y|s) by application
+of Bayes law. Based on the estimate of s, then the receiver
+interprets the actual semantic content z by p(z|s).
+Another approach we propose is to include the semantic
+hidden target RV z into the design by processing pθ (z|y). If
+
+the calculation of the posterior is intractable, we can replace
+pθ (z|y) by the approximation qφ (z|y), i.e., the semantic decoder, with parameters φ ∈ RNφ ×1 . We expect the following
+benefit: We assume the entropy H (z) = Ez∼p(z)[− ln p(z)]
+of the semantic RV z, i.e., the actual semantic uncertainty or
+information content, to be less or equal to the entropy H (s)
+of the source s, i.e., H (z) ≤ H (s). There, Ex∼p(x) [f (x)]
+denotes the expected value of f (x) w.r.t. both discrete or
+continuous RVs x. Consequently, since we would like to
+preserve the relevant, i.e., semantic, RV z rather than s, we can
+compress more s.t. preserving z conveyed in s. Note that in
+semantic communication the relevant variable is z, not s. Thus,
+processing pθ (s|y) without taking z into consideration resembles the classical approach. Instead of using (and transmitting)
+s for inference of z, we now want to find a compressed
+representation y of s containing the relevant information about
+z.
+C. Semantic Communication Design via Infomax Principle
+After explaining the system model and the basic components, we are able to approach a semantic communication
+system design: We first define an optimization problem to
+obtain the encoder pθ (x|s) following the Infomax principle
+from an information theoretic perspective [29]. Thus, we like
+to find the distribution pθ (x|s) that maps s to a representation
+x such that most information of the relevant RV z is included
+in y, i.e., we maximize the Mutual Information (MI) I (z; y)
+w.r.t. pθ (x|s) [30]:
+arg max Iθ (z; y)
+
+(1)
+
+pθ (x|s)
+
+
+
+pθ (z, y)
+=arg max Ez,y∼pθ (z,y) ln
+p(z)pθ (y)
+pθ (x|s)
+
+(2)
+
+=arg max H (z) − H (pθ (z, y), pθ (z|y))
+
+(3)
+
+pθ (x|s)
+
+=arg max Ez,y∼pθ (z,y) [ln pθ (z|y)] .
+pθ (x|s)
+
+(4)
+
+5
+
+There, H (p(x), q(x)) = Ex∼p(x)[− ln q(x)] is the cross entropy between two pdfs/pmfs p(x) and q(x). Note independence from θ in H (z) and dependence in pθ (z|y) and
+pθ (z, y) through the Markov chain z → s → y. It is worth
+mentioning that we so far have not set any constraint on the
+variables we deal with. Hence, the form of pθ (y|s) has to be
+constrained to avoid learning a trivial identity mapping y = s.
+We indeed constrain the optimization by our communication
+channel p(y|x) we assume to be given.
+If the calculation of the posterior pθ (z|y) in (4) is intractable, we are able to replace it by a variational distribution qφ (z|y) with parameters φ. Similar to the transmitter,
+DNNs are usually proposed [19], [31] for the design of the
+approximate posterior qφ (z|y) at the receiver. To improve
+the performance complexity trade-off, the application of deep
+unfolding can be considered, a model-driven learning approach
+that introduces model knowledge of pθ (s, x, y, z) to create
+qφ (z|y) [6], [32]. With qφ (z|y), we are able to define a
+Mutual Information Lower BOund (MILBO) [30] similar to
+the well-known Evidence Lower BOund (ELBO) [5]:
+
+To the end, maximization of the MILBO w.r.t. θ and φ
+balances maximization of the mutual information Iθ (z; y)
+and minimization of the Kullback-Leibler (KL) divergence
+DKL (pθ (z|y) ∥ qφ (z|y)). The former objective can be seen
+as a regularization term that favors encoders with high mutual
+information, for which decoders can be learned that are close
+to the true posterior.
+D. Classical Design Approach
+If we consider classical communication design approaches,
+we would solve the problem
+arg max I (s; y)
+
+(14)
+
+pθ (x|s)
+
+which relates to Joint Source Channel Coding (JSCC). There,
+the aim is to find a representation x that retains a significant
+amount of information about the source signal s in y. Again,
+we can apply the lower bound (8). In fact, bounding Eq. (14)
+by (8) shows that approximate maximization of the mutual
+information justifies the minimization of the cross entropy in
+the Auto Encoder (AE) approach [4] oftentimes seen in recent
+wireless communication literature [4], [22], [17].
+
+Iθ (z; y) ≥ Ez,y∼pθ (z,y) [ln qφ (z|y)]
+
+
+= Ey∼pθ (y) Ez∼pθ (z|y) [ln qφ (z|y)]
+
+(6)
+
+= − Ey∼pθ (y) [H (pθ (z|y), qφ (z|y))]
+
+(7)
+
+E. Information Bottleneck View
+
+= −LCE
+θ,φ .
+
+(8)
+
+It should be stressed that we have not set any constraints on
+the variables in the Infomax problem so far. However, in many
+applications, compression is needed because of the limited
+information rate. Therefore, we can formulate an optimization
+problem where we like to maximize the relevant information
+Iθ (z; y) subject to the constraint to limit the compression rate
+Iθ (s; y) to a maximum information rate IC :
+
+(5)
+
+The lower bound holds since −H (pθ (z, y), pθ (z|y)) itself is a lower bound of the expression in (3) and
+Ez,y∼pθ (z,y) [ln pθ (z|y)/ ln qφ (z|y)] ≥ 0. Now, we can calculate optimal values of θ and φ of our semantic communication
+design by minimizing the amortized cross entropy LCE
+θ,φ in (7),
+i.e., marginalized across observations y [6].
+Thus, the idea is to learn parametrizations of the transmitter
+discriminative model and of the variational receiver posterior,
+e.g., by Auto Encoders (AEs) or reinforcement learning. Note
+that in our semantic problem (1), we do not auto encode the
+hidden z itself, but encode s to obtain z by decoding. This
+can be seen from Fig. 1 and by rewriting the amortized cross
+entropy (7), (8):
+LCE
+θ,φ = Ey∼p(y) [H (pθ (z|y), qφ (z|y))]
+
+(9)
+
+= Es,x,y,z∼pθ (s,x,y,z) [− ln qφ (z|y)]
+(10)
+
+
+
+= Es,z∼p(s,z) Ex∼pθ (x|s) Ey∼p(y|x) [− ln qφ (z|y)] .
+We can further prove the amortized cross entropy to be
+decomposable into
+
+arg max Iθ (z; y)
+
+s.t.
+
+Iθ (s; y) ≤ IC .
+
+(15)
+
+pθ (x|s)
+
+Problem (15) is called the Information Bottleneck (IB) problem [8], [23], [33], [34]. The IB method introduced by Tishby
+et al. [23] has been the subject of intensive research for years
+and has proven to be a suitable mathematical/informationtheoretical framework for solving numerous problems - also in
+wireless communications [35], [36], [24], [25]. Note that we
+aim for an encoder that compresses s into a compact representation x for discrete RVs by clustering and for continuous
+RVs by dimensionality reduction.
+To solve the constrained optimization problem (15), we can
+use Lagrangian optimization and obtain
+arg max Iθ (z; y) − βIθ (s; y)
+
+(16)
+
+pθ (x|s)
+
+LCE
+θ,φ
+
+= Ey∼pθ (y) Ez∼pθ (z|y) [− ln qφ (z|y) + ln pθ (z|y)
+
+− ln pθ (z|y)]
+= Ey∼pθ (y) [DKL (pθ (z|y) ∥ qφ (z|y))] +
+
+(11)
+
+H (z|y)
+| {z }
+
+=−Iθ (z;y)+H(z)
+
+(12)
+=H (z) − Iθ (z; y) + Ey∼pθ (y) [DKL (pθ (z|y) ∥ qφ (z|y))] .
+| {z } |
+{z
+}
+enc. objective
+
+dec. objective
+
+(13)
+
+with Lagrange multiplier β ≥ 0. The Lagrange multiplier β
+allows defining a trade-off between the relevant information
+Iθ (z; y) and compression rate Iθ (s; y), which indicates the
+relation to rate distortion theory [24]. With β = 0, we have
+the InfoMax problem (1) whereas for β → ∞ we minimize
+compression rate. Calculation of the mutual information terms
+may be computationally intractable, as in the InfoMax problem
+(1). Approximation approaches can be found in [37], [38].
+Notable exceptions include if the RVs are all discrete or
+Gaussian distributed.
+
+6
+
+We note that in [8], [21] the authors already introduced the
+IB problem to task-oriented communications. But [8], [21]
+do not address our viewpoint or classification: We compress
+and channel encode the messages/communications source s
+for given entailment p(s|z), in the sense of a data-reduced
+and reliable communication of the semantic RV z. Basically,
+we implement joint source-channel coding of s s.t. preserving
+the semantic RV z, and we do not differentiate between Levels
+A and B as indicated by Weaver’s notion outlined in Sec. I-A.
+Indeed, we draw a direct connection to IB compared to related
+semantic communication literature [17], [19], [31] that so far
+only included optimization with terms reminiscent of the IB
+problem.
+This article does not only distinct itself on a conceptual, but
+also on a technical level from [21], [28]: We follow a different
+strategy to solve (15).
+First, using the data processing inequality [39], we see
+that the compression rate is upper bounded by the mutual
+information of the encoder Iθ (s; x) and that of the channel
+I (x; y):
+Iθ (s; y) ≤ min {Iθ (s; x) , I (x; y)} .
+
+(17)
+
+In case of negligible encoder compression Iθ (s; x) > I (x; y),
+the channel becomes the limiting factor of information rate.
+For example, with a deterministic continuous mapping x =
+µθ (s), this is true since Iθ (s; x) → ∞. Using the chain
+rule of mutual information [39], we see that this upper bound
+on compression rate grows with the dimension of x, i.e., the
+number of channel uses NTx :
+Iθ (s; y) ≤ I (x; y) =
+
+NTx
+X
+n=1
+
+I (xn ; y|xn−1 , . . . , x1 ) .
+{z
+}
+|
+
+(18)
+
+≥0
+
+Assuming y to be conditional dependent on xn given
+xn−1 , . . . , x1 , i.e., p(y|xn , . . . , x1 ) ̸= p(y|xn−1 , . . . , x1 )
+being, e.g., true for an AWGN channel, it is
+I (xn ; y|xn−1 , . . . , x1 ) > 0 [39] and the sum in (18)
+indeed strictly increases. Replacing y in I (x; y) of (18) by
+s, the result also holds for encoder compression Iθ (s; x),
+respectively. Hence, increasing the encoder output dimension
+NTx , we can increase the possible compression rate Iθ (s; y).
+Interchanging x and y in (18), we see that the same holds
+for the receiver input dimension NRx .
+Further, the mutual information of the channel and thus the
+compression rate are upper bounded by channel capacity:
+Iθ (s; y) ≤ I (x; y) ≤
+
+max
+
+I (x; y) = C .
+
+(19)
+
+p(x);E[|xn |2 ]≤1
+
+For example,with an AWGN channel, we have C = NTx /2 ·
+ln 1 + 1/σn2 again increasing with NTx .
+Now, let us assume the RVs to be discrete so that H (x|s) ≥
+0. Indeed, this is true if the RVs are processed discretely
+with finite resolution on digital signal processors, as in the
+numerical example of Sec. III. As long as Iθ (s; x) < C, all
+information of the discrete RVs can be transmitted through
+the channel with arbitrary low error probability according to
+Shannon’s channel coding theorem [1]. Then, we can upper
+bound encoder compression Iθ (s; x) and thus compression
+
+rate Iθ (s; y) by the sum of entropies of any output xn [39]
+of the encoder pθ (x|s) - each with cardinality |Mx |:
+NTx
+X
+H (xn )
+Iθ (s; x) = H (x) − H (x|s) ≤ H (x) ≤
+| {z }
+n=1
+
+(20)
+
+≥0
+
+≤ NTx · log2 (|Mx |) .
+(21)
+Note that the entropy sum in (21) grows again with NTx for
+discrete RVs since 0 ≤ H (xn ) ≤ log2 (|Mx |). Moreover, we
+can define an encoder capacity Cθ analogous to channel capacity C in (19) upper bounding encoder compression Iθ (s; x).
+It may be restricted by the chosen (DNN) model pθ (x|s) and
+optimization procedure w.r.t. θ, i.e., the hypothesis class [5].
+In summary, we have proven by (19) and (21) that there
+is an information bottleneck when maximizing the relevant
+information Iθ (z; y) either due to the channel distortion
+I (x; y) or encoder compression Iθ (s; y).
+To fully exploit the available resources, we set constraint IC
+to be equal to the upper bound, i.e., channel capacity C or the
+upper bound on encoder compression rate NTx ·log2 (|Mx |). In
+both cases, the upper bound grows (linearly) with the encoder
+output dimension NTx , and thus we can set the constraint IC
+higher or lower by choosing NTx .
+With fixed constraint IC , we maximize the relevant information Iθ (z; y). By doing so, we derive an exact solution to (15)
+that maximizes Iθ (z; y) for a fixed encoder output dimension
+that bounds the compression rate. As in the InfoMax problem,
+we can exploit the MILBO to use the amortized cross entropy
+LCE
+θ,φ in (9) as the optimization criterion.
+In [21], however, the authors solve the variational IB
+problem of (16) and require tuning of β. Albeit also using the
+MILBO as a variational approximation to the first term in (16),
+they introduce a KL divergence term as an upper bound to
+compression rate Iθ (s; y) derived by DKL (pθ (y) ∥ qϑ (y)) ≥
+0 with some variational distribution qϑ (y) with parameters ϑ
+[37]. Then, the variational IB objective function reads [37]:
+Iθ (z; y) − βIθ (s; y)
+≥ Ez,y∼pθ (z,y) [ln qφ (z|y)]
+− β Es∼p(s) [DKL (pθ (y|s) ∥ qϑ (y))] .
+
+(22)
+
+Moreover, the authors use a log-uniform distribution as the
+variational prior qϑ (y) in [21] to induce sparsity on y so that
+the number of outputs is dynamically determined based on
+the channel condition or SNR, i.e., pθ (y|s, σn2 ). The approach
+additionally necessitates approximation of the KL divergence
+term in (22) and estimation of the noise variance σn2 .
+With our approach we avoid the additional approximations
+and tuning of the hyperparameter β in (22) possibly enabling
+better semantic performance as well as reduced inference and
+training complexity at the cost of full usage of NTx channels
+even when the channel capacity C allows for its reduction.
+We leave a numerical comparison to [21] for future research
+as this is out of the scope of this paper.
+F. Implementation Considerations
+Now, we will provide important implementation considerations for optimization of (8)/(10) and (15). We note that
+
+7
+
+computation of the MILBO leads to similar problems as for
+the ELBO [29]: If calculating the expected value in (10)
+cannot be solved analytically or is computationally intractable
+- as typically the case with DNNs -, we can approximate
+it using Monte Carlo sampling techniques with N samples
+N
+{zi , si , xi , yi }i=1 .
+For Stochastic Gradient Descent (SGD) - based optimization
+like, e.g., in the AE approach, the gradient w.r.t. φ can then
+be calculated by
+∂LCE
+θ,φ
+∂φ
+
+∂
+Ez,s,y∼pθ (y|s)p(s|z)p(z) [− ln qφ (z|y)]
+∂φ
+
+
+∂ ln qφ (z|y)
+= − Ez,s,y∼pθ (y|s)p(s|z)p(z)
+∂φ
+N
+1 X ∂ ln qφ (zi |yi )
+≈−
+N i=1
+∂φ
+=
+
+(23)
+
+∂θ
+
+(25)
+
+∂
+Ez,s,y∼pθ (y|s)p(s,z) [ln qφ (z|y)]
+(26)
+∂θ
+
+
+∂fθ (s, n) ∂ ln qφ (z|y)
+= − Ez,s,n∼p(n)p(s|z)p(z)
+·
+∂θ
+∂y
+(27)
+N
+
+1 X ∂fθ (si , ni ) ∂ ln qφ (zi |yi )
+·
+.
+N i=1
+∂θ
+∂y
+y=fθ (si ,ni )
+(28)
+
+The trick can be easily implemented in ADFs by adding a
+noise layer after (DNN) function x = µθ (s), typically used
+for regularization in ML literature. Then, our loss function
+(10) amounts to
+N
+
+LCE
+θ,φ ≈ −
+
+1 X
+ln qφ (zi |yi = fθ (si , ni )) .
+N i=1
+
+ResNet Feature
+Extractor
+
+ResNet classifier:
+r ∈ RNFeat
+
+qφ (z|s)
+z
+
+Classifier
+
+ẑ
+
+Fig. 2. Central image processing: Based on the images, ResNet extracts
+semantics by classification.
+
+III. E XAMPLE OF S EMANTIC I NFORMATION R ECOVERY
+
+=−
+
+≈−
+
+s ∈ RNx ×Ny ×Nc
+
+p(s|z)
+
+(24)
+
+with N being equal to the batch size Nb and by applica∂
+ln qφ (zi |yi ) =
+tion of the backpropagation algorithm to ∂φ
+∂
+∂φ qφ (zi |yi )/qφ (zi |yi ) in Automatic Differentiation Frameworks (ADF), e.g., TensorFlow and PyTorch. Computation of
+the so-called REINFORCE gradient w.r.t. θ leads to a high
+variance of the gradient estimate since we sample w.r.t. the
+distribution pθ (y|s) dependent on θ [29].
+Leveraging the direct relationship between θ and y in
+ln qφ (z|y) can help reduce the estimator’s high variance. Typically, e.g., in Variational AEs (VAE), the reparametrization
+trick is used to achieve this [29]. Here we can apply it if
+we can decompose the latent variable y ∼ pθ (y|s) into a
+differentiable function y = fθ (s, n) and a RV n ∼ p(n)
+independent of θ. Fortunately, the typical forward model
+of a communication system pθ (y|s) fulfills this criterion.
+Assuming a deterministic DNN encoder x = µθ (s) and
+additive noise n with covariance Σ, we can thus rewrite y into
+fθ (s, n) = µθ (s) + Σ1/2 · n and accordingly the amortized
+cross entropy gradient into:
+∂LCE
+θ,φ
+
+Image:
+Sem. Chan.
+
+(29)
+
+This allows for joint optimization of both θ and φ, as demonstrated in recent works [4], treating unsupervised optimization
+of AEs as a supervised learning problem.
+
+In this section, we provide one numerical example of datadriven semantics to explain what we understand under a
+semantic communication design and to show its benefits: It
+is the task of image classification. In fact, we consider our
+example of the biologist from Sec. II-B who wants to know
+which type the tree is.
+For the remainder of this article, we will thus assume the
+hidden semantic RV to be a one-hot vector z ∈ {0, 1}M ×1
+where all elements are zero except for one element representing one of the M image classes. Then, the semantic channel
+p(s|z) (see Fig. 1) generates images belonging to this class,
+i.e., the source signal s.
+Note that for point-to-point transmission as in [21] we could
+first classify the image based on the posterior qφ (z|s) as
+shown in Fig. 2 and transmit the estimate ẑ (encoded into
+x) through the physical channel since this would be most rate
+or bandwidth efficient.
+But if the image information is distributed across multiple
+agents, all (sub) images may contribute useful information for
+classification. We could thus lose information when making
+hard decisions on each transmitter’s side. In the distributed
+setting, transmission and combination of features, i.e., soft
+information, is crucial to obtain high classification accuracy.
+Further, we note that transmission of full information, i.e.,
+raw image data s, through a wireless channel from each
+agent to a central unit for full image classification would
+consume a lot of bandwidth. This case is also shown in Fig. 2
+assuming perfect communication links between the output of
+the semantic channel and the input of the ResNet Feature
+Extractor.
+Therefore, we investigate a distributed setting shown in
+Fig. 3. There, each of four agents sees its own image
+s1 , . . . , s4 ∼ p(si |z) being generated by the same semantic
+RV z. Based on these images, a central unit shall extract
+semantics, i.e., perform classification. We propose to optimize
+the four encoders pθi (xi |si ) with i = 1, . . . , 4, each consisting
+of a bandwidth efficient feature extractor (ResNet Feature
+Extractor i) and transmitter (Tx i) jointly with a decoder
+qφ (z|y = [y1 , y2 , y3 , y4 ]T ), consisting of a receiver (Rx)
+and concluding classifier (Classifier), w.r.t. cross entropy (10)
+of the semantic labels (see Fig. 3). Hence, we maximize the
+system’s overall semantic measure, i.e., classification accuracy.
+Note that this scenario is different from both [27], [28]: We
+
+8
+
+z
+
+TABLE I
+S EMANTIC INFO RMATION T RA N SMISSION AND R ECOVERY (SINFONY)
+- DNN ARCHITECTURE FOR DISTRIBUTED IMAGE CLASSIFICATION .
+
+Sem. Chan.
+
+Sem. Chan.
+
+Sem. Chan.
+
+Sem. Chan.
+
+p(s1 |z)
+
+p(s2 |z)
+
+p(s3 |z)
+
+p(s4 |z)
+
+Image 1:
+
+Image 2:
+
+s1 ∈ RNx ×Ny ×Nc s2
+pθ1 (x1 |s1 )
+
+pθ2 (x2 |s2 )
+
+ResNet Feature
+Extractor 1
+r1 ∈ RNFeat
+
+Encoder
+
+Component
+
+Layer
+
+Dimension
+
+Image 3:
+
+Image 4:
+
+Input
+
+Image (MNIST, CIFAR10)
+
+(14, 14, 1), (16, 16, 3)
+
+s3
+
+s4
+
+4×
+Feature
+Extractor
+
+Conv2D
+ResNetBlock (2/3 res. un.)
+ResNetBlock (2/3 res. un.)
+ResNetBlock (2/3 res. un.)
+Batch Normalization
+ReLU activation
+GlobalAvgPool2D
+
+(14, 14, 14), (16, 16, 16)
+(14, 14, 14), (16, 16, 16)
+(7, 7, 28), (8, 8, 32)
+(4, 4, 56), (4, 4, 64)
+(4, 4, 56), (4, 4, 64)
+(4, 4, 56), (4, 4, 64)
+(56), (64)
+
+4× Tx
+
+ReLU
+Linear
+Normalization (dim.)
+
+NTx
+NTx
+NTx
+
+Channel
+
+AWGN
+
+NTx
+
+Rx
+
+ReLU (4× shared)
+GlobalAvgPool2D
+
+(2, 2, Nw )
+Nw
+
+Classifier
+
+Softmax
+
+M = 10
+
+pθ3 (x3 |s3 )
+
+pθ4 (x4 |s4 )
+
+ResNet Feature
+
+ResNet Feature
+
+ResNet Feature
+
+Extractor 2
+
+Extractor 3
+
+Extractor 4
+
+r2
+
+r3
+
+r4
+
+Tx 2
+
+Tx 3
+
+Tx 4
+
+x2
+
+x3
+
+x4
+
+Comm.
+
+Comm.
+
+Comm.
+
+Comm.
+
+Channel 1
+
+Channel 2
+y2
+
+Channel 3
+y3
+
+Channel 4
+y4
+
+Tx 1
+x1 ∈ RNTx
+
+y1 ∈ RNRx
+
+Rx
+
+Central Unit:
+Decoder
+qφ (z|y)
+
+Classifier
+
+ẑ
+
+Fig. 3. Semantic INFOrmation traNsmission and recoverY (SINFONY)
+for distributed agents. Each agent extracts features for bandwidth-efficient
+transmission. Based on the received signal, the central unit extracts semantics
+by classification.
+
+include a physical communication channel (Comm. Channel
+i) since we aim to transmit and not only compress. For the
+sake of simplicity, we assume orthogonal channel access. The
+IB is addressed by limiting the number of channel uses, which
+defines the constraint IC in (15).
+As a first demonstration example, we use the grayscale
+MNIST and colored CIFAR10 datasets with M = 10 image
+classes [40]. We assume that the semantic channel generates
+an image that we divide into four equally sized quadrants and
+each agent observes one quadrant s1 , . . . , s4 ∈ RNx ×Ny ×Nc
+where Nx and Ny is the number of image pixels in the xand y-dimension, respectively, and Nc is the number of color
+channels. Albeit this does not resemble a realistic scenario,
+note that we can still show the basic working principle and
+ease implementation.
+A. ResNet
+For the design of the overall system, we rely on a famous
+DNN approach for feature extraction, breaking records at the
+time of invention: ResNet [40], [41]. The key idea of ResNet
+is that it consists of multiple residual units: Each unit’s input
+is fed directly to its output and if the dimensions do not
+match, a convolutional layer is used. This structure allows
+for fast training and convergence of DNNs since the training
+
+error can be backpropagated to early layers through these skip
+connections. From a mathematical point of view, usual DNNs
+have the design flaw that using a larger function class, i.e.,
+more DNN layers, does not necessarily increase the expressive
+power. However, this holds for nested functions like ResNet
+which contain the smaller classes of early layers.
+Each residual unit itself consists of two Convolutional NNs
+(CNNs) with subsequent batch normalization and ReLU activation function, i.e., ρ1 (·) = max(·, 0), to extract translation
+invariant and local features across two spatial dimensions Nx
+and Ny . Color channels like in CIFAR10 add a third dimension
+Nc = 3 and additional information. The idea behind stacking
+multiple layers of CNNs is that features tend to become more
+abstract from early layers (e.g., edges and circles) to final
+layers (e.g., beaks or tires).
+In this work, we use the preactivation version of ResNet
+without bottlenecks from [40], [41] implemented for classification on the dataset CIFAR10. In Tab. I, we show its structure
+for the distributed scenario from Fig. 3. There, ResNetBlock
+is the basic building block of the ResNet architecture. Each
+block consists of multiple residual units (res. un.) and we use 2
+for the MNIST dataset and 3 for the CIFAR10 dataset, which
+means we use ResNet14 and ResNet20, respectively. We arrive
+at the architecture of central image processing from Fig. 2 by
+removing the components Tx, (physical) Channel, and Rx and
+increasing each spatial dimension by 2 to contain all quadrants
+of the original image. For further implementation details, we
+refer the reader to the original work [41].
+B. Distributed Semantic Communication Design Approach
+Our key idea here is to modify ResNet w.r.t. the communication task by splitting it at a suitable point where a
+representation r ∈ RNFeat ×1 of semantic information with lowbandwidth is present (see Fig. 2 and 3). ResNet and CNNs
+in general can be interpreted to extract features: With full
+images, we obtain a feature map of size 8 × 8 × NFeat after
+the last ReLU activation (see Tab. I). These local features are
+
+9
+
+aggregated by the global average pooling layers across the 2
+spatial dimensions into r. Based on these NFeat global features
+in r, the softmax layer finally classifies the image. We note that
+the features contain the relevant information w.r.t. the semantic
+RV z and are of low dimension compared to the original image
+or even its sub-images, i.e., 64 compared to 16 × 16 × 3 = 768
+for CIFAR10.
+Therefore, we aim to transmit each agent’s local features
+ri ∈ RNFeat ×1 (i = 1, . . . , 4) instead of all sub-images si
+and add the component Tx in Tab. I to encode the features
+ri into xi ∈ RNTx ×1 for transmission through the wireless
+channel (see Fig. 3). We note that xi ∈ RNTx ×1 is analog and
+that the output dimension NTx of xi defines the number of
+channel uses per agent/image. Note that the less often we use
+the wireless channel (NTx ), the less information we transmit
+but the less bandwidth we consume, and vice versa. Hence, the
+number of channel uses defines the IB in (15). We implement
+the Tx module by DNN layers. To limit the transmit power
+to one, we constrain the Tx output by the norm along the
+training
+√ batch or the encode vector dimension (dim.), e.g.,
+xi = NTx · x̃i / ∥x̃i ∥2 where x̃i ∈ RNTx ×1 is the output of
+the layer Linear from Tab. I. For numerical simulations, we
+choose all Tx layers to have width NTx .
+At the receiver side, we use a single Rx module only with
+shared DNN layers and parameters φRx for all inputs yi :
+This setting would be optimal if any feature is reflected in
+any sub-image and if the statistics of the physical channels
+are the same. Exploiting the prior knowledge of locationinvariant features and assuming Additive White Gaussian
+Noise (AWGN) channels, this design choice seems reasonable.
+In our experiments, all layers of the Rx module have width
+Nw . A larger layer width Nw is equivalent to more computing
+power.
+The output of the Rx module can be interpreted as a
+representation of the image features ri with index i indicating
+the spatial location. Thus, we have a representation of a feature
+map of size (2, 2, Nw ) that we aggregate across the spatial
+dimension according to the ResNet structure. Based on this
+semantic representation, a softmax layer with 10 units finally
+computes class probabilities qφ (z|y) whose maximum is the
+maximum a posteriori estimate ẑ. In the following, we name
+our proposed approach Semantic INFOrmation TraNsmission
+and RecoverY (SINFONY).
+C. Optimization Details
+We evaluate SINFONY in TensorFlow 2 [42] on the MNIST
+and CIFAR10 datasets. The source code is available in [43].
+We split the dataset into 60k/50k training data and 10k
+validation data samples, respectively. For preprocessing, we
+normalize the pixel inputs to range [0, 1], but we do not use
+data augmentation, in contrast to [40], [41], yielding slightly
+worse accuracy. The ReLU layers are initialized with uniform
+distribution according to He and all other layers according to
+Glorot [44].
+In the case of CIFAR10 classification with central image
+processing and original ResNet, we need to train Nθ + Nφ =
+273, 066 parameters. We like to stress that although we divided
+
+the image input into four smaller pieces, this number grows
+more than four times to 4Nθ + Nφ = 1, 127, 754 with
+NTx = NFeat = 64 for SINFONY. The reason lies in the
+ResNet structure with minor dependence on the input image
+size and that we process at four agents with an additional
+Tx module. Only Nφ = 4, 810 parameters amount to the
+Rx module and classification, i.e., the central unit. We note
+that the number of added Tx and Rx parameters of 33, 560
+and 3, 192 is relatively small. Since the number of parameters
+only weakly grows with Rx layer width Nw in our design, we
+choose Nw = NFeat as the default.
+For optimization of the cross entropy (10) or the loss
+function (29), we use the reparametrization trick from Sec. II-F
+and Stochastic Gradient Descent (SGD) with a momentum of
+0.9 and a batch size of Nb = 64. We add l2 -regularization
+with a weight decay of 0.0001 as in [40], [41]. The learning
+rate of ϵ = 0.1 is reduced to 0.01 and 0.001 after Ne = 100
+and 150 epochs for CIFAR10 and after 3 and 6 for MNIST. In
+total, we train for Ne = 200 epochs with CIFAR10 and for 20
+with MNIST. In order to optimize the transceiver for a wider
+SNR range, we choose the SNR to be uniformly distributed
+within [−4, 6] dB where SNR = 1/σn2 with noise variance σn2 .
+D. Numerical Results
+In the following, we will investigate the influence of specific
+design choices on our semantic approach SINFONY. Then, we
+compare a semantic with a classical Shannon-based transmission approach. The design choices are as follows:
+• Central: Central and joint processing of full image
+information by ResNet classifier, see Fig. 2. It indicates
+the maximum achievable accuracy.
+• SINFONY - Perfect com.: The proposed distributed design SINFONY trained with perfect communication links
+and without channel encoding, i.e., Tx and Rx module,
+but with Tx normalization layer. Thus, the plain and
+power-constrained features are transmitted with NTx =
+NFeat channel uses. It serves as the benchmark since it
+indicates the maximum performance of the distributed
+design.
+• SINFONY - AWGN: SINFONY perfect comm. evaluated with AWGN channel.
+• SINFONY - AWGN + training: SINFONY perfect
+comm. trained with AWGN channel.
+• SINFONY - Tx/Rx (NTx = NFeat ): SINFONY trained
+with channel encoding, i.e., Tx and Rx module, and
+NTx = NFeat channel uses.
+• SINFONY - Tx/Rx (NTx < NFeat ): SINFONY trained
+with channel encoding and NTx < NFeat channel uses for
+feature compression.
+• SINFONY - Classic digital com.: SINFONY - Perfect
+com. with classic digital communications (Huffman coding, LDPC coding with belief propagation decoding, and
+BPSK modulation) as additional Tx and Rx modules. For
+details, see Sec. III-D4.
+• SINFONY - Analog semantic AE: SINFONY - Perfect
+com. with ML-based analog communications (AE for
+any element in ri ) as additional Tx and Rx modules. It
+
+10
+
+100
+Central
+SINFONY
+Perfect com.
+AWGN
+AWGN + training
+Tx/Rx NTx = 56
+Tx/Rx NTx = 14
+
+10−1
+
+10−2
+
+−20
+
+−10
+
+0
+
+10
+
+Central
+SINFONY
+Perfect com.
+AWGN
+AWGN + training
+Tx/Rx NTx = 64
+Tx/Rx NTx = 16
+
+Classification error rate on CIFAR10
+
+Classification error rate on MNIST
+
+100
+
+10−1
+−20
+
+20
+
+−10
+
+SNR
+[dB]
+η
+
+is basically the semantic communication approach from
+[17], [22], [26]. For details, see Sec. III-D5.
+Since meaning is expressed by the RV z, we use classification
+accuracy to measure semantic transmission quality. For illustration in logarithmic scale, we show the opposite of accuracy
+in all plots, i.e., classification error rate.
+1) MNIST dataset: The numerical results of our proposed
+approach SINFONY on the MNIST validation dataset are
+shown in Fig. 4 for Nw = 56. To obtain a fair comparison
+between transmit signals xi ∈ RNTx ×1 of different length
+NTx , we normalize the SNR by the spectral efficiency or rate
+η = NFeat /NTx . First, we observe that the classification error
+rate of 0.5% of the central ResNet unit with full image information (Central) is smaller than that of 0.9% of SINFONY Perfect com.. Note that we assume ideal communication links.
+However, the difference seems negligible considering that the
+local agents only see a quarter of the full images and learn
+features independently based on it.
+With noisy communication links (SINFONY - AWGN),
+the performance degrades especially for SNR < 10 dB, and
+we can avoid degradation just partly by training with noise
+(SINFONY - AWGN + training). Introducing the Tx module
+(SINFONY - Tx/Rx NTx = 56), we further improve classification accuracy at low SNR. If we encode the features from
+NFeat = 56 to only NTx = 14 in the Tx module (SINFONY
+- Tx/Rx NTx = 14) to have less channel uses/bandwidth
+(stronger bottleneck), the error rate is lowest compared to other
+SINFONY examples with non-ideal links for low normalized
+SNR. At high SNR, we observe a small error offset, which
+indicates lossy compression. In fact, our system SINFONY
+learns a reliable semantic encoding to improve the classification performance of the overall system with non-ideal links.
+Every design choice in Tab. I is well-motivated.
+2) CIFAR10 dataset: Comparing these results to the classification accuracy on CIFAR10 shown in Fig. 5, we observe
+a similar behavior. But a few main differences become ap-
+
+10
+
+20
+
+Fig. 5. Classification error rate of different SINFONY examples (distributed
+setting) and central image processing on CIFAR10 as a function of normalized
+SNR.
+100
+Classification error rate on MNIST
+
+Fig. 4. Classification error rate of different SINFONY examples (distributed
+setting) and central image processing on the MNIST validation dataset as a
+function of normalized SNR.
+
+0
+SNR
+[dB]
+η
+
+SINFONY
+Perfect com.
+Tx/Rx NTx = 56
+Tx/Rx NTx = 14
+Tx/Rx NTx = 7
+Tx/Rx NTx = 4
+Tx/Rx NTx = 2
+
+10−1
+
+10−2
+−10
+
+0
+
+10
+
+20
+
+SNR
+[dB]
+η
+
+Fig. 6. Classification error rate of SINFONY on the MNIST validation dataset
+for different rate/channel uses constraints as a function of normalized SNR.
+
+parent: Central performs much better with 12% error rate
+than SINFONY - Perfect com. with 20%. We expect the
+reason to lie in the more challenging dataset with more
+color channels. Further, SINFONY - AWGN + training with
+NTx = NFeat = 64 channel uses runs into a rather high error
+floor. Notably, even SINFONY - Tx/Rx (NTx = 16) with
+fewer channel uses performs better than both SINFONY AWGN and SINFONY - AWGN + training over the whole
+SNR range and achieves channel encoding with negligible loss.
+This means adding more flexible channel encoding, i.e., Tx/Rx
+module, is crucial for CIFAR10.
+3) Channel Uses Constraint: Since one of the main advantages of semantic communication lies in savings of information rate, we also investigate the influence of the number of
+channel uses NTx on MNIST classification error rate shown in
+Fig. 6. From a practical point of view, we fix the information
+
+11
+
+Classification error rate on MNIST
+
+100
+Central image com.
+SINFONY
+Perfect com.
+Tx/Rx NTx = 56
+Classic digital com.
+-RC =0.25, BPSK
+-RC =0.50, BPSK
+-RC =0.25, 16QAM
+Analog semantic AE
+
+10−1
+
+10−2
+
+−10
+
+0
+
+10
+
+20
+
+SNR
+[dB]
+η
+
+Fig. 7. Classification error rate of SINFONY with different kinds of optimized
+Tx/Rx modules and central image processing with digital image transmission
+on the MNIST validation dataset as a function of normalized SNR.
+
+bottleneck by the output dimension NTx and maximize the mutual information Iθ (z; y). Decreasing the number of channel
+uses from NTx = 14 to 2 and accordingly the upper bound
+IC on the mutual information Iθ (s; y), i.e., compression rate,
+from (19) or (21), we observe that the error floor at high
+SNR increases. We assume that, since the channel capacity
+decreases with SNR and NTx , higher compression is required
+for reliable transmission through the channel in the training
+SNR interval. For NTx = 56, almost no error floor occurs
+at the cost of a smaller channel encoding gain. This means
+compression and channel coding are balanced based on the
+channel condition, i.e., training SNR region, to find the optimal
+trade-off to maximize Iθ (z; y), which we can also observe in
+unshown simulations.
+4) Semantic vs. Classic Design: Finally, we compare semantic and classic communication system designs. For the
+classic digital design, we first assume that the images are
+compressed lossless and protected by a channel code for
+transmission and reliable overall image classification by the
+central unit based on qφ (z|s) (Central image com.). We apply
+Huffman encoding to a block containing 100 images si where
+each RGB color entry contains 8 bits.
+For fairness, we also compare to a SINFONY version where
+Tx and Rx modules of Tab. I are replaced by a classic design
+(SINFONY - Classic digital com.): We first compress each
+element of the feature vector ri that is computed in 32-bit
+floating-point precision in the distributed setting SINFONY
+- AWGN to 16-bit. Then, we apply Huffman encoding to a
+block containing 100 feature vectors of length NFeat .
+Further, we use a 5G LDPC channel code implementation
+from [45] with interleaver, rate RC = {0.25, 0.5, 0.25} and
+long block length of {15360, 16000, 15360}, and modulate
+the code bits with {BPSK, BPSK, 16-QAM}. For digital
+image transmission, we use rate RC = 0.25 with block
+length of 15360 and BPSK modulation. At the receiver, we
+assume belief propagation decoding, where the noise variance
+
+is perfectly known for LLR computation.
+The results in Fig. 7 reveal tremendous information rate
+savings for the semantic design with SINFONY: We observe
+an enormous SNR shift of roughly 20 dB compared to the
+classic digital design w.r.t. to both image (Central image com.)
+and feature transmission (SINFONY - Classic digital com.).
+Note that the classic design is already near the Shannon
+limit and even if we improve it by ML we are only able
+to shift its curve by a few dB. The reason may lie in
+overall system optimization with SINFONY w.r.t. semantics
+and analog encoding of x.
+5) SINFONY vs. Analog “Semantic” Autoencoder: To distinguish both influences, we also implemented the approach
+of (14) according to Shannon by analog AEs. The analog
+AE has been introduced by O’Shea and Hoydis in [4]. From
+the viewpoint of semantic communication, it resembles the
+semantic approach from [17], [22], [19], [26] without differentiating between semantic and channel coding and the mutual
+information constraint I (x; y) like in [19]. We trained the AE
+matching the Tx and Rx module in Tab. I with mean square
+error criterion for reliable transmission of the feature vector r
+with SINFONY training settings. The Rx module consists of
+one ReLU layer of width Nw = NTx providing the estimate of
+r. We provide results (SINFONY - Analog semantic AE) in
+Fig. 7: Indeed, most of the shift is due to analog encoding. By
+this means, we further avoid the typical thresholding behavior
+of a classic digital system seen at 14 dB.
+In conclusion, this surprisingly clear result justifies an
+analog “semantic” communications design and shows its huge
+potential to provide bandwidth savings. However, introducing
+the semantic RV z by SINFONY, we can further shift the curve
+by 2 dB and avoid a slightly higher error floor compared to
+the analog “semantic” AE. With expect a larger performance
+gap with more challenging image datasets such as CIFAR10.
+More importantly, the main benefit of SINFONY lies in lower
+training complexity: We avoid separate and possibly iterative
+semantic and communication training procedures.
+IV. C ONCLUSION
+Motivated by the approach of Bao, Basu et al. [14], [15] and
+inspired by Weaver’s notion of semantic communication [2],
+we brought the terminus of a semantic source to the context
+of communications by considering its complete Markov chain.
+We defined the task of semantic communication in the sense
+of a data-reduced and reliable transmission of communications
+sources / messages over a communication channel such that
+the semantic Random Variable (RV) at a recipient is best
+preserved. We formulated its design either as an Information
+Maximization or as an Information Bottleneck optimization
+problem covering important implementations aspects like the
+reparametrization trick and solved the problems approximately
+by minimizing the cross entropy that upper bounds the negative mutual information. With this article, we distinguish
+from related literature [14], [15], [19], [21], [26] in both
+classification and perspective of semantic communication and
+a different ML-based solution approach.
+Finally, we proposed the ML-based semantic communication system SINFONY for a distributed multipoint scenario:
+
+12
+
+SINFONY communicates the meaning behind multiple messages that are observed at different senders to a single receiver
+for semantic recovery. We analyzed SINFONY by processing
+images as an example of messages. Notably, numerical results
+reveal a tremendous rate-normalized SNR shift up to 20 dB
+compared to classically designed communication systems.
+R EFERENCES
+[1] C. E. Shannon, “A Mathematical Theory of Communication,” The Bell
+System Technical Journal, vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[2] W. Weaver, “Recent Contributions to the Mathematical Theory of
+Communication,” in The Mathematical Theory of Communication, 1949,
+vol. 10, pp. 261–281.
+[3] M. Gastpar, B. Rimoldi, and M. Vetterli, “To code, or not to code:
+lossy source-channel communication revisited,” IEEE Trans. Inf. Theory,
+vol. 49, no. 5, pp. 1147–1158, May 2003.
+[4] T. O’Shea and J. Hoydis, “An Introduction to Deep Learning for the
+Physical Layer,” IEEE Trans. on Cogn. Commun. Netw., vol. 3, no. 4,
+pp. 563–575, Dec. 2017.
+[5] O. Simeone, “A Very Brief Introduction to Machine Learning with Applications to Communication Systems,” IEEE Trans. on Cogn. Commun.
+Netw., vol. 4, no. 4, pp. 648–664, Dec. 2018.
+[6] E. Beck, C. Bockelmann, and A. Dekorsy, “CMDNet: Learning a
+Probabilistic Relaxation of Discrete Variables for Soft Detection With
+Low Complexity,” IEEE Trans. Commun., vol. 69, no. 12, pp. 8214–
+8227, Dec. 2021.
+[7] P. Popovski, O. Simeone, F. Boccardi, D. Gündüz, and O. Sahin,
+“Semantic-Effectiveness Filtering and Control for Post-5G Wireless
+Connectivity,” Journal of the Indian Institute of Science, vol. 100, no. 2,
+pp. 435–443, Apr. 2020.
+[8] E. C. Strinati and S. Barbarossa, “6G networks: Beyond Shannon
+towards semantic and goal-oriented communications,” Computer Networks, vol. 190, p. 107930, May 2021.
+[9] Q. Lan, D. Wen, Z. Zhang, Q. Zeng, X. Chen, P. Popovski, and
+K. Huang, “What is Semantic Communication? A View on Conveying
+Meaning in the Era of Machine Intelligence,” Journal of Communications and Information Networks, vol. 6, no. 4, pp. 336–371, Dec. 2021.
+[10] E. Uysal, O. Kaya, A. Ephremides, J. Gross, M. Codreanu, P. Popovski,
+M. Assaad, G. Liva, A. Munari, B. Soret, T. Soleymani, and K. H.
+Johansson, “Semantic Communications in Networked Systems: A Data
+Significance Perspective,” IEEE/ACM Trans. Netw., vol. 36, no. 4, pp.
+233–240, Jul. 2022.
+[11] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener,
+K. K. Wong, and C.-B. Chae, “Beyond Transmitting Bits: Context,
+Semantics, and Task-Oriented Communications,” IEEE J. Sel. Areas
+Commun., vol. 41, no. 1, pp. 5–41, Jan. 2023.
+[12] L. Floridi, “Philosophical Conceptions of Information,” in Formal Theories of Information: From Shannon to Semantic Information Theory
+and General Concepts of Information, ser. Lecture Notes in Computer
+Science, 2009, pp. 13–53.
+[13] W. Hofkirchner, Emergent Information: A Unified Theory of Information
+Framework. World Scientific, 2013, vol. 3.
+[14] J. Bao, P. Basu, M. Dean, C. Partridge, A. Swami, W. Leland, and J. A.
+Hendler, “Towards a theory of semantic communication,” in 2011 IEEE
+Network Science Workshop (NSW), West Point, NY, USA, Jun. 2011,
+pp. 110–117.
+[15] P. Basu, J. Bao, M. Dean, and J. Hendler, “Preserving quality of
+information by using semantic relationships,” Pervasive and Mobile
+Computing, vol. 11, pp. 188–202, Apr. 2014.
+[16] B. Güler, A. Yener, and A. Swami, “The Semantic Communication
+Game,” IEEE Trans. on Cogn. Commun. Netw., vol. 4, no. 4, pp. 787–
+802, Dec. 2018.
+[17] N. Farsad, M. Rao, and A. Goldsmith, “Deep Learning for Joint SourceChannel Coding of Text,” in 2018 IEEE International Conference on
+Acoustics, Speech and Signal Processing (ICASSP), Calgary, Canada,
+Apr. 2018, pp. 2326–2330.
+[18] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep Learning based
+Semantic Communications: An Initial Investigation,” in 2020 IEEE
+Global Communications Conference (GLOBECOM), Tapei, Taiwan,
+Dec. 2020, pp. 1–6.
+[19] ——, “Deep Learning Enabled Semantic Communication Systems,”
+IEEE Transactions on Signal Processing, vol. 69, pp. 2663–2675, 2021.
+
+[20] Z. Weng, Z. Qin, and G. Y. Li, “Semantic Communications for Speech
+Signals,” in 2021 IEEE International Conference on Communications
+(ICC), Virtual Conference, Jun. 2021, pp. 1–6.
+[21] J. Shao, Y. Mao, and J. Zhang, “Learning Task-Oriented Communication
+for Edge Inference: An Information Bottleneck Approach,” IEEE Journal on Selected Areas in Communications, vol. 40, no. 1, pp. 197–211,
+Jan. 2022.
+[22] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep Joint SourceChannel Coding for Wireless Image Transmission,” IEEE Trans. on
+Cogn. Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[23] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” in 37th Annual Allerton Conference on Communication, Control and Computing, Sep. 1999, pp. 368–377.
+[24] S. Hassanpour, T. Monsees, D. Wübben, and A. Dekorsy, “ForwardAware Information Bottleneck-Based Vector Quantization for Noisy
+Channels,” IEEE Trans. Commun., vol. 68, no. 12, pp. 7911–7926, 2020.
+[25] S. Hassanpour, D. Wübben, and A. Dekorsy, “Forward-Aware Information Bottleneck-Based Vector Quantization: Multiterminal Extensions
+for Parallel and Successive Retrieval,” IEEE Trans. Commun., vol. 69,
+no. 10, pp. 6633–6646, Jul. 2021.
+[26] E. Beck, B.-S. Shin, S. Wang, T. Wiedemann, D. Shutin, and A. Dekorsy, “Swarm Exploration and Communications: A First Step towards
+Mutually-Aware Integration by Probabilistic Learning,” Electronics,
+vol. 12, no. 8, p. 1908, Apr. 2023.
+[27] I. E. Aguerri and A. Zaidi, “Distributed Variational Representation
+Learning,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43, no. 1, pp.
+120–138, Jan. 2021.
+[28] J. Shao, Y. Mao, and J. Zhang, “Task-Oriented Communication for Multidevice Cooperative Edge Inference,” IEEE Transactions on Wireless
+Communications, vol. 22, no. 1, pp. 73–87, Jan. 2023.
+[29] O. Simeone, “A Brief Introduction to Machine Learning for Engineers,”
+Foundations and Trends® in Signal Processing, vol. 12, no. 3-4, pp.
+200–431, Aug. 2018.
+[30] P. Vincent, H. Larochelle, I. Lajoie, Y. Bengio, and P.-A. Manzagol,
+“Stacked Denoising Autoencoders: Learning Useful Representations in
+a Deep Network with a Local Denoising Criterion,” Journal of Machine
+Learning Research, vol. 11, no. 110, pp. 3371–3408, 2010.
+[31] M. Sana and E. C. Strinati, “Learning Semantics: An Opportunity for
+Effective 6G Communications,” in 2022 IEEE 19th Annual Consumer
+Communications Networking Conference (CCNC), Virtual Conference,
+Jan. 2022, pp. 631–636.
+[32] N. Farsad, N. Shlezinger, A. J. Goldsmith, and Y. C. Eldar, “Data-Driven
+Symbol Detection Via Model-Based Machine Learning,” in 2021 IEEE
+Statistical Signal Processing Workshop (SSP), Virtual Conference, Jul.
+2021, pp. 571–575.
+[33] Z. Goldfeld and Y. Polyanskiy, “The Information Bottleneck Problem
+and its Applications in Machine Learning,” IEEE Journal on Selected
+Areas in Information Theory, vol. 1, no. 1, pp. 19–38, May 2020.
+[34] A. Zaidi, I. Estella-Aguerri, and S. Shamai (Shitz), “On the Information
+Bottleneck Problems: Models, Connections, Applications and Information Theoretic Views,” Entropy, vol. 22, no. 2, p. 151, Feb. 2020.
+[35] B. M. Kurkoski and H. Yagi, “Quantization of binary-input discrete
+memoryless channels,” IEEE Transactions on Information Theory,
+vol. 60, no. 8, pp. 4544–4552, 2014.
+[36] J. Lewandowsky and G. Bauch, “Information-optimum ldpc decoders
+based on the information bottleneck method,” IEEE Access, vol. 6, pp.
+4054–4071, 2018.
+[37] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep Variational
+Information Bottleneck,” in 5th International Conference on Learning
+Representations (ICLR), Toulon, France, Apr. 2017, pp. 1–19.
+[38] M. I. Belghazi, A. Baratin, S. Rajeswar, S. Ozair, Y. Bengio, A. Courville, and R. D. Hjelm, “MINE: Mutual Information Neural Estimation,”
+in Proc. of the 35th International Conference on Machine Learning
+(PMLR), Stockholm, Sweden, Jun. 2018.
+[39] T. M. Cover and J. A. Thomas, Elements of information theory, 2nd ed.
+Hoboken, N.J: Wiley-Interscience, 2006.
+[40] K. He, X. Zhang, S. Ren, and J. Sun, “Deep Residual Learning for Image
+Recognition,” in 29th IEEE Conference on Computer Vision and Pattern
+Recognition (CVPR), Las Vegas, NV, USA, Jun. 2016, pp. 770–778.
+[41] ——, “Identity Mappings in Deep Residual Networks,” in European
+Conference on Computer Vision 2016 (ECCV), ser. Lecture Notes in
+Computer Science, Amsterdam, Netherlands, Oct. 2016, pp. 630–645.
+[42] M. Abadi et al., “TensorFlow: Large-Scale Machine Learning on
+Heterogeneous Systems,” 2015. [Online]. Available: https://www.
+tensorflow.org/
+
+13
+
+[43] E. Beck, “Semantic Information Transmission and Recovery
+(SINFONY) Software,” Jun. 2023, Zenodo. [Online]. Available:
+https://doi.org/10.5281/zenodo.8006567
+[44] K. He, X. Zhang, S. Ren, and J. Sun, “Delving Deep into Rectifiers:
+Surpassing Human-Level Performance on ImageNet Classification,” in
+IEEE International Conference on Computer Vision (ICCV), Santiago,
+Chile, Dec. 2015, pp. 1026–1034.
+[45] J. Hoydis, S. Cammerer, F. A. Aoudia, A. Vem, N. Binder, G. Marcus,
+and A. Keller, “Sionna: An Open-Source Library for Next-Generation
+Physical Layer Research,” arXiv:2203.11854 [cs, math], Mar. 2022.
+
+Edgar Beck (Graduate Student Member, IEEE)
+received the B.Sc. and M.Sc. degrees in electrical engineering from the University of Bremen, Germany,
+in 2014 and 2017, respectively, where he is currently
+pursuing a Ph.D. degree in electrical engineering
+at the Department of Communications Engineering
+(ANT). His research interests include cognitive radio, compressive sensing, massive MIMO systems,
+semantic communication, and machine learning for
+wireless communications.
+Edgar Beck was a recipient of the OHB Award for
+the best M.Sc. degree in Electrical Engineering and Information Technology
+at the University of Bremen in 2017.
+
+Dr. Carsten Bockelmann (Member, IEEE) received
+Dipl.-Ing. and Ph.D. degrees in electrical engineering from the University of Bremen, Germany, in
+2006 and 2012, respectively. Since 2012, he has been
+a Senior Research Group Leader with the University
+of Bremen, coordinating research activities regarding
+the application of compressive sensing and machine
+learning to communication problems. His research
+interests include massive machine-type communication, ultra-reliable low latency communications and
+industry 4.0, compressive sampling, and channel
+coding.
+
+Prof. Dr. Armin Dekorsy (Senior Member, IEEE)
+received his B.Sc. from the University of Applied
+Sciences Konstanz, his M.Sc. from the University
+of Paderborn, and his Ph.D. from the University of
+Bremen in 2000, all in communications engineering.
+He is distinguished by eleven years of industry
+experience in leading research positions, notably as
+DMTS at Bell Labs and as Research Coordinator
+Europe Qualcomm, and by conducting more than
+50 (inter)national research projects. He is head of
+the Department of Communications Engineering,
+founder and managing director of the Gauss-Olbers Space-TechnologyTransfer-Center, and has been a board member of the Technology Center
+for Informatics and Information Technology (TZI) for the last 10 years. His
+current research focuses on distributed signal processing, compressive sensing, information bottleneck method, semantic communications, and machine
+learning, leading to the development of technologies for 5G/6G, industrial
+radio, and LEO/GEO satellite communications. He is a Senior Member of
+the IEEE Communications and Signal Processing Society and a member of
+the VDE/ITG Expert Committee “Information and System Theory”. He is also
+co-author of the textbook “Nachrichtenübertragung, Release 6, Springer‘, a
+bestseller in the German-speaking world on communication technologies.
+
+

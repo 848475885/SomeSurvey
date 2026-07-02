@@ -1,0 +1,260 @@
+2848                                                                           IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 9, SEPTEMBER 2025
+
+
+
+
+                           Fully Learnable Multi-Rate Quantization for Digital
+                                   Semantic Communication Systems
+                                            Minhoe Kim            and Dong Jin Ji , Member, IEEE
+
+
+   Abstract—We propose ConcreteSC, a digital semantic commu-                        Digital semantic communication systems, while offering
+nication framework that eliminates massive codebooks through                     compatibility with current infrastructure, face unique chal-
+temperature-controlled concrete distributions. Unlike vector                     lenges. A key challenge lies in effectively digitizing the semantic
+quantization (VQ), it offers a fully differentiable solution to
+quantization, allowing end-to-end training even under channel
+                                                                                 information from the encoder model while overcoming the
+noise. A simple masking mechanism further enables single-model,                  gradient flow impediment arising from the non-differentiable
+multi-rate transmission without retraining. Simulation results                   quantization function [6]. Various methods have been proposed
+on ImageNet under Rayleigh and Rician fading demonstrate                         to mitigate the gradient blockage problem arising from the digi-
+that ConcreteSC consistently surpasses VQ-based baselines in                     tization function. For instance, [7] utilized uniform quantization
+structural similarity index (SSIM) and peak signal-to-noise ratio                to digitize the output from the semantic encoder. On the other
+(PSNR). Moreover, computational complexity scales linearly with
+bit length, avoiding the exponential complexity of codebooks.                    hand, [8] trained a multi-layer perception (MLP) structure with
+These advantages highlight ConcreteSC’s robustness, flexibility,                 sigmoid activations and utilized BPSK modulation to transmit
+and reduced overhead for semantic communication in next-                         these bits. Recently, [9], [10] investigated diffusion-model–
+generation wireless systems.                                                     based latency-aware generative semantic communications
+   Index Terms—Machine learning for communications, deep                         and token-based context-aware frameworks under binary-flip
+learning, semantic communications, quantization.                                 channels, further underscoring the need for efficient, fully
+                                                                                 differentiable digitization schemes. Of these methods, Vector
+                                                                                 quantization (VQ) has emerged as a prominent technique for
+                      I. I NTRODUCTION                                           efficient digitization due to the density matching property
+     EMANTIC communications have emerged as a revolu-                            [11], [12]. In VQ-based systems, the continuous semantic
+S    tionary paradigm shift in wireless communication, moving
+beyond the traditional Shannon paradigm of reliable bit
+                                                                                 features are mapped to a finite set of codewords, which are
+                                                                                 then transmitted using digital modulation. While VQ provides
+transmission to prioritize the successful delivery of semantic                   a viable solution for digitization, it suffers from limitations
+meaning [1]. This approach holds immense potential for                           in terms of susceptibility to channel noise and codebook
+enhancing efficiency and user experience, particularly in appli-                 divergence during training [13].
+cations involving image transmission, where conveying the                           This letter proposes ConcreteSC, a new digital semantic
+meaning of the image takes precedence over perfect pixel-                        communication framework that employs concrete distributions
+level reconstruction [2], [3]. This is especially important when                 as its digitization mechanism. Unlike VQ’s abrupt quantization
+considering the increase in image and video traffic over                         of semantic features, concrete distributions provide a contin-
+wireless networks.                                                               uous relaxation of discrete random variables [14], enabling
+   Recent advancements in deep learning (DL) have fueled                         a more gradual and controlled progression from continuous
+the development of semantic communication systems, enabling                      outputs to near-binary bits. We harness a temperature anneal-
+the extraction and transmission of task-relevant semantic                        ing strategy to systematically adjust the “discreteness” level,
+features from source data [4]. These DL-based systems                            ensuring a smooth transition throughout training. Given their
+have demonstrated remarkable capabilities in conveying the                       strong performance in digital channel state feedback [15],
+essence of images, even under challenging channel conditions.                    concrete distributions also show considerable promise for
+However, most existing semantic communication systems for                        semantic communications. Concretely, ConcreteSC offers:
+image transmission rely on analog modulation, which can be                          • Reduced complexity: Concrete distribution-based digitiza-
+incompatible with existing digital communication infrastruc-                           tion eliminates the need for explicit codebooks, resulting
+ture [4], [5].                                                                         in greatly reduced complexity.
+                                                                                    • Enhanced robustness to noise: The continuous nature
+   Received 28 May 2025; accepted 17 June 2025. Date of publication                    of concrete distributions provides a way to incorporate
+19 June 2025; date of current version 11 September 2025. This work was
+supported by the National Research Foundation of Korea (NRF) grant funded
+                                                                                       channel noise during the training process, improving the
+by the Korea government (MSIT) (RS-2024-00333781). The associate editor                resilience of the semantic communication system.
+coordinating the review of this article and approving it for publication was        • Single-model, Multi-rate Quantization: By utilizing a
+S. P. Herath. (Corresponding author: Dong Jin Ji.)
+   Minhoe Kim is with the Department of Electrical and Information
+                                                                                       simple masking scheme during the training process a
+Engineering, Seoul National University of Science and Technology, Seoul                single model can be used for multi-rate transmission,
+01811, Republic of Korea (e-mail: kimminhoe@seoultech.ac.kr).                          greatly reducing the model parameter count.
+   Dong Jin Ji is with the Department of Semiconductor Engineering, Seoul           The remainder of this letter is organized as follows.
+National University of Science and Technology, Seoul 01811, Republic of
+Korea (e-mail: jdj0524@seoultech.ac.kr).                                         Section II describes the conventional VQ-based semantic com-
+   Digital Object Identifier 10.1109/LWC.2025.3581374                            munication systems. Section III provides a detailed description
+               2162-2345 
+                         c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                      and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                      See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:20 UTC from IEEE Xplore. Restrictions apply.
+KIM AND JI: FULLY LEARNABLE MULTI-RATE QUANTIZATION                                                                                                     2849
+
+
+
+
+Fig. 1.   Structure of the proposed ConcreteSC scheme paired with a transformer backbone.
+
+
+of the proposed ConcreteSC. Section IV presents the simula-                      sampling with a continuous, temperature-controlled softmax.
+tion results and analysis, demonstrating the performance gains                   Concretely, the encoder’s real-valued output is mapped into a
+achieved by the proposed system compared to traditional VQ-                      set of logits, each corresponding to a potential bit position.
+based methods. Finally, Section V concludes this letter.                         During forward propagation, these logits are transformed into
+                                                                                 “soft” 0/1 values, enabling smooth end-to-end gradient flow
+         II. C ONVENTIONAL VQ-BASED S EMANTIC                                    and joint optimization of the encoder and decoder. As training
+                       C OMMUNICATION                                            proceeds, we exponentially decrease the softmax temperature,
+                                                                                 pushing the sampled bits closer to strict 0/1. By the end of
+   VQ is a popular method for digitizing semantic features
+                                                                                 training or at inference time, a hard argmax-like operation is
+by mapping each continuous feature vector to its nearest
+                                                                                 applied, yielding fully digital codewords without maintaining
+discrete codeword within a fixed-size codebook. Once these
+                                                                                 a large codebook.
+codewords are assigned unique indices, the transmitter can
+                                                                                    Crucially, this sampling process remains differentiable until
+generate digital bit sequences for reliable transmission using
+                                                                                 the final inference stage, allowing any noise model to be
+standard channel coding and modulation. VQ-based schemes
+                                                                                 injected. The resulting stochastic gradients naturally propagate
+have demonstrated strong performance in compressing and
+                                                                                 through the quantizer, ensuring the network learns robust bit
+reconstructing data under various wireless settings; however,
+                                                                                 representations suited to real-world channel conditions. This
+they typically require a large codebook, whose size grows
+                                                                                 design thus sidesteps the complexity of large codebooks or
+exponentially with the target bit rate, leading to higher memory
+                                                                                 non-differentiable lookups and smoothly adapts to the noise
+requirements and increased complexity. Furthermore, the non-
+                                                                                 statistics encountered during training.
+differentiable nature of the nearest-neighbor assignment can
+impede gradient flow during end-to-end training and make it
+                                                                                 B. Masking-Based Multi-Rate Quantization
+more challenging to incorporate channel impairments directly
+into the optimization process.                                                      After the Gumbel–Softmax quantizer produces an Nmax -
+   VQ-based semantic communication leverages a learned                           bit vector b, we enforce the desired rate by positional
+codebook to digitize the semantic features extracted from                        masking. For each image we draw a target length Nfb ∈
+source data, enabling fully digital transmission through stan-                   {4, 8, . . . , Nmax } uniformly at random. The first Nfb bits are
+dard channel coding and modulation [11], [12]. In this                           kept, while the remaining Nmax − Nfb positions are set to a
+framework, the transmitter’s deep encoder compresses and                         neutral value −1 that blocks gradients. The −1 padding exists
+quantizes continuous feature representations into discrete                       only inside the decoder and is never transmitted. Because low-
+codeword indices, while the receiver’s decoder reconstructs                      index bits are always preserved, the network learns to embed
+the original data from these indices and a shared codebook.                      the most relevant semantics there and push less critical detail
+As demonstrated in [11], [12], this approach can achieve high                    toward bits that are frequently masked.
+compression ratios. However, the non-differentiable vector-                         At inference a single Nfb is fixed: the transmitter sends the
+lookup operation frequently complicates end-to-end training,                     leading Nfb bits, the receiver pads the rest with −1, and the
+and maintaining large codebooks at higher bit rates can                          decoder operates unchanged. Thus ConcreteSC supports any
+introduce substantial memory and computational overhead.                         rate Nfb ≤ Nmax with one model and no codebooks.
+
+                                                                                 C. Overall Structure of ConcreteSC
+                   III. P ROPOSED S CHEME
+                                                                                    The proposed system has three learnable blocks as shown in
+   In this section, we present ConcreteSC, a novel digital
+                                                                                 Fig. 1: (i) a quantization unit in the transmitter that converts
+semantic communication framework designed to address key
+                                                                                 encoder features into Nmax soft bits via a temperature-
+limitations of conventional VQ-based systems. In particular,
+                                                                                 controlled Gumbel–Softmax; (ii) a masking unit that keeps
+ConcreteSC (i) removes the need for an explicit and potentially
+                                                                                 only Nfb < Nmax leading bits to realise the desired rate; and
+massive codebook, (ii) directly incorporates channel noise
+                                                                                 (iii) a padding unit in the receiver that restores the bit-vector
+during training via differentiable sampling, and (iii) supports
+                                                                                 length with a sentinel value before decoding.
+multiple bit rates with a single trained model.
+                                                                                    To demonstrate generality we embed this digitisation mod-
+                                                                                 ule in two semantic backbones–(a) the CNN-based DeepJSCC
+A. Concrete Distribution Based Quantizer                                         model and (b) a Transformer encoder-based model. In both
+  A cornerstone of ConcreteSC is the concrete (Gumbel–                           cases the semantics are learned jointly by the transmitter
+Softmax) distribution [14], which approximates discrete                          (which compresses the image according to its meaning) and
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:20 UTC from IEEE Xplore. Restrictions apply.
+2850                                                                       IEEE WIRELESS COMMUNICATIONS LETTERS, VOL. 14, NO. 9, SEPTEMBER 2025
+
+
+                                                                    TABLE I
+                                                         SSIM P ERFORMANCE C OMPARISON
+
+
+
+
+the receiver (which reconstructs it from the transmitted bits).                              IV. P ERFORMANCE E VALUATION
+Following common end-to-end semantic-communication prac-                         We benchmark ConcreteSC against a conventional VQ
+tice, no separate channel code is used; the neural pair learns                baseline under Rayleigh and Rician (k = 3) fading at
+an implicit joint source–channel code.                                        SNR ∈ {0, 20} dB, evaluating SSIM for each feedback
+      Transmitter: An input image of size (W, H, C) is split into             budget Nfb ∈ {4, 8, 12, 16, 20, 24, 28, 32}. The VQ encoder
+(Npat × Npat ) patches. Each patch is processed by the chosen                 uses 16-dimensional codewords, which delivered the best
+backbone, yielding a feature tensor that the quantization unit                SSIM among {16, 32, 64} dimensions, and a codebook of size
+maps to a length-Nmax bit vector. As the temperature τ is                     2Nfb with the commitment cost fixed at 10. All remaining
+annealed from τinit to τend , these bits become increasingly                  architecture and training hyper-parameters are shared so that
+hard.                                                                         only the quantization method differs. Training runs for 20
+      Rate Control: During training we draw Nfb ∼                             epochs on ImageNet-1k (256 × 256 × 3 images). We adopt
+Unif{4, 8, . . . , Nmax } independently for every image, retain               a temperature schedule of τ : 10 → 0.01 for ConcreteSC;
+the first Nfb bits and set the rest to −1. At inference a single              exploratory runs showed that this combination offers faster
+Nfb is chosen by the link budget and applied identically to all               convergence, more stable training, and higher reconstruction
+patches.                                                                      quality than alternatives such as 10 → 1 or 2 → 0.01, striking
+      Receiver: After demodulation the missing (Nmax − Nfb )                  a good balance between early exploration and a sufficiently
+slots are padded with −1, and the same semantic backbone                      “hard” quantizer at convergence.
+decodes the fixed-length tensor to reconstruct Î ∈ RW ×H ×C .                   We employ a simple 2 × 2 MIMO system with perfect CSI
+   This architecture lets one trained model operate at any                    at the transmitter, using 4-QAM and SVD-based precoding.
+Nfb ≤ Nmax , avoids large VQ codebooks, and can be                            As our focus lies in digitization rather than advanced MIMO
+plugged into different semantic encoders—here DeepJSCC                        strategies, a 2 × 2 setup suffices for demonstration. During
+and Transformer—without modification.                                         ConcreteSC training, we approximate channel impairments via
+                                                                              a binary flip model, thereby injecting stochastic bit errors into
+D. Loss Function and Metrics                                                  the forward pass. A flip probability of 0.01 was chosen since
+   We adopt the structural similarity index (SSIM) to quan-                   it exhibited the best performance across the whole SNR range.
+titatively evaluate the perceptual quality of reconstructed                   By contrast, the VQ-based system relies on discrete codebooks
+images. In particular, the training objective is to minimize                  and does not explicitly simulate channel noise at train time.
+1 − SSIM(I , Î ). This choice encourages preservation of high-                  Table I and II present the SSIM and PSNR scores for
+level structural information rather than raw pixel-level fidelity.            Rayleigh and Rician fading, respectively. Due to out-of-
+At inference, we use the SSIM and peak signal-to-noise                        memory issues beyond 16 bits, the VQ result stops at that limit.
+ratio (PSNR) metric to compare various rates or channel                       At 20 dB, VQ with up to 16 bits shows similar performance
+conditions, ensuring a consistent measure of perceptual and                   to ConcreteSC with miniscule difference in both SSIM and
+absolute quality. By incorporating channel noise directly into                PSNR metrics. Under more adverse 0 dB conditions, for the
+the forward pass, the model learns to optimize 1 − SSIM                       transformer backbone, VQ fails to exceed SSIM = 0.21,
+across a realistic range of distortions and bit rates.                        whereas ConcreteSC reaches notably higher values (e.g., 0.641
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:20 UTC from IEEE Xplore. Restrictions apply.
+KIM AND JI: FULLY LEARNABLE MULTI-RATE QUANTIZATION                                                                                                    2851
+
+
+                                                                    TABLE II
+                                                       PSNR P ERFORMANCE C OMPARISON ( D B)
+
+
+
+
+vs. 0.217 in Rayleigh fading, a threefold gain). In addition, VQ                [2] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+requires separate models for each bit length, while ConcreteSC                      channel coding for wireless image transmission,” IEEE Trans. Cogn.
+                                                                                    Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+scales seamlessly to 32 bits with a single network–yielding a                   [3] H. Zhang, S. Shao, M. Tao, X. Bi, and K. B. Letaief, “Deep learning-
+4× reduction in total model storage compared to maintaining                         enabled semantic communication systems with task-unaware transmitter
+                                                                                    and dynamic data,” IEEE J. Sel. Areas Commun., vol. 41, no. 1,
+separate VQ models per feedback rate.                                               pp. 170–185, Jan. 2023.
+  Regarding computational complexity, ConcreteSC needs                          [4] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+only O(PNfb ) operations for P patches, whereas VQ incurs                           semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+                                                                                    pp. 2663–2675, 2021.
+O(P 2Nfb ) pairwise distances, making VQ impractical as                         [5] Z. Weng, Z. Qin, X. Tao, C. Pan, G. Liu, and G. Y. Li, “Deep learning
+Nfb grows. Empirically, on four RTX 4090 GPUs (256 × 256                            enabled semantic communications with speech recognition and synthe-
+                                                                                    sis,” IEEE Trans. Wireless Commun., vol. 22, no. 9, pp. 6227–6240,
+images, Nfb = 16) ConcreteSC decodes 26 912 img/s versus                            Sep. 2023.
+692 img/s for VQ ( ×39 speed-up). Peak GPU memory usage                         [6] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+during inference likewise drops from 12.7 GB (VQ) to 4.1 GB                         Constellation constrained deep joint source-channel coding,” IEEE J.
+                                                                                    Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Feb. 2022.
+(ConcreteSC), a ×3 saving.                                                      [7] H. Xie and Z. Qin, “A lite distributed semantic communication system
+                                                                                    for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+                                                                                    pp. 142–153, Jan. 2021.
+                        V. C ONCLUSION                                          [8] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding
+   In this letter, we introduced ConcreteSC, a novel dig-                           for sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+                                                                                    vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+ital semantic communication framework that bypasses the                         [9] L. Qiao, M. B. Mashhadi, Z. Gao, C. H. Foh, P. Xiao, and M. Bennis,
+large codebooks required by conventional vector quantization.                       “Latency-aware generative semantic communications with pre-trained
+By leveraging a temperature-controlled concrete distribution,                       diffusion models,” IEEE Wireless Commun. Lett., vol. 13, no. 10,
+                                                                                    pp. 2652–2656, Oct. 2024.
+ConcreteSC enables gradient-based training with end-to-end                     [10] L. Qiao, M. B. Mashhadi, Z. Gao, R. Tafazolli, M. Bennis, and
+differentiability, even in the presence of channel noise. The                       D. Niyato, “Token communications: A unified framework for cross-
+proposed masking strategy further allows a single model to                          modal context-aware semantic communications,” 2025, arXiv:2502.
+                                                                                    12096.
+support multiple bit rates, eliminating the need for separate                  [11] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector quan-
+networks per rate. In our experiments under Rayleigh and                            tized semantic communication system,” IEEE Wireless Commun. Lett.,
+                                                                                    vol. 12, no. 6, pp. 982–986, Jun. 2023.
+Rician fading, ConcreteSC not only achieved up to a threefold                  [12] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+increase in SSIM compared to VQ-based baselines, but also                           communications with masked VQ-VAE enabled codebook,” IEEE Trans.
+demonstrated a ×39 speed-up in inference throughput. These                          Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Feb. 2023.
+                                                                               [13] T. K. S. Flores, M. Medeiros, M. Silva, D. G. Costa, and I. Silva,
+findings highlight ConcreteSC’s practical benefits in terms                         “Enhanced vector quantization for embedded machine learning: A post-
+of robustness, efficiency, and flexibility for next-generation                      training approach with incremental clustering,” IEEE Access, vol. 13,
+semantic communication systems.                                                     pp. 17440–17456, 2025.
+                                                                               [14] C. J. Maddison, A. Mnih, and Y. W. Teh, “The concrete distribution: A
+                                                                                    continuous relaxation of discrete random variables,” in Proc. Int. Conf.
+                            R EFERENCES                                             Learn. Represent., Nov. 2016, pp. 1–20.
+                                                                               [15] D. J. Ji and B. C. Chung, “Concrete feedback layers: Variable-length,
+ [1] X. Luo, H.-H. Chen, and Q. Guo, “Semantic communications: Overview,            bit-level CSI feedback optimization for FDD wireless communica-
+     open issues, and future research directions,” IEEE Wireless Commun.,           tion systems,” IEEE Trans. Wireless Commun., vol. 23, no. 10,
+     vol. 29, no. 1, pp. 210–219, Feb. 2022.                                        pp. 15353–15366, Oct. 2024.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:47:20 UTC from IEEE Xplore. Restrictions apply.
+

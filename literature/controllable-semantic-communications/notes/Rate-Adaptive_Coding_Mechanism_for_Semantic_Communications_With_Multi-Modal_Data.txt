@@ -1,0 +1,1088 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024                                                                                       1385
+
+
+
+
+      Rate-Adaptive Coding Mechanism for Semantic
+         Communications With Multi-Modal Data
+          Yangshuo He , Guanding Yu , Senior Member, IEEE, and Yunlong Cai , Senior Member, IEEE
+
+
+
+   Abstract— Recently, the ever-increasing demand for bandwidth                requests for communication resources will eventually face
+in multi-modal communication systems requires a paradigm shift.                a serious bottleneck. Therefore, as a new paradigm shift,
+Powered by deep learning, semantic communications are applied                  semantic communications [3] are investigated again to reduce
+to multi-modal scenarios to boost communication efficiency and
+save communication resources. However, the existing end-to-end                 the amount of transmitted data irrelevant to the final task.
+neural network (NN) based framework without the channel                           The promising benefits of semantics have inspired vari-
+encoder/decoder is incompatible with modern digital communica-                 ous researchers ever since Shannon information theory. The
+tion systems. Moreover, most end-to-end designs are task-specific              first measure of semantic information based on the logical
+and require re-design and re-training for new tasks, which                     probability of propositions was established by [4]. Reference
+limits their applications. In this paper, we propose a distributed
+multi-modal semantic communication framework incorporating                     [5] further refined this idea by proposing a generic semantic
+the conventional channel encoder/decoder. We adopt NN-based                    communication model in propositional logic. However, these
+semantic encoder and decoder to extract correlated semantic                    historical works only affect messages with logical probability,
+information contained in different modalities, including speech,               which is infeasible in reality. Current studies on semantic
+text, and image. Based on the proposed framework, we further                   communications generally focus on end-to-end learning based
+establish a general rate-adaptive coding mechanism for various
+types of multi-modal semantic tasks. In particular, we utilize                 on deep neural networks (NNs), which leverage the power of
+unequal error protection based on semantic importance, which is                deep learning to extract semantic information from source data
+derived by evaluating the distortion bound of each modality. We                and learn to minimize the negative effects caused by imperfect
+further formulate and solve an optimization problem that aims at               wireless channels. The core ideas of these works are training
+minimizing inference delay while maintaining inference accuracy                an end-to-end NN with manually added channel noise and
+for semantic tasks. Numerical results show that the proposed
+mechanism fares better than both conventional communication                    utilizing task-specific metrics rather than bit rate or BER.
+and existing semantic communication systems in terms of task                   Specifically, the NN encoder extracts semantic information
+performance, inference delay, and deployment complexity.                       from data and the NN decoder utilizes the semantic informa-
+  Index Terms— Semantic communication, task-oriented, multi-                   tion for downstream tasks, including data reconstruction and
+modal fusion, robustness verification problem, unequal error                   inference. The work in [6] first adopted deep learning for joint
+protection.                                                                    source and channel coding (JSCC), in which text data is com-
+                                                                               pressed and recovered via a stacked long short term memory
+                      I. I NTRODUCTION                                         (LSTM) network. Then, the authors in [7] followed this idea
+
+M       ODERN communication systems are developed based
+        on the Shannon information theory [1] to recover
+transmitted messages and use bit rate or bit error rate (BER) as
+                                                                               and implemented JSCC with a convolutional neural network
+                                                                               (CNN) for image transmission. The transformer encoder was
+                                                                               utilized in [8] to better extract the semantic information for
+a key performance metric. With the coming era of connected                     JSCC. To cope with semantic representation, the authors in
+intelligence [2], transmitting the escalated amount of data                    [9] and [10] utilized the information bottleneck theory to
+becomes a huge burden on communication systems. Under the                      minimize the size of semantic features while maximizing the
+conventional Shannon’s framework, the trending solutions are                   relevance between data and task output. Moreover, the authors
+demanding wider and wider bandwidth together with higher                       in [11] leveraged a vector quantized-variational autoencoder
+and higher transmission power. However, the ever-increasing                    to learn a codebook of semantic features, which is shared
+                                                                               by both transmitter and receiver. The authors in [12] further
+  Manuscript received 14 November 2022; revised 17 May 2023 and
+4 November 2023; accepted 18 November 2023. Date of publication                expanded upon the task-oriented concept and proposed a
+23 November 2023; date of current version 19 March 2024. The work of           personalized multi-user semantic communication framework
+Guanding Yu was supported by the National Key Research and Development         for image transmission.
+Program of China under Grant 2018YFB1802302. The work of Yunlong Cai
+was supported in part by the National Natural Science Foundation of China         On the other hand, as the emerging connected intelligence
+under Grant U22A2004. The associate editor coordinating the review of this     in daily life, various networked sensors collect numerous
+article and approving it for publication was L. Schmalen. (Corresponding       multi-modal data from the physical world, thereby driving a
+author: Guanding Yu.)
+  The authors are with the College of Information Science and Elec-            large amount of transmitted data [13]. In conventional commu-
+tronic Engineering, Zhejiang University, Hangzhou 310027, China (e-mail:       nication systems, accurately transmitting numerous data would
+sugarhe@zju.edu.cn; yuguanding@zju.edu.cn; ylcai@zju.edu.cn).                  cause a bottleneck in communication resources. However,
+  Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCOMM.2023.3335977.                                    the aforementioned semantic-aware and task-oriented commu-
+  Digital Object Identifier 10.1109/TCOMM.2023.3335977                         nications show their great potential for processing massive
+                      0090-6778 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                    See https://www.ieee.org/publications/rights/index.html for more information.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1386                                                                           IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+multi-modal data. One main task of semantic communications                           small set and thus re-training is still unavoidable for
+is to merge multi-modal data for further improving the infer-                        other transmission tasks. Furthermore, due to the limited
+ence performance [14], such as human sentiment detection,                            resources of sensor devices, it is impractical to train
+Level 5 autonomous driving, automation control in smart                              complex models with a large number of parameters in
+house, and real-time health care analysis. In such scenarios,                        multi-modal semantic communications.
+semantic information is contained in the multi-modal data.                       In this paper, to deal with the first challenge, we propose
+By integrating the modality-specific features from multi-modal                a distributed multi-modal semantic communication framework
+data and discarding redundant invariant information, the task                 that incorporates the key modules in the conventional physical
+goal of reducing communication overhead can be achieved.                      layer. We utilize the NN-based semantic source encoder while
+In [15], a multi-modal semantic communication framework                       retaining the conventional channel encoder. The semantic
+named DeepSC-VQA was proposed. Based on JSCC system,                          source encoder aims at extracting semantic information from
+DeepSC-VQA processes image and text separately, and fuses                     different modality data and discarding irrelevant and redundant
+semantic information for visual question answering. However,                  data. The following channel encoder protects semantic fea-
+existing multi-modal semantic communications face two main                    tures from imperfect wireless channels. Unlike existing JSCC
+challenges:                                                                   frameworks that utilize black box NNs for joint encoders, our
+   1) First, most existing studies on semantic communications                 design not only effectively corrects errors due to channel noise
+       implement conventional source and channel encoders                     in a more effective and explainable manner but also can be
+       using NNs. The output signals of such NNs are in                       easily implemented on well-established digital communication
+       general continuous values that are incompatible with                   systems.
+       modern digital communication systems. To address such                     Based on the distributed multi-modal semantic communi-
+       a problem, some studies have introduced quantization                   cation framework, we further propose a rate-adaptive coding
+       techniques into NNs. The authors in [16] quantized                     mechanism to address the second challenge. Specifically,
+       the full resolution constellation, which is the output                 we take semantic importance into consideration in channel
+       tensor of the NN, to 64-QAM during the inference                       coding and assign unequal error protection for different seman-
+       phase. Furthermore, the work in [17] adopted the con-                  tic information accordingly. The novelty of the proposed
+       stellation quantization during the feedforward process.                mechanism is twofold. First, the proposed mechanism is
+       Regarding the back-propagation, the zero derivative                    independent of the NN-based semantic encoder and decoder.
+       problem of the quantization function is solved by replac-              The semantic encoder and decoder can be directly imple-
+       ing the hard quantization symbol with a differentiable                 mented with a separable pre-trained multi-modal fusion model
+       soft-max weighted symbol. However, the quantization                    while the aforementioned JSCC approach requires end-to-end
+       value is no longer the optimal result of the NN’s objec-               re-training. Secondly, we leverage the robustness verification
+       tive function. Moreover, such a derivative substitution                problem (RVP) [19] to evaluate the effect of channel cod-
+       approach lacks an intuitive physical interpretation, rely-             ing on semantic task performance. Given the universality of
+       ing solely on a mathematical approximation to enable                   robustness bounds computation, the proposed mechanism can
+       back-propagation. The sub-optimality and lack of a                     be applied to all types of NNs and model inputs. There-
+       clear physical motivation may restrict the maximum                     fore, our proposed design is general to various multi-modal
+       performance of multi-modal fusion.                                     fusion tasks with separable pre-trained NN models, such
+   2) Secondly, most existing studies adopt the end-to-end                    as multi-modal sentiment analysis (MSA) and multi-modal
+       NN for extracting semantic information and mitigating                  emotion recognition.
+       the effect of channel noise. The NN in current seman-                     To summarize, our main contributions are as follows:
+       tic communication studies is optimized jointly with a                     1) Distributed Multi-Modal Semantic Communica-
+       wireless channel for a specific task, instead of directly                     tion Framework: We propose a practical distributed
+       utilizing the existing pre-trained state-of-the-art model                     multi-modal semantic communication framework that
+       for this task. When the semantic communication system                         incorporates channel encoders to be compatible with
+       is required to transmit data for another task or other                        modern communication systems. The NN-based seman-
+       wireless environments, it is needed to re-design and                          tic source encoder can be implemented with existing
+       train an NN or re-train the network with a new wireless                       pre-trained models for different tasks without re-training
+       channel using the pre-trained model. However, it is                           since the encoder is designed independently of the
+       usually infeasible to re-train an end-to-end model in                         physical layer. Additionally, the proposed framework
+       practical multi-modal scenarios from time to time. For                        supports unequal error protection for different modalities
+       example, in a distributed sensor network, it is unrealistic                   according to their semantic significance, which exploits
+       to re-train an encoder with all kinds of decoders. To                         the semantic diversity among different modalities.
+       handle the above limitation, the concept of multi-task                    2) Theoretical Analysis of Semantic Importance: We
+       learning has been introduced into semantic commu-                             utilize RVP to characterize the relation between the input
+       nications in [18]. The authors proposed a multi-task                          perturbation for different modalities and the distortion
+       semantic communication framework named U-DeepSC,                              of semantic output. We consider the input distortion
+       which can serve several tasks with fixed parameters.                          as channel noise and evaluate the semantic inference
+       Nevertheless, U-DeepSC can only serve tasks in a                              performance in realistic wireless channels. Based on the
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                             1387
+
+
+
+
+Fig. 1.   The distributed multi-modal fusion semantic communication framework.
+                                                                                                           (m)
+       noise sensitivity of different modalities, we define the                  where U (m) ∈ Rd            is the semantic information of the
+       semantic importance of different modalities for semantic                  m-th modality and S (m) (·; θS (m) ) is the semantic encoder
+       tasks.                                                                    of the m-th modality with learnable parameters θS (m) .
+   3) Algorithm Development for Rate-Adaptive Coding                             The process of semantic encoding can be decomposed into
+       Mechanism: We present a rate-adaptive coding mech-                        two consecutive procedures: modality embedding and feature
+       anism that jointly considers semantic information and                     extraction. Modal embedding is a feature extraction technique
+       channel conditions to unequally assign coding rates                       that represents modality data as low-dimensional vectors.
+       for different modalities according to their semantic                      In practice, the observed multi-modal data are typically large
+       significance. Specifically, we formulate and solve an                     inputs with different formats, such as text, images, and audio.
+                                                                                                                               (m)
+       optimization problem in multi-modal semantic commu-                       Therefore, the modality-specific module Se is employed to
+       nications, where the coding rates of different modalities                                     (m)
+                                                                                 convert raw data x        into the corresponding modal embed-
+       are optimized to minimize the inference delay under                       ding h(m) . For instance, BERT is a recently developed textual
+       semantic task performance constraints.                                    embedding model, while CNN is widely used for visual
+   The rest of this paper is organized as follows: The dis-                      embeddings. However, the embeddings of various modalities
+tributed multi-modal semantic communication framework is                         would still consume a significant communication overhead.
+                                                                                                                  (m)
+introduced in Section II. Section III analyzes the seman-                        Hence, a feature extractor Sf is used to further process and
+tic importance of different modalities for unequal protec-                       compress the modal embedding to output semantic information
+tion. Section IV further develops the algorithm for the                          of the m-th modality.
+rate-adaptive coding mechanism. Numerical results are pre-                          After that, the rate-adaptive coding mechanism utilizes
+sented in Section V to illustrate the effectiveness of the                       semantic information to evaluate the semantic importance
+proposed rate-adaptive coding mechanism. Finally, conclu-                        of different modalities. Combining with the channel state
+sions are drawn in Section VI.                                                   information (CSI) feedback, the transmission rate for each
+                                                                                 modality is optimized to minimize the inference delay while
+                  II. M ULTI -M ODAL S EMANTIC                                   maintaining semantic task performance. In the rate-adaptive
+                  C OMMUNICATION F RAMEWORK                                      coding mechanism, the semantic features are quantized into a
+   In this section, we first introduce the distributed multi-modal               binary bit stream for physical layer transmission. To simplify
+fusion semantic communication framework for wireless com-                        the following analysis, we normalize semantic features to
+munication systems. As shown in Fig. 1, we mainly focus                          [0, 1] and quantize the floating-point precision features into an
+on multi-modal semantic communications in a distributed                          B-bit fixed-point binary representation, denoted by Ũ (m) . The
+co-inference system. To carry out semantic tasks such as                         bit-level semantic features are then encoded and modulated
+sentiment analysis and emotion recognition, we employ a well-                    into transmission symbols Z (m) , which are transmitted to the
+trained multi-modal fusion model, denoted as F : X → Y.                          server through wireless channels. At the receiver, the channel
+This model F : X → Y is split into semantic source                              decoder decodes the received symbols Ẑ (m) into Û (m) and
+encoders S = S (1) , S (2) , · · · , S (M ) and a semantic source                feeds back CSI to the transmitter for the rate-adaptive coding
+decoder C, which are separately deployed at edge devices                         mechanism. Due to imperfect wireless transmission, Û (m) is
+and the server, respectively. Specifically, the model takes M                    generally not identical with Ũ (m) .
+different modalities collected from edge devices as input X =                       At thenserver, a feature-levelofusion mechanism Cf fuses
+
+  x(1) , x(2) , · · · , x(M ) . The semantic source encoder for the              ÛM = Û (1) , Û (2) · · · , Û (M ) into a joint representation
+m-th modality extracts the semantic information as                               Uf for downstream tasks. Since the semantic information
+                                                                               contained in M modalities is closely related, Cf is capable
+                      U (m) = S (m) x(m) ; θS (m) ,             (1)
+                                                                                 of learning the cross-modality representation based on the
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1388                                                                           IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+significance of each modality. Finally, a semantic task function              different NN tasks with various architectures, and is not just
+Cp takes the fusion output to conduct a specific task. Note that              limited to the multi-modal semantic task in our simulations.
+the semantic decoder consists of both a multi-modal fusion and                   In communication systems, the imperfect wireless chan-
+a task-specific function. The distorted output of the semantic                nel would cause distortions in received signals and degrade
+source decoder is given by                                                    the performance of NNs. Therefore, the RVP is adopted in
+                                                                            [25] to verify the robustness of graph neural networks in
+                       ŷ = C ÛM ; θC ,                     (2)              a decentralized inference scenario. Similarly, we model the
+                                                                              channel noise as the bounded perturbation and leverage RVP in
+where θC is the learnable parameters of semantic decoder C.                   the rate-adaptive coding mechanism. Specifically, the received
+   The NN-based semantic encoder shows great potential                        semantic features UM are distorted by the random channel
+to extract semantic information from the complex seman-                       noise and thus the semantic output ŷ also deviates from the
+tic source. However, the end-to-end NN design lacks error                     original true output y. To ensure the robustness of the semantic
+protection ability against channel noise and is incompatible                  task, we utilize RVP to compute the distortion bound of the
+with modern bit-level communication systems. The proposed                     semantic output, which is a function of input semantic features
+distributed multi-modal semantic communication framework                      and distortion bounds of each modality. The perturbation
+only utilizes NN-based semantic encoders for source coding                    bounds of different modalities are related to transmission error
+and maintains the conventional channel encoder for error pro-                 probabilities that are determined by specific channel coding
+tection. Based on this, we can further propose a rate-adaptive                rates. Consequently, based on this we are able to analyze the
+coding mechanism that jointly considers the semantic encoder                  effect of channel coding rate on semantic task performance.
+and conventional channel coding to minimize inference delay
+while maintaining semantic task accuracy. In the following,
+we present the theoretic analysis and algorithm development                   B. Robustness Bound in Multi-Modal Semantic
+for the proposed rate-adaptive coding mechanism in detail.                    Communications
+                                                                                 We assume that the perturbed semantic feature Û (m) is
+          III. S EMANTIC I MPORTANCE A NALYSIS                                within an Lp ball, i.e. Û (m) ∈ Bp U (m) , ∆(m) , where
+                                                                              Bp (x, ∆) = {x̂ : ∥x̂ − x∥p ≤ ∆} and ∥ · ∥p denotes the Lp
+   In the multi-modal fusion problem, different modalities
+                                                                              norm. Given the perturbed input ÛM , the distorted semantic
+contribute differently to the semantic task. The observed fact
+                                                                              output is bounded by C L and C U , i.e., C L ⪯ ŷ ⪯ C U . We
+reveals that the distortion tolerance for each modality varies.
+                                                                              consider the range of distortion as the robustness bound on
+Specifically, significant modalities are more sensitive to noise,
+                                                                              the output value. Therefore, the maximum robustness bound
+but the trivial ones allow relatively larger distortion without
+                                                                              over all perturbed input is given by
+affecting the overall inference performance of the semantic
+task. As a result, the unequal error protection scheme based                              γ C, UM , ∆M = max C U − min C L ,
+                                                                                                          
+                                                                                                                                        (3)
+on semantic importance can be applied in multi-modal fusion                                                           ÛM          ÛM
+semantic communications. In this section, we first present a                                        
+                                                                              where ∆M = ∆(1) , ∆(2) , · · · , ∆(M ) is the maximum
+brief introduction to RVP. Then we theoretically investigate                  distortion bound of each semantic feature. To compute the
+the robustness bound of the semantic output and formulate                     lower and upper bounds of the semantic output, we adopt the
+the semantic importance.                                                      linear-relaxation framework [20], which models the bound as
+                                                                              a linear function and utilizes linear relaxation for non-linear
+A. Introduction of RVP                                                        operations in the NN. By propagating the bound parameters
+                                                                              over the NN, we can obtain the function of linear lower and
+   Intuitively, if the m-th modality is semantically important
+                                                                              upper bounds of the output w.r.t the semantic features.
+to the semantic task, the perturbation of this modality feature
+                                                                                 There are several methods available for computing the
+will cause a considerable semantic output distortion and even
+                                                                              bound parameters in an NN. Without loss of generality, we rep-
+severely degrade the inference performance. To investigate
+                                                                              resent the NN as a computational graph, similar to TensorFlow
+the relation between input distortion and output distortion,
+                                                                              and PyTorch. This representation enables general robustness
+we leverage the RVP in [19]. Although the NNs are trained
+                                                                              bound analysis for various NN architectures. Moreover, for
+to behave correctly for unseen inputs, it is observed that the
+                                                                              the NN without recurrent structure,1 the corresponding com-
+performance of NNs can be severely degraded by slightly
+                                                                              putational graph can be considered as a directed acyclic
+perturbed inputs. Therefore, RVP has been proposed to provide
+                                                                              graph (DAG) GC = (V, E), where V = {v1 , v2 , · · · , vn }
+formal guarantees for the behavior of NNs. An NN is robust
+                                                                              is the set of computation nodes in C and E = {(vi , vj )}
+if it produces similar outputs for every perturbed input within
+                                                                              is the set of node pairs representing that vi is the input
+a small bound. The authors in [20] introduced the concept
+                                                                              node of vj . Each computation node vi represents an NN
+of robustness bounds in multi-layer perceptron (MLP), which
+                                                                              operation hi = hi (u(i)) ∈ Rdi , where u(i) is the set of
+represent the lower and upper distortion bounds of the neuron
+                                                                              parent nodes for node vi . For simplicity, we represent the
+output with bounded perturbed inputs. RVP has also been
+                                                                              computation function recursively as a function of the input
+utilized to analyze the robustness of various NNs, such as CNN
+[21], RNN [22], LSTM [23], and Transformer [24]. Therefore,                     1 Analysis of the robustness bounds of recurrent NNs such as RNN and
+the following robustness analysis can be generally applied to                 LSTM can also refer to previous studies [22] and [23].
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                               1389
+
+                        
+feature hi = hi ÛM . According to the attribute of DAG,                       be further formulated as
+we can recursively compute the linear lower and upper bounds                                 XM                                                         
+of the output node. Before that, we first give the definition of                γ C, UM , ∆M =   ∆(m)                       A(m),U
+                                                                                                                             n           + A(m),L
+                                                                                                                                            n                 .
+                                                                                                                                     q                q
+linear bounds on computation nodes.                                                                      m=1
+   Definition 1 (Linear bounds on computation nodes [20]):                                                                                                (6)
+For computation node vi in DAG, we define two linear                            Since the perturbation is due to wireless channels with
+functions hL      U
+             i , hi   : Rd1 → Rdi , hL    i   = hL   i   ÛM     =
+                                                                             random noise, the input distortion is positively related to the
+   L M         L    U
+Ai Û + bi , hi = hi Û     U    M           U M
+                                       = Ai Û + bi , such U                   transmission error probability, i.e. ∆(m) ∝ ϵ. Moreover, the
+that hi ⪯ hi ⪯ hi . Ai , Ai ∈ Rdi ×d1 , bL
+       L                U     L   U                      U       di            error probability can be expressed as ϵ = Q(φ), where Q(·)
+                                                    i , bi ∈ R
+are parameters of linear bounds given by the feedforward                       is the Gaussian Q-function and φ is the signal-to-noise-ratio
+function Fi of node vi which takes parameters for every                        (SNR). If the SNR is large enough, the error probability is
+                                              L     U    L   U
+                                                                              approximated to zero, i.e. Q(φ) → 0, φ ≫ 0. Therefore,
+    nodes vj ∈ u(i) as input,
+parent                            i.e., Ai , Ai , bi , bi =                   in the high SNR scenario, the maximum robustness bound
+Fi A L        U     L  U
+        j , Aj , bj , bj ) j∈u(i) .                                            of semantic outputs could be approximated to zero which
+   To gain more insight into the feedforward function Fi ,                     indicates that the distortion bound is tight.
+detailed examples of Fi in various NN architectures can be
+found in previous studies [20], [21], [22], [23], [24]. According
+to Definition 1, the bounds of semantic output are also the                    C. Definition of Semantic Importance
+bounds of the output node vn . Therefore, the lower and upper                     It can be seen from (6) that the maximum robustness
+bounds of the semantic output for perturbed input ÛM are                      bound of semantic output is a weighted summation of input
+respectively given by                                                          distortion bounds, where the weight is the norm of the lower
+                                                                               and upper bound parameters. Clearly, given the same input
+                       C L = hL    L M
+                                        + bL
+                   
+                              n = An Û    n,
+                                                                               perturbation, the modalities with larger parameters would sig-
+                                                                        (4)    nificantly enlarge the robustness bound of the semantic output.
+                        U     U    U M
+                       C = hn = An Û + bU n,
+                                                                               Therefore, these modalities take a crucial role in the semantic
+where the parameters AL      U    L        U                                   task and thus we can formulate the semantic importance of
+                        n , An , bn , and bn can be recursively
+computed from input nodes by the virtue of DAG. Note that the                  the m-th modality as
+parameters for input node v1 are AL        U        L
+                                     1 = A1 = I, b1 = b1 =
+                                                           U
+                                                                                               κ(m) = A(m),U
+                                                                                                       n                    + A(m),L
+                                                                                                                               n              .           (7)
+0. Next, we compute the maximum upper bound and minimum                                                                 q                 q
+lower bound for the semantic output over every perturbed input                    In order to enhance the robustness of semantic inference,
+in order to obtain the maximum robustness bound γ, which                       we should pay more attention to those semantically important
+is the maximum distortion range of ŷ. The maximum upper                       modalities. Intuitively, we can minimize the perturbations of
+bound over all perturbed input ÛM can be computed as                          more important modalities to reduce the distortion bound
+                                                                               in (6). More specifically, we can use lower coding rates for the
+max C U = max AU
+               n Û
+                    M
+                      + bU
+                         n                                                     transmission of important modalities to mitigate the effect of
+ÛM          ÛM
+              M
+                                                                               imperfect wireless channels. Meanwhile, distortions on those
+                                                                               less semantically significant modalities would have relatively
+             X
+         =                 max              A(m),U
+                                             n     Û (m) + b(m),U
+                                                             n
+             m=1 Û
+                    (m) ∈B (U (m) ,∆(m) )
+                          p                                                    less impact on the semantic output by the virtue of small
+             M
+             X                                                                 weights. As a result, high coding rates could be assigned
+         =         ∆(m)      max        A(m),U
+                                         n     J + A(m),U
+                                                    n     U (m)                for those unimportant modalities to improve communication
+                           J∈Bp (0,1)                                          efficiency. In the next section, we will discuss the unequal error
+             m=1
+             + b(m),U                                                          protection for the rate-adaptive coding mechanism in detail.
+                n
+             XM
+         =         (m)
+                   ∆        A(m),U
+                             n              + A(m),U
+                                               n     U (m) + b(m),U
+                                                              n     ,                    IV. R ATE -A DAPTIVE C ODING M ECHANISM
+                                        q
+             m=1                                                                  It is observed that different modalities may play differ-
+                                                                        (5)    ent roles in the semantic task. To improve communication
+                                                                               efficiency, we introduce unequal error protection to the joint
+where ∥ · ∥q is the dual norm of Lp norm meaning that q                        source and channel coding design. Specifically, the proposed
+satisfies 1/p + 1/q = 1. The detailed proof can be found in                    rate-adaptive coding mechanism first characterizes the seman-
+Appendix A.                                                                    tic importance of all M modalities and then encodes each
+   The minimum lower bound can be computed in a similar                        modality feature with different error protection abilities. For
+way. In our distributed multi-modal semantic communication                     simplicity, we only consider the channel coding rate R(m) ,
+framework, the distortion of semantic features is caused by the                which is the most important error protection factor for chan-
+imperfect wireless channel. To jointly design channel coding                   nel code. In other words, under the premise of successful
+and semantic encoder/decoder, we only need to consider the                     semantic task execution, the proposed mechanism allocates
+first term which is related to channel noise. Accordingly, the                 each modality a coding rate for improving communication
+maximum robustness bound of the semantic output in (3) can                     efficiency. In this section, we first formulate the rate-adaptive
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1390                                                                            IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+coding problem and then develop an efficient algorithm to                      to [26], the second constraint specifies the maximal achievable
+solve it.                                                                      rate with error probability ϵ. The last constraint connects the
+                                                                               numerical distortion of each modality and the transmission
+A. Problem Formulation                                                         error probability. It comes from the fact that bit errors in the
+  As aforementioned, the goal of the proposed rate-adaptive                    most significant bits would cause the maximum distortion for
+coding mechanism is to maximize communication efficiency                       B-bit fixed-point quantization.
+under given semantic task robustness requirements. Consider-
+ing that each edge device is capable of sensing and processing                 B. Problem Transformation
+only one type of modality, the inference latency can be                           The problem in (9) is not easy to solve, since the Q function
+expressed as                                                                   does not have an operational closed-form. In the following,
+                                  C
+                         T = max{Tm    U
+                                    + Tm },                             (8)    we approximate it into a convex one. First, we utilize the
+                                m                                              approximation of Q function in [27], as
+          C
+where Tm     is the calculation latency for the m-th edge device                                                       1
+       U
+and Tm is the upload latency for the m-th edge device to                                                 Q(z) ≈               ,              (11)
+                                                                                                                 1 + exp(2az)
+transmit modality features. We assume that the calculation                                      p
+delay is neglectable.2 We simplify the transmission delay for                  where a = 2/π. In the proposed framework, NNs are robust
+the m-th modality as Tm    U
+                               = D(m) /R(m) , where D(m) is the                to distortions caused by the imperfect wireless channel. Thus,
+data size of semantic features and R(m) is the transmission                    it is possible to allow for a relatively higher error probability
+rate. Therefore, the inference latency of the semantic task can                aiming at a high transmission rate, which corresponds to the
+be expressed as T = maxm {D(m) /R(m) }.                                        scenario that the approximation gap of (11) is negligible. Then,
+   In practice, modalities have different data sizes, as well as               we further look into the last constraint in (9). Under the fixed-
+coding rates, which are determined by semantic importance.                     point quantization,
+                                                                                         PK               the maximum distortion given K error
+As a result, the transmission latency for different modalities                 bits is k=1 2−k , which indicates the errors on the K most
+varies greatly. In this case, the inference of semantic tasks may              significant bits. We denote the indices of error bits as eK =
+be severely delayed if the transmission time of one modality is                {i1 , i2 , · · · , iK }. The distortion caused by an error on the
+too high. Meanwhile, other devices must wait for the straggler                 ik -th bit is denoted as d(ik ) = 2−ik . We further assume that
+modality, which causes a considerable waste of time and                        the probability of bit flip satisfies i.i.d. uniform distribution.
+                                                                                                                                           B −1
+                                                                                                                                            
+resources. To achieve high inference efficiency, we formulate                  Thus the probability of K bits error is Pr{eK } = K             ,
+                                                                                           B
+the rate-adaptive coding mechanism as an optimization prob-                    where K          = B!/(K!(B−K)!). Based on this, the expectation
+lem whose objective is to minimize the overall inference delay,                of numerical distortion with K error bits is calculated as
+as                                                                                                             X              K
+                                                                                                                              X
+                     D(m)                                                                         E{dK } =          Pr{eK }         d(ik )
+P1 : min max (m) ,                                                                                             eK             k=1
+      {R(m) }M m R
+                                                                                                                B−1
+                                                                                                                       B
+       s.t. γ C, UM , ∆M ≤ ∆0 ,
+                                                                                                                      X
+                                                                                                                K−1
+                                r                                                                          =     B
+                                                                                                                             2−l
+                                   V (m) −1 (m)             log L                                                K      l=1
+              (m)       (m)
+            R      ≤C       −           Q (ϵ ) log2 e +           ,                                      K
+                                                                                                             1 − 2−B .
+                                                                                                                       
+                                     L                        L                                       =                                     (12)
+               ∀m = 1, 2, · · · , M,                                                                     B
+                         ϵ(m)
+                                                                               Therefore, we can approximate    the distortion constraint in (9)
+                          XB                                                   to ∆(m) ≤ ϵ(m) 1 − 2−B . The approximation gap tends to
+                                                                                                          
+           ∆   (m)
+                     ≤          2−j ,   ∀m = 1, 2, · · · , M,           (9)
+                                                                               be zero and negligible when high precision quantization is
+                         j=1
+                                                                               used.
+where ϵ(m)
+         R ∞ is the error probability,
+                             √          Q−1 (·) is the inverse of                 For convenience, we can equivalently rewrite the objec-
+                     2
+Q(x) = x exp −t /2 / 2πdt, L is the blocklength of the                         tive function as a formulation of maximizing the mini-
+channel code, ∆0 is the bound of semantic task distortion                      mum rate max{R(m) }M minm R(m) /D(m) . To solve the min-
+and C (m) , V (m) are respectively the channel capacity and                    imizing maximum problem in (9), we further transform
+dispersion, given by                                                           the problem equivalently by introducing a new variable
+                                                                               τ = minm R(m) /D(m) and adding a constraint of τ ≤
+                (
+                  C (m) = 12 log2 1 + φ(m) ,
+                                               
+                                           −2               (10)              R(m) /D(m) . Considering the optimal case that the rate and
+                  V (m) = 1 − 1 + φ(m)           .                             distortion for each modality would reach their maximum,
+  The received SNR is given by φ(m) = |h(m) |2 P (m) /Pnoise ,
+                                                                      (m)      we could take equal signs for the last two constraints. By com-
+where h(m) is the channel gain, P (m) is the transmit power,                   bining all the aforementioned steps, P1 can be approximately
+     (m)                                                                       converted to
+and Pnoise = σ (m) W is the noise power. The robustness of the
+semantic task is formulated as the first constraint. According                  P2 :      min        −τ,
+                                                                                       {R(m) }M ,τ
+  2 We neglect the calculation delay in our channel transmission problem
+                                                                                                     R(m)
+because it is not the focus of our research and can be handled by adding a                s.t. τ ≤        ,     ∀m = 1, 2, · · · , M,
+constant to the optimal solution.                                                                    D(m)
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                           1391
+
+
+               M
+               X                                                               this selected constraint indicates that the maximum distortion
+                                                                               bounds of all modality features are ∆(m) ≈ 0.5.
+               m=1
+                                                                                  We further look into the equation in (14) and find that the
+                                       1 − 2−B κ(m)
+                                              
+                         hq                                              i     variable τ can be regarded as the minimum weighted coding
+               1 + exp             8L
+                              πV (m) log22 e
+                                             (C (m) + logL L − R(m) )          rate over all modalities. The inference delay of the semantic
+                                                                               task decreases with the increase of the weighted coding rate.
+               ≤ ∆0 .                                                 (13)     Meanwhile, the increasing weighted coding rate enlarges the
+   We can easily prove that P2 is a standard convex optimiza-                  modality distortion bound, which eventually deteriorates the
+tion problem. The detailed proof can be found in Appendix B.                   semantic task performance. Therefore, the optimal solution
+In the case of the optimal solution τ ∗ , it is apparent that the              τ ∗ balances the tradeoff between the inference delay and
+distortion of each modality reaches the maximum bound and                      inference accuracy.
+all modalities share the same transmission delay. Therefore,
+the constraints in P2 can take the equal signs when τ = τ ∗ .                  C. Algorithm Development
+We use the Lagrange multiplier method to find that the optimal
+solution τ ∗ satisfies                                                            Thus far, we have characterized the semantic importance of
+                                                                               different modalities by leveraging RVP to evaluate the input
+              M
+              X                        a(m)                                    distortion bounds. Furthermore, we have analyzed the semantic
+ f (τ ∗ ) =                                                  − ∆0 = 0,
+                    1 + exp       k (m) (b(m) − D(m) τ ∗ )                     task performance under unequal error protection, based on
+              m=1
+                                                                               which we formulate and solve an optimization problem to
+                                                      (14)
+                                                                               balance the tradeoff between the inference delay and inference
+                ≜ q1 − 2−B κ(m) , b(m) ≜ C (m) + log L/L,                      accuracy. The optimal transmission rate for each modality is
+                          
+where a(m)
+                                                                               derived from the aforementioned problem. In the following,
+and k (m) ≜       8L/πV (m) log22 e. It is difficult to find                   we summarize the proposed algorithm for the rate-adaptive
+a closed-form solution of summation of exponents in (14).                      coding mechanism, as shown in Algorithm 2.
+Consequently, we can solve P2 using the bisection method as
+shown in Algorithm 1.
+                                                                               Algorithm 2 Rate-Adaptive Coding Mechanism
+Algorithm 1 Numerical Algorithm for P2                                         Input: modality features, UM ; semantic source decoder,
+                                                                                   C (·; θC∗ ), output distortion bound ∆0 , channel state infor-
+Input: tolerance, T OL; maximum iterations, N0 ; function,
+               PM                   (m)                                            mation CSI.
+    f (τ ) = m=1 1+exp k(m)a b(m) −D(m) τ − ∆0 .
+                               [   (          )]                               Output: transmission symbols, ZM .
+Output: optimal code rate, {R(m)∗ }M .                                          1: Compute parameters of linear lower and upper bounds,
+                                                                                      L/U      L/U
+ 1: Set counter i ← 1, set endpoint τl ← 0, τr ←                                   An , bn according to [20].
+    maxm C (m) / minm D(m) .                                                    2: Compute the maximum robustness bound of semantic
+ 2: while i ≤ N0 do                                                                output γ as (6).
+ 3:      Set midpoint τm ← a + (b − a)/2.                                       3: Estimate SNR, φ(m) ← CSI and compute C (m) , V (m)
+ 4:      if f (τm ) = 0 or (τr − τl )/2 < T OL then τ ∗ ← τ m                      in (10).
+    BREAK end if                                                                4: Solve the optimal transmission rate {R(m)∗ }M in
+ 5:      Increment counter i ← i + 1.                                              P2 according to Algorithm 1.
+ 6:      if f (τl ) · f (τm ) > 0 then τl ← τm else τr ← τm end                 5: for modality m do
+    if                                                                          6:      Quantize modality feature
+                                                                                                                       into B-bit representation,
+ 7: end while                                                                      Ũ (m) ← Quantize U (m) .
+ 8: R(m)∗ ← D (m) τ ∗ , m = 1, · · · , M .                                      7:      Determine code rate and modulation from transmission
+                                                                                             (m)∗    (m)∗
+                                                                                   rate, Rc , Qm ← R(m)∗ .
+   By observation, we can easily obtain the range of the                        8:      Channel     coding and  modulation, Z (m)            ←
+                                                                                                  (m)    (m)    (m)∗
+                                                              ∗                    Encoder Ũ , Rc , Qm               .
+optimal solution to the optimization
+                                        problem, i.e., τ ∈
+  0, minm C (m) + log L/L /D(m) . When τ = 0, the trans-                        9: end for
+mission rate R(m) = 0 which indicates the infinite length                      10: ZM ← Z (1) , Z (1) , · · · , Z (M ) .
+repetition coding. In this situation, f (0) = −∆0 since the error
+probability tends to be zero. In the case of the upper bound, the
+                                                                                  As shown in Fig. 2, the rate-adaptive coding mechanism
+error probability ϵ(m) = 0.5, which is equivalent to random
+                                                                              adaptively assigns different coding rates for different semantic
+transmission. We assume τmax = C (1) + log L/L /D(1)
+                                                          (1)                  features based on both communication efficiency and semantic
+without loss of generality. Then, we have f (τmax ) = A /2 +                 task performance. We assume that the rate-adaptive coding
+                      r (m)
+PM       (m)                                             (m)
+   m=2 a     / 1+e            − ∆0 from (14), where r           =              mechanism has the knowledge of the well-trained semantic
+                                                                               source decoder C (·; θC∗ ). In each transmission process, the
+  (m)   (m)     (1) (m)      (1)
+                                 
+k      b    − b D /D               ≥ 0. To satisfy the condition
+in the bisection method, we should emphasize the constraint                    semantic source encoders map different modality data into
+on choosing the maximum    PM robustness bound of semantic                     modality features UM . With a restriction on the output dis-
+output, i.e., ∆0 ≤ 0.5 m=1 a(m) . Combining it with (6),                       tortion bound ∆0 and the semantic features UM , the RVP
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1392                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+                                                                                                                TABLE I
+                                                                                             K EY F EATURES OF THE JSCC A PPROACH AND THE
+                                                                                                         P ROPOSED M ECHANISM
+
+
+
+
+Fig. 2.   The proposed rate-adaptive coding mechanism.
+
+
+
+finds the optimal transmission rates for different modali-
+ties. Specifically, based on the modality features and NN
+architecture, we recursively compute the parameters of linear                    In this case, re-training the model for end-to-end inference
+lower and upper bounds as in [20] and thus we compute                            is necessary to deploy the JSCC approach. Thus, the com-
+the maximum robustness bound over all perturbed input γ.                         plexity of JSCC can be computed as O (Nepoch · Nsample · N ),
+After that, we evaluate the SNR according to the CSI, which                      where Nepoch is the number of training epochs needed for
+is estimated by the server. Using the numerical method in                        convergence, Nsample is the number of samples in the training
+Algorithm 1, we solve the optimization problem P2 to find the                    set, and N is the complexity of the NN feedforward process.
+optimal transmission rates for all modalities. For each modal-                   Furthermore, if the JSCC approach leverages fine-tuning solely
+ity, we determine the appropriate coding rate and modulation                     to adjust the semantic decoder, the complexity could be
+order corresponding to the optimal transmission rate. Then, the                  reduced to O (Nepoch · Nsample · NC ). Apparently, both Nepoch
+full precision semantic feature U (m) is quantized into a B-bit                  and Nsample are considerably large which means that it would
+fixed-point binary sequence Ũ (m) , which is finally encoded                    take a massive effort in re-training or fine-tuning the NNs. On
+and modulated into transmission symbols Z (m) .                                  the other hand, the proposed rate-adaptive coding mechanism
+                                                                                 requires no re-training and thus has a much lower complexity.
+D. Discussion                                                                    Hence, it is generally easier to deploy in a realistic system.
+   In the following, we analyze the algorithmic complexity and                      In some instances, pre-trained models may not be available.
+compare several key features to illustrate the different between                 For example, when the existing model is proprietary rather
+our proposed mechanism and the JSCC approach.                                    than open-source, both the proposed mechanism and the JSCC
+   It can be seen that the rate-adaptive coding mechanism                        approach require training the model from scratch. However,
+could be implemented using the existing pre-trained model                        once an initial pre-trained model for the task is established,
+without re-training. As a result, we only need to consider                       it can be seamlessly implemented in various wireless envi-
+the complexity of the optimization problem which consists                        ronments without re-training or fine-tuning. Therefore, the
+of RVP and the bisection method. The complexity of RVP                           proposed mechanism maintains an advantage over JSCC in
+is the complexity of semantic source decoder, denoted as                         terms of implementation complexity. This is because JSCC
+O(NC ), since the RVP computation process is equivalent to                       requires both initial training when no pre-trained model is
+the feedforward process of the NN. Moreover, the complexity                      available, and re-training or fine-tuning for new wireless
+of the bisection method can be computed as O (− log2 T OL),                      channel conditions. The detailed complexity comparison of
+determined by the tolerance. Therefore, the complexity of the                    a specific task will be presented in Section V-B.
+rate-adaptive coding mechanism can be written as                                    To provide a comprehensive view of the rate-adaptive cod-
+                                                                                 ing mechanism and the JSCC approach, we present Tab. I that
+                         O (NC − log2 T OL) .                           (15)     summarizes several key features of both methods.
+   Next, we analyze the complexity of the JSCC approach.
+Since it is impossible to transmit the full precision sig-                                             V. S IMULATION R ESULTS
+nals generated by the JSCC semantic encoder in practical                            In this section, we illustrate the performance of the dis-
+systems, we assume that the binarized signals are encoded                        tributed multi-modal fusion model and validate the effective-
+using channel codes and modulated to transmission symbols.                       ness of the proposed rate-adaptive coding mechanism. We
+Therefore, we neglect the complexity of channel coding in the                    demonstrate the effectiveness of the proposed scheme by
+following comparison. We further assume that there exist well-                   comparing it with the conventional transmission mechanism
+trained NN models for different multi-modal semantic tasks.                      and the NN-based JSCC semantic communication system.
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                           1393
+
+
+
+A. Simulation Setup                                                                                          TABLE II
+                                                                                   S PECIFICATION OF D ISTRIBUTED M ULTI -M ODAL F USION M ODEL
+   1) Datasets: In the simulation, we implement the semantic
+task with MSA [28]. We conduct simulation on two benchmark
+datasets that provide word-aligned utterances with textual,
+visual, and acoustic signals.
+   • CMU-MOSI [29] is the first opinion-level annotated
+      dataset for sentiment and subjectivity analysis in videos.
+      The dataset is a collection of 2,199 online video clips
+      expressing some opinions, each of which is annotated
+      with a sentiment score in the range of [−3, 3]. The
+      dataset is rigorously annotated with labels for subjectivity,
+      sentiment intensity, per-frame and per-opinion annotated
+      visual features, and per-milliseconds annotated audio
+      features.
+   • CMU-MOSEI [30] is the largest MSA dataset to date                         QAM, and 256-QAM. For simplicity, we assume that all edge
+      and is an improvement over MOSI. The dataset consists                    devices transmit with the same power P (m) = P, ∀m ∈
+      of more than 23,400 annotated utterances from more than                  {1, 2, · · · , M }. We set the bound of semantic task distortion to
+      1,000 gender-balanced YouTube speakers.                                  ∆0 = 10−3 , as it balances the need to avoid severe degradation
+Predicting the sentiment score for each utterance can be                       of inference accuracy resulting from an overly large bound
+considered as a regression task. Therefore, we adopt the                       against the need to prevent excessive communication resources
+mean absolute error (MAE) and Pearson correlation (Corr)                       required for each modality from an overly small bound.
+as performance metrics.                                                          4) Baselines: Regarding the baseline schemes in the
+   2) Neural Network Model: We implement the distributed                       simulation, we adopt both the conventional transmission
+multi-modal fusion network based on a state-of-the-art (SOTA)                  approach and the NN-based JSCC approach in semantic
+model for MSA, named MISA [36], and we could directly                          communications.
+use the pre-trained model provided in [36]. To satisfy the                       • Conventional method: This method uses the same NN
+separability of the NN in our distributed multi-modal semantic                      as the source encoder, followed by conventional phys-
+communication framework, some complicated fusion designs                            ical layer transmission. In this approach, we also use
+in the network are discarded and the detailed implementation                        LDPC codes for channel coding but the code rate for
+is shown in Tab. II. We utilize the BERT-base-uncased pre-                          all modalities are the same, i.e., R(m) = Rfixed , ∀m ∈
+                                                    (1)
+trained model [31] for textual embedding Se , which is                              {1, 2, · · · , M }. To make a fair comparison, we assume
+followed by a fully connected (FC) layer textual encoder                            the same transmission delay in both the conventional
+  (1)                                                                               method and our proposed mechanism. Therefore, the rate
+Sf . The model contains 12 Transformer encoder layers. For
+                       (2)
+visual embedding Se , we adopt iMotions’ FACET module,                              adopted in this approach is determined by
+a facial emotion classifier, to extract visual expression features.                                                           D(m)
+                              (3)                                                                       Rfixed = max                       .          (16)
+The acoustic embedding Se is extracted by COVAREP [32]                                                               m   maxm D
+                                                                                                                                     (m)
+                                                                                                                              R(m)
+which is a speech processing toolbox. Two-layer stacked
+LSTM followed by FC layers are used for both visual                               •   JSCC: To perform an end-to-end NN-based coding sys-
+and acoustic encoders. We leverage a one-layer Transformer                            tem, we modify the JSCC scheme in [8]. We add a layer
+encoder in fusion module Cf . The self-attention mechanism is                         simulating a wireless channel in the original multi-modal
+                                                                                                                                       (m)
+capable of learning the correlation between each modality and                         fusion network between semantic encoders SJSCC and
+extracting collaborative semantic information. An FC layer is                         semantic decoder CJSCC . In this approach, we set the
+set as the prediction module Cp .                                                     channel layer as the AWGN channel with SNR =
+   3) Wireless System Settings: We implement a distributed                            0dB. Using the aforementioned pre-trained MISA model,
+multi-modal fusion model in which each edge device is only                            we freeze the semantic encoders and only fine-tune the
+capable of collecting and processing one type of modality. We                         semantic decoder based on the loss function given in
+assume a flat-fading model, where the channel gain remains                            [8]. Then, the model F JSCC is separated and deployed at
+static during the transmission of each inference sample. The                          edge devices and the server respectively. Note that JSCC
+channel gain for each device is independently generated                               views the output tensor of the NN as constellation points.
+according to the Rayleigh distribution. In the scenario of                            Considering the feasibility in communication systems,
+additive white Gaussian noise (AWGN) channel, the channel                             we quantize the double precision signals into the 4096-
+gain satisfies h(m) = 1. We assume perfect CSI for all edge                           QAM constellation, which is large enough to mimic the
+devices, which is estimated by the server through channel                             continuous constellation in [7] and [8].
+reciprocity in TDD systems. In the simulation, we use low-
+density parity-check (LDPC) code for channel coding. The                       B. Performance Analysis
+channel coding is based on 3GPP specification [33]. The                           1) Error-Free Performance: First, we evaluate the per-
+physical layer supports modulations of QPSK, 16-QAM, 64-                       formance of the distributed multi-modal fusion using
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1394                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+
+Fig. 3.   Performance of distributed multi-modal fusion model with the same coding rate for all modalities in the AWGN channel.
+
+
+
+error-free transmission to demonstrate the effectiveness of                                                   TABLE III
+the multi-modal fusion model. Additionally, the error-free                                P ERFORMANCE OF D ISTRIBUTED M ULTI -M ODAL F USION
+                                                                                                 T HROUGH E RROR -F REE T RANSMISSION
+transmission performance could serve as the upper bound for
+simulations in wireless channels, since the full modal semantic
+features U (m) are transmitted to the server noiselessly. We
+choose three existing multi-modal fusion models for the task of
+MSA: MulT [34] which utilizes the self-attention mechanism
+to learn cross-modality representations, ICCN [35] which uses
+the outer product between modalities for canonical correlation
+analysis, and MISA [36] which combines modality invariant
+and specific representations to analyze both characteristic and                  some intricate information extraction methods and modality
+private features.                                                                fusion techniques in the original model without sacrificing
+   The comparative results on the MOSI and MOSEI datasets                        the overall inference performance. Even without sophisticated
+are presented in Tab. III. From the results, the proposed                        fusion methods, the proposed model fares better than most
+distributed multi-modal fusion model achieves almost the                         baselines and maintains a neglectable gap with SOTA.
+same performance as MISA. To separating the NN into a                               2) The Impact of Coding Rate: To illustrate the impor-
+semantic encoder and a semantic decoder in our distributed                       tance of coding rate selection in the distributed multi-modal
+multi-modal semantic communication framework, we discard                         semantic communication framework, we test the conventional
+
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                             1395
+
+
+
+
+Fig. 4.   Performance of distributed multi-modal fusion model with the same coding rate for all modalities in the Rayleigh channel.
+
+
+
+method over multiple code rates in both AWGN and Rayleigh                        low rate for semantically significant modalities across various
+channels, and the performance results are shown in Fig. 3                        SNRs to ensure inference accuracy.
+and Fig. 4. From the figures, reducing the channel coding rate                      3) Optimal Rates: To demonstrate the effectiveness of
+is an effective means to fulfill the requirement of semantic                     jointly considering semantic encoders and decoders during
+tasks. Increasing the transmission rate to reduce inference                      transmission, we plot the optimal rate by solving P2 in
+delay inevitably impairs the accuracy of semantic tasks in the                   Fig. 5. In the distributed multi-modal semantic communication
+low SNR scenario.                                                                framework, modality features are encoded at a rate based
+   Furthermore, the figures demonstrate that using an equal                      on the optimization solution. Each device determines the rate
+transmission rate for all modalities makes performance sen-                      of the LDPC code and the modulation order that approximate
+sitive to the channel SNR. This result arises because the                        the optimal transmission rate. The actual transmission rates
+variability in semantic importance among modalities plays                        for three modalities are also illustrated in Fig. 5. With the rate
+a significant role in semantic tasks. Generally, both task                       matching feature in the 3GPP standard, the system supports
+performance and communication efficiency are limited by the                      flexible rate selection. As a result, the performance loss due
+modality that is with a large data size but less semantically                    to the quantization of the optimal solution can be reasonably
+crucial. Therefore, it is of great importance to assign unequal                  neglected in the practical system.
+error protection to different modalities to balance the semantic                    From the figures, the transmission rates for all modalities
+task performance and transmission efficiency. Specifically,                      increase with the channel SNR. The optimal rate for each
+while increasing the transmission rate helps reduce delay for                    modality varies based on both the semantic importance and
+modalities with large data sizes, it is important to maintain a                  the data size. The size of the textual modality is relatively
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1396                                                                               IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+                                                                                  the baselines in terms of both semantic task accuracy and
+                                                                                  inference latency. Moreover, the performance of the proposed
+                                                                                  mechanism approaches the error-free transmission perfor-
+                                                                                  mance in both AWGN and Rayleigh channels, which indicates
+                                                                                  that it can indeed achieve robust semantic inference. The
+                                                                                  conventional method suffers from significant performance loss
+                                                                                  since the same transmission rate is applied for all modalities.
+                                                                                  To meet the delay requirement, a high transmission rate Rfixed
+                                                                                  is adopted for all modalities. In this case, the distortion of
+                                                                                  semantically critical modality increases, and thus the robust-
+                                                                                  ness bound of the semantic task is exceeded.
+                                                                                     The performance deterioration denoted by the dash lines
+                                                                                  in Fig. 6 and Fig. 7 is due to modulation method selection.
+                                                                                  Intuitively, the transmission rate increases with the channel
+                                                                                  SNR and thus both higher modulation order and lower coding
+                                                                                  rate are chosen. As a result, the error protection ability
+                                                                                  decreases and the inference system suffers from performance
+                                                                                  degradation. From the figures, our transmission mechanism
+                                                                                  outperforms the NN-based JSCC approach. Clearly, the inser-
+                                                                                  tion of a channel layer in the original multi-modal fusion
+                                                                                  F makes the training process hard to converge. Meanwhile,
+                                                                                  the new model F JSCC fails to reach the performance upper
+                                                                                  bound of the original model. Therefore, there exists a small
+                                                                                  performance gap between the JSCC approach and the proposed
+                                                                                  mechanism even in the high SNR scenario.
+                                                                                     5) Implementation Complexity: Finally, we study the imple-
+                                                                                  mentation complexity to gain more insights into the proposed
+                                                                                  mechanism in a realistic system. In our simulation, the com-
+                                                                                  plexity of one layer Transformer is O n2 · d + n · d2 [38],
+                                                                                  where d is the feature dimension and n is the sequence length.
+                                                                                  Therefore, the complexity of the semantic source     decoder
+Fig. 5. Actual and optimal transmission rates for textual, visual, and acoustic   can be computed as O (NC ) = O 9 · d + 3 · d2 , and the
+modality in distributed multi-modal semantic communication framework.
+                                                                                  complexity of JSCC can be rewritten as
+                                                                                                O Nepoch · Nsample · 9 · d + 3 · d2 .
+                                                                                                                                   
+                                                                                                                                            (17)
+small and it is semantically important to the sentiment analysis                  We take the model on the MOSI dataset as an example and
+task. As a result, the optimal rate for textual modality is the                   approximately compute the number of basic operations as 28×
+lowest among all modalities. Transmitting at a low coding rate                    1283 × (9 × 128 + 3 × 1282 ) = 1.81GOps, where GOps means
+significantly reduces the error probability and achieves better                   billions of operations.
+task performance. Meanwhile, even though the transmission                            For the proposed rate-adaptive coding mechanism, we take
+delay of textual modality increases, it will not affect the                       MSA on the MOSI dataset as an example. The number
+end-to-end inference delay because of the small amount of                         of basic operations of the rate-adaptive coding mechanism
+data. On the contrary, transmitting visual and acoustic modal-                    can be approximately    computed as 9 × 128 + 3 × 1282 −
+                                                                                           −6
+                                                                                              
+ity would lead to a large communication overhead. Thus, the                       log2 10       = 56.62MOps. We summarize the number of
+optimal rate for these modalities becomes higher to keep a                        basic operations needed for deployment in Tab. IV. It can
+small communication delay. Additionally, the acoustic data                        be seen that the implementation complexity of the proposed
+contains less semantic information and plays a trivial role                       rate-adaptive coding mechanism is much lower than JSCC.
+in the MSA task. As shown in Fig. 5, the optimal acoustic                         Specifically, for the MOSI dataset, the proposed mechanism
+rate is considerably larger than other rates, which indicates                     simply requires 0.0028% number of operations of its counter-
+that the semantic task allows more distortion for acoustic                        part to be deployed in a realistic system.
+features.                                                                            Based on the end-to-end NN, the JSCC approach could
+   4) Performance Comparisons: To validate the superiority                        indeed mitigate the effect of channel noise. However, such an
+of our proposed rate-adaptive coding mechanism, we com-                           approach cannot directly use the existing pre-trained SOTA
+pare the performance of the distributed multi-modal fusion                        model. It requires re-train or fine-tune by adding a layer that
+semantic communication framework with the aforementioned                          simulates a wireless channel between the semantic encoder
+baseline methods. The results summarized in Fig. 6 and                            and decoder. Additionally, even if the JSCC approach has
+Fig. 7 illustrate that the proposed mechanism outperforms                         already designed and trained a new model with a layer of
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                             1397
+
+
+
+
+Fig. 6.   Performance comparison in the AWGN channel.
+
+
+
+AWGN channel beforehand, it may not function optimally                                                        TABLE IV
+when the wireless environment changes, e.g. the distribution                         T HE N UMBER OF BASIC O PERATIONS N EEDED FOR D EPLOYMENT
+of channel fading changes. In such a case, the model must
+undergo re-training on the new wireless channel.
+   In contrast, the proposed rate-adaptive coding mechanism
+addresses this challenge through two approaches. First, the
+proposed mechanism only focuses on the inference pro-
+cess rather than the training process. To achieve the trade-                     This eliminates the need of re-training the model in
+off between inference accuracy and delay, the proposed                           a new wireless channel when the wireless environment
+mechanism optimizes the transmission rates for all modalities                    changes.
+based on both channel conditions and their semantic signifi-                        In summary, the JSCC approach jointly considers semantic
+cance. As a result, the proposed mechanism can be applied to                     information and wireless channel conditions by using the NN,
+any new task with an existing pre-trained SOTA model without                     which requires training and lacks generality. On the contrary,
+the need for re-training the model with a wireless channel                       the proposed mechanism considers semantic importance and
+layer. Second, the proposed mechanism employs conventional                       channel conditions during the inference process by assigning
+physical transmission methods, such as channel encoding and                      unequal error protection to each modality based on RVP.
+modulation, which are well-established in modern communi-                        This process is independent of the NN’s training process
+cation systems and applicable to most wireless environments.                     and is generally applicable to most NN architectures and
+Furthermore, the optimization problem considers channel con-                     wireless channels. Therefore, the proposed mechanism could
+ditions based on CSI feedback, without being dependent on                        be deployed in well-established communication systems with
+the type of wireless channel and its specific characteristics.                   considerably less effort compared with JSCC.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1398                                                                              IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+
+Fig. 7.   Performance comparison in the Rayleigh channel.
+
+
+
+                      VI. C ONCLUSION                                            performance under the same inference delay. Additionally, the
+   This paper has presented a rate-adaptive coding mechanism                     proposed mechanism can be generalized to any multi-modal
+in a distributed multi-modal semantic communication frame-                       fusion model and can be easily deployed without re-training
+work, which jointly considers the semantic source encoder and                    the NN as compared to existing semantic communication
+decoder with unequal protection channel coding. To balance                       frameworks.
+the tradeoff between communication efficiency and semantic                          As far as we know, we are among the first to investigate
+task performance, we modeled it as an optimization problem                       unequal protection for semantic communications with multi-
+with guaranteed performance constraints. It aims to find the                     modal data. This work has currently been a first step towards
+optimal transmission rate for each modality feature. We have                     the goal and some open problems still need further study.
+analyzed the effect of channel coding rate on semantic task                      First, this paper only focuses on the channel coding rate
+accuracy by utilizing the RVP on semantic encoder/decoder                        which is the most important error protection factor for channel
+and constrained the optimization with a robustness bound                         codes. However, new designs of unequal error protection codes
+of semantic output. The robustness bound is a function of                        for multi-modal semantic communications that yield higher
+modality features, channel condition, transmission rate, and                     performance gain would be an intriguing direction to explore.
+semantic decoder, which makes the aforementioned optimiza-                       Secondly, we show that combining multiple independently
+tion problem challenging to solve. Through approximation and                     faded replicas of semantic information would achieve more
+relaxation, we have successfully solved the problem based                        reliable inference. However, this performance gain is different
+on the optimization approach. Compared with the competi-                         from the one provided by diversity [39], and we name such
+tive semantic communication framework and the conventional                       a technique as “semantic diversity”. It would be a promising
+method, the proposed mechanism achieves better semantic                          future direction to theoretically analyze semantic diversity and
+
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+HE et al.: RATE-ADAPTIVE CODING MECHANISM FOR SEMANTIC COMMUNICATIONS WITH MULTI-MODAL DATA                                                           1399
+
+
+
+combine semantic diversity and spatial diversity for higher                     Without loss of generality, we first compute the second order
+performance gain. Finally, the proposed rate-adaptive coding                  partial derivative with respect to R(m) , as
+mechanism could potentially be applied more broadly. The
+                                                                               gR(m) R(m)
+main factor is quantifying semantic importance and fully
+leveraging semantic diversity, not limited to deep learning                          ∂2g
+                                                                                =         2
+approaches. For example, in the IoT network, one can quantify                      ∂R(m)
+                                                                                            2
+the age of information of different messages as their semantic                  = a(m) k (m) ·
+importance and leverage the proposed rate-adaptive coding                           (m) (m)                                  
+                                                                                exp k (b        − R(m) ) exp k (m) b(m) − R(m) − 1
+mechanism accordingly.                                                                                                 3        .
+                                                                                              1 + exp k (m) b(m) − R(m)
+                          A PPENDIX A                                                                                            (23)
+                     P ROOF OF D UAL N ORM                                       Since we have b(m) = C (m) + log L/L ≥ R(m) and
+                                                                                (m)
+  Firstly, suppose ∥·∥p is an Lp norm on space X , and x ∈ X .                a     ≥ 0, ∀ m = 1, 2, · · · M , the second order derivatives
+Let y = (y1 , · · · , yn ) be an element of the dual space Y. By              are non-negative, i.e. gR(m) R(m) ≥ 0, ∀ m = 1, 2, · · · M .
+definition, the dual space norm is given by                                   In addition, it is clear that the second order partial deriva-
+                                                                              tives regarding two different variables satisfy gR(m) R(n) =
+                       ∥y∥∗ = sup y ⊤ x.                             (18)     0, ∀ m, n = 1, 2, · · · M, m ̸= n. The Hessian of function
+                                   ∥x∥p ≤1
+                                                                              g given in (24) is positive semi-definite, which indicates that
+  By Hölder’s inequality, we have                                            the second constraint is convex. Consequently, P2 is a convex
+                   n               n                                          optimization problem.
+                   X               X
+           ⊤
+         y x=            xi yi ≤         |xi yi | ≤ ∥x∥p ∥y∥q ,      (19)             H = diag(gR(1) R(1) , gR(2) R(2) , · · · , gR(M ) R(M ) ).     (24)
+                   i=1             i=1
+
+where q = p/(p − 1). Therefore, ∥y∥∗ ≤ ∥y∥q .                                                                R EFERENCES
+  To prove the converse inequality, we consider the vector
+                 |yi |q−2                                                      [1] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+defined by x̃i = ∥y∥  q−1 yi . Hence the Lp norm of x̃ is given                    Tech. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+                      q
+by                                                                             [2] W. Tong and P. Zhu, 6G: The Next Horizon: From Connected People and
+                                                                                   Things to Connected Intelligence. Cambridge, U.K.: Cambridge Univ.
+                                  n
+                                                 !1/p                              Press, 2021.
+                        1        X
+                                          p(q−1)                               [3] W. Weaver, “Recent contributions to the mathematical theory of com-
+          ∥x̃∥p =                    |yi |                                         munication,” ETC, Rev. Gen. Semantics, vol. 10, no. 4, pp. 261–281,
+                    ∥y∥q−1q      i=1                                               1953.
+                                             !1/q q/p                        [4] R. Carnap and Y. Bar-Hillel, “An outline of a theory of semantic
+                                    n                                              information,” J. Symbolic Log., vol. 19, no. 3, pp. 230–232, 1954.
+                        1          X
+                 =                    |yi |q                                 [5] J. Bao et al., “Towards a theory of semantic communication,” in Proc.
+                    ∥y∥q−1q        i=1                                             IEEE Netw. Sci. Workshop, Jun. 2011, pp. 110–117.
+                                                                               [6] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+                           q/p
+                       ∥y∥q                                                        channel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+                   =          = 1.                                   (20)          Process. (ICASSP), Apr. 2018, pp. 2326–2330.
+                       ∥y∥q−1
+                          q                                                    [7] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint source-
+                                                                                   channel coding for wireless image transmission,” IEEE Trans. Cognit.
+Since ∥x̃∥p ≤ 1, the dual norm is the supremum over y ⊤ x̃.                        Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+Thus,                                                                          [8] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+                                                                                   semantic communication systems,” IEEE Trans. Signal Process., vol. 69,
+                                      n                                            pp. 2663–2675, 2021.
+                                1    X
+         ∥y∥∗ ≥ y ⊤ x̃ =                 |yi |q = ∥y∥q .             (21)      [9] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+                              ∥y∥q−1
+                                 q   i=1                                           for edge inference: An information bottleneck approach,” IEEE J. Sel.
+                                                                                   Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+   Therefore, we have ∥y∥∗ = ∥y∥q which proves that ∥ · ∥q                    [10] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for mul-
+is the dual norm of Lp norm.                                                       tidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+                                                                                   vol. 22, no. 1, pp. 73–87, Jan. 2023.
+                                                                              [11] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Ye Li, “Robust
+                            A PPENDIX B                                            semantic communications with masked VQ-VAE enabled codebook,”
+                                                                                   2022, arXiv:2206.04011.
+                         C ONVEXITY OF P2                                     [12] J. Kang et al., “Personalized saliency in task-oriented semantic commu-
+                                                                                   nications: Image transmission and performance analysis,” IEEE J. Sel.
+   Apparently, both the objective function and the first con-                      Areas Commun., vol. 41, no. 1, pp. 186–201, Jan. 2023.
+straint are convex. Thus P2 is a convex optimization problem                  [13] T. Baltrusaitis, C. Ahuja, and L.-P. Morency, “Multimodal machine
+if the second constraint is also convex. We denote function g                      learning: A survey and taxonomy,” IEEE Trans. Pattern Anal. Mach.
+                                                                                   Intell., vol. 41, no. 2, pp. 423–443, Feb. 2019.
+as
+                                                                              [14] Q. Lan et al., “What is semantic communication? A view on conveying
+               M                                                                   meaning in the era of machine intelligence,” J. Commun. Inf. Netw.,
+  n      o  X                        a(m)
+g t, R(m)    =                                       −∆0 .                      vol. 6, no. 4, pp. 336–371, Dec. 2021.
+               M
+                       m=1
+                           1 + exp k (m) b(m) − R(m)                          [15] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+                                                                                   communications for VQA,” IEEE Wireless Commun. Lett., vol. 11, no. 3,
+                                                                     (22)          pp. 553–557, Mar. 2022.
+
+
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+1400                                                                                   IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 72, NO. 3, MARCH 2024
+
+
+
+[16] H. Xie and Z. Qin, “A lite distributed semantic communication system             [38] A. Vaswani et al., “Attention is all you need,” in Proc. Adv. Neural Inf.
+     for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,                  Process. Syst. (NIPS), vol. 30, Dec. 2017, pp. 5998–6008.
+     pp. 142–153, Jan. 2021.                                                          [39] S. M. Alamouti, “A simple transmit diversity technique for wire-
+[17] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:                    less communications,” IEEE J. Sel. Areas Commun., vol. 16, no. 8,
+     Channel input constrained deep joint source-channel coding,” in Proc.                 pp. 1451–1458, Oct. 1998.
+     IEEE Int. Conf. Commun. (ICC), May 2022, pp. 3880–3885.
+[18] G. Zhang, Q. Hu, Z. Qin, Y. Cai, and G. Yu, “A unified multi-
+     task semantic communication system with domain adaptation,” 2022,
+     arXiv:2206.00254.                                                                                          Yangshuo He received the B.S.E. degree in
+[19] G. Katz, C. W. Barrett, D. L. Dill, K. Julian, and M. J. Kochenderfer,                                     information engineering from Zhejiang University,
+     “Reluplex: An efficient SMT solver for verifying deep neural networks,”                                    Hangzhou, China, in 2022, where he is currently
+     in Proc. 29th Int. Conf. Comput. Aided Verification (CAV), Jul. 2017,                                      pursuing the Ph.D. degree with the College of
+     pp. 97–117.                                                                                                Information Science and Electronic Engineering. His
+[20] H. Zhang, T.-W. Weng, P.-Y. Chen, C.-J. Hsieh, and L. Daniel, “Effi-                                       current research interests include machine learning
+     cient neural network robustness certification with general activation                                      and wireless communications.
+     functions,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), Dec. 2018,
+     pp. 4939–4948.
+[21] H. Zhang et al., “Towards stable and efficient training of verifiably
+     robust neural networks,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+     Apr. 2020.
+[22] C.-Y. Ko, Z. Lyu, L. Weng, L. Daniel, N. Wong, and D. Lin,
+     “POPQORN: Quantifying robustness of recurrent neural networks,” in                                       Guanding Yu (Senior Member, IEEE) received the
+     Proc. 36th Int. Conf. Mach. Learn., in Proceedings of Machine Learning                                   B.E. and Ph.D. degrees in communication engineer-
+     Research, vol. 97, K. Chaudhuri and R. Salakhutdinov, Eds., Jun. 2019,                                   ing from Zhejiang University, Hangzhou, China, in
+     pp. 3468–3477.                                                                                           2001 and 2006, respectively. From 2013 to 2015,
+[23] R. Jia, A. Raghunathan, K. Göksel, and P. Liang, “Certified robustness                                   he was also a Visiting Professor with the School
+     to adversarial word substitutions,” in Proc. Conf. Empirical Methods                                     of Electrical and Computer Engineering, Georgia
+     Natural Lang. Process., 9th Int. Joint Conf. Natural Lang. Process.                                      Institute of Technology, Atlanta, GA, USA. In
+     (EMNLP-IJCNLP), Nov. 2019, pp. 4127–4140.                                                                2006, he joined Zhejiang University, where he is
+[24] Z. Shi, H. Zhang, K.-W. Chang, M. Huang, and C.-J. Hsieh, “Robustness                                    currently a Professor with the College of Infor-
+     verification for transformers,” in Proc. Int. Conf. Learn. Represent.                                    mation and Electronic Engineering. His research
+     (ICLR), Apr. 2020.                                                                                       interests include integrated sensing and commu-
+                                                                                      nications (ISAC), mobile edge computing/learning, and machine learning
+[25] M. Lee, G. Yu, and H. Dai, “Decentralized inference with graph neural
+                                                                                      for wireless networks. He received the 2016 IEEE ComSoc Asia-Pacific
+     networks in wireless communication systems,” IEEE Trans. Mobile
+                                                                                      Outstanding Young Researcher Award. He regularly sits on the technical
+     Comput., vol. 22, no. 5, pp. 2582–2598, May 2023.
+                                                                                      program committee (TPC) boards of prominent IEEE conferences, such as
+[26] Y. Polyanskiy, H. V. Poor, and S. Verdu, “Channel coding rate in the             ICC, GLOBECOM, and VTC. He also serves as the Symposium Co-Chair
+     finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5,             for IEEE GLOBECOM 2019 and the Track Chair for IEEE VTC 2019 Fall. He
+     pp. 2307–2359, May 2010.                                                         has served as the Guest Editor for IEEE Communications Magazine Special
+[27] E. Page, “Approximations to the cumulative normal function and its               Issue on Full-Duplex Communications, an Editor for IEEE J OURNAL ON
+     inverse for use on a pocket calculator,” J. Roy. Stat. Soc. C, Appl. Statist.,   S ELECTED A REAS IN C OMMUNICATIONS Series on Green Communications
+     vol. 26, no. 1, pp. 75–76, Mar. 1977.                                            and Networking, and Series on Machine Learning in Communications and
+[28] M. Soleymani, D. Garcia, B. Jou, B. Schuller, S.-F. Chang, and                   Networks, an Editor for IEEE W IRELESS C OMMUNICATIONS L ETTERS, a
+     M. Pantic, “A survey of multimodal sentiment analysis,” Image Vis.               Lead Guest Editor for IEEE Wireless Communications Magazine Special
+     Comput., vol. 65, no. 1, pp. 3–14, Sep. 2017.                                    Issue on LTE in Unlicensed Spectrum, an Editor for IEEE T RANSACTIONS
+[29] A. Zadeh, R. Zellers, E. Pincus, and L.-P. Morency, “Multimodal senti-           ON G REEN C OMMUNICATIONS AND N ETWORKING , and an Editor of IEEE
+     ment intensity analysis in videos: Facial gestures and verbal messages,”         ACCESS. He is serving as an Editor for IEEE T RANSACTIONS ON M ACHINE
+     IEEE Intell. Syst., vol. 31, no. 6, pp. 82–88, Nov./Dec. 2016.                   L EARNING IN C OMMUNICATIONS AND N ETWORKING.
+[30] A. B. Zadeh, P. P. Liang, S. Poria, E. Cambria, and L.-P. Morency,
+     “Multimodal language analysis in the wild: CMU-MOSEI dataset and
+     interpretable dynamic fusion graph,” in Proc. 56th Annu. Meeting Assoc.
+     Comput. Linguistics (ACL), Jul. 2018, pp. 2236–2246.                                                        Yunlong Cai (Senior Member, IEEE) received
+[31] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training                                       the Ph.D. degree in electronic engineering from
+     of deep bidirectional transformers for language understanding,” in Proc.                                    the University of York, York, U.K., in 2010.
+     North Amer. Chapter Assoc. Comput. Linguistics, Hum. Lang. Tech.                                            From 2010 to 2011, he was a Post-Doctoral Fellow
+     (NAACL-HLT), Jun. 2019, pp. 4171–4186.                                                                      with the Electronics and Communications Labo-
+[32] G. Degottex, J. Kane, T. Drugman, T. Raitio, and S. Scherer,                                                ratory, CNAM, Paris, France. He was a Visiting
+     “COVAREP—A collaborative voice analysis repository for speech tech-                                         Professor at various universities, including the Geor-
+     nologies,” in Proc. IEEE Int. Conf. Acoust., Speech Signal Process.                                         gia Institute of Technology, McGill University, and
+     (ICASSP), May 2014, pp. 960–964.                                                                            the University of California, Irvine. Since February
+[33] NR; Physical Layer Procedures for Data, document TS 36.214, Version                                         2011, he has been with the College of Information
+     17.0.0, 3GPP, 2022.                                                                                         Science and Electronic Engineering, Zhejiang Uni-
+                                                                                      versity, Hangzhou, China, where he is currently a Professor. His research
+[34] Y.-H. H. Tsai, S. Bai, P. P. Liang, J. Z. Kolter, L.-P. Morency, and
+                                                                                      interests include transceiver design for multiple-antenna systems, cooperative
+     R. Salakhutdinov, “Multimodal transformer for unaligned multimodal
+                                                                                      and relay communications, UAV communications, and machine learning for
+     language sequences,” in Proc. 57th Annu. Meeting Assoc. Comput.
+                                                                                      communications. He has published over 200 journals and conference papers
+     Linguistics (ACL), Jul. 2019, pp. 6558–6569.
+                                                                                      in these areas. He regularly sits on the technical program committee boards
+[35] Z. Sun, P. Sarma, W. Sethares, and Y. Liang, “Learning relationships             of prominent IEEE conferences, such as ICC, GLOBECOM, and VTC. He
+     between text, audio, and video via deep canonical correlation for multi-         has served as the General Chair for the 18th IEEE International Sympo-
+     modal language analysis,” in Proc. Conf. AAAI Artif. Intell., Feb. 2020,         sium on Wireless Communications Systems, which was held in Hangzhou,
+     pp. 8992–8999.                                                                   in October 2022. He was an Associate Editor of IEEE S IGNAL P ROCESSING
+[36] D. Hazarika, R. Zimmermann, and S. Poria, “MISA: Modality-invariant              L ETTERS from 2018 to 2023. He serves as an Associate Editor for IEEE
+     and -Specific representations for multimodal sentiment analysis,” in             T RANSACTIONS ON C OMMUNICATIONS and a Senior Area Editor for IEEE
+     Proc. 28th ACM Int. Conf. Multimedia, Oct. 2020, pp. 1122–1131.                  S IGNAL P ROCESSING L ETTERS. He is the Lead Guest Editor of the Special
+[37] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural               Issue on “Next Generation Advanced Transceiver Technologies” of the IEEE
+     Comput., vol. 9, no. 8, pp. 1735–1780, Nov. 1997.                                J OURNAL ON S ELECTED A REAS IN C OMMUNICATIONS.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:09:09 UTC from IEEE Xplore. Restrictions apply.
+

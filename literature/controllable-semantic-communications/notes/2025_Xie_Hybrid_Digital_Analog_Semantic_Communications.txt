@@ -1,0 +1,1140 @@
+                                                                                                                                                                                         1
+
+
+
+
+                                              Hybrid Digital-Analog Semantic Communications
+                                                                            Huiqiang Xie, Member, IEEE, Zhijin Qin, Senior Member, IEEE,
+                                                                            Zhu Han, Fellow, IEEE, and Khaled B. Letaief, Fellow, IEEE
+
+
+
+                                              Abstract—Digital and analog semantic communications (Sem-                   be categorized into two categories: analog semantic commu-
+                                           Com) face inherent limitations such as data security concerns                  nications and digital semantic communications.
+                                           in analog SemCom, as well as leveling-off and cliff-edge effects                  Analog semantic communications [3]–[11] convey the se-
+                                           in digital SemCom. In order to overcome these challenges,
+                                           we propose a novel SemCom framework and a corresponding                        mantic information using continuous signals, which takes
+                                                                                                                          advantage of deep learning (DL) to design end-to-end sys-
+arXiv:2405.12580v2 [eess.SP] 28 May 2024
+
+
+
+
+                                           system called HDA-DeepSC, which leverages a hybrid digital-
+                                           analog approach for multimedia transmission. This is achieved                  tems and maps the source to the non-fixed-size constellations
+                                           through the introduction of analog-digital allocation and fusion               directly. There exist many works for different modal data trans-
+                                           modules. To strike a balance between data rate and distortion,                 mission. Xie et al. [3] have developed a DL based semantic
+                                           we design new loss functions that take into account long-distance
+                                           dependencies in the semantic distortion constraint, essential                  communication system, named DeepSC, for text transmission,
+                                           information recovery in the channel distortion constraint, and                 in which the sentences are mapped to the embedding vectors
+                                           optimal bit stream generation in the rate constraint. Addi-                    and then transformed to the learned non-fixed-size constella-
+                                           tionally, we propose denoising diffusion-based signal detection                tion points. Yi et al. [4] introduced the explicit knowledge
+                                           techniques, which involve carefully designed variance schedules                base to the DeepSC as the side information and integrated the
+                                           and sampling algorithms to refine transmitted signals. Through
+                                           extensive numerical experiments, we will demonstrate that HDA-                 knowledge base into the end-to-end optimization, such that
+                                           DeepSC exhibits robustness to channel variations and is capable                achieves the higher bilingual evaluation understudy (BLEU)
+                                           of supporting various communication scenarios. Our proposed                    score at the low signal-to-noise ratio (SNR) regions. Weng et
+                                           framework outperforms existing benchmarks in terms of peak                     al. [5] have proposed an end-to-end semantic communication
+                                           signal-to-noise ratio and multi-scale structural similarity, show-             system for speech recognition and speech synthesis tasks,
+                                           casing its superiority in semantic communication quality.
+                                                                                                                          named DeepSC-ST. The speech signals are processed by the
+                                              Index Terms—Semantic communications, multimedia trans-                      DeepSC-ST and output the continuous constellation points at
+                                           mission, analog communications, digital communications, hybrid
+                                                                                                                          the transmitter. Grassucci et al. [6] have designed a generative
+                                           digital-analog communications.
+                                                                                                                          audio semantic communication framework, which transmits
+                                                                                                                          the continuous embedding vectors to generate the audios at the
+                                                                     I. I NTRODUCTION                                     receiver. Dai et al. [8] have investigated the end-to-end image
+                                              As mobile communication systems transition from the fifth                   transmission problem, in which the image is non-linearly trans-
+                                           generation (5G) to the sixth generation (6G), there is a need                  formed into continuous signals with different lengths. Wu et al.
+                                           to address the evolving requirements of seamlessly integrating                 [10] have investigated the end-to-end image transmission for
+                                           virtual/augmented reality, remote control robots, and ubiqui-                  multiple-inputs multiple-outputs (MIMO) channels. Similarly,
+                                           tous connected intelligence. To meet these demands, target                     the images are converted into continuous semantic features
+                                           key performance indicators [1] have been proposed, aiming to                   and adaptively assigned to different subchannels based on
+                                           ensure the seamless integration of these advanced technologies                 the channel state information (CSI). Wang et al. [11] have
+                                           in the next generation of mobile communication systems,                        proposed a video semantic communication system, in which
+                                           e.g., 107 devices/km2 for connectivity, 60 b/s/Hz for spectral                 the semantic features of frames are extracted into continuous
+                                           efficiency, and 100 us for end-to-end latency. To materialize                  signals and transmitted using analog communication methods.
+                                           this vision, semantic communications [2] have been envisioned                     The continuous signals in analog semantic communications
+                                           as one of the potential technologies due to the low semantic                   have two benefits. One is to allow gradient propagation and
+                                           errors, high spectral efficiency, and high transmission rates.                 enable end-to-end optimization. The other is that the contin-
+                                           By exchanging semantic information at both ends, semantic                      uous signals have a high degree of freedom that provides the
+                                           communications can reconstruct sources or directly perform                     smoothness performance optimization varying from channel
+                                           tasks with the tolerance of transmission errors. According to                  conditions, enabling better robustness in the low SNR regimes.
+                                           the communication paradigm, semantic communications can                        However, continuous signals also have flaws. The commer-
+                                                                                                                          cial encryption algorithms are designed for discrete signals,
+                                              Huiqiang Xie is with College of Information Science and Technology, Jinan
+                                           University, Guangzhou, China (e-mail: huiqiangxie@jnu.edu.cn).                 e.g., bit streams, raising concerns about the data security of
+                                              Zhijin Qin is with the Department of Electronic Engineering, Tsinghua       continuous signal-based systems. Besides, in some scenarios
+                                           University, Beijing, China, and also is with the State Key Laboratory          that require accurate transmission at the bit level, analog
+                                           of Space Network and Communications, Beijing, China. (e-mail: qinzhi-
+                                           jin@tsinghua.edu.cn). (Zhijin Qin is the corresponding author.)                semantic communications cannot meet the requirement due to
+                                              Zhu Han is with the Department of Electrical and Computer Engineering,      the approximately infinite candidate sets in continuous signals.
+                                           University of Houston, Houston, USA (e-mail: zhan2@uh.edu)).                   Therefore, digital semantic communications have attracted the
+                                              Khaled B. Letaief is with the Department of Electronic and Computer
+                                           Engineering, The Hong Kong University of Science and Technology, Hong          attention of researchers.
+                                           Kong, China (email: eekhaled@ust.hk).).                                           Digital semantic communications [12]–[20] transmit se-
+                                                                                                                                   2
+
+
+
+mantic information in the type of discrete signal, which             and industries [22]–[25]. Skoglund et al. [22] have proposed
+maps the source to bit streams or fixed-size constellations.         HDA codes for the bandwidth compression scenarios, and
+Tung et al. [12] have proposed the quantized joint source-           Köken et al. [24] have analyzed the robustness of HDA codes
+channel coding for image transmission, named DeepJSCC-Q,             with bandwidth mismatch. HDA transmission is also adopted
+by mapping the continuous signals to the close points in the         in the Japanese and Canadian television signal transmission
+fixed-size constellations to be compatible with some protocols.      [26], where video and speech signals are transmitted by analog
+Similarly, Bo et al. [13] improved the quantized joint source-       and digital transceivers, respectively. However, these works
+channel coding by learning transition probability from source        rely on linear transforms and ignore the semantic informa-
+data to discrete constellation symbols, in which the Gumbel-         tion behind data, which is unsuitable for non-linear semantic
+Max sampling is employed to sample the constellation points          transmission.
+from the learned transition probability so that avoiding the            Inspired by the concept of HDA codes, we propose a novel
+non-differentiable quantization. Guo et al. [15] quantized           framework called DL-based HDA semantic communication.
+the semantic information with the learnable non-linear scalar        This framework integrates the strengths of both analog and
+quantizer, which learns to adopt dynamic quantization levels         digital semantic communications to effectively tackle the chal-
+for different semantic values. Fu et al. [17] have proposed the      lenges mentioned earlier. Firstly, the HDA semantic commu-
+vector quantized semantic communication system, in which             nication systems can improve data security and alleviate the
+the semantic vectors are quantized into bit streams with the         leveling-off and cliff-edge effects by transmitting part infor-
+learnable vector quantizer and transmitted with the digital          mation with the continuous signals in analog communications
+channel codings and modulations. Gao et al. [19] have devel-         (Q1). Besides, analog and digital semantic communications
+oped an adaptive modulation and retransmission scheme by             are special cases of HDA semantic communications. By con-
+deriving the relationship between bit-error-rate and the task        trolling the ratio between analog and digital components, the
+performance, in which the semantic information is quantized          HDA semantic communications not only can be transformed
+into fixed-length bit streams. Huang et al. [20] have proposed       into purely analog or digital semantic communications (Q2)
+an iterative training algorithm for digital semantic communi-        but also support the different communication scenarios (Q3).
+cations, in which the deep source codec are trained according        The main contributions are summarized as follows:
+to the chosen channel coding rate.
+                                                                       • A novel HDA semantic communication framework is
+   The above works on digital semantic communication                     proposed, which takes advantage of analog and digital
+achieve accurate transmission at the bit or symbol level and             semantic communications and addresses the limitations
+part of the works can apply the encryption algorithms to                 inherent in each.
+encrypt the bit streams. However, digital semantic communi-            • Based on the HDA semantic communication framework,
+cation systems introduce unavoidable quantization errors due             we propose an HDA semantic communication system,
+to the process of quantizing continuous signals to discrete              named HDA-DeepSC, for multimedia transmission, in
+signals, which introduces the leveling-off effect. That is, the          which the new analog-digital allocation and fusion mod-
+quality of the decoded source signal is limited because of the           ules are proposed to generate the analog and digital
+quantization errors. Besides, digital semantic communications            components. Besides, the new loss functions are designed
+experience the cliff-edge effect varying from different channel          to capture the local and global information, alleviate the
+conditions, which usually results in a drastic degradation               distortions from channels, and balance the source rate.
+in performance at lower SNRs. Therefore, it is imperative              • To further improve the quality of the recovered images,
+to adopt a new semantic communication paradigm that can                  we proposed a diffusion-based framework enhanced sig-
+address the limitations of both analog and digital semantic              nal detection by designing the variance schedule and
+communications. This paradigm should enhance data security               sampling algorithm.
+and mitigate the leveling-off and cliff-edge effects. However,         • Based on extensive simulation results, the proposed
+designing such a semantic communication system poses sev-                HDA-DeepSC outperforms the conventional and DL-
+eral challenges that need to be overcome, namely,                        based communication systems and improves the system
+Q1: How to enhance data security and alleviate the leveling-             robustness at the low SNR regime.
+    off and cliff-edge effects?                                         The rest of this paper is organized as follows. The sys-
+Q2: How it be compatible with purely analog and digital              tem model is introduced in Section II. The HDA semantic
+    semantic communication?                                          transmission is proposed in Section III. Section IV details the
+Q3: How to support the various communication environ-                proposed diffusion-based signal detection. Numerical results
+    ments, e.g., the wide bandwidth scenario or the weak             are presented in Section V to show the performance of
+    communication scenario?                                          the proposed frameworks. Finally, Section VI concludes this
+   The concept of hybrid digital-analog (HDA) joint source-          paper.
+channel codes [21] was proposed by Mittal et al. in 2002,               Notation: Bold-font variables denote matrices or vectors.
+which proves that HDA codes are capable of theoretically             Cn×m and Rn×m represent complex and real matrices of size
+achieving the Shannon limit (theoretically optimum distortion)       n × m, respectively. CN (µ, σ 2 ) means circularly-symmetric
+and a less severe leveling-off and cliff-edge effects. Since then,   complex Gaussian distribution with mean µ and covariance
+the HDA codes have attracted much attention from academics           σ 2 . N (µ, σ 2 ) means Gaussian distribution with mean µ and
+                                                                                                                                                                           3
+
+
+
+                                                                  zA                                                         xA
+                                                                                      Analog Channel Encoder
+                                Semantic   z    Analog-Digital                                                                       Power      x
+                                 Encoder          Allocation                                                                          Norm.
+                                                                  zD        Quantizer &      b     Digital Channel Encoder & x D
+
+
+
+
+                                                                                                                                                     Physical Channels
+                                                                          Entropy Encoder                  Modulation
+
+
+
+                                                                  zˆ A                                                        xˆ A
+                                                                                      Analog Channel Decoder
+                          ˆ     Semantic   ẑ   Analog-Digital                                                                       Signal     y
+                                 Decoder            Fusion                                                                           Detection
+                                                                  zˆD    Entropy Decoder &    b̂       Demodulation &         xˆ D
+                                                                            Dequantizer            Digital Channel Decoder
+
+
+Fig. 1. The proposed hybrid digital-analog semantic communication framework.
+
+
+
+covariance σ 2 . U(a, b) means continuous uniform distribution                     2) Digital Transmitter: The entropy coding and quantizer
+between a and b. (·)∗ denotes the conjugate operation. x[k]                      will be employed firstly to convert zD into bit streams by
+represents the k-th element in the vector.
+                                                                                                                b = E(Q(zD )),                                           (4)
+                                                                                 where b is the bit streams, Q(·) and E(·) are denoted as
+                       II. S YSTEM M ODEL                                        the quantizer and entropy encoder, respectively. Then, b is
+                                                                                 encoded with digital channel encoders (e.g., LDPC codes) and
+   As shown in Fig. 1, we consider a single-input single-output                  fixed-size constellations (e.g., 16-QAM) by
+(SISO) communication system, which aims to send multimedia
+over the air. The proposed HDA SemCom framework consists                                                       xD = M (CD (b)) ,                                         (5)
+of the HDA transmitter, the wireless channel model, and the                      where xD ∈ CLD ×1 is the encoded symbols, M(·) represents
+HDA receiver, which employs both digital semantic transmis-                      the fixed-size modulation, and CD (·) is denoted as the digital
+sion and analog semantic transmission.                                           channel encoder.
+                                                                                   With the analog and digital symbols, the transmitted sym-
+                                                                                 bols are x = [xA , xD ] ∈ CL×1 , where L = LA + LD . The
+A. The Hybrid Digital-Analog Transmitter                                                                                             L
+                                                                                 bandwidth compression ratio is defined as η = 3×H×W      .
+  The HDA transmitter consists of a semantic encoder that
+                                                                                 B. Wireless Channel Model
+extracts the semantic information behind images, analog-
+digital allocation that allocates the semantic information for                      When x is transmitted over the block fading channels, the
+analog and digital transmission, and channel encoders that                       received signal can be given by
+protect the information over the air.                                                                             y = hx + n,                                            (6)
+  Given an image, I ∈ R3×H×W , where H and W are the
+height and width of the image. The semantic information can                      where h is the channel coefficient that remains constant within
+be extracted by                                                                  a channel coherence time, n is the additive   white Gaussian
+                                                                                 noise (AWGN), in which n ∼ CN 0, σn2 IL . For the Rayleigh
+                              z = S(I; αt ),                              (1)    fading channel, the channel coefficient follows h ∼ CN (0, 1);
+                                                                                                                                              2
+where z ∈ RM ×1 is the semantic information and S(·; αt ) is                                p fading channel, itpfollows h ∼ CN µh , σh
+                                                                                 for the Rician
+                                                                                 with µh = r/(r + 1) and σh = 1/(r + 1), where r is the
+denoted as the semantic encoder with the parameter αt . Then,                                                                      2
+                                                                                 Rician coefficient. The SNR is defined as E(∥x∥ )/E(∥n∥ ).
+                                                                                                                                             2
+z is split into two parts with analog-digital allocation module
+by
+                                                                                 C. The Hybrid Digital-Analog Receiver
+                       [zA , zD ] = A(z; θt ),                            (2)       The receiver comprises signal detection that estimates the
+                                                                                 transmitted symbols, a analog-digital fusion module that fuses
+where zA and zD are the semantic information transmitted by                      the digital and analog semantic information, channel decoders
+the analog transmitter and the digital transmitter, respectively.                that alleviate the distortions from the wireless channels, and a
+A(·; θt ) is analog-digital allocation with parameters θt .                      semantic decoder that recovers the images with the received
+   1) Analog Transmitter: The encoded symbols for analog                         semantic information.
+semantic transmission are represented as                                            With the least squares (LS) signal detection, the transmitted
+                                                                                 symbols can be estimated by
+                         xA = CA (zA ; βt ),                              (3)                                     h∗                   h∗
+                                                                                                         x̂ =          2y = x +           2 n,                           (7)
+where xA ∈ CLA ×1 is the encoded complex symbols and                                                             |h|                  |h|
+CA (·; βt ) is denoted as the analog channel encoder with the                    where x̂ = [x̂A , x̂D ] represents the estimated symbols. We
+parameter βt .                                                                   assume that h is the perfect CSI. After the signal detection,
+                                                                                                                                     4
+
+
+
+the semantic features are recovered by the analog and digital          Similarly, the semantic decoder consists of the residual Swin
+receivers, respectively.                                            Transformer block, convolutional layers, and pixel shuffle. The
+   1) Analog Receiver: The semantic features transmitted by         residual block is to enhance the visual semantic understanding.
+analog communications are estimated by                              The residual connection provides a short connection from
+                             −1                                     the semantic encoder to the semantic decoder, allowing the
+                      ẑA = CA  (x̂A ; βr ),                 (8)    processing of reconstruction to fuse varying levels of features.
+                                                  −1                The convolutional layers and pixel shuffle form the recon-
+where ẑA is the estimated semantic features and CA  (·; βr ) is
+denoted as the analog channel decoder with parameter βr .           struction module, in which the sub-pixel convolutional layer
+   2) Digital Receiver: For digital semantic transmission, the      upsamples the feature and pixel shuffle reallocates the features
+transmitted bit streams are recovered firstly by                    to reconstruct the transmitted images.
+                          −1
+                                                                       2) Analog-Digital Allocation and Fusion: At the transmit-
+                              M−1 (x̂D ) ,
+                                         
+                    b̂ = CD                                 (9)     ter, the analog-digital allocation module transforms the origi-
+where CD −1
+            (·) represents the digital channel decoder and          nal semantic information into essential and auxiliary semantic
+   −1
+M (·) is denoted as the fixed-size demodulation. Then, the          information. The essential part includes the basic informa-
+semantic features transmitted with digital semantic transmis-       tion about the image, e.g., the high-frequency information,
+sion are recovered by                                               and needs to be delivered accurately and cryptographically.
+                                                                    Therefore, the essential part is transmitted accurately by digital
+                     ẑD = Q−1 (E −1 (b̂)),                 (10)    communication systems, in which the data encryption methods
+                                                                    (e.g., symmetric cryptography and asymmetric cryptography)
+where E −1 (·) and Q−1 (·) are denoted as the entropy decoder
+                                                                    can be applied to encrypt the bit streams to guarantee the data
+and dequantizer, respectively.
+                                                                    security of the essential part.
+  With ẑA and ẑD , the semantic features are fused by
+                                                                       A hyper codec is proposed to extract the essential part of
+                    ẑ = A−1 (ẑA , ẑD ; θr ),             (11)    the original semantic information, which is given by
+
+where ẑ is the recovered semantic information and A−1 (·; θr )                              zD = H(z; θt ),                     (13)
+is represented as the analog-digital fusion module with param-      where H(z; θt ) is denoted as the hyper encoder. As shown in
+eters θr .                                                          Fig. 2, the hyper encoder employs two convolutional layers
+   Finally, the transmitted image can be reconstructed by           to downsample the original semantic information, such that
+                       Iˆ = S −1 (ẑ; αr ),                 (12)    enables a larger receptive field and extracts the essential
+                                                                    semantic information.
+where S −1 (·; αr ) represents the semantic decoder with pa-           The auxiliary part helps improve the quality of the recovered
+rameter αr .                                                        image, which is transmitted by analog communication systems
+                                                                    with the following benefits. Analog communication systems do
+III. H YBRID D IGITAL -A NALOG S EMANTIC T RANSMISSION              not have a cliff effect and are suitable for optimizing systems
+   In this section, we design an HDA semantic communica-            in an end-to-end manner. To extract the auxiliary part, we first
+tion system, named HDA-DeepSC, for heterogeneous wireless           analyze the entropy of z conditioned on z̃, H (z |z̃ ), which
+communication environments. Then, we develop the new loss           qualifies the uncertainty about z when z̃ is known. In other
+function to train the HDA-DeepSC with the proposed training         words, it measures the remaining information of z when z̃ is
+algorithm.                                                          known. The lower bound of H (z |z̃ ) is derived by
+                                                                                     H (z |z̃ ) = H (z, z̃) − H (z̃)
+                                                                                                                                 (14)
+A. Model Design                                                                                 ≥ H (z) − H (z̃) ,
+   The proposed HDA-DeepSC is shown in Fig. 2. The design           where the equals hold when z̃ is close to z. z̃ =
+of each module is detailed below.                                   H−1 Q−1 (Q(zD )) ; θr is the recovered semantic informa-
+   1) Semantic Codec: The semantic encoder comprises a              tion based on essential part without consideration of transmis-
+convolutional layer and a residual Swin Transformer block.          sion errors. H−1 (·; θr ) is denoted as hyper decoder, where two
+The first convolutional layer projects the images into vector-      convolutional layers are employed to upsample and recover the
+shaped tokens, which are used as inputs to the residual Swin        basic semantic information.
+Transformer block in a permutation-invariant manner. Then,             By observing (14), we can obtain the remaining information
+the residual Swin Transformer block consists of several Swin        of z when z̃ is known, i.e., the auxiliary part, by
+Transformer layers and a convolution layer, in which the Swin
+Transformer layer [27] originates from the Transformer and                                     zA = z − z̃,                      (15)
+introduces the local attention and shifted window mechanism
+                                                                    where zA is transmitted by analog communications.
+to improve the visual semantic understanding. Besides, a con-
+                                                                      At the receiver, the analog-digital fusion module is em-
+volutional layer with spatially invariant filters in the residual
+                                                                    ployed to obtain the fine semantic information by fusing the
+block can enhance the translational equivariance. The residual
+                                                                    essential and auxiliary parts, which is given by
+connection allows for aggregation of the shallow and deep
+semantic features.                                                        ẑ = A−1 (ẑA , ẑD ; θr ) = H−1 (ẑD ; θr ) + ẑA ,   (16)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  5
+
+
+
+
+                                                                                                                                                                                                                                                                                                          Arithmetic Encoder
+                                                                                                                                                                             Conv2D 120x3x3/1
+
+
+
+                                                                                                                                                                                                              Conv2D 120x5x5/2
+
+
+
+                                                                                                                                                                                                                                                    Conv2D 120x5x5/2
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                 Channel Encoder
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                 Power Norm.
+                                                                                                                                                                                                                                                                                                              Quantizer &
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                               Modulation
+                                                                                                                                                                                                 LeakyReLU
+
+
+
+                                                                                                                                                                                                                                       LeakyReLU
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                     Digital
+                                             Conv2D 120x8x8/8
+
+
+
+
+                                                                                                                    Conv2D 120x3x3/1
+                                                                                      Swin Transformer
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         Physical Channel Layer
+                                                                                           Layers
+                                                                                                                                                                                                  Hyper Encoder
+                                                                                                                                                                                                                                                                                                                                                                                                                                                    C
+                                                                                                                                                                                      Arithmetic Decoder &
+                                                                                                                                                                                           Dequantizer
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                       Power Norm.
+                                                                                                                                                                                                                                                                                                                                            FC 120x240
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                              FC 240x2LA
+                                                                                                                                                                                                                                                                                                                                                                     LeakyReLU
+                                                                                                                                                                                                 Hyper Decoder
+                                                                    Semantic Encoder
+
+                                                                                                                                                                             Analog-Digital Allocation
+
+                                                                                                                                                                                                                                                                                                                                                     Analog
+                                                                                                                                                                                                             Transmitter                                                                                                                         Channel Encoder
+
+
+
+
+                                                                                                                                                                                                                  DeConv2D 120x3x3/1
+
+
+
+                                                                                                                                                                                                                                                    DeConv2D 180x5x5/2
+
+
+
+                                                                                                                                                                                                                                                                                     DeConv2D 120x5x5/2
+
+
+
+                                                                                                                                                                                                                                                                                                                                 Arithmetic Decoder
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                 Channel Decoder
+                                                                                                                                                                                                                                        LeakyReLU
+
+
+
+                                                                                                                                                                                                                                                                         LeakyReLU
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                   & Dequantizer
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                      Demodulation
+                                                                                                                                                                                                                                                                                                                                                                                     Digital
+                                                                Conv2D 192x3x3/1
+
+                                                                                   Conv2D 120x3x3/1
+
+
+
+
+                                                                                                                                       Conv2D 120x3x3/1
+
+
+                                                                                                                                                          Swin Transformer
+                               Pixel Shuffle/8
+
+
+
+
+                                                                                                      Layer Norm.
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                         Signal Detection
+                                                                                                                                                               Layers
+
+
+
+
+                                                                                                                                                                                                                                     Hyper Decoder
+
+                                                                                                                                                                                                               Analog-Digital Fusion
+
+
+
+
+                                                                                                                                                                                                                                                                                                                               FC 120x120
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                 FC 240x120
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                     FC 2LAx240
+                                                                                                                                                                                                                                                                                                                                                                                                           LeakyReLU
+                                                                                                                                                                                                                                                                                                                                                         LeakyReLU
+                                                                                            Semantic Decoder
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                      Analog
+                                                                                                                                                                                                                                                                                                                                                  Channel Decoder
+                                                                                                                                                                                                              Receiver
+                                                                     : Element-wise Addition                                                                                                   : Element-wise Subtraction                                                                                                     C : Sequence Concatnation
+
+Fig. 2. The structure of the proposed hybrid digital-analog semantic communication system.
+
+
+
+where H−1 (·; θr ) shares the same weights with the hyper                                                                                                                                                                        non-parametric density with a standard uniform density to
+decoder in the transmitter.                                                                                                                                                                                                      better match the prior of z̃D .
+   The design of analog-digital allocation and fusion can also                                                                                                                                                                      For digital channel codec and modulation, we adopt the
+be viewed as a coarse-to-fine processing. The digital and                                                                                                                                                                        adaptive modulation and coding for different SNRs.
+analog component transmits coarse and auxiliary semantic                                                                                                                                                                            4) Analog Transeiver: The analog channel codec aims to
+information about the basics and supplements of the image,                                                                                                                                                                       compress the semantic features and transmit them effectively
+respectively. The receiver fuses the coarse and auxiliary se-                                                                                                                                                                    over the air. Similarly to the previous works [29], the analog
+mantic information to obtain fine semantic information, which                                                                                                                                                                    channel codec mainly employs the fully connected layers
+is used to recover the high-fidelity images.                                                                                                                                                                                     to transmit the semantic information due to global semantic
+   3) Digital Transceiver: The quantizer module rounds ele-                                                                                                                                                                      information preservation. Compared with the convolutional
+ments of zD to the nearest integer, z̃D . Then, the arithmetic                                                                                                                                                                   neural network (CNN) layer to capture the local information,
+coding converts z̃D into bit streams, in which the arithmetic                                                                                                                                                                    the dense layer is good at capturing global information and
+coding is one kind of entropy coding. The entropy coding                                                                                                                                                                         preserving the entire attributes, which follows the target of
+requires the distribution of z̃D in advance. Similarly to [28],                                                                                                                                                                  the analog channel codec. This can enhance the system’s
+we model z̃D using a non-parametric, fully factorized density                                                                                                                                                                    robustness to channel noise.
+model by
+                                                
+                   Y                          1 1                                                                                                                                                                                B. Loss Function Design
+  p (z̃D |ψ ) =       pz̃D [i]|ψ[i] ψ[i] ∗ U − ,      (z̃D [i]) ,
+                    i
+                                              2 2                                                                                                                                                                                   The wireless multimedia transmission problem can be
+                                                             (17)                                                                                                                                                                viewed as the classical rate-distortion optimization problem,
+where ψ[i] is the parameters of each univariate distribution                                                                                                                                                                     which includes distortion and rate constraints.
+pz̃D [i]|ψ[i] . Like most cases, we model the quantization errors                                                                                                                                                                   1) Loss Function Design for Distortion Constraints: The
+with the uniform distribution. Therefore, we convolve each                                                                                                                                                                       distortion constraint can be categorized into semantic and
+                                                                                                                                         6
+
+
+                                                                                 ⌢
+channel distortion constraints. For semantic distortion con-              where z = H−1 (ẑD ; θr ). The log-likelihood then works out
+                                                                                                                     ⌢
+straint, except for the pixel difference considered in most               to be the squared difference between z and z weighted by λz .
+works, we further introduce the frequency difference of the               Then, the I (z, ẑD ) can be rewritten as
+images. The designed loss function for semantic distortion                                        h
+                                                                                                        ⌢
+                                                                                                            i
+constraint is given by                                                       I (z, ẑD ) ≥ −λz E ∥z − z∥2 + H(z) + constant. (22)
+                 h                             i                            Submitting (22) into (19) and omitting the constant, the LCD
+                                           ˆ ,
+                       ˆ 2 + λF |F (I) − F(I)|
+          LSD = E ∥I − I∥                                         (18)    can be written as
+                                                                                                          h          i
+                                                                                                                 ⌢
+                                                                               LCD ≈ E [∥z − ẑ∥] + λz E ∥z − z∥2 − H(z).            (23)
+where λF is the weight and F(·) represents the Fourier
+transform. The first item in (18) refers to the pixel difference          If we freeze the semantic codec during training, H(z) can be
+of the image, we assume that the pixels of the image follow               technically dropped out from LCD .
+the Gaussian distribution without loss of generality and thus                2) Loss Function Design for Rate Constraints: For rate
+employ the mean-square error (MSE) loss. The second item                  constraint, the analog transmitter designs the fixed-length
+in (18) refers to the frequency difference of the image, we               output. Therefore, we consider the rate constraint for the
+consider the learning of long-range dependencies of the image             digital transmitter, which is given
+and design the Fourier-based loss function. In detail, we
+map the images into the frequency domain and compare the                                 LRate = E [− log(p (z̃D |ψ )))] ,           (24)
+difference between the original and transmitted images. The               where p (z̃D |ψ ) is given in (17). By minimizing the rate
+reasons behind the design can be summarized as                            constraint, we can optimize the distribution of z̃D and reduce
+  • The MSE loss guides the neural networks to recover                    the number of bits generated by the arithmetic coding.
+    the local pixels of the images by comparing the pixel
+    difference, which ignores the long-range dependencies of              C. Training Details
+    the image.                                                               The proposed training algorithm is shown in Algorithm
+  • The Fourier-based loss can help the neural network learn              1. We adopt three-stage training methods. The first stage is
+    the long-range dependencies of the image. Because the                 to train the semantic codec with the LSD , which enables
+    same frequency in the frequency domain refers to the                  effective semantic extraction. After the semantic codec finishes
+    different pixels at the different positions of the image.             training, the second stage is to train the hybrid transceiver
+   For the channel distortion constraint, we consider the                 with LCD + λr LRate , which aims to reduce the distortions
+distortions from channels and the transmission of essential               from physical channels as well as the number of bit streams.
+information. The designed loss function is given by                       We can drop out the H(z) in LCD since we freeze the
+                                                                          semantic codec during training. The non-differentiable opera-
+                   LCD = E [∥z − ẑ∥] − I(z, ẑD ),               (19)    tions, e.g., the quantization, entropy coding, and modulation,
+                                                                          will block the gradient back-propagation from receiver to
+where the first item minimizes the distortions from channels              transmitter. Therefore, we substitute additive uniform noise
+and the second item maximizes the mutual information be-                  for the non-differentiable operations itself during training,
+tween z and ẑD to make ẑD contains more information of z.               i.e., z̃D = zD + u in line 10 of Algorithm 1. Besides, we
+However, directly optimizing the I(z, ẑD ) is hard. We derive            choose the error-free transmission for the z̃D due to two
+the lower bound of I(z, ẑD ) by                                          factors, one is that the number of generated bit streams is
+                                                                          much smaller than the conventional source coding, e.g., JPEG;
+               Z
+                                     p (z |ẑD )                          another one is the accurate bit transmission characteristic of
+I(z, ẑD ) =       p (z, ẑD ) log               dzdẑD                   digital communication. Finally, we train the whole network
+                                        p (z)
+               Z                                                          with LSD + λr LRate to improve the quality of the recovered
+          ≥   p (z, ẑD ) log q (z |ẑD , θr ) dzdẑD                     image and reduce the number of bit streams in an end-to-end
+             Z                                                            manner, which converges to the global optimization.
+           − p (z) log p (z) dz                                              When the whole network has been trained, we can employ
+           Z                                                              the model to transmit the image wirelessly. The inference
+          = p (z) p (ẑD |z ) log q (z |ẑD , θr )dzdẑD +H (z)           algorithm is presented in Algorithm 2. We remove the ad-
+                                                                          ditive uniform noise and replace it with the non-differentiable
+            = Ez∼p(z) EẑD ∼p(ẑD |z ) [log q (z |ẑD , θr )] + H (z) .   operations.
+                                                                  (20)       The three-stage training algorithm ensures that each stage
+where the inequation follows KL [p(z|ẑD ), q(z|ẑD , θr )] ≥ 0,          can converge to the local optimum and avoids the mismatch
+in which KL[·, ·] is the Kullback-Leibler (KL) divergence and             of gradient descent. Besides, the approximate quantized noise
+q (z |ẑD , θr ) is the variational approximation of p (z |ẑD ).         helps avoid the disappearing gradient, which enables end-to-
+   For the sake of argument, assume for a moment that the                 end training. Moreover, the inference algorithm indicates that
+likelihood is given by                                                    the digital component can adopt the encryption algorithm to
+                                                                        protect the digital bits and the adaptive modulation coding
+               q (z |ẑD , θr ) = N z, (2λz )−1 I ,
+                                     ⌢
+                                                                  (21)    against channel distortions.
+                                                                                                                                      7
+
+
+
+    Algorithm 1: HDA-DeepSC Training Algorithm.                       Algorithm 2: HDA-DeepSC Inference Algorithm.
+1  Function Train Semantic Codec():                               1  Function HDA-DeepSC Inference():
+      Input: Sample I from dataset.                                     Input: Sample I from dataset.
+ 2    z = S (I; αt ),                                              2    Transmitter:
+ 3    Iˆ = S −1 (z; αr ),                                          3      z = S (I; αt ).
+ 4    Compute LSD with (18),                                       4      // Analog-Digital Allocation
+ 5    Train αt , αr → Gradient descent with LSD .                  5      zD = H(z; θt ),
+      Return: S (·; αt ) and S −1 (·; αr ).                        6      z̃D = Q(zD ),
+ 6 Function Train Hybrid Transceiver():
+                                                                   7      z̃ = H−1 (Q−1 (z̃D ); θr ),
+      Input: Freeze semantic codec and sample                      8      zA = z − z̃.
+               Semantic features z.                                9      // Digital Transmitter
+ 7    Transmitter:                                                10      b = E(z̃D ),
+ 8       // Analog-Digital Allocation                             11      xD = M (CD (b)).
+ 9       zD = H(z; θt ),                                          12      // Analog Transmitter
+         z̃D = zD + u, u ∼ U − 12 , 12 ,                                  xA = CA (zA ; βt ),
+                                              
+10                                                                13
+
+11       z̃ = H−1 (z̃D ; θr ),                                    14      Power Normalization,
+12       zA = z − z̃.                                             15      Transmit x = [xA , xD ] over the air.
+13       // Digital Transmitter                                   16    Receiver:
+14       Transmit z̃D error-free to avoid gradient                17      Receive y with (6).
+        disappear.                                                18      Signal detection by (7) to get x̂A and x̂D .
+15       // Analog Transmitter                                    19      // Digital Receiver
+                                                                                 −1
+                                                                                     M−1 (x̂D ) ,
+                                                                                                  
+16       xA = CA (zA ; βt ),                                      20      b̂ = CD
+17       Power normalization,                                     21      ẑD = Q−1 (E −1 (b̂)),
+                                                                          ⌢
+18       Transmit xA over the air.                                22      z = H−1 (ẑD ; θr ).
+19    Receiver:                                                   23      // Analog Receiver
+         Receive yA with (6) and z̃D .                                            −1
+20                                                                24      ẑA = CA   (x̂A ; βr ).
+21       // Digital Receiver                                      25      // Analog-Digital Fusion
+22       ẑD = z̃D ,                                              26
+                                                                                     ⌢
+                                                                          ẑ = ẑA + z,
+         ⌢
+23       z = H−1 (ẑD ; θr ).                                     27      Iˆ = S −1 (ẑ; αr ).
+24       // Analog Receiver                                             Return: I.ˆ
+25       Signal detection by (7) to get x̂A ,
+                 −1
+26       ẑA = CA    (x̂A ; βr ).
+27       // Analog-Digital Fusion
+                     ⌢                                            A. De-noising Diffusion Framework
+28       ẑ = ẑA + z.
+29    Compute LCD + λr LRate with (23) and (24).                     Given a random noise as input, the denoising diffusion
+30    Train βt , βr , θt , θr → Gradient descent with             framework [30] models the generative processing through
+        LCD + λr LRate .                                          multiple de-noising steps. Each step iteratively enhances the
+      Return: CA (·; βt ), CA   −1
+                                    (·; βr ), H (·; θt ), and     generative results by removing the predicted noise, akin to
+                   −1
+                H (·; θr ).                                       Langevin dynamics. The de-noising diffusion framework is
+                                                                  divided into forward process and reverse process.
+31 Function Train Whole Network():
+                                                                     1) Forward Process: The forward process is fixed to a
+      Input: Sample I from dataset.
+                                                ˆ                 Markov chain with T steps that gradually adds Gaussian noise
+32    Repeat lines 2, 8-28, and 3 to get I.
+                                                                  to the data according to a variance schedule γ1 , · · · , γT , which
+33    Compute LSD + λr LRate with (18) and (24).
+                                                                  is given by
+34    Train αt , αr , βt , βr , θt , θr → Gradient descent
+        with LSD + λr LRate .                                            x(0) → x(1) → x(2) → · · · → x(T −1) → x(T ) ,            (25)
+      Return: The HDA-DeepSC.                                               (0)                                     (t)   (t−1)
+                                                                                                                                  
+                                                                     p x
+                                                                  where         is the input information, p x x                     =
+                                                                  N      1 − γ x(t−1) , γ (t) I , and p(x(T ) ) is modeled with
+                                                                              (t)
+
+                                                                  N (0, I). Due to the reparameterization of normal distribution,
+       IV. D IFFUSION F RAMEWORK E NHANCED S IGNAL                x(t) can be represented as
+                         D ETECTION                                                   p                   p
+                                                                              x(t) = 1 − γ (t) x(t−1) + γ (t) ϵ(t)
+   This section provides an overview of the de-noising diffu-                         q            2                        (26)
+sion framework and its background. Subsequently, we intro-                          = 1 − γ̄ (t) x(0) + γ̄ (t) ϵ̄(t) ,
+duce a novel diffusion-based signal detection method called                                              q
+                                                                  where ϵ̄(t) ∼ N (0, I) and γ̄ (t) =
+                                                                                                                 Q
+DiffSDNet. DiffSDNet is developed by incorporating a care-                                                  1 − t=1 (1 − γ (t) ).
+fully designed variance schedule into the training and sampling   Observe (26), the forward process recurrently adds the Gaus-
+algorithms.                                                       sian noise step by step to make x(0) approach the normal
+                                                                                                                                            8
+
+
+
+distribution, which can be viewed as the encoding processing            reverse process to refine x̃, such that obtains the more accurate
+without learnable parameters.                                           x. Given the x̃ and σñ , we adopt (27) to remove the noise
+   2) Reverse Process: The reverse process is also defined as           in x̃ to closer thex. However, the existing variance schedule
+a Markov chain with T steps starting at x(T ) , which is given          of p x(t) x(t−1) and sampling algorithm are unsuitable for
+by                                                                      wireless communications. We need to design the variance
+                                                                        schedule and sampling algorithm by considering the channel
+     x(T ) → x(T −1) → x(T −2) → · · · → x(1) → x(0) ,          (27)    SNR.
+                                                 
+where q x(t−1) x(t) = N µ x(t) ; ω , σ (t) I . The reverse                 1) Variance Schedule Design: A variance schedule refers
+process generates the x(t−1) based on x(t) , in which the mean          to the way in which the mean and variance of the added
+of x(t−1) is modeled with neural network with the x(t) as               noise changes over the course of the diffusion process. During
+input.                                                                  this process, the mean and variance of the added noise is
+   From (26), we can observe that x(t−1) can be predicted               adjusted at each step, affecting the amount of noise introduced
+with x(t) and x(0) by removing the added noise. Therefore,             at each stage, therefore variance schedule determines how the
+µ x(t) ; ω can be modeled as                                            noise level evolves during the diffusion process. A variance
+                                                                        schedule can impact the quality of generated x and the model’s
+                                         γ (t)
+                                                         
+        (t)            1          (t)          (t)                      convergence behavior.
+    µ(x ; ω) = p                 x − (t) ϵ(x ; ω) . (28)
+                     1 − γ (t)           γ̄                                The variance schedule should satisfy the γ̄ (T ) → 0. Based
+                                                                       on the constraint, we design the variance schedule with T = 50
+where ϵ x(t) ; ω predicts the noise added to x(t) . From (28),
+                                                                        steps, which is given by
+the reverse process predicts the Gaussian noise at each step and
+then removes the predicted noise to restore the x(0) from x(T )                                             0.5t
+with learnable parameters, which can be viewed the decoding                                         γ (t) =       ,                      (32)
+                                                                                                              T
+processing.
+   The loss function for the diffusion-based model at step t is which γ̄ (50) ≈ e−6.375 ≈ 0. The designed variance schedule
+defined as                                                              includes 50 different noise levels. The reasons behind the
+            "         q                                        2 # designed variance schedule can be summarized as
+  (t)                                 2
+LDiff = E ϵ̄(t) − ϵ       1 − γ̄ (t) x(0) + γ̄ (t) ϵ̄(t) ; ω, t       .   • Compared with the conventional diffusion-based frame-
+
+                                                                (29)         work with 1,000 steps for generative tasks, we empirically
+During training, we sample the t first and model the x            (t)        find that the de-noise task does not need too many steps
+with x  (0)
+             by adding the Gaussian noise with the scheduled                 due to the low complexity of the de-noise task.
+                                                                                                                       (t)
+                                                                          • We design a monotonic function of γ            to achieve coarse-
+variances.
+   Compared with the previous de-noise frameworks, e.g.,                     to-fine  de-noise  processing,   which  has an  unequal interval
+DnCNN, that predict the noise with only one step, the                        SNR,    e.g., a  small  interval  in high  SNR    regions and a
+de-noising diffusion framework can predict the noise with                    large interval   in low   SNR  regions.   The   unequal interval
+multiple steps, such that matches the distributions of noise                 SNR    can   speed  up   the de-noise   processing   with fewer
+and achieves better performance of de-noise. Therefore, we                   steps at  low   SNR   regions.
+propose a de-noising diffusion-based signal detection method.              2) Sampling Algorithm: The sampling algorithm performs
+                                                                        the reverse process by sampling the steps. For example, the
+                                                                        conventional diffusion-based framework usually samples 1,000
+B. The Proposed De-noising Diffusion-based Signal Detection
+                                                                        steps from T → 0 [30] or 100 steps with the subsequence
+  The detected signals in (7) can be rewritten as                       of T → 0 [31], in which x(T ) is the first sampled step.
+                            x̂ = x + ñ,                        (30)    However, starting from x(T ) is unsuitable for signal detection.
+               ∗
+                                                                        The detected signals will start from different x(t) where t
+              h
+where ñ = |h|  2 n is an effective noise after the signal detec-       depends on the received SNR at the receiver. Therefore, we
+tion. We employ the block-fading channel model in (6), where            propose a dynamic sampling algorithm shown in Algorithm 3.
+the h keeps constant. Therefore, the ñ follows a circularly               Firstly, given the known σñ , we search the starting point t̃
+symmetric complex Gaussian distribution with zero mean and              at the reverse process, which is given by
+scaled variance, σñ2 = σn2 /|h|2 .
+                                                                                                  1
+                                                
+   Since the coefficients of p x(t) x(t−1) should satisfy                                   √           ∈ [γ̄ (t̃+1) , γ̄ (t̃) ].       (33)
+             2
+                                                                                                1 + σñ
+p
+    1 − γ (t) + γ (t) = 1, we rewritten x̂ as
+
+                             1         σñ                                 Then, the signal detection aims to recover the transmitted
+                   x̃ = √         x+ √       ϵ,                 (31)    signals as more accurate as possible. Therefore, we change
+                            1+σñ      1+σñ
+              √                                                         the random sampling to deterministic sampling. In detail,
+where x̃ = x̂/ 1 + σñ and ñ = σñ ϵ, ϵ ∼ CN (0, I).                   we reduce the degree of randomness in the reverse process
+   Comparing (31) with (26), we find that the wireless trans-           by setting σ (t) in (27) equals to zero, which means that
+mission is similar to the forward process. We model x and x̃            the q x(t−1) x(t) changes
+                                                                                                     from N µ x(t) ; ω , σ (t) I to
+in (31) as x(0) and x(t) in (26). It is natural to employ the                             (t)
+                                                                        deterministic µ x ; ω .
+                                                                                                                                                       9
+
+
+
+    Algorithm 3: Dynamic Sampling Algorithm.
+                                                                                  38
+1 Function Dynamic Sampling():
+     Input: The detected signal x̃ and σñ .
+                                                                                  36
+2    Initialize x̃ as the starting point, x(t̃) .
+3    Find the t̃ by (33) with σñ .
+
+
+
+
+                                                                      PSNR (dB)
+                                                                                  34
+4    for t = t̃ → 1 do                                    
+                                           (t)
+5         x(t−1) = √ 1          x(t) − γγ̄ (t) ϵ(x(t) ; ω)
+                         1−γ (t)                                                  32
+                   (0)
+        Return: x
+                                                                                  30
+
+                                                                                                                       Analog DeepSC
+                    V. N UMERICAL R ESULTS                                                                             Analog DeepSC with DiffSDNet
+                                                                                                                       Analog DeepSC with DnCNN
+                                                                                  28
+  In this section, we compare the proposed HDA-DeepSC                                  0        2       4        6           8          10        12
+
+with DL-based semantic communication systems and digital
+communication systems over AWGN and Rician fading chan-           Fig. 3. The PSNR performance comparison between Analog DeepSC and
+nels, where we assume the perfect CSI for all schemes.            Analog DeepSC with different denoisers on the Kodak dataset.
+
+                                                                                                 TABLE I
+A. Implementation Details                                             T HE PSNR C OMPARISON BETWEEN THE ANALOG D EEP SC WITH
+   1) The Dataset: We choose the DIK2K dataset [32] for                   DIFFERENT DIFFUSION - BASED DENOISERS AT SNR=0 D B.
+
+training, which contains 1,000 images with different scenes.
+                                                                                       Sampling Steps   10     20     30         40          50
+The Kodak dataset is used for testing.
+   2) Training Settings: The semantic codec consists of 6                                   DDPM        29.3   29.0   28.9       28.8    29.0
+Swin-Transformer layers, respectively. Each layer is with 6                                DiffSDNet    29.1   29.5   29.9       30.1        \
+heads and a width of 120. The diffusion-based model adopts
+the structures of OpenAI-UNet. The λF , λz , and λr is 0.1,
+0.1, and 0.0005, respectively. The learning rate is 2 × 10−4 .    and h = 1 for the AWGN channels. Peak signal-to-noise ratio
+   3) Benchmarks and Performance Metrics: We adopt the            (PSNR) and multi-scale structural similarity (MS-SSIM) are
+separate source-channel coding, the DL-based analog semantic      used as the metrics to measure the local and global quality of
+communication system, the DL-based digital semantic com-          images.
+munication system, and the one-step denoising network as the
+benchmarks, which are detailed as follows.                        B. Denoising Networks Comparisons
+   • Separate source-channel coding: Employ the source and          Fig. 3 presents the PSNR performance for the analog
+      channel coding separately to transmit the images, we use    DeepSC with different denoisers. First observe that the analog
+      the following technologies, respectively:                   DeepSC with denoiser has a larger PSNR than that without
+        – Better Portable Graphics (BPG) for image source         denoiser in the low SNR regimes. This validates the effective-
+           coding, the state-of-the-art image compression         ness of the denoiser in reducing the noise level. For the small
+           method.                                                noise level at the high SNR regimes, the analog DeepSC is
+        – Low-density parity check (LDPC) coding and              capable of restoring the signals therefore all methods achieve a
+           capacity-achieved coding are used for the channel      similar PSNR as the SNR increases. Furthermore, we observe
+           coding.                                                that the analog DeepSC with DiffSDNet outperforms that with
+        – The adaptive modulation and coding (AMC) is em-         DnCNN with 0.6dB in terms of PSNR. This suggests that the
+           ployed for different SNRs, including 1/2 coding rate   multiple-step denoiser has a stronger power of denoising than
+           with BPSK, 1/2 coding rate with QPSK, 3/4 coding       the one-step denoiser.
+           rate with QPSK, 1/2 coding rate with 16QAM, and          Table I shows the comparison between analog DeepSC
+           3/4 coding rate with 16QAM.                            with DDPM and DiffSDNet. The proposed DiffSDNet can
+   • Analog semantic communication systems: The purely            achieve higher PSNR with fewer sampling steps than the
+      analog semantic communication of HDA-DeepSC trained         DDPM, confirming the effectiveness of the designed variance
+      with MSE loss.                                              schedule and sampling algorithm. Especially, the PSNR of
+   • Digital     semantic communication systems: The              analog DeepSC with DDPM will decrease as the number of
+      DeepJSCC-Q proposed in [12].                                sampling steps increases. This is due to the high degree of
+   • Denoising convolutional neural network (DnCNN) as the        randomness introduced in the reverse process.
+      one-step de-noise benchmark
+   The LDPC codes we use are from the 802.11ad standard,          C. Communication System Comparisons
+with blocklength 672 bits for both the 1/2 and 3/4 rate codes.       Figs. 4 and 5 report the PSNR and MS-SSIM comparison
+The coherent time is set as the transmission time for each        between the various methods over AWGN channels and Ri-
+image in the simulation. We set r = 1 for the Rician channels     cian channels. For AWGN channels, we can see in Fig. 4
+                                                                                                                                                                          10
+
+
+
+
+                    40                                                                       25
+                             HDA-DeepSC                                                               HDA-DeepSC
+                             Analog DeepSC with DiffSDNet                                             Analog DeepSC with DiffSDNet
+                             DeepJSCC-Q                                                               DeepJSCC-Q
+                             BPG+AMC                                                                  BPG+AMC
+
+
+
+                    35                                                                       20
+
+
+
+
+                                                                              MS-SSIM (dB)
+        PSNR (dB)
+
+
+
+
+                    30                                                                       15
+
+
+
+
+                    25                                                                       10
+                         0       2            4             6   8   10   12                       0       2            4             6           8   10        12
+                                                     SNR (dB)                                                                  SNR (dB)
+
+                                                  (a) PSNR                                                                 (b) MS-SSIM
+
+Fig. 4. Comparison between HDA-DeepSC and the Analog DeepSC, DeepJSCC-Q, and BPG with different channel coding on the Kodak dataset over AWGN
+channels.
+
+
+                    38
+                             HDA-DeepSC                                                               HDA-DeepSC
+                             Analog DeepSC with DiffSDNet                                    20       Analog DeepSC with DiffSDNet
+                             DeepJSCC-Q                                                               DeepJSCC-Q
+                             BPG+AMC                                                                  BPG+AMC
+
+
+                    34
+                                                                              MS-SSIM (dB)
+
+
+
+                                                                                             15
+        PSNR (dB)
+
+
+
+
+                    30
+                                                                                             10
+
+
+
+
+                    26
+                                                                                             5
+                         0       2            4             6   8   10   12                       0       2            4             6           8   10        12
+                                                     SNR (dB)                                                                  SNR (dB)
+
+                                                  (a) PSNR                                                                 (b) MS-SSIM
+
+Fig. 5. Comparison between HDA-DeepSC and the Analog DeepSC, DeepJSCC-Q, and BPG with different channel coding on the Kodak dataset over Rician
+channels.
+
+
+that our HDA-DeepSC outperforms all the benchmarks. This                                                          TABLE II
+indicates that the discrete signals of the digital component                         T HE A BLATIONS OF F OURIER - BASED C OMPONENT: MSE L OSS , MSE
+                                                                                         L OSS WITH F OURIER - BASED M ODULE , AND MSE L OSS WITH
+can accurately deliver crucial semantic information for details                                            F OURIER - BASED L OSS .
+recovery and the continuous signals of the analog component
+can prevent the leveling-off and cliff-edge effects for lower                                Method        MSE loss
+                                                                                                                                  MSE loss +           MSE loss +
+quantization errors. Besides, the HDA-DeepSC achieves the                                                                    Fourier-based Module    Fourier-based loss
+best performance in terms of MS-SSIM, which means that                                        PSNR            48.09                      50.35             52.19
+the images transmitted by HDA-DeepSC have better global                                  MS-SSIM              33.01                      35.23             40.01
+quality. This is likely because we introduce the Fourier-based
+loss function that makes the model learn the long-distance
+dependencies. For the Rician channel case shown in Fig. 5,                    digital transmitter.
+we observe that the DL-based analog systems are more robust                     In Table II, we study the ablations of Fourier-based com-
+to channel changes due to the high degree of freedom in                       ponents by only considering the semantic codec, in which the
+continuous signals, in which the HDA-DeepSC is beneficial                     MSE loss with Fourier-based module means that we insert
+from the analog component. Visual examples are presented                      the pluggable Fourier-based modules [33] into the semantic
+in Fig. 8(a)-(c). We can observe the proposed HDA-DeepSC                      codec and train the semantic codec with MSE loss function.
+can restore more details, e.g., the mouth and feathers of                     The Fourier-based module or loss can improve the quality
+the parrot, than the BPG with LDPC and 16QAM due to                           of images with more than 2dB in terms of PSNR and MS-
+delivering essential semantic information accurately by the                   SSIM due to the long-distance dependencies learning in the
+                                                                                                                                                                                       11
+
+
+
+
+                    38                                                                                       25
+                                HDA-DeepSC                                                                               HDA-DeepSC
+                                Analog DeepSC with DiffSDNet                                                             Analog DeepSC with DiffSDNet
+                                DeepJSCC-Q                                                                               DeepJSCC-Q
+                                BPG+1/2 LDPC+16QAM                                                                       BPG+1/2 LDPC+16QAM
+                    36
+
+
+                                                                                                             20
+
+
+
+
+                                                                                              MS-SSIM (dB)
+                    34
+        PSNR (dB)
+
+
+
+
+                    32
+                                                                                                             15
+
+
+                    30
+
+
+
+
+                    28                                                                                       10
+                         0.05                             0.1                0.15                                 0.05                             0.1                0.15
+                                             Bandwidth Compression Ratio                                                              Bandwidth Compression Ratio
+
+                                                     (a) PSNR                                                                              (b) MS-SSIM
+
+Fig. 6. PSNR and MS-SSIM performance for different bandwidth compression ratios on the Kodak dataset over AWGN channels.
+
+
+                    40
+                                                                             SNR = 5dB                                                                                SNR = 5dB
+                                                                             SNR = 10dB                                                                               SNR = 10dB
+                                                                             SNR = 15dB                                                                               SNR = 15dB
+                                                                                                             24
+
+                    38
+                                                                                              MS-SSIM (dB)
+        PSNR (dB)
+
+
+
+
+                                                                                                             22
+                    36
+
+
+
+
+                                                                                                             20
+                    34
+
+
+
+
+                    32                                                                                       18
+                            0.5              1           1.5          2    2.5            3                          0.5              1           1.5          2    2.5            3
+                                                   Digital-Analog Ratio                                                                     Digital-Analog Ratio
+
+                                                     (a) PSNR                                                                              (b) MS-SSIM
+
+Fig. 7. PSNR and MS-SSIM performance for different digital-analog ratios on the Kodak dataset over AWGN channels.
+
+
+
+frequency domain. Besides, we observe that the Fourier-based                                  of MS-SSIM, indicating the neural networks operate as the
+loss can largely increase MS-SSIM than the Fourier-based                                      better content generator, thereby generating the image with
+module. The reason behind that is the Fourier-based module                                    global consistency.
+introduces the additional Fourier-based parameters making it
+challenging to further improve its performance. This suggests
+that Fourier-based loss can directly capture the global infor-                                E. Digital-Analog Ratio Comparisons
+mation of images without additional parameters and hence as
+                                                                                                 Fig. 7 shows the comparisons across different digital-analog
+an attractive loss to improve the global quality of images.
+                                                                                              (DA) ratios by changing the ratio between the number of
+                                                                                              transmitted symbols of digital and analog components, where
+D. Bandwidth Compression Ratio Comparisons                                                    the total number of transmitted symbols is fixed. The larger
+   Fig. 6 demonstrates the comparisons for different band-                                    DA ratio means more semantic information is transmitted
+width compression ratios over AWGN channels at SNR=10dB.                                      with the digital transmitter and vice versa. We can observe
+The HDA-DeepSC outperforms all the benchmarks in terms                                        that the PSNR and MS-SSIM decrease as the DA ratio
+of PSNR and MS-SSIM. For example, the HDA-DeepSC                                              increases, which is caused by the unavoidable quantization
+achieves the same PSNR as separate codings (the BPG                                           errors introduced by the digital transmitter. The more semantic
+with 1/2 LDPC and 16QAM) with a 33% improvement on                                            information transmitted through the digital transmitter, the
+bandwidth compression ratio. This suggests that the HDA-                                      larger the quantization errors introduced to the transmitted in-
+DeepSC can provide a higher data transmission rate than the                                   formation. This suggests that the analog transmitter operates as
+benchmarks for a given PSNR or MS-SSIM. Besides, we find                                      a continuous signal-based system, thereby effectively reducing
+that the learning-based methods outperform the BPG in terms                                   the quantization errors by decreasing the DA ratio.
+                                                                                                                                                   12
+
+
+
+
+Fig. 8. Visualized examples for different methods transmitted over AWGN channels at SNR=10dB: (a) original image; (b) image recovered by BPG with
+1/2 LDPC and 16QAM; (c) image recovered by HDA-DeepSC with 0.2 DA ratio using unencrypted bits; (d)-(f) image recovered by HDA-DeepSC with 0.2,
+0.87, and 3 DA ratio using encrypted bits, respectively.
+
+
+
+                          TABLE III                                       analog and digital semantic communications. Our framework
+ T HE PSNR P ERFORMANCE FOR THE E NCRYPTED AND U NENCRYPTED               aims to overcome the inherent limitations associated with
+          B ITS OVER AWGN C HANNELS AT SNR=10 D B.
+                                                                          each approach. Building upon the framework, we introduced
+         DA Ratio         0.2      0.4    0.875     1.5      3            a robust HDA semantic communication system called HDA-
+       Encrypted Bits    13.75    13.67   13.61    13.56   13.52
+                                                                          DeepSC, specifically designed for multimedia transmission.
+                                                                          HDA-DeepSC leverages digital communication methods to
+      Unencrypted Bits   37.69    36.62   35.30    34.80   33.51
+                                                                          transmit crucial semantic information, ensuring accurate deliv-
+                                                                          ery and data security. Additionally, it utilizes analog communi-
+                                                                          cation methods to transmit auxiliary semantic information, ef-
+F. Data Security                                                          fectively mitigating the leveling-off and cliff-edge effects asso-
+   Table III reports the PSNR performance for the encrypted               ciated with traditional approaches. We also introduced analog-
+and unencrypted bits, where these terms refer to whether the              digital allocation and fusion modules to separate and fuse the
+encryption algorithm encrypts the bit streams transmitted by              digital and analog components, respectively. Besides, we have
+the digital transmitter. We assume that the eavesdropper is               designed the Fourier-based loss function to guide the model
+incapable of decoding the encrypted bits and only decodes                 in learning the long-distance dependencies and combined the
+the semantic information transmitted by the analog transmitter,           rate constraint with the non-parametric, fully factorized density
+where the HDA-DeepSC model is known to the eavesdropper.                  model. Moreover, we have proposed the diffusion framework
+From Table III, the PSNR of encrypted bits is 20dB lower                  enhanced signal detection, named DiffSDNet, by multiple de-
+compared to that of unencrypted bits, indicating the images               noising steps to reduce the noise level at the low SNR regimes,
+recovered by encrypted bits are little like the original ones. In         in which we customized the variance schedule and sampling
+other words, the eavesdropper obtains less information from               algorithm for wireless communication environments. The nu-
+the semantic information transmitted by the analog transmitter.           merical results have proved the effectiveness of DiffSDNet in
+Besides, the PSNR of encrypted bits slightly decreases as                 denoising and demonstrated the superiority of HDA-DeepSC
+the DA ratio increases. This suggests that the HDA-DeepSC                 in terms of robustness, transmission rate, and data security,
+effectively safeguards data with few bits while achieving the             especially in low SNR regimes. Therefore, the proposed HDA
+high PSNR. Visual examples are presented in Figs. 8(c)-(f),               semantic communication framework shows great promise as
+where Figs. 8(d)-(f) are the images recovered by encrypted                a candidate for the new semantic communication paradigm,
+bits. Interestingly, the essential information is protected by the        offering significant potential for real-world implementations.
+HDA-DeepSC, e.g. the color, the background, and the textures,
+which proves the effectiveness of the HDA-DeepSC in data
+security.                                                                                              R EFERENCES
+                                                                           [1] C. Wang, X. You, X. Gao, X. Zhu, Z. Li, C. Zhang, H. Wang, Y. Huang,
+                         VI. C ONCLUSION                                       Y. Chen, H. Haas, J. S. Thompson, E. G. Larsson, M. D. Renzo, W. Tong,
+                                                                               P. Zhu, X. Shen, H. V. Poor, and L. Hanzo, “On the road to 6g: Visions,
+  In this paper, we present an innovative HDA semantic                         requirements, key technologies, and testbeds,” IEEE Commun. Surv.
+communication framework that combines the strengths of                         Tutorials, vol. 25, no. 2, pp. 905–974, Nov. 2023.
+                                                                                                                                                             13
+
+
+
+ [2] Z. Qin, X. Tao, J. Lu, and G. Y. Li, “Semantic communications:              [27] Z. Liu, Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin, and B. Guo,
+     Principles and challenges,” CoRR, vol. abs/2201.01389, 2022.                     “Swin transformer: Hierarchical vision transformer using shifted win-
+ [3] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled                dows,” in IEEE Int. Conf. on Computer Vision, Montreal, QC, Canada,
+     semantic communication systems,” IEEE Trans. Signal Process., vol. 69,           Oct. 2021, pp. 9992–10 002.
+     pp. 2663–2675, Apr. 2021.                                                   [28] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Variational
+ [4] P. Yi, Y. Cao, X. Kang, and Y.-C. Liang, “Deep learning-empowered                image compression with a scale hyperprior,” in Int. Conf. on Learning
+     semantic communication systems with a shared knowledge base,” IEEE               Representations, Vancouver, BC, Canada, Apr. 2018.
+     Trans. Wireless Commun., Early Access, 2023.                                [29] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+ [5] Z. Weng, Z. Qin, X. Tao, C. Pan, G. Liu, and G. Y. Li, “Deep                     semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+     learning enabled semantic communications with speech recognition and             pp. 2584–2597, Sept. 2022.
+     synthesis,” IEEE Trans. Wireless Commun., vol. 22, no. 9, pp. 6227–         [30] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”
+     6240, Feb. 2023.                                                                 in Advances in Neural Information Processing Systems, Virtual, Dec.
+ [6] E. Grassucci, C. Marinoni, A. Rodriguez, and D. Comminiello, “Dif-               2020.
+     fusion models for audio semantic communication,” in Int. Conf. on           [31] J. Song, C. Meng, and S. Ermon, “Denoising diffusion implicit models,”
+     Acoustics, Speech and Signal Process., Seoul, South Korea, Apr. 2024,            in Int. Conf. on Learning Representations, Virtual, May 2021.
+     pp. 13,136–13,140.                                                          [32] A. Ignatov, R. Timofte et al., “Pirm challenge on perceptual image
+ [7] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-preserved                enhancement on smartphones: report,” in European Conference on
+     communication system for highly efficient speech transmission,” IEEE             Computer Vision, Jan. 2019.
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 245–259, Jan. 2023.              [33] L. Chi, B. Jiang, and Y. Mu, “Fast fourier convolution,” in Advances in
+ [8] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear         Neural Information Processing Systems 33, H. Larochelle, M. Ranzato,
+     transform source-channel coding for semantic communications,” IEEE               R. Hadsell, M. Balcan, and H. Lin, Eds., Virtual Event, Dec. 2020.
+     J. Sel. Areas Commun., vol. 40, no. 8, pp. 2300–2316, Aug. 2022.
+ [9] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, and X. Tao, “A unified multi-
+     task semantic communication system for multimodal data,” IEEE Trans.
+     Commun., pp. 1–1, Early Access, 2024.
+[10] H. Wu, Y. Shao, E. Ozfatura, K. Mikolajczyk, and D. Gündüz,
+     “Transformer-aided wireless image transmission with channel feedback,”
+     IEEE Trans. Wireless Commun., Early Access, 2024.
+[11] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and
+     P. Zhang, “Wireless deep video semantic transmission,” IEEE J. Sel.
+     Areas Commun., vol. 41, no. 1, pp. 214–229, Jan. 2023.
+[12] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-
+     Q: Constellation constrained deep joint source-channel coding,” IEEE J.
+     Sel. Areas Inf. Theory, vol. 3, no. 4, pp. 720–731, Dec. 2022.
+[13] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+     digital semantic communications via variational autoencoder,” IEEE
+     Trans. Commun., pp. 1–1, Early Access, 2024.
+[14] Y. He, G. Yu, and Y. Cai, “Rate-adaptive coding mechanism for semantic
+     communications with multi-modal data,” IEEE Trans. Commun., vol. 72,
+     no. 3, pp. 1385–1400, Mar. 2024.
+[15] L. Guo, W. Chen, Y. Sun, and B. Ai, “Device-edge digital semantic com-
+     munication with trained non-linear quantization,” in Int. Veh. Technol.
+     Conf., Florence Italy, Jun. 2023.
+[16] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. Quek, “Ofdm-based digital
+     semantic communication with importance awareness,” arXiv preprint
+     arXiv:2401.02178, 2024.
+[17] Q. Fu, H. Xie, Z. Qin, G. Slabaugh, and X. Tao, “Vector quantized se-
+     mantic communication system,” IEEE Wireless Commun. Lett., vol. 12,
+     no. 6, pp. 982–986, Jun. 2023.
+[18] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic
+     communications with masked vq-vae enabled codebook,” IEEE Trans.
+     Wireless Commun., vol. 22, no. 12, pp. 8707–8722, Dec. 2023.
+[19] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+     scheme for semantic communication systems,” IEEE Trans. Cognit.
+     Commun. Networking, vol. 10, no. 1, pp. 150–163, Feb. 2024.
+[20] J. Huang, K. Yuan, C. Huang, and K. Huang, “D2-JSCC: Digital
+     deep joint source-channel coding for semantic communications,” arXiv
+     preprint arXiv:2403.07338, 2024.
+[21] U. Mittal and N. Phamdo, “Hybrid digital-analog (HDA) joint source-
+     channel codes for broadcasting and robust communications,” IEEE
+     Trans. Inf. Theory, vol. 48, no. 5, pp. 1082–1102, May 2002.
+[22] M. Skoglund, N. Phamdo, and F. Alajaji, “Hybrid digital–analog
+     source–channel coding for bandwidth compression/expansion,” IEEE
+     Trans. Inf. Theory, vol. 52, no. 8, pp. 3757–3763, Aug. 2006.
+[23] M. Rüngeler, J. Bunte, and P. Vary, “Design and evaluation of hybrid
+     digital-analog transmission outperforming purely digital concepts,” IEEE
+     Trans. Commun., vol. 62, no. 11, pp. 3983–3996, Nov. 2014.
+[24] E. Köken and E. Tuncel, “On robustness of hybrid digital/analog source-
+     channel coding with bandwidth mismatch,” IEEE Trans. Inf. Theory,
+     vol. 61, no. 9, pp. 4968–4983, Sept. 2015.
+[25] T. Fujihashi, T. Koike-Akino, T. Watanabe, and P. V. Orlik, “Holocast+:
+     Hybrid digital-analog transmission for graceful point cloud delivery with
+     graph fourier transform,” IEEE Trans. Multimedia, vol. 24, pp. 2179–
+     2191, May 2022.
+[26] J. A. Hart, The Economics, Technology and Content of Digital TV.
+     Boston, MA: Springer US, 2004.
+

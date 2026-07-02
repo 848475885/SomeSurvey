@@ -1,0 +1,926 @@
+5486                                                                  IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+
+  Predictive and Adaptive Deep Coding for Wireless
+   Image Transmission in Semantic Communication
+       Wenyu Zhang , Haijun Zhang , Fellow, IEEE, Hui Ma , Hua Shao , Ning Wang , Member, IEEE,
+                                               and Victor C. M. Leung , Life Fellow, IEEE
+
+   Abstract— Semantic communication is a newly emerged com-                     efficiency. Simulation results demonstrate that the proposed
+munication paradigm that exploits deep learning (DL) models to                  DeepJSCC-V model can achieve similar PSNR performances
+realize communication processes like source coding and channel                  compared with the state-of-the-art Attention-based DeepJSCC
+coding. Recent advances have demonstrated that DL-based joint                   (ADJSCC) model, and the proposed OraNet model is able to
+source-channel coding (DeepJSCC) can achieve exciting data                      predict high-quality PSNR values with an average error lower
+compression and noise-resiliency performances for wireless image                than 0.5dB. Results also demonstrate that the proposed PADC
+transmission tasks, especially in environments with low chan-                   can use nearly minimal bandwidth consumption for wireless
+nel signal-to-noises (SNRs). However, existing DeepJSCC-based                   image transmission tasks with different channel SNR and image
+semantic communication frameworks still cannot achieve adap-                    contents, at the same time guaranteeing the PSNR constraint for
+tive code rates for different channel SNRs and image contents,                  each image data.
+which reduces its flexibility and bandwidth efficiency. In this
+paper, we propose a predictive and adaptive deep coding (PADC)                    Index Terms— Adaptive code length, joint source channel
+framework for realizing flexible code rate optimization with a                  coding, quality prediction, semantic communication, wireless
+given target transmission quality requirement. PADC is realized                 image transmission.
+by a variable code length enabled DeepJSCC (DeepJSCC-V)
+model for realizing flexible code length adjustment, an Ora-
+cle Network (OraNet) model for predicting peak-signal-to-noise                                             I. I NTRODUCTION
+(PSNR) value for an image transmission task according to its
+contents, channel signal to noise ratio (SNR) and the compression
+ratio (CR) value, and a CR optimizer aims at finding the minimal
+                                                                                I   N A WIRELESS communication system, source coding
+                                                                                    and channel coding are two commonly used techniques
+                                                                                for improving communication efficiency and reliability respec-
+data-level or instance-level CR with a PSNR quality constraint.
+By using the above three modules, PADC can transmit the                         tively. In general, source coding is usually conducted at the
+image data with minimal CR, which greatly increases bandwidth                   application layer, and it is helpful for decreasing the data
+                                                                                amount by reducing the information redundancy of the original
+   Manuscript received 18 July 2022; revised 28 October 2022; accepted
+1 January 2023. Date of publication 11 January 2023; date of current            source data. For image data compression tasks, traditional
+version 14 August 2023. This work was supported in part by the National         source coding methods mainly use the following three steps to
+Natural Science Foundation of China under Grant 62102021, Grant 62101030,       reduce data amount: transform, quantization and entropy cod-
+Grant 62225103, and Grant U22B2003; in part by the China Post-Doctoral
+Science Foundation under Grant 2020M680350; in part by the Beijing Natural      ing, such as the well-known Discrete Cosine Transform (DCT)
+Science Foundation under Grant L212004; in part by the China Univer-            based Joint Photographic Experts Group (JPEG) [1] and Better
+sity Industry-University-Research Collaborative Innovation Fund under Grant     Portable Graphics (BPG) [2] standards, and Discrete Wavelet
+2021FNA05001; in part by the Guangdong Pearl River Talent Recruitment
+Program under Grant 2019ZT08X603; in part by the Guangdong Pearl River          Transform (DWT) based JPEG2000 standard [3]. Channel
+Talent Plan under Grant 2019JC01X235; in part by the Shenzhen Science and       coding generally works at the physical layer, and it is mainly
+Technology Innovation Commission under Grant R2020A045; and in part by          used for improving the transmission reliability by using error
+the Fundamental Research Funds for the Central Universities of USTB under
+Grant FRF-IDRY-20-020. The associate editor coordinating the review of this     check or error correcting coding techniques, such as Low
+article and approving it for publication was C. Huang. (Corresponding author:   Density Parity Check Code (LDPC) [4], Polar code [5], and
+Haijun Zhang.)                                                                  Turbo code [6]. In conventional communication systems, the
+   Wenyu Zhang, Hui Ma, and Hua Shao are with the School of Intelli-
+gence Science and Technology, Institute of Artificial Intelligence, Univer-     above two coding processes are implemented as two separate
+sity of Science and Technology Beijing, Beijing 100083, China (e-mail:          functional modules or blocks, and this practice is helpful for
+wyzhang@ustb.edu.cn; hui_ma@ustb.edu.cn; shaohua@ustb.edu.cn).                  designing, developing, and maintaining the communication
+   Haijun Zhang is with the Beijing Advanced Innovation Center for Materials
+Genome Engineering and the Beijing Engineering and Technology Research          system in a flexible way.
+Center for Convergence Networks and Ubiquitous Services, University of Sci-        From the perspective of system-level optimality, the above
+ence and Technology Beijing, Beijing 100083, China (e-mail: haijunzhang@        separable or layered source-channel coding paradigm is actu-
+ieee.org).
+   Ning Wang is with the Henan Joint International Research Laboratory of       ally suboptimal because it is designed and optimized indepen-
+Intelligent Networking and Data Analysis, School of Information Engineering,    dently without considering the mutual impacts, thus cannot
+Zhengzhou University, Henan 450001, China (e-mail: ienwang@zzu.edu.cn).         work cooperatively to achieve the best overall communication
+   Victor C. M. Leung is with the College of Computer Science and Software
+Engineering, Shenzhen University, Shenzhen 518060, China, and also with the     capacity [7]. For example, the source decoding block assume
+Department of Electrical and Computer Engineering, The University of British    that its input code from channel decoding block is error-free,
+Columbia, Vancouver, BC V6T 1Z4, Canada (e-mail: vleung@ieee.org).              and then it can recover the transmitted data without error
+   Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TWC.2023.3234408.                                       from the result of channel decoding. However, when channel
+   Digital Object Identifier 10.1109/TWC.2023.3234408                           SNR is low and channel decoding is not able to guarantee
+                       1536-1276 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                     See https://www.ieee.org/publications/rights/index.html for more information.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                          5487
+
+
+
+the zero bit error rate, the quality of the recovering result                     • CR-adaptation problem: The capacity of a DeepJSCC
+will be dramatically reduced. This problem is called as the                    model is also influenced by the CR of the obtained semantic
+’cliff-effect’, and it widely exists in conventional wireless                  codes. Similar to the SNR-adaptation problem, a DeepJSCC
+communication systems [8], [9], [10].                                          model is trained with one dedicated CR, thus the length of the
+   To solve the above problem, joint source-channel coding                     obtained semantic code (SC) is fixed, and cannot be changed
+(JSCC) has been proposed by jointly designing and opti-                        as other code lengths. However, in practice, it is necessary for
+mizing source coding and channel coding process to achieve                     us to dynamically adjust the code length to save bandwidth
+system-level optimality for the coding process [11], [12], [13].               for different channel SNR and image contents. To meet this
+Due to the advances of deep learning (DL) in recent years, it is               requirement, we need to prepare several DeepJSCC models
+practical for us to use the powerful data compression and noise                with different CRs for adjusting the CRs.
+resiliency capabilities of DL models to realize the end-to-end                    Due to the above two problems, one needs to train multiple
+JSCC process with one DL model [14], [15], [16], and recent                    DeepJSCC models to cover all channel SNR and CR regimes.
+advances have demonstrated that DL based JSCC (DeepJSCC)                       For example, if we divide the channel SNR as the following
+methods, particularly deep autoencoder based JSCC methods,                     8 levels {0, 3, 6, 9, 12, 15, 18, 21}dB, and divide the CR as the
+can achieve exciting capacities in both data compression and                   following 5 levels {0.1, 0.2, 0.3, 0.4, 0.5}, we need to prepare
+transmission reliability for various wireless data transmission                5 × 8 = 40 DeepJSCC models, which greatly increases the
+tasks, such as image [9], text [17], and speech [18].                          training and deployment cost of DeepJSCC models. Moreover,
+   For wireless image transmission tasks, in the conventional                  even if we prepare enough DeepJSCC models trained with
+communication paradigm, an image may be firstly compressed                     different channel SNRs and CRs, we still cannot realize
+by using the JPEG/JPEG2000 source coding methods and                           adaptive rate control for a specific image transmission task
+then transformed as noise-resiliency channel code by using                     with a quality constraint because the quality of the recovered
+a channel coding method like LDPC. At the receiver, the                        image is unknown to us.
+transmitted bits can be recovered without errors by using                         To solve the SNR-adaptation problem, Xu et al. [23] pro-
+the corresponding channel decoding and source decoding                         posed an attention module-based DeepJSCC model (ADJSCC)
+processes when channel SNR is not too low. In the frame-                       that can adjust the learned image features in different channel
+work of DeepJSCC, the source channel coding and decoding                       SNR conditions. ADJSCC is motivated by the compression
+processes are jointly completed by using an encoder and                        ratio and channel coding rate optimization method in [24],
+a decoder respectively, and the encoder-decoder pair (EDP)                     and utilizes a squeeze-and-excitation module [25] to adjust
+is trained in an end-to-end way, along with a non-trainable                    the learned image features in different SNR conditions to
+physical channel. In this way, the whole wireless transmission                 maximize the image reconstruction quality. More specifically,
+process is optimized from the original input image data and                    except for the commonly used convolutional blocks (Conv-
+recovered output image data, thus it is globally optimal, and                  blocks) and trans-convolutional blocks (TransConv-blocks),
+recent works have shown that this DeepJSCC-enabled wire-                       an attention feature block (AFB) is introduced to adap-
+less transmission scheme can achieve superior data compres-                    tively adjust the signal strength of the learned features after
+sion performance compared with traditional JPEG/JPEG2000                       a Conv-block or TransConv-block, such that the encoder
+methods. In addition, it can achieve significant reliability                   and decoder can adjust the coding resources assigned to
+performance improvement against channel noise compared                         source coding/decoding process and channel coding/decoding
+with conventional communication scheme, especially in low                      process. When channel SNR is high, the coding resources
+SNR regime [9], [19], [20].                                                    assigned to channel coding/decoding can be relatively lower,
+   In [9], deep convolutional neural network based autoen-                     and more resources are assigned for source coding/decoding
+coders are firstly used to realize joint source-channel coding                 to improve data compression efficiency. On the contrary, when
+for wireless image transmission, and recent advances have                      channel SNR is low, more coding resources can be used for
+shown that the capability of DeepJSCC models can be further                    channel coding/decoding to enhance transmission reliability.
+enhanced by using channel output feedback [10] and refine-                     Accordingly, the coding resources assigned to channel coding
+ment transmission methods [21], [22]. However, as a new                        are reduced. Simulation results demonstrate that the achieved
+emerged methodology, the above proposed DeepJSCC models                        PSNR performance of one single ADJSCC model is the same
+suffer from the following two problems:                                        as the highest PNSRs achieved by multiple JSCC models with
+   • SNR-adaptation problem: Since each DeepJSCC model                         different training SNRs. Therefore, ADJSCC can effectively
+is trained with a specific channel SNR, the obtained DeepJSCC                  solve the SNR-adaptation problem.
+models are channel-dedicated, and they can achieve the best                       To solve the CR-adaptation problem, Yang et al. [26]
+performance for wireless image transmission tasks only when                    proposed a DeepJSCC method with adaptive rate control
+the channel SNRs are similar to their corresponding training                   capability (DeepJSCC-A) for wireless image transmission.
+SNRs. For example, a DeepJSCC model trained with channel                       In DeepJSCC-A, the source coding and channel coding
+SNR equals to 12dB only performs well when the test SNR                        processes are conducted by using two separate encoders, and
+is close to 12dB, otherwise, the performance will be greatly                   the output semantic codes are divided into the following two
+decreased. Since the channel SNR can vary in both low and                      parts: selective features that can be either active or nonactive
+high SNR regimes, we need to prepare several DeepJSCC                          for transmission, and non-selective features that are always
+models to cover the full SNR regime.                                           active for transmission. A policy network is introduced
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5488                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+for determining which selective features are transmitted                            contents. More specifically, by using a simple code
+along with the non-selective features. Simulation results                           mask operation and with a given compression ratio (CR)
+demonstrated that the DeepJSCC-A can achieve adaptive                               R, DeepJSCC-V simply selects the first R-proportion
+rates according to different channel SNR and image contents.                        semantic features as the transmitted codes, and the
+However, DeepJSCC-A still suffered from the following                               remained features will be directly abandoned. In this
+disadvantages: First, DeepJSCC-A cannot support arbitrary                           way, the CR-adaptation operation is very simple in
+CRs when selecting the features, and the rate choices are                           implementation, and the training process is similar to
+quite limited. Secondly, the non-selective features will always                     ADJSCC that uses randomly generated CR values for
+occupy a large portion of the coding resources, thus the                            different training samples, but doesn’t need additional
+coding rates cannot be lower than a threshold, e.g. 0.25 in                         training tricks.
+the paper [26], which further reduces the rate choices.                           • To solve the transmission quality prediction problem,
+Thirdly, though DeepJSCC-A can adjust the rate according                            we propose an Oracle Network (OraNet) that is able
+to the channel SNR and image contents, it is not able to                            to predict high-quality PSNR for a single image trans-
+predict the PSNR qualities of the transmitted images, thus                          mission task by jointly considering channel SNR, CR,
+the transmission quality cannot be flexibly controlled with                         and image contents. By utilizing this capability, OraNet
+a target PSNR constraint. Fourthly, the simulation results                          can be further used for predicting the optimal CR value
+on CIFAR10 data show that DeepJSCC-A cannot achieve                                 with given channel SNRs and image contents, and the
+equivalent performance compared with ADJSCC trained with                            optimized CR can be used to guide the DeepJSCC-V
+specific CRs, especially in high channel SNR regime. As a                           model to adjust the code length.
+conclusion, we can see that the CR-adaptation problem is                          • With the help of DeepJSCC-V and OraNet models,
+still not effectively addressed by DeepJSCC-A.                                      we propose data-level CR optimization and instance-level
+   In conventional communication systems, it is a common                            optimization in the framework of PADC. Data-level CR
+practice that the transmitter adjusts the transmission data rate                    optimization problem aims at minimizing the CR of
+according to the real-time channel conditions. For example,                         all image data with a constraint of ensuring that the
+when using LDPC as the channel code, we can use a relatively                        average PSNR of all images is not lower than a given
+lower data rate to enhance the noise-resilience capacity when                       target threshold value. Instance-level optimization is a
+channel SNR is relatively low [27]. In addition, using a smaller                    new problem and has not been investigated in existing
+modulation order is also helpful for improving transmission                         work, it aims at minimizing the CR of every single image,
+reliability. Realizing the above adaptive rate control process                      at the same time guarantees its transmission quality. Both
+relies on the knowledge of how the transmission performance,                        the two optimization processes can be used for improving
+such as bit error rate (BER) and block error rate (BLER),                           the bandwidth efficiency of DeepJSCC-enabled wireless
+is influenced by the channel SNR, and this knowledge can be                         image transmissions.
+previously formulated or known to us. However, in semantic                        • We use the CIFAR10 data and ImageNet data for training
+communication, adaptive rate control still cannot be well                           the proposed DeepJSCC-V and OraNet models, and test
+addressed even if we have DeepJSCC models with flexible                             the performances of the proposed PADC framework by
+rate adjustment abilities, because the transmission quality is                      using CIFAR100 and Kodak datasets. Results obtained
+jointly influenced by the channel SNR, CR, and data contents,                       demonstrate that the proposed DeepJSCC-V model can
+and the relationship between the transmission quality and the                       achieve similar PSNR performances and higher trans-
+three factors are very complex and hard to be formulated. If we                     mission efficiency compared with the state-of-the-art
+want to optimize the transmission rate for each single image                        ADJSCC model [23], and results also show that the pro-
+transmission task, we must know the transmission qualities by                       posed OraNet can obtain high-quality PSNR prediction
+jointly considering the influences of the three factors, other-                     results according to the image contents, channel SNR, and
+wise, the transmission quality cannot be guaranteed. Therefore,                     CR. Particularly, by querying the OraNet, results obtained
+Except for the SNR-adaptation and CR-adaptation problems,                           demonstrate that the proposed PADC find nearly minimal
+we also need to solve the transmission quality prediction                           CR configuration that meets the PSNR requirements.
+problem to enable the transmitter to realize transmission
+quality-guaranteed rate control for every single transmission.                    The remainder of the paper is organized as follows: and
+   To address the above problems, in this paper, we propose                    Section 2 illustrates the framework of the proposed PADC
+a predictive and adaptive deep coding (PADC) framework                         framework, Section 3 presents the simulation results of the
+for achieving flexible, adaptive, and quality guaranteed rate                  proposed method, along with the network architectures of the
+control according to different channel SNR and image con-                      used DeepJSCC-V and OraNet models. Finally, Section 4 con-
+tents. Compared with ADJSCC [23] and DeepJSCC-A [26],                          cludes this paper.
+the proposed PADC framework has following contributions:                          Notation: Cn and Rn means the complex and real data with
+   • Unlike      the code rate selection framework of                          total dimensions n respectively. x ∼ CN (μx , σx2 ) designates
+      DeepJSCC-A, in PADC we propose a simple, flexible,                       variable x follows a circularly-symmetric complex Gaussian
+      and effective variable code length enabled DeepJSCC                      distribution with mean μx and σx2 . Variables with bold fonts
+      model, namely DeepJSCC-V, that can achieve arbitrarily                   means that they are matrices or vectors. a · b means the
+      code rates for different channel SNRs and image                          dot-product of vectors a and b. x∗ means the conjunct
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                         5489
+
+
+
+transpose of complex variable x. At last, E[x] means the                      denotes the conjunct transpose of z. In general, a physical
+expectation value of variable x, and I denotes the identity                   channel with lower SNR means relatively higher physical
+matrix.                                                                       noise power compared with the SC power, the quality of the
+                                                                              final recovered result will be lower compared with a relatively
+      II. P REDICTIVE AND A DAPTIVE D EEP C ODING                             higher physical channel SNR.
+   In this section, we elaborate the framework proposed PADC
+method, including the system model, PADC framework, model                     B. The Proposed PADC Framework
+training, and adaptive rate control.                                             To deal with the CR-adaptation and SNR-adaptation prob-
+                                                                              lems at the same time, as Figure 1 shows, in this paper we
+A. System Model                                                               propose a novel DeepJSCC framework called predictive and
+   We consider a DeepJSCC-enabled wireless image transmis-                    adaptive deep coding (PADC), and it is composed of a variable
+sion system, and our goal is to reconstruct the original target               code length enabled DeepJSCC (DeepJSCC-V) model for joint
+image data with minimal distortion at the receiver from the                   source-channel coding with flexible code length adjustment
+received SCs under certain channel SNR and data compression                   ability, an Oracle Network (OraNet) for predicting the quality
+ratio conditions. The DeepJSCC model is composed of a                         of the reconstructed image with specific channel SNR and
+trainable encoder Eφ , and non-trainable physical channel, and                compression ratio (CR) information, and a CR optimizer
+a trainable decoder Dθ , where φ and θ denote the Encoder                     that minimizes the transmission data rate with given PSNR
+parameters and Decoder parameters respectively. Denote the                    constraint. The design principles of the above three modules
+N -dimensional original data that needs to be transmitted as                  are illustrated as follows:
+x ∈ RN , it will be firstly encoded as a K-dimensional                           1) DeepJSCC-V: The design principle of the network archi-
+complex semantic code (SC) z ∈ CK , as given by                               tecture of DeepJSCC-V is the same as ADJSCC, which utilizes
+                                                                              an attention feature module for adjusting the learned features
+                        z = Eφ (x, γ, R),                              (1)    according to different channel SNRs, such that the Encoder
+                                                                              and Decoder models can solve the SNR adaptation problem.
+where γ means the channel SNR, and R = K/N denotes
+                                                                              The main difference is that the proposed DeepJSCC-V model
+the CR of the input image data. After power normalization,
+                                                                              has an SC mask process for solving the CR-adaptation prob-
+the SC obtained will be transmitted over the physical channel
+                                                                              lem, and it trains the model to adjust the deep coding process
+and subsequently received by the receiver, and corrupted with
+                                                                              with different CR in an automatic way. We denote the SC
+additive white Gaussian noise (AWGN), as given by
+                                                                              obtained from the Encoder as zo = Eφ (x, γ), and zo ∈ CKmax ,
+                           z̃ = hz + n,                                (2)    where Kmax denotes the maximal allowable SC length. Kmax
+                                                                              can be set as a relatively large value such that we can have
+where h ∈ C denotes the channel gain coefficient, and                         more CR choices, and in this paper, we suggest setting it as
+n ∼ CN (0, σ 2 I) denotes independent identically distributed                 Kmax = N/2, in this way the maximal CR value is 0.5.
+(i.i.d) AWGN samples with power σ 2 . For the AWGN channel                    Then, SC zo is masked by using a binary SC mask vector
+without considering the influence of channel gain h, the                                                       K
+                                                                              (SCMV), denoted as α ∈ {0, 1} max , to adjust its length. More
+transmitting model is simply given by                                         specifically, given an expected CR R ∈ (0, 1], we can know the
+                            z̃ = z + n.                                (3)    corresponding code length is K = RN/2, where · means
+                                                                              round-up operation. Note that a complex semantic symbol is
+At last, the decoder recovers data from the received SC z̃, and               represented by two real-value semantic features obtained from
+the result can be formulated as                                               the Encoder. Then, the value of element αi is set as follows
+                                                                                                        
+                        x̃ = Dθ (z̃, γ, R).                            (4)                                1, if i ≤ K
+                                                                                                   αi =                                  (6)
+   In the above DeepJSCC-enabled semantic communication                                                   0, otherwise.
+process, the channel SNR has a significant influence on the
+                                                                              Then, the SC mask operation is given by
+quality of the final reconstructed image x̃. In general, the
+channel SNR is determined by the noise power σ 2 , which                                                     z = zo · α,                             (7)
+is mainly caused by the nature noise and interferences in
+                                                                              where · denotes the dot product operation. When αi = 1,
+the physical channel. In this paper, we suppose that physical
+                                                                              the i-th code or symbol will be selected for transmission.
+channel noise is AWGN, and to quantify the quality of the
+                                                                              In other words, the first K elements of SC will be selected
+physical channel, we define the SNR as follows
+                                                                              as masked SC (MSC), and then transmitted to the receiver.
+                                   Pz                                         When the MSC is received by the receiver, it needs to be
+                        γ = 10 log10   ,                    (5)
+                                   σ2                                         expanded with 0 elements to ensure that its dimension is still
+where Pz denotes the average power of the SCs, and in                         Kmax . We can simply pad Kmax − K zero elements behind
+practice, we will use a power normalization operation to ensure               the received MSC, and then the expanded SC can be sent
+that it is equal to a bounded value, e.g. Pz = 1.                             to the decoder to reconstruct the input image. We denote the
+  To meet this power constraint, the SC z needs to be                         received SC as z̃, then we can have the following padded SC
+                                     1
+normalized to satisfy the condition K   E[z∗ z] ≤ Pz , where z∗               z̃o = [z̃, 0]T ∈ CKmax . Finally, the recovered result can be
+
+       Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5490                                                                  IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+
+Fig. 1.   The proposed PADC framework.
+
+obtained as x̃ = Dθ (z̃o , γ). Note that, in DeepJSCC-V, the                     power of the SC can satisfy the following constraint
+                                                                                  1
+dimensions of the Encoder output zo and Decoder input z̃o                        K E[ z∗ 
+                                                                                          z] ≤ Pz .
+are all fixed as Kmax , thus CR R is not included as a variable                     2) OraNet: The OraNet is a network that aims at predicting
+of the Encoder and Decoder.                                                      the quality of a reconstructed image by jointly considering
+   The output zo of the encoder also can be a 3-dimensional                      channel SNR γ, CR R, and SC zo . Particularly, the SC zo
+data with shape NH × NW × Nc , where NH , NW and Nc                              is the extracted feature of the original input image, and note
+denote the width, height, and channel respectively. In this                      that its total dimension can be different for input images with
+situation, the SCMV α can be a binary vector with length                         different sizes. Compared with the original input image data,
+Nc , and given a code length K, the first K channels will be                     SC zo is simpler compression of the image content for the
+selected for transmission. For example, when K = 8, which                        OraNet to learn the relationship between the quality of the
+means that the first 8 channels will be selected as the MSC,                     reconstructed images and the image content. If we use the orig-
+and the remained channels will be abandoned.                                     inal image data for predicting the quality value, we will need a
+   Fig. 2 shows the architecture of the used JSCC-V network,                     much bigger model to understand the complex image contents,
+which is composed of the following three blocks: residual                        and the computation complexity will be greatly increased.
+convolutional block (RCB), attention feature block (AFB), and                    To further reduce complexity and keep the dimension stable,
+residual transpose convolutional block (RTCB). The residual                      in this paper we will use channel-wise mean (CWM) μz and
+structure helps enhance the joint source-channel coding capa-                    channel-wise standard deviation (CWSTD) σ z of SC zo as
+bility, at the same time improving the convergence speed of                      the image content features for predicting the quality of the
+the model training process [28]. The normalization operation                     reconstructed image. For example, suppose that the shape of
+used after a convolutional or transconvolutional layer is local                  SC zo is 48 × 8 × 8, i.e. it has 48 channels, and in each
+divisive normalization based generalized normalization trans-                    channel, the width and height are all 8. Accordingly, we can
+formation (GDN), which is effective for dealing with image                       know the dimension of μz and σ z are all 48, and in total,
+compression and density modeling tasks [29]. A convolutional                     we have 96 image content feature values. In the Simulation
+or transconvolutional layer is designated by parameters m ×                      section, we will further provide some examples to demonstrate
+n × c |  s, in which m, n, and c correspond to the width,                       why CWM and CWSTD features can be used for predicting
+height, and output channel of the used convolutional kernel,                     image qualities.
+symbols ↓ and ↑ means the downsampling operation and                                The image quality metric can be set as any suitable metric
+up-sampling operation respectively, and parameter s means                        that can quantify the quality of the final reconstructed images.
+the stride length. The architecture of AFB is the same as the                    In this paper, we use the commonly used peak signal-to-noise
+AFBs in [23] and [25].                                                           ratio (PSNR) as the image quality metric, and it formulates
+   After the last AFB of the Encoder, we can obtain semantic                     the distortion between the input image x and reconstructed
+feature data with shape H/4 × W/4 × 48, and then we can                          image x̃ as follows:
+know the maximal code length is Kmax = 3HW/2. Note
+that the SCs are complex symbols. Given a specified CR R,                                                                     MAX2
+we can know the first 2K = 2 RKmax  channels will be                                                 PSNR = 10 log10             ,                    (8)
+                                                                                                                              MSE
+selected as the MSC. The MSC will be flattened as a vector
+and transformed as a K-dimensional complex SC, i.e. z ∈ CK .                     where MAX means the allowable peak pixel value of the
+In the same way with [9], the √ complex SC is normalized by                      images. Since the images used is 8-bit per pixel, we can know
+the following equation  z = KPz z∗zz , where z∗ denotes the                     the signal peak value is MAX = 28 −1 = 255. A higher PSNR
+conjunct transpose of z, and Pz denotes the average transmit-                    means better quality of the recovered image because the MSE
+ting power constraint. In this way, the average transmitting                     becomes lower. Denote Gω as an OraNet model parametrized
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                            5491
+
+
+
+
+Fig. 2.   Architecture of the used DeepJSCC-V model, in which PN means power normalization.
+
+by ω, then the predicted image quality can be represented as
+PSNR = Gω (μz , σ z , γ, R).
+   Figure 3 shows the architecture of the used OraNet model,
+which is mainly composed of two residual fully connection
+blocks (RFCBs). With the two RFCBs, the model can effec-
+tively extract the representative information for predicting the
+PSNR, and a fully connection layer can be used for obtaining
+the predicted PSNR outputs. A ReLU activation function is
+added behind the FC layer because we want to ensure that
+the predicted PSNR values are larger than 0. In general, the
+complexity of OraNet is much lower than the DeepJSCC-V
+                                                                                 Fig. 3.   Architecture of the used OraNet model.
+model, thus its inference efficiency is much higher.
+   3) CR Optimizer: With the trained DeepJSCC-V and                              different CRs, but it will cause much higher training and
+OraNet models, we can minimize CR values to improve the                          deployment costs compared with DeepJSCC-V.
+bandwidth efficiency with a given PSNR constraint. Due to the                         b) Instance-level CR optimization: In this problem, the
+difference of PSNR constraint, the CR optimization problem                       PSNR constraint is guaranteeing that the PSNR of every
+can be divided into the following two levels:                                    single reconstructed image is not lower than a target PSNR
+      a) Data-level CR optimization: Suppose that the number                     value PSNRth . We can use an OraNet model for predicting
+of SNR levels and CR levels are NSN R and NCR respectively,                      the PSNR values by jointly considering CWM feature μz ,
+we can obtain a NSN R × NCR sized PNSR performance table                         CWSTD feature σ z , channel SNR γ, and CR R, then the
+QD (γ, R) by using the test data samples. In this problem, the                   optimization model is given by
+PSNR constraint is ensuring that the expected PSNR value of
+all reconstructed images is lower than a target PSNR value                                     P2.     min R
+PSNRth , as given by                                                                                   s.t. Gω (μz , σ z , γ, R) ≥ PSNRth ,
+                                                                                                           0 < R ≤ 1.                                   (10)
+                  P1.     min R
+                                                                                 Since the CWM μz , CWSTD σ z , and channel SNR γ are
+                          s.t. QD (γ, R) ≥ PSNRth ,
+                                                                                 all given, and Gω (μz , σ z , γ, R) is a monotonically increasing
+                               0 < R ≤ 1.                                 (9)    function to R, i.e. when data compression ratio R is not
+                                                                                 sufficiently large, a relative larger value of R will produce
+Since we only have NSN R × NCR feasible solutions, the                           a relative higher PSNR value. As such, the above problem
+above problem can be readily solved by an exhaustive search                      also can be easily solved by querying the OraNet. More
+process. In this way, we can obtain an optimized CR value                        specifically, we can divide the CR regime as the following L
+for all transmitted images regardless of the influences of the                   CR levels R1 , . . . , RL , then we can compute the corresponding
+image contents. The above problem is quite similar to the                        PSNR predictions for all the CR levels, and choose the
+CR-adaptation problem in conventional transmission systems                       minimal CR R∗ that satisfies the PSNR constraint as the
+that optimizes the coding rates according to wireless channel                    optimization result. It is also practical to use a bisection search
+conditions, and the image content is not needed in this                          process to find a more accurate CR value. With the optimized
+scenario. With one trained DeepJSCC-V model, we can realize                      CR R∗ , the DeepJSCC-V model then can use a minimal data
+the data-level CR optimization for DeepJSCC-enabled wireless                     rate to transmit the image data with PSNR constraint.
+image transmission tasks. We can also realize data-level opti-                      It is necessary to emphasize that, instance-level CR opti-
+mization if we have enough ADJSCC models trained with                            mization is a new problem and has not been considered before.
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5492                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+In conventional sparable communication systems, it is not                      data zoj . During the training process, the DeepJSCC-V model
+applicable for us to adjust CR by considering the influences                   will automatically learn to compress more information on zoi
+of the image contents, but it can be realized by the proposed                  to reduce the loss objective as much as possible. As a result,
+PADC-enabled semantic communication systems. Particularly,                     an inner SC channel will be trained to carry more information
+since instance-level CR optimization enables us to flexibly                    compared with other outsider channels.
+adjust the CR for every single image, thus it can achieve higher
+bandwidth efficiency compared with data-level CR optimiza-                     Algorithm 1 One Training Round for DeepJSCC-V
+tion, at the same time guaranteeing the PSNR constraint of                      1: Input: Training dataset X , batch size B, learning rate η;
+every transmission. However, it doesn’t mean instance-level                     2: Output: DeepJSCC-V model parameters (φ, θ);
+CR optimization can be a better choice than data-level CR                       3: Sample a data batch X = [x1 , . . . , xB ] from X ;
+optimization in all situations. When it is not required for us                  4: for each data sample xi ∈ X:
+to guarantee the transmission quality of each single image,                     5: Randomly generate channel SNR γi ∈ U(0, 27);
+it is also practical for us to use data-level CR optimization to                6: Randomly generate CR Ri ∈ U(0.05, 0.5);
+improve bandwidth efficiency, and only using DeepJSCC-V                         7: Compute SC zoi = Eφ (xi , γi );
+can achieve this goal.                                                          8: Generate SCMV αi by Eq. (6);
+                                                                                9: Compute MSC zi by Eq. (7);
+C. Model Training                                                              10: if channel is fading:
+  In PADC, there are two models need to be trained, i.e. the                   11:     Randomly generate CSI hi ∼ CN (0, 1);
+DeepJSCC-V model and the OraNet model, and their training                      12:     Randomly generate AWGN ni ∼ CN (0, σi2 I) with
+processes are illustrated as follows:                                              SNR γi ;
+  1) DeepJSCC-V: Given an N -dimensional input image data                      13:     Compute the received MSC z̃i by Eq. (2);
+x, we can obtain the SC as zo = Eφ (x, γ), and then obtain                     14: else if channel is AWGN:
+the MSC z ∈ CK by using the SCMV with a given CR R.                            15:     Randomly generate AWGN ni ∼ CN (0, σi2 I) with
+After transmission, the receiver obtains SC z̃, and then we get                    SNR γi ;
+the final reconstructed image as x̃ = Dθ (z̃, γ, R). The loss                  16:     Compute the received MSC z̃i by Eq. (3);
+function is defined as the mean square error (MSE) between                     17: end if
+the original image x and the reconstructed image x̃, as given                  18: Recover image by x̃i = Dθ (z̃i , γi , Ri );
+by                                                                             19: end for each
+                                                                                                                   B
+                                   1                                           20: Compute average loss L = N1B         i=1 xi − x̃i ;
+                                                                                                                                       2
+
+              Lθ,φ (x, x̃; γ, R) =    x − x̃ 2 .           (11)                21: Update model parameters (φ, θ) by gradient descent.
+                                   N
+With the above loss function, the model parameters φ, θ can
+be optimized by minimizing the MSE-based distortion degree                        2) OraNet: Once the DeepJSCC model is trained, we can
+between the input images and output images, as given by                        then use it for training the OraNet model. With the obtained
+                                                                               SC zo , we can then compute its CWM μz and CWSTD σ z
+       (φ∗ , θ∗ ) = argminφ,θ Ex,γ,R [Lθ,φ (x, x̃; γ, R)] .           (12)     features. Accordingly, we can also obtain the reconstructed
+In the training process, the channel SNR γ and CR R of                         image x̃, and compute the PSNR between x̃ and x by using
+each image sample are randomly generated. In this paper, the                   equation (8). Except for the ground-truth PSNR value, we can
+channel SNR and CR are randomly generated from intervals                       also obtain a predicted PSNR value by using the OraNet, i.e.
+γ ∈ [0, 27]dB and R ∈ [0.05, 0.5] respectively. With sufficient                PSNR = Gω (μz , σ z , γ, R). In this way, the loss function of
+training samples, the DeepJSCC-V model can automatically                       OraNet can be defined as
+learn the optimal source-channel coding process with specific                               Lω (μz , σ z , γ, R) = (PSNR − P
+                                                                                                                            SNR)2 .                   (13)
+SNR γ and CR R.
+   The process of one training round for DeepJSCC-V is                           In the same way with the DeepJSCC model, the model
+illustrated in Algorithm 1. Note that the whole training process               parameters ω can be optimized by minimizing the above loss
+may contain thousands of training rounds, and it will not                      function, as given by
+be terminated until the loss reaches convergence. In each
+                                                                                          ω ∗ = argminω Ezo ,γ,R [Lω (μz , σ z , γ, R)] .             (14)
+training round, we randomly generated different SNR and
+CR values, and by using the AFB proposed in [23] and the                       In each training iteration, the channel SNR γ and CR R are
+SC mask process proposed in this paper, we can obtain a                        randomly generated in the same way as the training process of
+DeepJSCC-V model trained with SNR-adaptation and CR-                           the DeepJSCC-V model. Algorithm 2 illustrates one training
+adaptation capabilities. Particularly, by using the SC mask                    round for the OraNet. Note that, DeepJSCC-V and OraNet are
+process, an SC symbol with an inner location is more probable                  trained independently. More specifically, the OraNet model
+to be transmitted, and it will carry more information compared                 is trained on the basis of a previously trained DeepJSCC-V
+with other outsider SC symbols. For example, suppose that SC                   model because it needs to use the SC and PSNR as the training
+zo is a 3-dimensional tensor, for two SC channels zoi , zoj ∈ zo ,             data. In this way, we can know that an OraNet is dedicated
+if i > j, then the i-th channel data zoi will be more probable to              to a specific DeepJSCC-V model, and it is not suggested
+be selected for transmission compared with the j-th channel                    to use it for predicting the transmission qualities of other
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                          5493
+
+
+
+DeepJSCC-V models that are trained with different channel                      epochs is set as 400. The training process of OraNet model is
+types and training data.                                                       similar to DeepJSCC-V, but the difference is that the maximal
+                                                                               training epochs are set as 150 since the complexity of OraNet
+Algorithm 2 One Training Round for OraNet                                      is much lower than DeepJSCC-V.
+                                                                                  Except for CIFAR10 and CIFAR100 data, in this paper we
+ 1: Input: Training dataset X , batch size B, learning rate η;
+                                                                               will also train the proposed DeepJSCC-V and OraNet models
+ 2: Output: OraNet model parameters ω;
+                                                                               by using the ImageNet data [32], [33] to enable the proposed
+ 3: Sample a data batch X = [x1 , . . . , xB ] from X ;
+                                                                               PADC method can deal with the adaptive transmission prob-
+ 4: for each data sample xi ∈ X:
+                                                                               lem for large-scale and high-resolution images. To increase the
+ 5: Randomly generate channel SNR γi ∈ U(0, 27);
+                                                                               training efficiency and reduce the training samples, we train
+ 6: Randomly generate CR Ri ∈ U(0.05, 0.5);
+                                                                               the DeepJSCC-V model for ImageNet data on the basis of a
+ 7: Call DeepJSCC-V to obtain zoi and x̃i ;
+                        (i)                    (i)                             DeepJSCC-V model pretrained on the CIFAR10 data. We use
+ 8: Compute CWM μz and CWSTD (σ z )2 of zoi ;
+                                                                               45000 images randomly selected from the ImageNet validation
+                i = Gω (μ(i)
+ 9: Compute PSNR
+                                      (i)
+                                z , σ z , γi , Ri );                           dataset as the training data, and use the remained 5000 images
+10: Compute real PSNRi with xi and x̃i by Eq. (8);
+                                                                               as the validation data. For each training sample, it is obtained
+11: end for each
+                                   B                                          by center-crop the original images with size 128 × 128, the
+12: Compute average loss L = B   1                    2
+                                      i=1 (PSNRi − PSNRi ) ;                   batch size is set as 32, and maximal training epochs is set as
+13: Update model parameters ω by gradient descent.
+                                                                               50. Other training settings are the same as the training process
+                                                                               for CIFAR10 data. After the training process on ImageNet
+                                                                               data, we then test the performances of DeepJSCC-V and
+                   III. S IMULATION R ESULTS                                   OraNet on the Kodak24 data [34], which contains 24 color
+  In this section, we will first illustrate the simulation settings,           images with size 768×512. To reduce performance fluctuation,
+then present the performance evaluation results to demonstrate                 all the PSNR performances of each image transmission task
+that the proposed PADC framework can achieve predictive                        are obtained by 100 repeats. After the training process, the
+and adaptive rate control for wireless image transmission, and                 accompanied OraNet is trained by using the same ImageNet
+some examples will also be provided for understanding the                      data, and its training process is the same as the process of the
+properties of the proposed PADC.                                               aforementioned OraNet training process on CIFAR10 data.
+
+
+A. The Used Datasets and Simulation Settings                                   B. Results on CIFAR Data
+   We will first use CIFAR10 and CIFAR100 data [30] as the                        In this subsection, we want to demonstrate that the proposed
+experimental data for training and testing the performance of                  DeepJSCC-V can achieve better performances on data-level
+the proposed method. CIFAR10 data and CIFAR100 data are                        CR optimization compared with the ADJSCC method [23]
+two similar datasets, but the classes of the two datasets are                  by using the CIFAR100 test data, and also prove that the
+10 and 100 respectively. Since we only focus on transmitting                   proposed OraNet can effectively predict the PSNR values.
+the images, thus the class labels will not be used. Both of                    We won’t compare the performance between DeepJSCC-V
+the two datasets contain 60000 color image samples with size                   and DeepJSCC-A proposed in [26] because the Encoder and
+32 × 32, of which 50000 of them are training images, and                       Decoder networks in DeepJSCC-A are specifically designed
+the remaining 10000 images are test samples. In this paper,                    for the Policy Network, thus it is not fair to compare the
+we will use the CIFAR10 training samples and test samples                      two methods with different network architectures. Most impor-
+as the training dataset and validation dataset respectively,                   tantly, it is shown that DeepJSCC-A is not able to achieve
+and they are used in the training process for obtaining the                    better performance compared with ADJSCC with the same
+DeepJSCC models. When evaluating the performance, we will                      CR [26]. Therefore, if the proposed DeepJSCC-V can achieve
+use CIFAR100 test samples as the test data, in this way, we can                similar PSNR performance compared with ADJSCC, we can
+evaluate the performance with data that are different from                     know that it outperforms DeepJSCC-A in terms of the PSNR
+the training and validation datasets. Note that the objects of                 performance with the same CR.
+CIFAR100 data are different from CIFAR10 data, thus the                           First, we compare the achieved PSNR performances of the
+evaluation performance will be slightly lower than the results                 proposed DeepJSCC-V and ADJSCC method with the same
+when using CIFAR10 test data for evaluating the performance.                   CR, and Figure 4 shows the results obtained. In this test,
+   When training the DeepJSCC-V model, in each training                        we train the DeepJSCC-V model with randomly generated CR
+epoch we first update the model parameters by using the                        values ranging from 0.05 to 0.5. For performance comparison,
+Adam stochastic optimization method [31] with the CIFAR10                      we train 4 ADJSCC models for each channel type, and
+training data and then evaluate the performance of the current                 the CRs are set as 1/16, 1/12, 1/6, and 1/3. For all the
+model by using the validation dataset, i.e. the CIFAR10 test                   DeepJSCC-V and ADJSCC models, the channel SNR value
+data. If the MSE performance of the current epoch becomes                      of each training image data is randomly generated from range
+lower compared with the best MSE performance achieved in                       γtrain ∈ [0, 27]dB. For fairness, except for the SC mask process,
+previous epochs, we then save the model as the final model to                  the architecture of the encoders and decoders in DeepJSCC-V
+be obtained. The training batch size is set as 128, the learning               and ADJSCC are the same. In this way, we can know
+rate is set as 10−4 , and the maximum number of training                       that the performance differences are caused by the proposed
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5494                                                                 IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+
+Fig. 4. PSNR performance comparison on CIAFR100 image transmission task achieved by the proposed DeepJSCC-V and ADJSCC [23], the training SNRs
+are randomly generated from γtrain ∈ [0, 27]dB, (a) and (b) plot the results achieved in AWGN channel and slow Rayleigh fading channel respectively.
+
+
+
+
+Fig. 5. Comparison of data-level minimal CR values on CIAFR100 image transmission task achieved by one DeepJSCC-V model and four ADJSCC
+models [23] with different target PSNR values.
+
+code length adjustment process. In our test, we observe that                    achieve slightly better performance compared with the pro-
+DeepJSCC-V requires more training epochs to get converged                       posed DeepJSCC-V in a slow Rayleigh fading channel.
+to the best coding performance. For example, ADJSCC may                            Next, we test the data-level CR optimization performance
+need 150 training epochs to achieve the best capacity, but                      achieved by the proposed DeepJSCC-V and ADJSCC. In this
+DeepJSCC-V may need 250 training epochs to achieve the                          test, we only use the DeepJSCC-V model to optimize the
+best performance, thus the training cost of DeepJSCC-V is                       data-level CR for all the CIFAR100 images according to
+relatively higher than ADJSCC.                                                  the average expected PSNR performance. In this way, the
+   From Figure 4(a), we can observe that, with the same                         CR values of all images are the same, and OraNet is
+CR, the proposed DeepJSCC-V can achieve similar PSNR                            not necessarily used. We first evaluate the performance of
+performances to ADJSCC in both high and low SNR regimes                         the proposed DeepJSCC-V with different CR and channel
+in AWGN channel. In fading channel, as Figure 4(b) shows,                       SNR conditions. More specifically, we evaluate the achieved
+we can see that, except for the situation when R = 1/16,                        PSNR performances with the following 8 CR levels R ∈
+DeepJSCC-V and ADJSCC achieve similar PSNR perfor-                              {1/16, 1/14, 1/12, 1/10, 1/8, 1/6, 1/4, 1/3}. It is necessary
+mances. However, when CR is very small, i.e. R = 1/16,                          to emphasize that, the number of CR levels of DeepJSCC-V
+the PSNRs achieved by DeepJSCC-V are slightly lower than                        can be much larger, such that the model can have more
+ADJSCC, and the performance gap becomes more evident                            choices when optimizing the code length. For performance
+when channel SNR becomes higher. The above results demon-                       comparison, we use the ADJSCC models with CR levels
+strate that, with only one model, in general, the proposed                      R ∈ {1/16, 1/12, 1/6, 1/3} for providing four different CR
+DeepJSCC-V can achieve similar performance compared with                        choices when optimizing the code length. With the above
+ADJSCC models trained with different CR values, which                           models, we then test the minimal CR achieved by the pro-
+is helpful for reducing the training and deployment cost.                       posed DeepJSCC-V and ADJSCC with different channel SNR
+However, when test CRs are relatively low, ADJSCC can                           conditions, and Figure 5 shows the results obtained.
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                           5495
+
+
+
+
+Fig. 6. Examples of the SC features and the achieved PSNR performances, in which (a)(c)(c) show the channel-wise mean value features, the channel-wise
+standard deviation features, and the corresponding PSNR performances.
+
+   In Figure 5(a), we can observe that, with the same target
+PSNR, the proposed DeepJSCC-V can achieve much lower
+CR compared with the ADJSCC method. As aforementioned,
+in Figure 4(a), DeepJSCC-V can achieve higher PSNR perfor-
+mance compared with ADJSCC in AWGN channels. In addi-
+tion, even with only one model, in this test DeepJSCC-V
+can provide 8 CR choices compared with ADJSCC models
+with only 4 CR choices. Due to the above two benefits,
+in general, DeepJSCC-V can use much smaller code length for
+the same image transmission task, thus the overall transmission
+efficiency will be greatly increased. In Figure 5(b), we can
+see that the proposed DeepJSCC-V also outperforms ADJSCC
+in slow Rayleigh fading channel, especially when the target
+PSNR threshold is large, e.g. PSNRth = 30dB. As we can see                      Fig. 7. The MSE between the predicted PSNR and ground-truth PSNR,
+                                                                                (a) and (b) are the results in AWGN channel and slow Rayleigh fading channel
+in Figure 4(b), with the same channel condition, DeepJSCC-V                     respectively.
+can achieve similar performance to ADJSCC, thus the main
+performance improvement is achieved by the flexibility of                       (PCA) [35] that decomposes the data as several orthogonal
+more CR level choices. In conclusion, we can know that one                      basis, and a basis carries more information if its corresponding
+DeepJSCC-V model with 8 CR choices can achieve much                             eigenvalue is larger. This characteristic is achieved by the SC
+better data-level CR optimization performance compared with                     mask operation, in which we preserve the first K elements
+the ADJSCC model with 4 choices. Therefore, DeepJSCC-V                          in each transmission, this practice will force the Encoder to
+is able to greatly improve the transmission efficiency com-                     learn to compress more important information to the inner
+pared with ADJSCC, at the same time reduces training and                        channels with a relatively smaller number because they are
+deployment costs.                                                               more probable to be transmitted. In this way, the information
+   Before demonstrating the performance of OraNet, we will                      loss caused by the SC mask process will be minimized.
+first show three examples of the CWM and CWSTD features                            Denote the PSNRs of the three images x1 , x1 , and x3 as
+obtained from the SCs, which is helpful for us to understand                    PSNR1 , PSNR2 , and PSNR3 respectively. From Figure 6,
+how DeepJSCC-V works and why the PSNR performance is                            we can also see that the PSNR rank is PSNR1 > PSNR2 >
+predictable. For CIFAR data with image size 32 × 32, the                        PSNR3 . Accordingly, we can see that, in general, the value
+                                                                                                             (1)       (2)       (3)        (1)
+shape of the SC obtained from the Encoder is 48 × 8 × 8.                        ranges of the features are |μz | < |μz | < |μz |, and σ z <
+                                                                                  (2)      (3)
+Since we set the CR to be randomly generated from 0.05 to                       σ z < σ z . Therefore, a relatively larger range of the SC
+0.5, thus we can know the corresponding number of channels                      values corresponds to a relatively lower PSNR performance.
+of MSC ranges from 5 to 48. We randomly select three                            The reason is that, for an image with more complex contents,
+images from the CIFAR 100 test data, denoted as x1 , x2 ,                       the values of CWM and CWSTD features will be relatively
+and x3 , and Figure 6 shows the CWM and CWSTD feature                           larger to carry more information, and accordingly it requires
+of each channel, along with achieved PSNR performance with                      more bandwidth resources to transmit the SC to achieve
+different CRs, as plotted in (a)(b)(c) respectively.                            the same PSNR performance compared with an image that
+   From Figure 6, we can observe that, for all three images,                    contains less information. These results indicate that the PSNR
+the absolute values of CWM and CWSTD features gradually                         of the reconstructed image is predictable according to the
+decreased from the 5-th channel to 48-th channel, which                         channel SNR and encoded image features.
+shows that an inner SC channel carries more information                            Next, we demonstrate that the proposed OraNet can pre-
+compared with an outer channel with relative larger channel                     dict high-quality PSNR results for the transmitted images.
+id. This result is similar to the principal component analysis                  Figure 7 shows the achieved MSE performances between the
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5496                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+
+Fig. 8. Performance comparison of DeepJSCC-V and conventional BPG+LDPC transmission schemes, (a)(b) and (c)(d) are the results obtained in AWGN
+channel and slow Rayleigh fading channel respectively.
+
+predicted PSNR values and the ground-truth PSNR values                         further decreasing the prediction precision. As a result, we can
+on the CIFAR100 test data, in (a) and (b) are the results in                   know that the MSE performance has a minimal value, which
+AWGN channel and slow Rayleigh Fading channel respec-                          is achieved when channel SNR is neither too low nor too high.
+tively. In general, we can see that when channel SNR is higher
+than 5dB, the achieved MSE performances can be lower than
+1 in both AWGN and slow Rayleigh fading channels, which                        C. Results on Kodak24 Data
+demonstrated the effectiveness of the proposed OraNet-based                       In this subsection, we will test the performance of the
+PSNR prediction method. However, we can also observe that                      proposed PADC method by using the Kodak24 data. Our
+when channel SNR is very low, e.g. 0dB, the predicting MSE                     main goal is to demonstrate that the proposed PADC method
+becomes quite large, this is because in a very low SNR regime,                 can realize adaptive image-level transmission with different
+the received MSC at the receiver will be heavily corrupted                     channel SNRs and image contents. Some examples will also be
+by the stochastic AWGN, causing huge distortion between the                    provided for understanding the characteristics of the proposed
+original MSC and received MSC, and the PSNR values of will                     method.
+fluctuate in a relative wide value range. Without stable training                 First, we compare the performance of the proposed
+samples, the OraNet will not be able to predict the PSNR                       DeepJSCC-V and conventional BPG+LDPC-based wireless
+values with high precision. In general, the MSE decreases                      transmission schemes. The BPG codec is a well-known tra-
+along with the increase of the channel SNR, but the MSE                        ditional image compression method that can achieve better
+will be slightly increased when channel SNR keeps increasing                   compression performance compared with methods like JPEG
+in a high SNR regime. The reason is that, when channel SNR                     and JPEG2000 [2]. For LDPC, We adopt the channel coding
+is high enough, e.g. higher than 18dB, the achieved PSNR                       scheme in 802.11n protocol [36], which includes the following
+performance of the DeepJSCC-V model will be gradually                          three block lengths: 648, 1296, and 1944, and in this test we
+converged to the upper limit. In this situation, though channel                will fix the code length as 1296. We will test the performance
+SNR is different, their corresponding PSNR values are almost                   of the BPG+LDPC scheme with the following three code
+the same, causing confusion when training the OraNet, and                      rates: 1/2, 2/3, and 3/4, and the corresponding code combina-
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                            5497
+
+
+
+
+Fig. 9.   Examples of the images reconstructed from different SC channels, the channel SNR is set as 12dB.
+
+tions are (648, 648), (864, 432), and (972, 324). Except for the
+source channel coding methods, the transmission performance
+is also influenced by the modulation order. In this test, the fol-
+lowing three modulation orders will be tested: BPSK, 4QAM,
+and 16QAM. Note that, due to the ’cliff effect’, the transmis-
+sion performance of conventional transmission schemes may
+drop sharply when the channel SNR is low, and even fail to
+transmit the image data. When the achieved PSNRs of con-
+ventional wireless transmission schemes are lower than 24 dB,
+we will not show them in the figure to improve the legibility.
+   Figure 8 shows the results obtained with different chan-
+nel cases and channel SNRs. From subfigures (a) and (b),
+we can observe that, in the AWGN channel case, the PSNR
+performance of the proposed DeepJSCC-V is relatively lower
+than BPG+LDPC transmission schemes with different modu-
+                                                                                 Fig. 10. The PSNR performances on three Kodak24 images achieved by
+lation orders, and the performance gap becomes larger when                       DeepJSCC-V with different CRs.
+channel SNR becomes higher. From subfigures (c) and (d),
+we can see that, in the slow Rayleigh fading channel case,                       with the BPG+LDPC schemes in all SNR regime, and in
+DeepJSCC-V can achieve relative better PSNR performance                          future, we can seek more effective model architectures and
+compared with traditional BPG+LDPC schemes in low SNR                            training algorithms to further improve the performance of
+regime, but relative lower PSNR performance when channel                         DeepJSCC-V model.
+SNR is relative high. These above results are quite similar to                      Next, we want to test the PSNR prediction performance
+the results shown in [9], we can know that except for fading                     of the OraNet. In Figure 6, we have already shown that the
+channel with low channel SNR, the proposed DeepJSCC-V                            PSNR performance of an image is closely related to the CWM
+model still cannot achieve better PSNR performance compared                      and CWSTD features. To further illustrate the property of the
+
+          Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5498                                                                 IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+
+Fig. 11. The predicted PSNR and tested PSNR on Kodak24 dataset, (a) and (b) are the results obtained in AWGN channel and slow Rayleigh fading channel
+respectively.
+
+SC, we use three Kodak images, namely Kodim08, Kodim21,                         test, we show the results of the following 5 CR levels: 1/16,
+and Kodim24, to show how each SC channel influences the                         1/12, 1/8, 1/6, and 1/4. From the results, we can see that the
+final reconstructed images. Recall that in this paper we set the                predicted PSNR values are quite close to the test PSNR values,
+maximal allowable SC channel number as 48 since we used                         and in the AWGN channel, the mean absolute value (MAE)
+two downsampling operations in the Encoder, thus the shape of                   between the predicted PSNR value and corresponding tested
+the SC obtained is 48×192×128. In this test, we set that only                   PSNR values of all the 5 CR levels are 0.293dB, 0.314dB,
+one SC channel data can be transmitted to the receiver, and                     0.367dB, 0.423dB, and 0.265dB. In slow Rayleigh fading
+then reconstruct the images with the received one SC channel                    channel, the MAE of the 5 CR levels are 0.318dB, 0.115dB,
+data. To show the differences of different SC channels, we plot                 0.0735dB, 0.323dB, and 0.350dB. From the above results,
+the results obtained from the 5-th and 7-th channels for each                   we can see that the OraNet is able to effectively predict the
+image, and Figure 9 shows the results obtained. For the same                    PSNR values with relatively low MAEs.
+three images, we further compute the achieved PSNRs with                           With the help of OraNet, we then evaluate the performance
+different CRs, the Figure 10 shows the results obtained.                        of the proposed PADC method on the instance-level (or image-
+   By observing the reconstructed images from 9(d)-(i), we can                  level) CR optimization problem. Figure 12 plots the examples
+see that, for the same task, the 5-th channel contains much                     of the reconstructed kodim13 and kodim23 images obtained
+more image details than the 7-th SC channel. Denote PSNR(m)                     when channel SNR γ = 12dB and CR R = 1/8. Since
+as the PSNR performance of the images reconstructed by                          Kodim13 images contain the forest and river flow objects, and
+the m-th SC channel, then we can see the PSNR rank is                           the texture details are much more complex compared with the
+PSNR(5) > PSNR(7) . This result shows that an SC channel                        macaw objects shown in Kodim23, we can know that Kodim13
+with a relative inner location contains more image information                  contains more information, and it requires more bandwidth to
+than other outside SC channels, which is consistent with the                    transmit the data for the same target PSNR constraint. As a
+results shown in Figure 6. Similar results can be observed in                   result, we can see that, with the same channel SNR and CR
+Figure 10, we can see that most of the image information is                     conditions, the PSNR performance of the Kodim13 image is
+compressed in the first 20 SC channels, and the information                     much lower than Kodim23 image, and the PSNR difference
+contained by the remained 28 channels is generally quite                        between the two images is larger than 8dB, which is very
+limited, and this result is also quite similar to the results                   large and cannot be ignored if we want to adjust the data
+shown in Figure 6(c). Note that, it doesn’t mean that the                       rates with a given target PSNR constraint. This result shows
+remaining 28 SC channels are not important, because they                        that it is necessary for us to adaptive adjust the data rate
+contain the image details that are indispensable if we want to                  according to the different image contents, otherwise, the PSNR
+obtain very high image quality. Most importantly, when the                      performances can fluctuate for different images if we use the
+channel condition is poor, we still need a relative larger CR                   same CR value. By using the proposed OraNet, we can see
+value to enhance the noise-resilience capability of the channel                 that PSNR performances can be predicted with relatively low
+coding and decoding process.                                                    error, which enables us to achieve adaptive joint source and
+   Next, we evaluate the PSNR performances of the proposed                      channel coding for a specific image under certain channel SNR
+DeepJSCC-V model on Kodak24 data, at the same time                              and image contents.
+compute the corresponding PSNR predictions by using the                            Figure 13 shows the tested and predicted instance-level
+OraNet model. Figure 11 shows the results obtained, in which                    CR optimization results for kodim13 and kodim23 images
+(a) and (b) are tested and predicted PSNR results in the AWGN                   achieved in the AWGN channel and slow Rayleigh fading
+channel and slow Rayleigh fading channel respectively. In this                  channel. In this test, we set the available CR choices to
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                             5499
+
+
+
+
+                                                                                                                                          
+Fig. 12. Examples of the kodim13 image and kodim23 images, results in (c)-(f) are all obtained with channel SNR γ = 12dB, and CR R = 1/8, P SNR
+means the predicted PSNR values obtained from the OraNet.
+
+
+
+
+Fig. 13.   The predicted PSNR and tested PSNR on Kodim13 and Kodim23 images with different channel SNR and target PSNR values.
+
+
+           Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+5500                                                                IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 22, NO. 8, AUGUST 2023
+
+
+
+have 18 levels, which are {1/3, 1/4, . . . , 1/20}, and test the                [2] F. Bellard. BPG Image Format. Accessed: Jun. 13, 2022. [Online].
+minimal CR values that achieve the target PSNR requirements                         Available: http://r0k.us/graphics/kodak/
+                                                                                [3] M. Rabbani and R. Joshi, “An overview of the JPEG 2000 still image
+with different channel SNR conditions. At the same time,                            compression standard,” Signal Process., Image Commun., vol. 17, no. 1,
+we also use the OraNet for predicting the PSNR value of                             pp. 3–48, Jan. 2002.
+the reconstructed images and predicting the optimal CR value                    [4] Z. Liu, R. Liu, and H. Zhang, “High-throughput adaptive list decoding
+                                                                                    architecture for polar codes on GPU,” IEEE Trans. Signal Process.,
+with a given target PSNR value. From the Figure, we can                             vol. 70, pp. 878–889, 2022.
+observe that the predicted optimal CR values are very close                     [5] H. Vangala, E. Viterbo, and Y. Hong, “A comparative study of polar
+to the tested ground-truth optimal PSNR values for both high                        code constructions for the AWGN channel,” 2015, arXiv:1501.02473.
+and low target PSNRs, which demonstrates that the proposed                      [6] S. Weithoffer, C. A. Nour, N. Wehn, C. Douillard, and C. Berrou, “25
+                                                                                    years of turbo codes: From Mb/s to beyond 100 Gb/s,” in Proc. IEEE
+PADC method can achieve reasonable CR optimization results                          10th Int. Symp. Turbo Codes Iterative Inf. Process. (ISTC), Dec. 2018,
+for wireless image transmission. We can also see that, a                            pp. 1–6.
+2dB increase in the target PSNR requirement will cause a                        [7] G. Shi, Y. Xiao, Y. Li, and X. Xie, “From semantic communication to
+                                                                                    semantic-aware networking: Model, architecture, and open problems,”
+significant increase in the CR value in both AWGN and                               IEEE Commun. Mag., vol. 59, no. 8, pp. 44–50, Aug. 2021.
+slow Rayleigh fading channels, especially when channel SNR                      [8] S. Kokalj-Filipović and E. Soljanin, “Suppressing the cliff effect in video
+is low. Therefore, to improve the transmission efficiency,                          reproduction quality,” Bell Labs Tech. J., vol. 16, no. 4, pp. 171–185,
+                                                                                    Mar. 2012.
+it is necessary to reduce the target PSNR value as much as                      [9] E. Bourtsoulatze, D. B. Kurka, and D. Gunduz, “Deep joint source-
+possible, especially in low-SNR environments. We can see                            channel coding for wireless image transmission,” IEEE Trans. Cognit.
+that, by using the proposed PADC, the above goal can be                             Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+effectively achieved.                                                          [10] D. B. Kurka and D. Gunduz, “DeepJSCC-f : Deep joint source-channel
+                                                                                    coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+                                                                                    no. 1, pp. 178–193, Dec. 2020.
+                         IV. C ONCLUSION                                       [11] M. Gastpar, B. Rimoldi, and M. Vetterli, “To code, or not to code: Lossy
+                                                                                    source-channel communication revisited,” IEEE Trans. Inf. Theory,
+   In this paper, we have proposed a PADC framework                                 vol. 49, no. 5, pp. 1147–1158, May 2003.
+to achieve predictive and adaptive code rate control for                       [12] F. Hekland, P. A. Floor, and T. A. Ramstad, “Shannon-Kotel-Nikov map-
+DeepJSCC-based wireless image transmission. PADC is com-                            pings in joint source-channel coding,” IEEE Trans. Commun., vol. 57,
+                                                                                    no. 1, pp. 94–105, Jan. 2009.
+posed of a DeepJSCC-V model for joint source-channel coding                    [13] V. Kostina, Y. Polyanskiy, and S. Verdú, “Joint source-channel coding
+with variable code length, an OraNet model for predicting                           with feedback,” IEEE Trans. Inf. Theory, vol. 63, no. 6, pp. 3502–3515,
+the PSNR of the image reconstructed by the Decoder by                               Jun. 2017.
+jointly using image contents, channel SNR, and CR, and a                       [14] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Ye Li, “Semantic communica-
+                                                                                    tions: Principles and challenges,” 2021, arXiv:2201.01389.
+CR optimizer for minimizing the CR with a given PSNR                           [15] P. Zhang et al., “Toward wisdom-evolutionary and primitive-concise 6G:
+constraint. We elaborated the framework of the proposed                             A new paradigm of semantic communication networks,” Engineering,
+PADC framework, and the network architectures of the used                           vol. 8, pp. 60–73, Jan. 2022.
+                                                                               [16] K. Niu et al., “Towards semantic communications: A paradigm shift,”
+DeepJSCC-V and OraNet models are also illustrated. Sim-                             2022, arXiv:2203.06692.
+ulation results demonstrated that, with the same channel                       [17] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+condition and compression ratio, the proposed DeepJSCC-V                            channel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+                                                                                    Process. (ICASSP), Apr. 2018, pp. 2326–2330.
+model can achieve better or similar performance compared                       [18] Z. Weng and Z. Qin, “Semantic communication systems for speech
+with the state-of-the-art ADJSCC model and also showed that                         transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+the proposed OraNet model can predict high-quality PSNR                             pp. 2434–2444, Aug. 2021.
+values, and the average prediction error of the Kodak24 images                 [19] T.-Y. Tung, D. B. Kurka, M. Jankowski, and D. Gündüz, “DeepJSCC-Q:
+                                                                                    Channel input constrained deep joint source-channel coding,” 2021,
+are lower than 0.5dB. By jointly using DeepJSCC-V and                               arXiv:2111.13042.
+OraNet, the result proved that the proposed PADC can achieve                   [20] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Ye Li, “Robust semantic
+effective data-level and instance-level code rate optimization                      communications against semantic noise,” 2022, arXiv:2202.03338.
+                                                                               [21] D. B. Kurka and D. Gunduz, “Successive refinement of images with
+with a given target PSNR constraint. Except for data-level                          deep joint source-channel coding,” in Proc. IEEE 20th Int. Workshop
+CR optimization, PADC can achieve instance-level adaptive                           Signal Process. Adv. Wireless Commun. (SPAWC), Jul. 2019, pp. 1–5.
+rate control for different channel SNRs and image contents,                    [22] D. B. Kurka and D. Gunduz, “Bandwidth-agile image transmission
+                                                                                    with deep joint source-channel coding,” IEEE Trans. Wireless Commun.,
+which is helpful for improving the transmission efficiency of                       vol. 20, no. 12, pp. 8081–8095, Dec. 2021.
+DeepJSCC-enabled semantic communications. The simulation                       [23] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+results show that, though the used DeepJSCC-V model can                             image transmission using deep source channel coding with attention
+achieve similar performance to the ADJSCC model, it still can-                      modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4,
+                                                                                    pp. 2315–2328, Apr. 2022.
+not achieve superior performance compared with conventional                    [24] K. Sayood, H. H. Otu, and N. Demir, “Joint source/channel coding
+BPG+LDPC-based transmission schemes in all SNR regime,                              for variable length codes,” IEEE Trans. Commun., vol. 48, no. 5,
+thus our future work is improving the network architecture                          pp. 787–794, May 2000.
+                                                                               [25] J. Hu, L. Shen, and G. Sun, “Squeeze-and-excitation networks,” in
+and training algorithm of the DeepJSCC-V model to further                           Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit., Jun. 2018,
+improve its coding capability.                                                      pp. 7132–7141.
+                                                                               [26] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+                                                                                    image transmission with adaptive rate control,” in Proc. IEEE Int. Conf.
+                            R EFERENCES                                             Acoust., Speech Signal Process. (ICASSP), May 2022, pp. 5193–5197.
+ [1] M. W. Marcellin, M. J. Gormish, A. Bilgin, and M. P. Boliek,              [27] Y. Polyanskiy, H. V. Poor, and S. Verdú, “Channel coding rate in the
+     “An overview of JPEG-2000,” in Proc. Data Compress. Conf., 2000,               finite blocklength regime,” IEEE Trans. Inf. Theory, vol. 56, no. 5,
+     pp. 523–541.                                                                   pp. 2307–2359, May 2010.
+
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+ZHANG et al.: PADC FOR WIRELESS IMAGE TRANSMISSION IN SEMANTIC COMMUNICATION                                                                              5501
+
+
+
+[28] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for                                     Hua Shao received the Ph.D. degree from BUPT in
+     image recognition,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.                               2017. Since 2017, he has been a Research Engineer
+     (CVPR), Jun. 2016, pp. 770–778.                                                                      with the Wireless Research Department, Huawei
+[29] J. Ballé, V. Laparra, and E. P. Simoncelli, “Density modeling                                        Chengdu Research Center, focusing on 5G physical
+     of images using a generalized normalization transformation,” 2015,                                   layer techniques and 3GPP standards progressing.
+     arXiv:1511.06281.                                                                                    In 2020, he enrolled at the School of Intelli-
+[30] A. Krizhevsky. CIFAR Dataset. Accessed: Mar. 18, 2021. [Online].                                     gence Science and Technology, Institute of Artificial
+     Available: https://www.cs.toronto.edu/~kriz/cifar.html                                               Intelligence, USTB. His research interests include
+[31] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”                                high-frequency physical layer techniques, position-
+     2014, arXiv:1412.6980.                                                                               ing, sparse signal processing, and AI approaches to
+[32] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet:                             reform the RAN physical layer modules.
+     A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput.
+     Vis. Pattern Recognit., Jun. 2009, pp. 248–255.
+[33] O. Russakovsky et al., “ImageNet large scale visual recognition chal-
+     lenge,” Int. J. Comput. Vis., vol. 115, no. 3, pp. 211–252, 2015.
+[34] R. Franzen. kodak24 Dataset. kodak24 dataset. [Online]. Available:
+     http://r0k.us/graphics/kodak/
+[35] H. Abdi and L. J. Williams, “Principal component analysis,” WIREs                                    Ning Wang (Member, IEEE) received the B.E.
+     Comput. Statistic, vol. 2, no. 4, pp. 433–459, Jul./Aug. 2010.                                       degree in communication engineering from Tianjin
+[36] A. Mahdi, N. Kanistras, and V. Paliouras, “A multirate fully parallel                                University, China, in 2004, the M.A.Sc. degree in
+     LDPC encoder for the IEEE 802.11 n/AC/ax QC-LDPC codes based on                                      electrical engineering from The University of British
+     reduced complexity XOR trees,” IEEE Trans. Very Large Scale Integr.                                  Columbia, Canada, in 2010, and the Ph.D. degree
+     (VLSI) Syst., vol. 29, no. 1, pp. 51–64, Jan. 2021.                                                  in electrical engineering from the University of
+                                                                                                          Victoria, Canada, in 2013. From 2004 to 2008,
+                                                                                                          he was with the China Information Technology Con-
+                                                                                                          sulting and Designing Institute as a Mobile Commu-
+                        Wenyu Zhang received the B.E. and M.Eng.                                          nication System Engineer, specializing in planning
+                        degrees in communication engineering from Beijing                                 and optimization of commercial mobile communica-
+                        Jiaotong University, Beijing, China, in 2013 and         tion networks. From 2013 to 2015, he was a Post-Doctoral Research Fellow
+                        2016, respectively, the joint Ph.D. degree from The      with the Department of Electrical and Computer Engineering and the Institute
+                        University of British of Columbia in 2019, and the       for Computing, Information and Cognitive Systems (ICICS), The University
+                        Ph.D. degree in communication engineering from           of British Columbia. Since 2015, he has been with the School of Information
+                        Beijing Jiaotong University in 2020. He is currently     Engineering, Zhengzhou University, Zhengzhou, China, where he is currently
+                        an Associate Professor with the School of Intelli-       a Professor and the Director of the Henan International Joint Laboratory for
+                        gence Science and Technology, Institute of Artificial    Intelligent Networking and Data Analysis. He also holds adjunct appointment
+                        Intelligence, University of Science and Technology       with the Department of Electrical and Computer Engineering, McMaster
+                        Beijing. His research interests include network intel-   University, Canada. His research interests include resource allocation and
+ligence and cloud/edge computing.                                                security designs of future cellular networks, channel modeling for wireless
+                                                                                 communications, statistical signal processing, and cooperative wireless com-
+                                                                                 munications. He was on the technical program committees of international
+                       Haijun Zhang (Fellow, IEEE) is currently a Full           conferences, including the IEEE GLOBECOM, IEEE ICC, IEEE WCNC,
+                       Professor and an Associate Dean of the School of          and CyberC.
+                       Computer and Communications Engineering, Uni-
+                       versity of Science and Technology Beijing, China.
+                       He was a Post-Doctoral Research Fellow with the
+                       Department of Electrical and Computer Engineer-
+                       ing, The University of British Columbia (UBC),
+                       Canada. He serves/served as the Track Co-Chair for
+                       VTC Fall 2022 and WCNC 2020/2021, the Sym-                                          Victor C. M. Leung (Life Fellow, IEEE) is currently
+                       posium Chair for Globecom’19, the TPC Co-Chair                                      a Distinguished Professor in computer science and
+                       for INFOCOM 2018 Workshop on Integrating Edge                                       software engineering at Shenzhen University, China.
+Computing, Caching, and Offloading in Next Generation Networks, and                                        He is also an Emeritus Professor in electrical and
+the General Co-Chair for GameNets’16. He serves/served as an Editor for                                    computer engineering and the Director of the Labo-
+IEEE T RANSACTIONS ON C OMMUNICATIONS and IEEE T RANSACTIONS                                               ratory for Wireless Networks and Mobile Systems,
+ON N ETWORK S CIENCE AND E NGINEERING. He received the IEEE CSIM                                           The University of British Columbia (UBC), Canada.
+Technical Committee Best Journal Paper Award in 2018, IEEE ComSoc Young                                    His research interests include the broad areas of
+Author Best Paper Award in 2017, and IEEE ComSoc Asia-Pacific Best Young                                   wireless networks and mobile systems, and he has
+Researcher Award in 2019.                                                                                  published widely in these areas. He is serving on
+                                                                                                           the editorial boards of the IEEE T RANSACTIONS
+                                                                                 ON G REEN C OMMUNICATIONS AND N ETWORKING , IEEE T RANSACTIONS
+                                                                                 ON C LOUD C OMPUTING , IEEE T RANSACTIONS ON C OMPUTATIONAL
+                                                                                 S OCIAL S YSTEMS , IEEE A CCESS , IEEE Network, and several other jour-
+                         Hui Ma received the Ph.D. degree in electrical engi-    nals. He received the 1977 APEBC Gold Medal, NSERC Postgraduate
+                         neering from The University of British Columbia in      Scholarships (1977–1981), IEEE Vancouver Section Centennial Award, 2011
+                         2019. He is currently a Lecturer with the School of     UBC Killam Research Prize, 2017 Canadian Award for Telecommunications
+                         Intelligence Science and Technology, University of      Research, 2018 IEEE TCGCC Distinguished Technical Achievement Recog-
+                         Science and Technology Beijing, China. His research     nition Award, and 2018 ACM MSWiM Reginald Fessenden Award. He has
+                         interests include intelligent communications, collab-   coauthored papers that won the 2017 IEEE ComSoc Fred W. Ellersick Prize,
+                         orative communications, massive MIMO, physical          2017 IEEE Systems Journal Best Paper Award, 2018 IEEE CSIM Best Journal
+                         layer security, and heterogeneous networks.             Paper Award, and 2019 IEEE TCGCC Best Journal Paper Award. He is
+                                                                                 a fellow of the Royal Society of Canada (Academy of Science), Canadian
+                                                                                 Academy of Engineering, and Engineering Institute of Canada. He is named
+                                                                                 in the current Clarivate Analytics list of “Highly Cited Researchers.”
+
+
+
+
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on July 02,2026 at 09:23:55 UTC from IEEE Xplore. Restrictions apply.
+

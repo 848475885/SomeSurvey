@@ -1,0 +1,375 @@
+                                               DD-JSCC: Dynamic Deep Joint Source-Channel
+                                                   Coding for Semantic Communications
+                                            Avi Deb Raha1 , Apurba Adhikary1 , Mrityunjoy Gain2 , Yumin Park1 , Walid Saad3 , and Choong Seon Hong1*
+                                                 1
+                                                     Department of Computer Science and Engineering, Kyung Hee University, Yongin-si 17104, Republic of Korea
+                                                          2
+                                                            Department of Artificial Intelligence, Kyung Hee University, Yongin-si 17104, Republic of Korea
+                                                            3
+                                                              Department of Electrical and Computer Engineering, Virginia Tech, Arlington, VA 22203, USA
+                                                                      E-mail: {avi, apurba, gain, yumin0906, cshong}@khu.ac.kr, walids@vt.edu
+
+                                             Abstract—Deep Joint Source-Channel Coding (Deep-JSCC)                           conventional wireless systems, source coding techniques (e.g.,
+                                         has emerged as a promising semantic communication approach                          JPEG, BPG, JPEG2000) compress data, while channel coding
+                                         for wireless image transmission by jointly optimizing source and                    methods (e.g., LDPC, Polar, Turbo codes) ensure transmis-
+                                         channel coding using deep learning techniques. However, tra-
+arXiv:2507.20467v1 [cs.NI] 28 Jul 2025
+
+
+
+
+                                         ditional Deep-JSCC architectures employ fixed encoder-decoder                       sion reliability [3]. However, this layered approach optimizes
+                                         structures, limiting their adaptability to varying device capa-                     source and channel coding independently, leading to subopti-
+                                         bilities, real-time performance optimization, power constraints                     mal communication capacity and the ”cliff-effect,” where data
+                                         and channel conditions. To address these limitations, we propose                    quality sharply degrades below certain SNR thresholds [3].
+                                         DD-JSCC: Dynamic Deep Joint Source-Channel Coding for                                  To address these limitations, Joint Source-Channel Coding
+                                         Semantic Communications, a novel encoder-decoder architecture
+                                         designed for semantic communication systems. Unlike traditional                     (JSCC) has emerged as a paradigm that integrates source and
+                                         Deep-JSCC models, DD-JSCC is flexible for dynamically ad-                           channel coding into a unified framework to optimize the end-
+                                         justing its layer structures in real-time based on transmitter                      to-end communication process [4]. Recent advancements in
+                                         and receiver capabilities, power constraints, compression ratios,                   deep learning have further propelled JSCC methodologies,
+                                         and current channel conditions. This adaptability is achieved                       leading to Deep Joint Source-Channel Coding (Deep-JSCC)
+                                         through a hierarchical layer activation mechanism combined
+                                         with implicit regularization via sequential randomized training,                    models that leverage deep neural networks, particularly au-
+                                         effectively reducing combinatorial complexity, preventing over-                     toencoders, to enhance both data compression efficiency and
+                                         fitting, and ensuring consistent feature representations across                     transmission reliability [5]. Deep-JSCC models have demon-
+                                         varying configurations. Simulation results demonstrate that DD-                     strated significant improvements over traditional methods in
+                                         JSCC enhances the performance of image reconstruction in                            various wireless data transmission tasks, including image [3],
+                                         semantic communications, achieving up to 2 dB improvement
+                                         in Peak Signal-to-Noise Ratio (PSNR) over fixed Deep-JSCC                           [5], text [6], and speech [7] transmission. These models
+                                         architectures, while reducing training costs by over 40%. The                       effectively mitigate the cliff-effect by maintaining robust per-
+                                         proposed unified framework eliminates the need for multiple                         formance across a range of SNR conditions and compression
+                                         specialized models, significantly reducing training complexity and                  ratios, thereby achieving closer to system-level optimality.
+                                         deployment overhead.                                                                   Despite these advancements, existing Deep-JSCC models
+                                             Index Terms—Semantic Communication, JSCC, Dynamic.
+                                                                                                                             predominantly rely on fixed encoder-decoder architectures that
+                                                                    I. I NTRODUCTION                                         are not designed to adapt dynamically to changing device
+                                                                                                                             capabilities, power constraints, or varying channel conditions.
+                                            The rapid proliferation of connected devices and the emer-
+                                                                                                                             In real-world wireless environments, especially in mobile
+                                         gence of data-intensive applications such as autonomous ve-
+                                                                                                                             and power-constrained devices, communication systems must
+                                         hicles [1], real-time financial trading, online gaming, and
+                                                                                                                             contend with varying computational resources and fluctuating
+                                         advanced telecommunications have dramatically increased the
+                                                                                                                             power levels. A fixed architecture poses significant ineffi-
+                                         demands on wireless communication networks [2]. These
+                                                                                                                             ciencies in such scenarios. For instance, under high SNR
+                                         applications require communication systems that are not only
+                                                                                                                             conditions or when devices have limited computational re-
+                                         high in speed and reliability but also highly adaptable to
+                                                                                                                             sources, a lightweight model suffices, conserving energy and
+                                         dynamic and heterogeneous operational environments. Tra-
+                                                                                                                             computational power. Conversely, in low SNR environments
+                                         ditional communication paradigms, which typically separate
+                                                                                                                             or when higher fidelity is required, a deeper model may
+                                         source coding and channel coding processes, are increasingly
+                                                                                                                             be necessary to ensure reliable communication. Maintaining
+                                         inadequate in meeting these sophisticated requirements. In
+                                                                                                                             multiple fixed architectures to accommodate these varying
+                                                                                                                             conditions is impractical due to the substantial memory and
+                                            This work has been accepted by the 2025 IEEE International Conference on         computational overhead, particularly in heterogeneous net-
+                                         Communications (IEEE ICC 2025), © 2025 IEEE. Copyright may be trans-
+                                         ferred without notice, after which this version may no longer be accessible.        works where devices have different capabilities.
+                                         Personal use of this material is permitted. Permission from IEEE must be               In this paper, we address these challenges by proposing
+                                         obtained for all other uses, including reprinting/republishing for advertising or   a Dynamic Deep Joint Source-Channel Coding (DD-JSCC)
+                                         promotional purposes, creating new collective works, resale or redistribution
+                                         to servers or lists, or reuse of any copyrighted component of this work in          architecture for semantic communication systems that can
+                                         other works. *Dr. CS Hong is the corresponding author.                              adapt its layer structure in real-time based on transmitter and
+receiver capabilities, power constraints, compression ratios,
+and current channel conditions. Unlike traditional approaches
+that require multiple specialized models for different op-
+erational scenarios [8], or methods that rely on dynamic
+partitioning [9] of fixed architectures, which remain effectively
+static by overburdening one device when both the sender
+and receiver have constrained computational resources, leading
+to performance bottlenecks and excessively large transmitted
+feature sizes, our DD-JSCC architecture employs a flexible
+layer configuration mechanism. This enables the encoder and
+decoder to dynamically activate or deactivate layers, ensuring
+balanced computational loads and optimized data compression.
+Consequently, a single model can efficiently operate across a
+wide spectrum of conditions, enhancing both data compression
+and transmission reliability without the need for maintaining
+multiple specialized models. The main contributions of this
+paper are summarized as follows:
+   1) We propose a novel encoder-decoder architecture for           Fig. 1: System Model for Dynamic Deep Joint Source-Channel
+       semantic communication that is fexible for dynamically       Coding for Semantic Communications.
+       adjusting its layer structures in real-time based on chan-
+       nel SNR, compression ratio (CR), device capabilities,        minimal distortion, dynamically adapting to varying channel
+       and power constraints. This adaptation ensures optimal       conditions, device computational capabilities and power con-
+       resource utilization and maintains high performance          straints as shown in fig. 1.
+       across diverse operational conditions. To the best of our       1) Transmitter: The transmitter consists of a semantic
+       knowledge, this work is the first to introduce a fully       encoder Eϕ (·), which transforms the input image x ∈ RN into
+       dynamic architecture that enables semantic communica-        a lower-dimensional complex-valued semantic code z ∈ CK :
+       tion systems to optimize both transmitter and receiver                             z = Eϕ (x; γ, R, Le ),                   (1)
+       configurations concurrently.                                 where, γ denotes the Signal-to-Noise Ratio (SNR), which
+   2) We propose a novel training strategy that employs             influences the encoding strategy based on current channel
+       sequential randomized layer selection with hierarchical      conditions. R = K N represents the desired Compression Ratio
+       constraints. This method acts as an implicit regular-                                         e
+                                                                    (CR). Le = [l1e , l2e , . . . , lL ] is the encoder’s active layer
+       izer, enhancing model generalization and robustness by       configuration vector, where each lie ∈ {0, 1} indicates whether
+       preventing overfitting and promoting the learning of         the ith layer is active (1) or inactive (0).
+       efficient feature representations across varying network        2) Power Normalization: To comply with transmission
+       configurations.                                              power constraints, the semantic code z is normalized before
+   3) Simulation results demonstrate that the proposed DD-          transmission. The power-normalized semantic code s ∈ CK is
+       JSCC architecture significantly enhances the perfor-         given by:                        s
+       mance of image reconstruction in semantic communi-                                               KPmax
+                                                                                             s=                z,                  (2)
+       cations. Specifically, DD-JSCC achieves up to 2 dB im-                                            ∥z∥2
+                                                                                    PK
+       provement in Peak Signal-to-Noise Ratio (PSNR) over          where ∥z∥2 = k=1 |zk |2 and Pmax is the maximum allowed
+       fixed Deep-JSCC architectures for image reconstruction       average power per symbol. This normalization ensures that the
+       tasks. Additionally, the DD-JSCC reduces training costs      average power constraint is satisfied:
+       by over 40%, highlighting its efficiency and scalability
+                                                                                           1  2
+       for real-world deployments.                                                             E ∥s∥ ≤ Pmax .                      (3)
+                                                                                           K
+                                                                       3) Physical Channel: The normalized semantic code s is
+     II. S YSTEM M ODEL AND P ROBLEM F ORMULATION
+   In this section, we present a comprehensive framework for        transmitted over a wireless channel modeled as:
+the proposed DD-JSCC architecture designed for semantic                                          z̃ = hs + n,                      (4)
+communication in wireless image transmission systems.               where h ∈ C represents the complex channel gain coeffi-
+                                                                    cient, capturing the effects of fading and path loss. n ∼
+A. System Model                                                     CN (0, σ 2 IK ) denotes the additive white Gaussian noise
+   The system model comprises three main components: the            (AWGN) vector, with σ 2 being the noise variance. For sce-
+transmitter, the physical channel, and the receiver. The trans-     narios where the channel gain is normalized (i.e., h = 1), the
+mitter includes a semantic encoder, while the receiver is           channel model simplifies to:
+equipped with a decoder. The DD-JSCC architecture aims to                                         z̃ = s + n.                      (5)
+reconstruct the original image x ∈ RN at the receiver with          The channel SNR γ is defined as:
+Fig. 2: Overview of the proposed DD-JSCC architecture. The flexible DD-JSCC framework can be adapted to various network
+architectures. In this study, we demonstrate its application using the DeepJSCC-V architecture.
+                                    
+                      E |h|2 ∥s∥2         |h|2 Pmax                  The dynamic activation of layers in both the encoder and
+                 γ=              2
+                                       =            ,         (6)
+                         E [∥n∥ ]            σ2                   decoder introduces substantial complexities to the training
+and is often expressed in decibels (dB) as:                       and optimization process. Specifically, the network parameters
+                                                                  must be optimized across an exponentially large number of
+                        γdB = 10 log10 (γ).                   (7)
+                                                                  possible layer configurations due to the combinatorial nature
+   4) Receiver: The receiver comprises a decoder Dθ (·), of layer activations. This results in a highly non-convex and
+which reconstructs the image from the received signal z̃:         intricate optimization landscape, complicating the search for
+                      x̂ = Dθ (z̃; γ, R, Ld ),                (8) a global optimum. The variability in layer configurations Le
+where Ld = [l1 , l2 , . . . , lL ] is the decoder’s active layer and Ld means that the effective architecture of the network
+                   d d         d
+
+configuration vector, where each lid ∈ {0, 1} indicates whether changes with each configuration, making the parameter space
+the ith layer is active (1) or inactive (0).                      significantly more complex. Moreover, without proper regular-
+                                                                  ization, the network overfits to specific layer configurations,
+B. Loss Function                                                  reducing generalization and robustness. Dynamic activation
+   To train the DD-JSCC architecture, we minimize the re-
+                                                                  further disrupts feature consistency, hindering shared represen-
+construction error between the original image x and the
+                                                                  tation learning. These challenges demand a training strategy
+reconstructed image x̂. This error is quantified using the Mean
+                                                                  that handles architectural variability while ensuring robust
+Squared Error (MSE):
+                                             N                    feature learning.
+                      1            2     1 X               2
+         L(x, x̂) = ∥x − x̂∥ =                  (xi − x̂i ) . (9)                   III. S OLUTION A PPROACH
+                      N                 N
+                                       i=1
+C. Problem Formulation                                               To effectively address the optimization challenges intro-
+   The encoder and decoder parameters (ϕ, θ) are jointly          duced by dynamic layer activation in the DD-JSCC architec-
+optimized to minimize the expected reconstruction error across    ture, we propose a solution that integrates Hierarchical Layer
+the distributions of the input images x, channel SNRs γ,          Activation and Implicit Regularization through sequential ran-
+compression ratios R, and layer configurations Le and Ld .        domized layer selection during training. This approach simpli-
+The optimization problem can be formulated as:                    fies the optimization landscape, prevents overfitting, ensures
+                                                                  consistent feature representations, and stabilizes the training
+    min Ex,γ,R,Le ,Ld [L (x, Dθ (hs + n; γ, R, Ld ))] ,    (10)   dynamics for both the encoder and decoder components of
+     ϕ,θ
+                                                                  the network.
+where L(·) denotes the reconstruction loss between the origi-
+nal image x and the reconstructed image x̂. This formulation      A. Hierarchical Layer Activation
+aims to jointly train the encoder and decoder to minimize            The dynamic activation of layers introduces an exponen-
+the average reconstruction loss over varying images, channel      tially large number of possible layer configurations in both
+conditions, compression ratios, and layer configurations.         the encoder and decoder, given by 2L−3 for each (since the
+first two and the last layer are always active for the minimal           Algorithm 1 Training Procedure of the DD-JSCC Framework
+configuration). To reduce this combinatorial complexity and              for Semantic Communication
+ensure consistent feature representations, we introduce hierar-          Require: Training dataset D = {xi }N      i=1 , Maximum number of
+chical constraints on the layer activations for both the encoder             layers L, Learning rate η, Total epochs E, Batch size B, Power
+and decoder.                                                                 constraint Pmax , SNR range [γmin , γmax ], CR range [Rmin , Rmax ].
+                                                                         Ensure: Optimized encoder parameters ϕ∗ , Optimized decoder pa-
+   1) Hierarchical Constraints: For the encoder, we enforce                  rameters θ∗
+that higher layers can only be active if all preceding layers are         1: Initialize encoder parameters ϕ and decoder parameters θ
+also active. Mathematically, the hierarchical constraint for the             {Only once}
+encoder is defined as:                                                    2: for epoch = 1 to E do
+                                                                          3:    for each mini-batch {xb }B
+                                                                                                         b=1 in D do
+                          e
+                   lie ≤ li−1 ,   ∀i = 3, . . . , L − 1,         (11)     4:       Randomly select n ∈ {3, . . . , L − 1} {Random layer
+with                                                                               activation}
+                                        e
+                           l1e = l2e = lL = 1,                   (12)     5:       Generate γ uniformly from the range [γmin , γmax ]
+                                                                          6:       Generate R uniformly from the range [Rmin , Rmax ]
+where lie ∈ {0, 1} indicates whether the i-th encoder layer               7:       Set Layer Configurations:
+is active (1) or inactive (0). Similarly, for the decoder, we                                            (
+                                                                                                e    d     1, if i ≤ n or i = L,
+enforce:                                                                                       li = li =
+                      d
+               lid ≤ li−1 , ∀i = 3, . . . , L − 1,        (13)                                             0, otherwise.
+with                                                                      8:       Encoder Forward Pass:
+                                        d
+                           l1d = l2d = lL = 1,                   (14)     9:       he = x {Input to the encoder}
+                                                                         10:       for i = 1 to L do
+where lid ∈ {0, 1} indicates whether the i-th decoder layer is           11:          if lie = 1 then
+active (1) or inactive (0). Under the hierarchical constraints,          12:             he = fie (he ) {Use stored weights for activated
+the number of possible layer configurations for both the                                 layers}
+                                                                         13:          end if
+encoder and decoder is reduced from exponential to linear.
+                                                                         14:       end for
+   This reduction applies separately to the encoder and de-              15:       Semantic Encoding: z = heq
+coder, but since we align their configurations during training           16:       Power Normalization: s = KP    max
+                                                                                                                      z
+                                                                                                               ∥z∥2
+(as will be discussed), the overall complexity is significantly          17:      Channel Transmission: z̃ = hs + n, n ∼ CN (0, σ 2 IK )
+reduced.                                                                 18:      Decoder Forward Pass:
+   2) Consistency in Feature Representations: The hierarchi-             19:      hd = z̃ {Decoder input}
+cal constraints ensure that each active layer in the encoder and         20:      for i = 1 to L do
+decoder builds upon the outputs of the most recent preceding             21:         if lid = 1 then
+                                                                         22:            hd = fid (hd ) {Use stored weights for activated
+active layer, maintaining consistent feature representations                            layers}
+across configurations. Instead of simply passing unchanged               23:         end if
+features through inactive layers, each active layer directly             24:      end for
+receives input from the last active layer in the sequence. Since         25:      Reconstruction: x̂ = hd
+the last layer is always active, if there is a gap due to skipped        26:      Loss Computation: Using Eq. 9.
+                                                                         27:      Update encoder parameters: ϕLe ← ϕLe − η∇ϕLe L
+layers, the last active layer before this final layer directly           28:      Update decoder parameters: θLd ← θLd − η∇θLd L
+provides its output to it. For the encoder, the output of the            29:   end for
+i-th layer is given by:                                                  30: end for
+         (                                                               31: Return Optimized parameters ϕ∗ , θ ∗
+             fie (hej ), if lie = 1, j = max{k | k < i, lke = 1},
+ hei =                                                            (15)
+             hej ,       if i = L and ∃j < L such that lje = 1.
+where j represents the index of the most recent active layer                4) Simplification of Optimization Problem: By limiting the
+before i, ensuring that inactive layers are effectively skipped. If      possible configurations and maintaining consistent computa-
+no intermediate layers are active, the last active layer directly        tional graphs for both encoder and decoder, the hierarchical
+connects to the final layer. Similarly, for the decoder, the             constraints simplify the optimization problem. They reduce
+output of the i-th layer follows:                                        the search space for the optimal parameters (ϕ, θ) and mitigate
+         (                                                               issues related to training instability caused by varying network
+          fid (hdj ), if lid = 1, j = max{k | k < i, lkd = 1},           architectures.
+ hdi =                                                         (16)
+          hdj ,       if i = L and ∃j < L such that ljd = 1.             B. Implicit Regularization through Sequential Randomized
+   3) Alignment of Encoder and Decoder Configurations: To                Layer Selection
+ensure compatibility between the encoder and decoder, we                    To prevent overfitting and improve generalization, we in-
+align their layer configurations during training and inference:          troduce an implicit regularization mechanism by employing
+                           Ld = Le .                        (17)         sequential randomized layer selection during training for both
+This means that if a certain number of layers are active in the          the encoder and decoder.
+encoder, the same number of layers are active in the decoder,               1) Expectation over Layer Configurations: The optimiza-
+respecting the hierarchical constraints.                                 tion objective becomes an expectation over the randomly
+selected layer configurations Le and Ld (which are aligned),         to evaluate model performance. During training, models are
+leading to the following expected loss function:                     trained across a range of SNR values, specifically (0−27) dB.
+        min Ex,γ,R,Le ,Ld [L (x, Dθ (hs + n; γ, R, Ld ))] ,   (18)   The channel encoders and decoders incorporate in total eight
+         ϕ,θ
+where Ld = Le due to the alignment.                                  layers and are optimized using the Adam optimizer with a
+   2) Implicit Regularization Effect: The randomness in layer        learning rate of 10−4 . For compression, the model was trained
+selection introduces variability during training for both the        with CRs ranging from 0.1 to 0.9, enabling it to handle a wide
+encoder and decoder, acting as an implicit regularizer. It           spectrum of compression levels. During testing, we evaluated
+                                                                                                    1 1
+discourages the model from relying too heavily on specific           the model at specific CRs of 12  , 6 , and 14 .
+layers, thus reducing the risk of overfitting. This approach         B. Performance Analysis
+aligns with principles in statistical learning theory [10]. The
+expectation over configurations introduces a regularization             Figs. 3(a) to 3(f) illustrate the PSNR performance of both
+term in the loss function:                                           fixed and dynamic architectures across different sets of ac-
+                                                                     tive layers, SNRs and CRs. Across all figures, the dynamic
+           Ltotal = ELe ,Ld [L] = Lempirical + λΩ(ϕ, θ),     (19)
+                                                                     architecture consistently outperforms the fixed architectures.
+where Lempirical represents the average reconstruction error over                                             1
+                                                                     For instance, in fig. 3(a), at a CR of 12  , the dynamic model
+the training data, and λΩ(ϕ, θ) serves as a regularization term.
+                                                                     achieved a PSNR of 31.35 dB at 18 dB SNR compared to the
+This regularization arises from the variability introduced by
+                                                                     fixed model’s 30.37 dB, marking an improvement of approxi-
+random layer configurations during training. By averaging the
+                                                                     mately 0.98 dB. Similarly, at an unseen SNR of −6 dB and the
+loss over different configurations, the model is encouraged
+                                                                     same CR, the dynamic model attained a PSNR of 17.43 dB
+to learn parameters that perform consistently across various
+                                                                     versus the fixed model’s 17 dB, indicating a 0.43 dB gain.
+architectural setups, thereby preventing overfitting to specific
+                                                                     These enhancements are even more pronounced at higher CRs;
+configurations. Fig. 2 shows the architecture we used for the
+                                                                     for example, at a CR of 41 and 18 dB SNR, the dynamic model
+proposed mechanism and Algorithm 1 describes the whole
+                                                                     reached 36.16 dB compared to the fixed model’s 34.14 dB,
+solution approach for the proposed architecture.
+                                                                     resulting in a significant improvement of 2.02 dB.
+C. Performance Metrics                                                  Furthermore, fig. 4(a) and fig. 4(b) present the average
+   To evaluate the effectiveness of the proposed DD-JSCC ar-         PSNR across all SNRs and CRs for different network config-
+chitecture, we employ the Peak Signal-to-Noise Ratio (PSNR)          urations. The proposed DD-JSCC architecture demonstrates a
+metric. It assess the quality of the reconstructed images            consistent increase in average PSNR as the number of active
+compared to the original images.                                     layers increases, achieving an average PSNR of 29.04 dB for
+   1) Peak Signal-to-Noise Ratio (PSNR): PSNR quantifies             the Set12345678 configuration. In contrast, the fixed ar-
+the reconstruction quality by measuring the ratio between the        chitectures exhibit irregular performance trends, with average
+maximum possible pixel value and the Mean Squared Error              PSNR values peaking at 27.99 dB for the Set12348 config-
+(MSE) between the original image x and the reconstructed             uration and decreasing thereafter. This disparity highlights the
+image x̂. A higher PSNR indicates better reconstruction qual-        effectiveness of our regularization and training techniques in
+ity.
+                                       MAX2I                         DD-JSCC. The model shares parameters across all configura-
+                                               
+                  PSNR = 10 · log10               ,          (20)    tions and employs hierarchical layer activation with implicit
+                                         MSE
+where MAXI is the maximum possible pixel value (e.g., 255            regularization. As layers are added, shared representations and
+for 8-bit images).                                                   collective optimization prevent overfitting, while deeper layers
+                                                                     refine features from shallower ones, enhancing pattern learning
+         IV. E XPERIMENTAL S ETUP AND R ESULTS                       and performance.
+   We evaluated the proposed DD-JSCC against fixed architec-            The statistical analysis underscores the robustness and scal-
+tures for wireless image transmission over an AWGN channel,          ability of the DD-JSCC architecture. On average, the dynamic
+using PSNR to assess reconstruction quality across different         model achieved PSNR improvements ranging from 0.43 dB
+SNRs, CRs, and layer configurations. Each configuration (e.g.,       to 2.02 dB over fixed models across all configurations. These
+Set12345678, Set12348) denotes active layer subsets                  gains are particularly significant at higher CRs and SNRs,
+within the encoder-decoder. For instance, Set12345678                where maintaining image quality under stringent compression
+activates all eight layers, while Set128 uses only layers 1,         and challenging channel conditions is critical. Additionally, the
+2, and 8.                                                            DD-JSCC architecture’s ability to generalize to unseen SNRs
+                                                                     of −6 dB and −3 dB without performance degradation further
+A. Dataset and Experimental Setup                                    validates the efficacy of the hierarchical layer activation and
+   We implement the proposed models and benchmark                    implicit regularization mechanisms employed during training.
+schemes using PyTorch [11]. To effectively capture visual               Moreover, the training efficiency of the DD-JSCC architec-
+differences among reconstructed images, we utilize the high-         ture presents a practical advantage. While fixed architectures
+resolution DIV2K dataset [12], which is renowned in semantic         required separate training sessions for each layer configura-
+communication community. The training subset of DIV2K is             tion—accumulating to a total of 1,200 epochs for six config-
+employed to train the network, while the testing subset is used      urations—the dynamic model achieved superior performance
+  Fig. 3: Performance Comparison Between the Proposed DD-JSCC and Fixed Deep-JSCC across Various Configurations.
+                                                                  framework of DD-JSCC eliminates the need for multiple
+                                                                  specialized models, thereby reducing training complexity and
+                                                                  deployment overhead.
+                                                                                          R EFERENCES
+                                                                   [1] A. Deb Raha et al., “An artificial intelligent-driven semantic communi-
+                                                                       cation framework for connected autonomous vehicular network,” in 2023
+                                                                       International Conference on Information Networking (ICOIN), 2023, pp.
+                                                                       352–357.
+                                                                   [2] Y. Qiao et al., “Deepseek-inspired exploration of rl-based llms
+                                                                       and synergy with wireless networks: A survey,” arXiv preprint
+Fig. 4: Average PSNR Comparison of DD-JSCC and Fixed                   arXiv:2503.09956, 2025.
+Architectures Across Different Network Configurations.             [3] W. Zhang et al., “Predictive and adaptive deep coding for wireless
+                                                                       image transmission in semantic communication,” IEEE Transactions on
+with just 700 epochs. This reduction in training time not only         Wireless Communications, vol. 22, no. 8, pp. 5486–5501, 2023.
+                                                                   [4] M. Fresia et al., “Joint source and channel coding,” IEEE Signal
+conserves computational resources but also facilitates quicker         Processing Magazine, vol. 27, no. 6, pp. 104–113, 2010.
+deployment and adaptability in real-world scenarios where          [5] E. Bourtsoulatze et al., “Deep joint source-channel coding for wireless
+channel conditions and compression demands may fluctuate               image transmission,” IEEE Transactions on Cognitive Communications
+                                                                       and Networking, vol. 5, no. 3, pp. 567–579, 2019.
+unpredictably.                                                     [6] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+                       V. C ONCLUSION                                  channel coding of text,” in 2018 IEEE International Conference on
+   In this paper, we introduced DD-JSCC, a novel encoder-              Acoustics, Speech and Signal Processing (ICASSP), 2018.
+decoder architecture tailored for semantic communication sys-      [7] Z. Weng and Z. Qin, “Semantic communication systems for speech
+                                                                       transmission,” IEEE Journal on Selected Areas in Communications,
+tems. This is the first study to incorporate dynamic layer             vol. 39, no. 8, pp. 2434–2444, 2021.
+adjustments based on real-time assessments of transmitter and      [8] P. Jiang et al., “Semantic satellite communications based on generative
+receiver capabilities, power constraints, compression ratios,          foundation model,” arXiv preprint arXiv:2404.11941, 2024.
+                                                                   [9] Y. Yan et al., “Latency-minimizing semantic communication with dy-
+and channel conditions. Our approach leverages hierarchical            namic model partitioning,” in ICC 2024 - IEEE International Conference
+layer activation and implicit regularization through sequen-           on Communications, 2024, pp. 5503–5508.
+tial randomized training, effectively reducing combinatorial      [10] N. Srivastava et al., “Dropout: a simple way to prevent neural networks
+                                                                       from overfitting,” The journal of machine learning research, vol. 15,
+complexity and preventing overfitting. This enables a single           no. 1, pp. 1929–1958, 2014.
+encoder-decoder framework to adaptively modify its structure,     [11] A. Paszke et al., “Pytorch: An imperative style, high-performance deep
+optimizing resource utilization and ensuring consistent feature        learning library,” Advances in neural information processing systems,
+                                                                       vol. 32, 2019.
+representations across varying configurations. Simulation re-     [12] E. Agustsson et al., “Ntire 2017 challenge on single image super-
+sults demonstrate that DD-JSCC significantly enhances image            resolution: Dataset and study,” in Proceedings of the IEEE conference on
+reconstruction performance, achieving up to 2 dB improve-              computer vision and pattern recognition workshops, 2017, pp. 126–135.
+ment in PSNR over fixed Deep-JSCC architectures while
+reducing training costs by over 40%. The unified and scalable
+

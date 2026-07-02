@@ -1,0 +1,1576 @@
+                                                                                                                                                                1
+
+
+
+                                                      SCAN: Semantic Communication with
+                                                                   Adaptive Channel Feedback
+                                                          Guangyi Zhang, Qiyu Hu, Yunlong Cai, and Guanding Yu
+
+
+                                                                                                 Abstract
+arXiv:2306.15534v1 [eess.SP] 27 Jun 2023
+
+
+
+
+                                                     In existing semantic communication systems for image transmission, some images are generally
+                                                 reconstructed with considerably low quality. As a result, the reliable transmission of each image cannot
+                                                 be guaranteed, bringing significant uncertainty to semantic communication systems. To address this
+                                                 issue, we propose a novel performance metric to characterize the reliability of semantic communication
+                                                 systems termed semantic distortion outage probability (SDOP), which is defined as the probability of
+                                                 the instantaneous distortion larger than a given target threshold. Then, since the images with lower
+                                                 reconstruction quality are generally less robust and need to be allocated with more communication
+                                                 resources, we propose a novel framework of Semantic Communication with Adaptive chaNnel feedback
+                                                 (SCAN). It can reduce SDOP by adaptively adjusting the overhead of channel feedback for images
+                                                 with different reconstruction qualities, thereby enhancing transmission reliability. To realize SCAN, we
+                                                 first develop a deep learning-enabled semantic communication system for multiple-input multiple-output
+                                                 (MIMO) channels (DeepSC-MIMO) by leveraging the channel state information (CSI) and noise variance
+                                                 in the model design. We then develop a performance evaluator to predict the reconstruction quality of
+                                                 each image at the transmitter by distilling knowledge from DeepSC-MIMO. In this way, images with
+                                                 lower predicted reconstruction quality will be allocated with a longer CSI codeword to guarantee the
+                                                 reconstruction quality. We perform extensive experiments to demonstrate that the proposed scheme can
+                                                 significantly improve the reliability of image transmission while greatly reducing the feedback overhead.
+
+
+                                                                                               Index Terms
+
+                                                     Channel feedback, semantic communication, semantic distortion outage probability (SDOP), multiple-
+                                                 input multiple-output (MIMO), wireless image transmission.
+
+                                             G. Zhang, Q. Hu, Y. Cai, and G. Yu are with the College of Information Science and Electronic Engineering, Zhe-
+                                           jiang University, Hangzhou 310027, China (e-mail: zhangguangyi@zju.edu.cn; qiyhu@zju.edu.cn; ylcai@zju.edu.cn; yuguand-
+                                           ing@zju.edu.cn).
+                                                                                                   2
+
+
+
+                                        I. I NTRODUCTION
+
+  Driven by the extensive deployment of various intelligent services, such as the autonomous
+driving and the Internet of Everything [1]–[3], a fierce demand for transmitting massive amounts
+of information has sprung up. It pushes industry and academia to further improve the transmission
+efficiency. To this end, semantic communication, as a new communication paradigm, has been
+regarded as a promising technology in 6G communications. Semantic communication is not
+the pursuit of accurate bit transmission, but the ability to transmit the desired meaning of
+the message, resulting in higher transmission efficiency than traditional communication system
+based on Shannon theory [3]. Therefore, the research on the semantic-aware physical layer
+communication design for semantic communication is expected to be explored.
+
+
+A. Prior Work
+
+  Recently, inspired by the success of deep learning, autoencoder architectures parameterized by
+deep neural networks (DNNs) have been used to implement semantic communication systems,
+achieving significant performance gains [3]. In particular, the existing focuses of semantic
+communication can be mainly divided into two categories: (i) Design effective semantic encoding
+and decoding algorithms [4]–[13]; (ii) Investigate advanced physical layer modules for semantic
+communication [14]–[19]. For the first issue, the transmitter and receiver are regarded as a pair of
+encoder and decoder consisting of DNNs, which are exploited to directly encode the input data
+of different modalities to channel symbols at the transmitter and decode the received channel
+symbols at the receiver. The deep joint source and channel coding (JSCC) technique for wireless
+image transmission has been firstly proposed in [4], where the image pixel values are mapped
+to the complex-valued channel symbols through a well-designed encoder. An attention-based
+semantic communication system for speech transmission has been proposed in [5]. For multi-
+modal data transmission, a unified joint source-channel coding semantic communication system
+for multi-modal data has been proposed in [6]. For the second issue, the researchers dedicated to
+implementing semantic communication by revising or redesigning the modules in conventional
+communications [14]. It is more adaptive to channel variations by considering both the semantic
+information of source data and channel state information (CSI). In [15], the problems of resource
+allocation and semantic information extraction for wireless semantic communication with rate
+                                                                                                 3
+
+
+
+splitting have been investigated. In [16], orthogonal frequency division multiplexing (OFDM)
+has been combined with an autoencoder for wireless image transmission over multipath fading
+channels, where the multipath channel and OFDM are represented by differentiable layers so that
+the system can be trained in an end-to-end manner. Moreover, a semantic-driven constellation
+design has been considered in [17] to improve the reconstruction quality of JSCC.
+  Although aforementioned semantic works have achieved significant performance gains, most of
+them only consider the single-input single-output (SISO) channels. However, when implementing
+the semantic communication systems to the multiple-input multiple-output (MIMO) scenarios,
+there will be a number of new issues to solve. Among them, channel feedback for semantic
+communication with MIMO is of great importance. Specifically, the strengths of MIMO, e.g.,
+high spectral efficiency, are highly dependent on the acquisition of CSI by the base station (BS),
+and require user equipment to feed the CSI back to the BS through feedback links, especially in
+frequency division duplex (FDD) scenarios [20]–[22]. Nevertheless, the substantial antennas at
+the BS for massive MIMO lead to a huge dimensionality of the CSI matrix, which dramatically
+increases the feedback overhead. To address this issue, many techniques have been developed
+to reduce the overhead of channel feedback, such as vector quantization and codebook-based
+approaches [23]. Based on compressive sensing (CS), several algorithms have been developed to
+compress the CSI matrix to reduce the overhead [24], [25], which outperform the quantization-
+based methods by using the spatial and temporal correlation of CSI. In particular, by transforming
+the CSI matrix into a sparse domain, low-dimensional compressed codewords can be obtained
+for feedback. The authors in [25] employed the spatial correlation between proximate antennas
+to compress the CSI matrix in the sparse spatial-frequency domain. In addition, there have
+also been many deep learning-based methods [26]–[30] that use DNNs to compress the CSI
+matrix, such as CsiNet [27] and CLNet [28]. These methods adopt an autoencoder structure
+consisting of an encoder and a decoder, which outperform the CS-based methods with a much-
+reduced computational complexity. Specifically, the authors in [28] proposed a forged complex
+valued input layer to process signals and utilized spatial-attention to enhance the performance
+of the network. For variable-rate feedback, a multi-rate framework has been developed in [29]
+to compress the CSI matrix with different compression ratios. However, despite the satisfactory
+performance, these methods may not be optimal in semantic communications since they have
+                                                                                                  4
+
+
+                                                                      Resource
+                                                                      Tolerance
+                                     Performance Curve
+
+
+
+
+                         Threshold
+
+                                           Image              Image
+                                           (a)                (b)
+
+
+    Fig. 1: (a) The target PSNR threshold and tolerance; (b) Illustration of the water-filling.
+
+
+not considered semantics of sources in the designs.
+
+
+B. Motivation and Contributions
+
+  To the best of our knowledge, semantic communication systems for image transmission
+generally achieve quite different performance on different images even in error-free transmission,
+as shown in Fig. 1(a). This is mainly because the images are of different complexities and the
+capabilities of the DNN models to handle different images are generally different. Moreover, we
+observe that if the images are required to be reconstructed with a reconstruction quality larger
+than a given threshold, the images with lower reconstruction quality are generally less tolerant to
+disturbances. In this case, when the channel condition is poor, some images will be reconstructed
+with rather low quality, leading to high uncertainty and lack of performance guarantee. Hence, it
+is necessary to allocate proper resources, such as channel feedback bits and transmission power,
+to the images with low reconstruction quality to guarantee their reconstruction qualities thereby
+enhancing the reliability, as shown in Fig. 1(b). However, existing semantic communication
+systems only focus on optimizing the end-to-end average distortions, such as average peak-signal-
+to-noise (PSNR), and have not considered the reconstruction quality of each image as well as the
+transmission reliability. Therefore, in this paper, we investigate the adaptive channel feedback
+design of image semantic communication systems with MIMO to improve the transmission
+reliability.
+  Unlike previous works that consider the end-to-end expected distortion, we first propose a
+novel metric, semantic distortion outage probability (SDOP), defined as the probability of the
+                                                                                                                             5
+
+
+
+distortion greater than a target distortion threshold. It is employed to characterize the reliability of
+semantic communication for image transmission. Based on the observation that images with low
+reconstruction quality are less robust when targeted to exceed the PSNR threshold1 , we develop
+a novel framework of Semantic Communication with Adaptive chaNnel feedback (SCAN) for
+image transmission to reduce SDOP thereby enhancing transmission reliability. To realize SCAN,
+we first propose an attention mechanism-based MIMO transmission semantic communication
+system (DeepSC-MIMO), which can adapt to channel and noise variations. In particular, the
+CSI matrix and noise variance are adopted to generate the attention mask to adaptively allocate
+higher power to more important feature vectors.
+      In order to know the reconstruction quality in advance, we propose a performance evaluator
+at the transmitter. It takes the image, CSI matrix, and noise variance as input and outputs the
+predicted reconstruction quality. To train the evaluator, a knowledge distillation loss is proposed
+by increasing the similarity of output features between the performance evaluator and DeepSC-
+MIMO. Then, an instance-wise adaptive scheme can be developed to adjust the length of the CSI
+codeword for each image, where the transmitter determines the compression level of the CSI
+matrix based on the predicted reconstruction quality of a given image. The images with lower
+predicted reconstruction quality will be allocated with a longer CSI codeword to guarantee the
+reconstruction quality, while the codeword length of those with higher predicted reconstruction
+quality can be reduced instead. Furthermore, a group-wise adaptive algorithm is developed
+to simultaneously determine the CSI compression levels for a group of images to meet the
+requirement of a group of images waiting for transmission. Our simulation results show that the
+proposed SCAN can significantly improve the SDOP performance while greatly reducing the
+feedback overhead. The main contributions of this paper are summarized as follows.
+      •   A novel performance metric, SDOP, is proposed to characterize the reliability of an end-
+          to-end semantic communication system.
+      •   We propose DeepSC-MIMO, which adapts to channel and noise variations by leveraging
+          the CSI and noise variance based on the attention mechanism.
+      •   A performance evaluator is developed based on knowledge distillation [31], where a novel
+          distillation loss is proposed to distill the knowledge contained in the semantic model.
+  1
+      PSNR can be viewed as the inverse of distortion, hence “targeted to exceed the PSNR threshold” actually denotes “targeted
+to not exceed the distortion threshold”. In the following, we will use both statements for clarity.
+                                                                                                     6
+
+
+
+  •   Based on the predicted performance, an adaptive instance-wise channel feedback scheme is
+      proposed to adjust the compression level of the CSI matrix.
+  •   We further propose a group-wise adaptive algorithm, which aims to determine the CSI
+      compression levels of a group of images to optimize the SDOP.
+
+
+C. Organization and Notations
+
+  The rest of this paper is structured as follows. Section II introduces the definition of SDOP.
+The framework of the proposed SCAN is presented in Section III. In Section IV, the knowledge
+distillation-based performance evaluator is described. Followed by the corresponding module
+designs of SCAN, the instance-wise and group-wise adaptive designs are given in Section V.
+Simulation results are presented in Section VI. Finally, Section VII concludes this paper.
+  Notations: Scalars, vectors, and matrices are respectively denoted by lower case, boldface
+lower case, and boldface upper case letters. For a matrix A, AT , AH , and ∥A∥2 are its transpose,
+conjugate transpose, and Frobenius norm, respectively. For a vector a, ∥a∥ is its Euclidean norm.
+Finally, Cm×n (Rm×n ) are the space of m × n complex (real) matrices.
+
+
+                                    II. D EFINITION OF SDOP
+
+  In this section, we propose a probabilistic model of semantic communication systems, in-
+cluding the definitions of mappings and variables. Then, we give the definition of the proposed
+SDOP based on the excess distortion event.
+
+
+A. Problem Formulation
+
+  A typical semantic communication system can be represented by the model shown in Fig. 2. In
+particular, the semantic communication system can be viewed as an end-to-end communication
+system developed to incorporate the channel coding and source coding. The encoding, decoding,
+and transmission procedures are parameterized by the DNNs, and the system is optimized in
+a back-propagation manner with the data-driven method. The input image is represented by a
+vector, s = [s1 , s2 , ..., sN ] ∈ RN ×1 , with probability distribution pS , where N is the length of
+the vector. Moreover, s is considered as a realization of the random variable S, in the alphabet
+S. Denote the encoding function of the encoder as F(· ; θ) : RN ×1 → CK×1 , where θ denotes
+                                                                                                         7
+
+
+                                  Encoder           Channel           Decoder
+
+
+
+
+                Fig. 2: Probabilistic model of a semantic communication system.
+
+
+the trainable parameters. The encoder directly maps s into the complex channel symbol vector,
+which is given by
+                                            z = F (s; θ) ∈ CK×1 ,                                     (1)
+
+where K is the number of transmitted symbols and z = [z1 , z2 , ..., zK ] ∈ CK×1 can be viewed as
+a realization of the random variable Z, in alphabet Z. We define the bandwidth ratios as ρ = K
+                                                                                             N
+                                                                                               .
+Subsequently, the encoded channel symbol vector z, is transmitted through the channel with
+transition probability, pẐ|Z . Then, we obtain the received symbol vector, ẑ = [ẑ1 , ẑ2 , ..., ẑK ] ∈
+CK×1 , which will be further processed by the decoder. Similarly, ẑ can be viewed as the
+realization of random variable Ẑ, in alphabet Ẑ. The decoder employs the decoding function,
+F(· ; ϕ) : CK×1 → RN ×1 , to map ẑ into an estimate of the original signal for reconstruction,
+given by
+                                            ŝ = F (z; ϕ) ∈ RN ×1 ,                                   (2)
+
+where ϕ denotes the trainable parameters of the decoder. Additionally, ŝ = [ŝ1 , ŝ1 , ..., ŝN ] is
+regarded as a realization of the random variable Ŝ, in alphabet Ŝ.
+  We further define the semantic communication system as a tuple of mappings:
+
+                  F(·; θ) : S → Z,          H(·; H, σ 2 ) : Z → Ẑ,       F(·; ϕ) : Ẑ → Ŝ.          (3)
+
+Considering the image transmission application, we further define the following block-wise
+quadratic-distortion measure function for the source,
+                                                                      K
+                                                               1 X
+                         dS : S × Ŝ → R,         dS (s, ŝ) ≜       dS (si , ŝi ) .                 (4)
+                                                               K i=1
+
+B. Outage for Semantic Communication
+
+  We observe that deep learning-based semantic communication systems typically achieve sig-
+nificantly different reconstruction quality on different input images, in which case some images
+                                                                                                     8
+
+
+
+will be transmitted with considerably low quality. This reminds us that the average performance
+metrics, e.g., the average PSNR, will fail to characterize the true end-to-end performance of such
+semantic communication systems. The main reasons can be further summarized as follows:
+  •   The semantic communication model for image transmission generally achieves different
+      performance over different samples, where some images will be reconstructed with rather
+      low quality, leading to high uncertainty and lack of performance guarantee.
+  •   It is hard to perceive the distortion when the difference between the original image and
+      the reconstructed image is sufficiently small. Hence, for human perception requirements,
+      images are expected to be transmitted with distortion less than the minimum threshold.
+  •   Since deep learning-based methods generally suffer from poor generalization ability and
+      reliability, there is often the case that the model cannot handle images from new distributions,
+      resulting in poor reliability. Thus, for applications with high reliability requirements, the
+      average distortion measure may not be suitable.
+  When communicating over quasi-static fading channels at a given rate R, the random fading
+coefficients may occasionally be very small, in which case the Shannon capacity is zero. For
+reliable transmission over this kind of channels, it is desirable that the transmission rate is less
+than the channel capacity [32]–[34]. It can be interpreted as the probability of failed transmission
+with high BER, referring to outage probability. However, the outage of conventional communi-
+cation systems is not able to characterize the outage performance of semantic communication
+systems. It is mainly because the performance of a semantic communication system is highly
+related to the source content and model capability. In this case, the transmission failure event is
+also source-dependent, but the conventional outage only considers channel factors. Therefore, it
+is necessary to define the outage in semantic communication by considering both sources and
+channels.
+
+C. SDOP Definition
+
+  Intuitively, the event that some images cannot be reconstructed with a distortion less than the
+target threshold can be regarded as a transmission failure and inspires us to define the outage
+in semantic communications. Mirroring results of the excess distortion probability from joint
+source-channel coding [33], [34], we propose a new metric called SDOP, which is defined as
+the probability that the instantaneous distortion is larger than the target quality-of-service (QoS)
+                                                                                                   9
+
+
+
+distortion. Revisiting the probabilistic model shown in Fig. 2, the conditional probability, p(ŝ|s)
+can be expressed as p(ŝ|s) = pθ (z|s)pẐ|Z (ẑ|z)pϕ (ŝ|z), where pθ and pϕ are defined by the
+encoder and decoder, respectively. As we adopt a deterministic DeepSC-MIMO, pθ and pϕ can
+be viewed as a Dirac-delta function for simplicity. Thus, we can define the erroneous set of
+(s, z) that violates the distortion constraints, Dth , as
+
+                          E = {(s, z) ∈ S × Z : dS (s, F (ẑ; ϕ)) > Dth } .                      (5)
+
+Therefore, the SDOP can be defined as the probability of exceeding the distortion constraint,
+Dth , which is expressed as
+                                 Z                Z
+                        P{E} ≜           pS (s)            pẐ|Z (ẑ | F (s; θ)) dzds,           (6)
+                                   s∈S            z∈E(s)
+
+where E(s) = {ẑ ∈ Ẑ : (s, ẑ) ∈ E}.
+  Considering a semantic communication system with MIMO, according to (6), the channel
+transition probability pẐ|Z , is related to the channel realization H and the variance of additive
+white Gaussian noise (AWGN) σ 2 . Therefore, denoting the distortion as a random variable, D,
+it will be a random variable that depends on the channel realization, noise variance, and input
+image. Hence, (6) can be further denoted by
+
+                                  P{E} ≜ P D(s, H, σ 2 ) > Dth ,
+                                          
+                                                                                                 (7)
+
+representing the probability that the distortion is larger than the threshold. Compared with the
+conventional outage, it considers both the source and channel, and thus is able to capture the
+true outage of the semantic communication system.
+
+
+                              III. P ROPOSED F RAMEWORK OF SCAN
+
+  In this section, we present the framework of the proposed SCAN. The proposed SCAN con-
+sists of the DeepSC-MIMO for image transmission, the performance evaluator for performance
+prediction, and the channel feedback scheme for precoding.
+
+
+A. DeepSC-MIMO
+
+  1) Overview and Settings: By implementing the probabilistic model shown in Fig. 2 with
+actual DNNs, the DeepSC-MIMO can be carried out as shown by the DeepSC-MIMO encoder
+                                                                                                                                    10
+
+
+                                                             Compression Indicator [2,4,5,…]
+
+
+                              Compression    CSI Decoder             Feedback Link                         CSI Encoder
+                                Decision
+
+
+      Performance                                                         Fading               Estimated
+       Evaluator                                                         Channel
+
+
+                              DeepSC-MIMO                                                                            DeepSC-MIMO
+                                Encoder       Precoder                                            Detection            Decoder
+
+    High          Low
+  Complexity   Complexity
+
+
+                            Transmitter                                                                       Receiver
+
+
+                                      Fig. 3: Framework of the proposed SCAN.
+
+
+and DeepSC-MIMO decoder in Fig. 3. In particular, s is encoded directly into z by the encoder,
+which we then elaborate how to transmit to the receiver using MIMO. Let V ∈ CNr ×d denote
+the precoder to transmit z, where d denotes the number of data streams. It can be obtained
+by applying the singular value decomposition (SVD) precoding with the channel matrix, H ∈
+CNr ×Nt . Note that the image is encoded by the encoder into a K-dimension vector, i.e., the
+complex channel symbols. We split them into a number of signals, whose dimensions all equal
+to d. Taking one split signal, x ∈ Cd×1 , as an example, we first constrain it with power, P , as
+∥Vx∥2 ≤ P . Then, the received signal can be denoted as
+
+                                                     y = HVx + n,                                                                  (8)
+
+where n ∈ CNr ×1 is the AWGN. At the receiver, we consider the linear receive combiner, thus
+the estimated signal is obtained by
+                                                           x̂ = UH y,                                                              (9)
+
+where the U is obtained by the receiver using H with SVD algorithm. Finally, the received
+signals are further processed by the decoder to recover the source image. Moreover, the average
+SNR at the receiver is defined by
+                                                           E {∥HVx∥2 }           P
+                                    SNR ≜ 10 log10                 2
+                                                                       = 10 log10 2 .                                          (10)
+                                                             E {∥n∥ }            σ
+  2) Architecture Design and Training: The proposed DeepSC-MIMO consists of the encoder
+and decoder at the transmitter and receiver, respectively. We leverage the convolutional layer
+and residual block to design the encoder and decoder. The details are illustrated in Fig. 4.
+                                                                                                                                                                                                                                                                                          11
+
+
+
+         Encoder                                                                                                                                                                                    CFA module
+
+                                                                                                                                                                                                                                   (c,1)             (c,1)
+
+
+
+
+                                                                                                                                                                                                                  Conv
+
+                                                                                                                                                                                                                            MLP
+
+
+
+
+                                                                                                                                                                                                                                                             MLP
+                                                            Block(stride=1)
+
+
+
+
+                                                                                           Block(stride=1)
+
+
+
+
+                                                                                                                              Normalization
+           Conv (PReLU)
+
+
+                           Conv (PReLU)
+
+
+
+
+                                                                                                             Conv (PReLU)
+                                                                                                                                                                                                                                                                     (1,)
+
+
+
+
+                                                                              CFA module
+             3×3×16/1
+
+
+                             3×3×32/2
+
+
+                                              module
+
+
+
+
+                                                                                                               3×3×c/2
+                                                                ResNet
+
+
+
+
+                                                                                               ResNet
+                                                                                                                                                                                        (2,Nr,Nt)
+
+
+
+
+                                                                                                                                 Power
+                                                                                                                                                            Phase 1
+
+
+
+
+                                               CFA
+ Input
+                                                                                                                                                                                          (c,1)
+
+
+
+
+                                                                                                                                                                                                     Shared MLP
+                                                                                                                                                                           MaxPool
+                                                                                                                                                                                                                                   (c,1)            (c,1)                   (c,1,1)
+                                                                                                                                                                                                                                                             Sigmoid
+                                                                                                                                                                           AvgPool        (c,1)
+                                                                                                                                                        (c,h,w)
+
+
+                                                                                                                                                            Phase 2
+                                                                                                                                                                                       (1,h,w)
+                                                                                                                                                                      MaxPool
+                                                            Wireless Channel                                                                                                                                             (4,h,w)            (1,h,w)                     (1,h,w)
+
+
+
+
+                                                                                                                                                                                                                                   Conv
+                                                                                                                                                                                              Concat                                                        Sigmoid
+                                                                                                                                                                      AvgPool
+                                                                                                                                                        (c,h,w)                       (1,h,w)
+                                                                                                                                                                                                          (2,h,w)
+
+
+
+
+                                                                                                                                                                                                                                          Reshape
+                                                                                                                                                                                   (1,h,w)                                 (1,h,w)                                              (c,h,w)
+
+
+
+
+                                                                                                                                                                    Conv
+
+                                                                                                                                                                             MLP
+
+
+
+
+                                                                                                                                                                                                                                                     MLP
+                                                                                                                                                                                              Concat
+                                                                                                                                                                                                                                                             (1,)
+
+
+
+
+                                                                                                                              Transformation
+                           Block(stride=1)
+
+
+
+
+                                                            Block(stride=1)
+           Tconv (PReLU)
+
+
+
+
+                                                                                           Tconv (PReLU)
+
+
+                                                                                                             Tconv (PReLU)
+                                               CFA module
+
+
+
+
+                                                                              CFA module
+
+
+
+
+                                                                                                                                                        (2,Nr,Nt)
+                                                                                             3×3×16/2
+
+
+                                                                                                                3×3×3/1
+
+                                                                                                                                 Reshape
+              3×3×c/2
+
+                               ResNet
+
+
+
+
+                                                                ResNet
+
+
+
+
+                                                                                                                                               Output                                              ResNet Block
+
+
+
+
+                                                                                                                                                                                   3×3×16/1
+
+
+
+
+                                                                                                                                                                                                                     3×3×16/1
+                                                                                                                                                                                                  PReLU
+
+
+
+
+                                                                                                                                                                                                                                     PReLU
+                                                                                                                                                                                     Conv
+
+
+
+
+                                                                                                                                                                                                                       Conv
+                                                                                                                             Decoder                                 (c,h,w)                                                                               (c,h,w)
+
+
+
+                                             Fig. 4: The architecture of DeepSC-MIMO with MIMO channel.
+
+
+   To make the DeepSC-MIMO adapt to different channel conditions, we develop a channel and
+feature attention (CFA) module. The CFA module is developed based on the channel and spatial
+block attention mechanism [35]. To make the DeepSC-MIMO adapt to the MIMO channels
+and improve the performance, we incorporate the CSI matrix H and the noise variance σ 2 into
+DeepSC-MIMO with a two-phase attention design, as shown in Fig. 4. In the first phase, H and
+σ 2 are first processed to obtain the corresponding channel features. Then, the channel features
+and image features are employed to generate the channel-wise attention mask, Mc ∈ R. Then,
+the mask is used to allocate different weights to different feature channels of F1 , given by
+F2 = F1 ⊙ Mc , where ⊙ denotes Hadamard product. By integrating the CSI matrix and noise
+variance into the design, the DeepSC-MIMO is expected to adjust the encoder output to better fit
+the MIMO channel. In the second phase, we adopt F2 , H, and σ 2 to generate the spatial attention
+mask, M, which is used to assign different weights for the elements in each feature channel,
+given as F3 = F2 ⊙ Mp . In this way, DeepSC-MIMO adapts to channel and noise variations by
+adaptively allocating more power to more important features according to CSI matrix and noise
+variance.
+   Assuming that each data si is sampled from a given dataset and CSI data Hi is sampled from a
+given distribution, we input them into the encoder. Then, we obtain the encoded channel symbols,
+                                                                                                              12
+
+
+
+ Algorithm 1: Training algorithm for DeepSC-MIMO
+     Input : The training dataset S, consisting of the input image si , batch size Q, AWGN variance σ 2 ,
+                 epochs M , and codeword length B.
+     Output: The parameters of the trained model
+1    Sample a batch of data, s1 , s2 , ..., sQ .
+2    Generate a batch of CSI matrices, H1 , H2 , ..., HB . from the given distribution.
+3    Generate a batch of noise samples, n1 , n2 , ..., nB , according to variance, σ 2 .
+4    for m ← 1 to M do
+ 5         for i ← 1 to Q do
+                                                                         
+ 6               Compute encoded channel symbols zi = F si , Hi , σ 2 ; θ .
+ 7               Compute received symbols ẑi = H (zi ; Hi , B, ni ).
+                                                                          
+ 8               Comput the reconstructed image ŝi = F ẑi , Hi , σ 2 ; ϕ .
+ 9         end
+10         Calculate the average loss based on (11).
+11         Update the parameters of DeepSC-MIMO.
+12   end
+
+
+
+zi = F (si , Hi , σ 2 ; θ). The transmission process is modeled as the channel layer and the received
+symbols can be denoted as ẑi = H (zi ; Hi , ni ), where ni represents the noise sample of AWGN.
+Subsequently, the decoder decodes zi into the reconstructed image, ŝi = F (z, Hi , σ 2 ; ϕ). To
+jointly learn the encoder and decoder via back-propagation, we employ the mean square-error
+(MSE) loss, which is given by
+                                                                N
+                                                           1 X
+                                               L (s, ŝ) =       (sj − ŝj )2 ,                             (11)
+                                                           N j=1
+
+where sj and ŝj denote the i-th elements of s and ŝ, respectively. Moreover, the detailed training
+procedure is summarized in Algorithm 1.
+
+
+B. Design of Channel Feedback
+
+     1) Encoder and Decoder for Channel Feedback: Assuming perfect CSI is known by the
+receiver, the number of feedback elements for the considered MIMO channel should be Nr × Nt
+without compressing. In [27], it has been proven that the deep learning-based methods are more
+                                                                                                  13
+
+
+
+effective in dealing with the sparse input. Therefore, we sparsify the channel in the beam space
+domain using a 2D discrete Fourier transform (DFT) [36], which is given by
+
+                                          H̃ = Fr HFH
+                                                    l ,                                        (12)
+
+where Fr ∈ CNr ×Nr and Fl ∈ CNt ×Nt denote the DFT matrices, respectively. Moreover, Fr and
+Fl are both unitary matrices and H̃ is a sparse matrix. Note that H̃ is a complex matrix, we
+transform it into a matrix of real numbers as
+
+                                                  e T,
+                                                  
+                                    e = Re H
+                                    H      e , Im H                                            (13)
+
+where operations Re(·) and Im(·) represent obtaining the real and imaginary parts of the complex
+matrix, respectively.
+  We design the CSI encoder as Ge (·), the CSI matrix is transformed into a B-dimensional
+codeword as zh = Ge (H),
+                     e where B < 2Nr Nt . Then, the codeword is sent to the transmitter and
+
+the CSI decoder is designed as Gd (·), which is employed to transform the codeword into the
+                               e = Gd (zh ). After receiving H
+original channel matrix, i.e., H                             e at the transmitter, the CSI matrix
+
+in the spatial-angle domain can be obtained by inverse DFT. Finally, the recovered CSI matrix
+is used for the precoding design for DeepSC-MIMO. As we aim to achieve adaptive channel
+feedback according to the predicted reconstruction quality, the encoder needs to implement
+multi-rate compression. That is, the CSI encoder should be able to compress the CSI matrix into
+different length values.
+  2) Adaptive Channel Feedback: We consider the case where all transmitted images are re-
+quired to be reconstructed to exceed a given minimum target PSNR threshold. It is worth
+emphasizing that the performance metric of image transmission usually selects PSNR, which
+is in fact the inversion of the quadratic-distortion. Then, the images with lower reconstruction
+quality, i.e., higher distortion, are generally less robust to the disturbances. This inspires us to
+re-determine the transmission resource allocation of the DeepSC-MIMO system by making a
+trade-off between the allocated transmission resource and the reconstruction quality according
+to the reconstruction quality of the images. Based on this observation, we aim to develop an
+adaptive channel feedback scheme to reduce the overhead of channel feedback while maintaining
+a satisfactory SDOP, i.e., guaranteeing more images whose reconstruction quality is greater than
+a given target PSNR threshold.
+                                                                                                 14
+
+
+
+  As shown in Fig. 3, the transmitter will determine the compression level of the CSI matrix
+based on the reconstruction quality of the given image and send a compression indicator to
+indicate the compression level. Then, the receiver compresses the CSI matrix according to the
+compression indicator, and feeds the compressed CSI codeword back to the transmitter through
+the feedback link for precoding. In order to know the reconstruction quality in advance so that
+the transmitter can determine the compression level, we propose a performance evaluator at the
+transmitter. The details about the performance evaluator and the adaptive design are presented
+in Sections IV and V, respectively.
+
+
+             IV. K NOWLEDGE D ISTILLATION -BASED P ERFORMANCE E VALUATOR
+
+  In this section, we present the detailed designs of the proposed performance evaluator based
+on knowledge distillation.
+
+
+A. Performance Influencing Factors
+
+  To the best of our knowledge, the reconstruction quality of each image mainly depends on
+three factors, image content, channel condition, and model capability. The specific explanations
+are listed below:
+  •   Image complexity: The knowledge about the complexity of image generally determines
+      the image redundancy, and is of great importance in many applications. It can be used to
+      indicate the compression ratio of an image, since images with low complexity are easier to
+      compress than images with high complexity [37].
+  •   Transmission errors: We consider MIMO communication, where inaccurate precoding caused
+      by the CSI compression will negatively affect on the reconstruction quality. Nevertheless,
+      AWGN also has an impact on the symbol transmission, resulting in the performance degra-
+      dation. Therefore, channel conditions need to be considered.
+  •   Model capability: The information extraction ability of the model has a significant impact on
+      the semantic communication performance of different inputs. In particular, the model tends
+      to perform better on inputs similar to the training data. For example, if DeepSC-MIMO is
+      trained on a series of images of dogs, there would be a performance degradation on the
+      images of cars due to the unsatisfactory generalization ability.
+                                                                                                 15
+
+
+                                     Compute PSNR
+
+                                                                                  PSNR Value
+                    DeepSC-MIMO                       DeepSC-MIMO
+                      Encoder                           Decoder
+
+
+                                                                                    PSNR
+                                       L2 Loss                          L2 Loss   Regression
+                                                                                     Loss
+                  Back Propagation
+
+
+
+                   Performance                        Performance
+                 Evaluator Encoder                  Evaluator Decoder             PSNR Value
+
+
+                                     Compute PSNR
+
+
+                                                         Residual
+                                                    Correction Module
+
+
+                   Fig. 5: Framework of the proposed performance evaluator.
+
+
+B. Training with Knowledge Distillation
+
+  Knowledge distillation has been widely used to transfer knowledge from teacher model to
+student model [38]–[40]. Specifically, we can employ the student model to mimic the teacher
+model, and the output of the student model can be regarded as an approximation of the output of
+the teacher model. Thus, to predict the reconstruction quality of each given image, we propose
+a lightweight learnable evaluator represented by DNNs. The architecture of the performance
+evaluator is shown in Fig. 5. Similar to DeepSC-MIMO, the proposed evaluator is designed as
+an autoencoder structure with a residual correction module, which is beneficial to imitate the
+behavior of DeepSC-MIMO.
+  We employ the encoder and decoder parts of the performance evaluator to generate the
+predicted reconstructed image, sp , which can be regarded as an approximation of the output
+of DeepSC-MIMO, st . Then, the reconstruction PSNR value, γp = ∥sp − s∥2 , can be taken as
+the prediction of the ground-truth PSNR value achieved by DeepSC-MIMO, γt = ∥st − s∥2 . The
+training target of the proposed performance evaluator can be formulated as a regression problem,
+that is
+                                          min Lc ≜ (γt − γp )2 ,                               (14)
+                                             π
+
+where π denotes the trainable parameters of the performance evaluator. To improve the prediction
+accuracy, we further develop an additional distillation loss on the intermediate features of the
+performance evaluator. In particular, the trained DeepSC-MIMO is set as the teacher to help
+the performance evaluator to learn to better predict the reconstruction quality of the image.
+                                                                                                                  16
+
+
+
+As presented in Fig. 5, the additional distillation loss is designed to encourage the features of
+the student model, performance evaluator, to be similar to that of the teacher model, DeepSC-
+MIMO. That is, we calculate the Frobenius norm of the difference between the features of the
+performance evaluator and DeepSC-MIMO as the measure of similarity. Assuming that the output
+encoded feature of DeepSC-MIMO is Ft and the output encoded features of the performance
+evaluator is Fp . Denote the output images of DeepSC-MIMO and the performance evaluator as
+st and sp , respectively. Then, the additional distillation loss is designed to increase the similarity
+and can be written as
+                                       Lp = ∥sp − st ∥2 + ∥Fp − Ft ∥22 .                                       (15)
+
+Intuitively, the additional distillation loss makes the performance evaluator learn the properties
+of DeepSC-MIMO, so that the performance evaluator has the similar model capability to the
+performance evaluator. For instance, if DeepSC-MIMO performs better on the images of dogs
+than on images of cats, the performance evaluator should also be so, in which way the PSNR
+value can be predicted more accurately.
+  Since the PSNR value of each image is also related to the CSI codeword length and noise
+variance, we further introduce a residual correction module to predict the PSNR loss caused by
+the transmission procedure. In particular, the proposed residual correction module takes s, B,
+and σ 2 as input, and outputs the predicted PSNR loss, which is denoted as γd . Therefore, as
+shown in Fig. 5, the predicted PSNR value of the performance evaluator can be redefined as
+γp = ∥sp − s∥2 + γd . Therefore, the total loss can be denoted by
+
+                                                L = λLc + Lp ,                                                 (16)
+
+where λ is the weighting hyperparameter. In order to train performance evaluator, we establish
+the dataset based on a trained DeepSC-MIMO. Specifically, the dataset consists of a number of
+tuples with the form (si , Hi , Bi , σi2 , γti , Fit , sit ), where γti , Fit , and sit are obtained by inputting si
+and Hi to DeepSC-MIMO. Moreover, with (16), we apply the stochastic gradient descent (SGD)
+algorithm to update the parameters of the predictor.
+
+                      V. P ROPOSED A DAPTIVE C HANNEL F EEDBACK D ESIGN
+
+  In this section, we introduce the proposed adaptive channel feedback design. In particular,
+the instance-wise adaptive design is developed to adaptively select the optimal CSI compression
+                                                                                                  17
+
+
+
+level based on the predicted PSNR value for each image. Moreover, the group-wise adaptive
+scheme is proposed to determine the CSI compression levels of a group of images within the
+average length constraint.
+
+
+A. Instance-Wise Design
+
+  In the following, we focus on the limited feedback scenario, where only the compressed
+CSI fed back with the codeword of a certain length is known at the transmitter. Besides, to
+help the transmitter predict the distortion, a very short codeword is fed back to the transmitter
+firstly, whose length is much less than that of really-required codewords. In this case, the channel
+transformation function can be extended to H (·; H, B, σ 2 ) by involving with the codeword length
+B. Note that the difference between the recovered CSI matrix Ĥ, and real CSI matrix H is
+measured by the normalized mean squared error (NMSE) [27], which can be computed as
+                                          (            )
+                                            ∥H − Ĥ∥22
+                              NMSE = E                   .                          (17)
+                                               ∥H∥22
+In particular, a smaller B will lead to better feedback accuracy, i.e., higher NMSE, which will
+cause the performance degradation of DeepSC-MIMO. Although increasing the codeword length
+of the CSI matrix helps reduce the difference, it would result in high feedback overhead. Thus,
+there is a trade-off between the feedback overhead and system performance. To realize adaptive
+channel feedback design, we first design an adaptive channel feedback regime with T -level
+compressed length, given as Λ = {L1 , L2 , ..., LT }, where L1 < L2 < ... < LT are the optional
+codeword length values.
+  Then, for each input image, the target can be formulated to minimize the SDOP by choosing
+appropriate codeword length. In fact, this can be achieved by solving the following optimization
+problem,
+
+                                P1 : min B,                                                   (18a)
+
+                                      s.t.   D̂(s, H, B, σ 2 ) ≤ Dth ,                        (18b)
+
+                                             B ∈ Λ,                                           (18c)
+
+where D̂(·) denotes the predicted distortion. In addition, constraint (18b) ensures that the dis-
+tortion of each individual reconstructed image is not greater than the target distortion Dth .
+Constraint (18c) indicates that optional CSI compression levels are selected from the given
+                                                                                               18
+
+
+
+set, Λ. Moreover, D(·) is a monotonically decreasing function of B. In this way, according to
+the predicted D̂(s, H, B, σ 2 ), the optimal codeword length, B ∗ , can be acquired by computing
+the predicted performance on different codeword length values with the performance evaluator.
+In general, it is an instance-wise method, and thus the CSI codeword length for each given image
+is immediately available.
+
+
+B. Group-Wise Design
+
+  In addition to the instance-wise adaptive applications, there is also the case that a group of
+images are required to wait for transmission. Therefore, we further investigate the group-wise
+adaptive design aiming to ensure that more images are transmitted over a group of images
+with less distortion than a target threshold, i.e., minimize SDOP. Firstly, we assume that there
+are M images, {sm }M
+                   m=1 , for transmission and the optional CSI codeword length values are
+
+Λ = {L1 , L2 , ..., LT }, where L1 < L2 < ... < LT . We focus on minimizing the SDOP with an
+average codeword length constraint. Specifically, the target can be formulated as the following
+problem,
+                                              M
+                                    1 X                             
+                    P2 : min P{E} ≜       δ D̂(s, H, Bm , σ 2 ) > Dth ,                    (19a)
+                                    M m=1
+                                      M
+                                   1 X
+                            s.t.         Bm ≤ Lth ,                                        (19b)
+                                   M m=1
+                                   Bm ∈ Λ,                                                 (19c)
+
+                                   sm ∈ S,                                                 (19d)
+
+where δ(·) equals 1 when the condition is satisfied, and 0 otherwise. The objective function can
+be interpreted as the ratio of the images with a distortion above the threshold, which can be
+further viewed as an empirical estimation of P {E}. Moreover, constraint (19b) is an average
+constraint ensuring that the feedback overhead is infinite, Lth denotes the constraint satisfying
+L1 ≤ Lth ≤ LT .
+  We then investigate ways to solve (19) in order to achieve the group-wise adaptive design.
+                                                              
+Firstly, we denote the predicted δ D̂(sm , H, Bm , σ 2 ) > Dth of the m-th sample choosing Lt
+                                                                               
+as the CSI codeword length as Gm,t . The value of δ D̂(sm , H, Bm , σ 2 ) > Dth is drawn from
+set {0, 1}, which is determined by comparing the predicted D̂ (sm , H, Bm , σ 2 ) with Dth . To
+solve the problem, we propose a bottom-up water-filling algorithm. Specifically, we respectively
+                                                                                                                        19
+
+
+
+ Algorithm 2: Group-wise adaptive method.
+                                  M
+     Input : M images, {sm }m=1 , optional CSI compression levels, Λ = {L1 , L2 , ..., LT }, and the predicted
+                 determination of excessing the distortion event, Gm,l for m = 1, ..., M and l = 1, ..., L.
+     Output: Optimized P{E} and the allocation strategy Ω.
+1    Initialize index list, I = {1, 2, ..., M }, to indicate the index of image that has not been determined with
+      the compression level.
+2    Initialize an empty list, K, to indicate which image have been allocated with proper codeword length.
+3    Initialize the allocation set Ω[i] = L1 , for i = 1, ..., M , i.e., allocates the shortest codeword length for M
+      images.
+4    for t = 1, ..., T do
+ 5         for i in I do
+ 6               clear K.
+ 7               if Gi,t = 0:
+ 8                 Assign Ω[i] = Lt .
+                      1
+                        PM
+ 9                 if M   m=1 Ω[m] > Lth :
+
+10                    Assign Ω[i] = Lt−1 .
+11                    break
+12                 Add i to K.
+13               Remove all elements of K from the index set, I.
+14               if I is empty:
+15                 break
+16         end
+17   end
+
+
+
+search the M images and assign the codeword length for each image by drawing the smallest
+but suitable Bm from Λ. In this way, the higher codeword length will be prioritized to allocate
+to the images that are least likely to exceed the threshold, while images that cannot meet the
+distortion requirement for any compression level will be discarded. Moreover, when constraint
+(19b) is unsatisfied, we terminate the algorithm and return the allocation results, Ω. Then, the
+transmitter will send Ω represented by the indicator to the receiver to indicate the codeword
+length for each CSI matrix. The detailed procedure is summarized in Algorithm 2.
+                                                                                                                 20
+
+
+
+
+                     Transmitter                             Receiver
+
+
+                                       Model training
+                                   Model online deployment                  Performance prediction and
+                                                                        1
+                                                                            determine the compression level
+
+                                                                            Compress the CSI matrix according
+                                                                        2
+                      1                                                     to the compression level indicator
+                                                                   H
+                                                                            Recover the CSI and perform
+                                                                        3
+                                                                            precoding
+
+                                                                            Reconstruct the image based on
+                                                                   2    4
+                                                                            the received symbol
+
+
+
+
+                      3
+
+
+
+                                                                   4
+
+
+
+                              Fig. 6: Communication process of SCAN.
+
+
+C. Communication Process of SCAN
+
+  We aim at adaptively adjusting the overhead of MIMO channel feedback for DeepSC-MIMO
+based on the predicted distortion. We train the proposed models, including DeepSC-MIMO,
+performance evaluator, and CSI model before deployment. The communication process of the
+semantic-aware adaptive channel feedback scheme is shown in Fig. 6, and described as follows.
+ (i) The transmitter determines the compression level based on the complexity of the images,
+     and transmits the compression indicator, r, to indicate the compression level, consisting of
+     log2 L bits.
+(ii) The receiver compresses the estimated channel, H ∈ CNr ×Nt , according to the indicator
+     and feeds back the CSI codeword to the transmitter.
+(iii) The transmitter recovers the CSI matrix with the CSI codeword to obtain the recovered Ĥ.
+     It then transmits the precoded data symbols to the receiver by performing precoding with
+     Ĥ.
+(iv) The receiver reconstructs the image based on the received symbol vector ẑ.
+Furthermore, since we simultaneously determine the CSI codeword length for a group of images
+in the group-wise design, the transmitter will immediately send M log2 L bits to the receiver to
+indicate the compression levels of the M images.
+                                                                                               21
+
+
+
+                                  VI. S IMULATION R ESULTS
+
+A. Simulation Setup
+
+  In the simulation, we consider a transmitter equipped with Nt = 16 transmit antennas and a
+receiver equipped with Nr = 16 receive antennas. The number of streams is d = 2. We employ
+the popular narrowband millimeter wave (mmWave) clustered channel [41]. We implement the
+proposed DeepSC-MIMO and the deep learning-based channel feedback scheme with the deep
+learning platform “Pytorch”. The “Adam” optimizer is employed, with the batch size of 128.
+Moreover, the initial learning rate is 0.0005 and will be reduced with the increase of the number
+of epochs. We use the CIFAR10 dataset which consists of 50, 000 color images of size 32×32×3
+in the training dataset and 10, 000 images in the test dataset.
+  As for channel feedback, we employ the CLNet [28], which proposes a forged complex-valued
+input layer to process CSI data and utilizes spatial-attention to improve the performance. Given
+a codeword length, the encoder of CLNet compresses the CSI into a low-dimensional latent
+vector. Moreover, the optional codeword length is set as Λ = [32, 64, 96, 128, 160, 192], unless
+otherwise specified. To evaluate the performance of the DeepSC-MIMO, PSNR is chosen for
+distortion metric. It measures the ratio between the maximum possible power and the noise,
+which can be calculated by
+                                                    MAX2
+                                 PSNR = 10 log10         (dB),                              (20)
+                                                    MSE
+where MSE = d(s, ŝ) represents the mean square-error (MSE) between the source image, s,
+and the reconstructed image, ŝ. Moreover, MAX is the maximum possible value of the pixels,
+e.g., MAX equals 255 for the images of RGB format. PSNR can be viewed as the inverse of
+the distortion. For comparison, we adopt the BPG source coding and the advanced low-density
+parity-check (LDPC) channel coding. The 16QAM and 4QAM are selected as the modulation
+schemes. Moreover, we also compare the DeepSC-MIMO with the classic DJSCC proposed in
+[4].
+
+
+B. Performance of DeepSC-MIMO
+
+  Fig. 7 presents the performance of the investigated schemes equipped with different numbers of
+antennas versus the SNR and we assume that the transmitter obtains the perfect CSI. In addition,
+“(16,16)” indicates Nr = 16 and Nt = 16, and the other notations can be understood in a similar
+                                                                                                                                                22
+
+
+
+
+                           Channel bandwidth ratio = 1/16                                        Channel bandwidth ratio = 1/24
+                                                                                    31
+              34
+
+              31                                                                    28
+
+              28
+                                                                                    25
+    PSNR/dB
+
+
+
+
+                                                                          PSNR/dB
+              25
+                                                                                    22
+              22                                DeepSC-MIMO (16, 16)                                                  DeepSC-MIMO (16, 16)
+                                                DeepSC-MIMO (8, 8)                                                    DeepSC-MIMO (8, 8)
+                                                DJSCC (16, 16)                                                        DJSCC (16, 16)
+                                                DJSCC (8, 8)                        19                                DJSCC (8, 8)
+              19                                BPG+LDPC+16QAM (16, 16)                                               BPG+LDPC+16QAM (16, 16)
+                                                BPG+LDPC+16QAM (8, 8)                                                 BPG+LDPC+16QAM (8, 8)
+                                                BPG+LDPC+4QAM (16, 16)                                                BPG+LDPC+4QAM (16, 16)
+                                                BPG+LDPC+4QAM (8, 8)                                                  BPG+LDPC+4QAM (8, 8)
+              16                                                                    16
+                   6   3     0     3     6      9     12     15     18                   6   3     0     3     6      9     12     15     18
+                                       SNR/dB                                                                SNR/dB
+                                       (a)                                                                   (b)
+
+Fig. 7: Performance versus SNR comparison of DeepSC-MIMO, DJSCC, and BPG+LDPC
+transmission methods under different numbers of antennas and channel bandwidth ratio.
+
+
+way. We train the proposed DeepSC-MIMO model with SNR = 18 dB and test it in SNR
+from −6 dB to 18 dB. It is readily seen that the PSNR achieved by DeepSC-MIMO increases
+with SNR. The system equipped with more antennas generally outperforms the system with
+fewer antennas. We also observe that DeepSC-MIMO can achieve relatively better performance
+than the standard separate coding scheme, especially in the low SNR regime. Besides, since we
+incorporate the CSI and channel noise into DeepSC-MIMO, it outperforms DJSCC in all SNR
+regimes. This is because the adaptive design is beneficial for exploiting the CSI information
+and allocating different power to different sub-channels. In addition, by comparing the results in
+Fig. 7(a) and Fig. 7(b), we find that the performance gain exists in different channel bandwidth
+ratios.
+  We also investigate the performance of adaptive design. In particular, we train DeepSC-MIMO
+with codeword length of 64, 96, and 128, in the scenario where SNR is uniformly sampled from
+[6, 18] dB, and test the model in different SNR regimes. The results are given by DeepSC-MIMO-
+A in Fig. 8. In addition, the model trained in the fixed SNR is denoted as DeepSC-MIMO-S.
+It is demonstrated that there is a slight performance loss for DeepSC-MIMO-A compared with
+                                                                                                  23
+
+
+
+                                                  Channel bandwidth ratio = 1/16
+                                     34
+
+                                     32
+
+                                     30
+
+
+
+
+                           PSNR/dB
+                                     28
+
+                                     26                                DeepSC-MIMO-S: B = 128
+                                                                       DeepSC-MIMO-A: B = 128
+                                                                       DeepSC-MIMO-S: B = 96
+                                     24                                DeepSC-MIMO-A: B = 96
+                                                                       DeepSC-MIMO-S: B = 64
+                                                                       DeepSC-MIMO-A: B = 64
+                                     22
+                                          6   3     0     3     6      9     12     15    18
+                                                              SNR/dB
+
+Fig. 8: The performance of proposed DeepSC-MIMO at different SNR regimes and CSI
+compression levels.
+
+
+DeepSC-MIMO-S and the performance loss increases with SNR. Although there exists certain
+performance degradation, the adaptive design is still of significance in view of that it reduces the
+training time. Moreover, the performance gap between DeepSC-MIMO-A and DeepSC-MIMO-S
+increases with the codeword length. This is because the model is more sensitive to the disturbance
+in the case with high PSNR.
+
+
+C. Accuracy of Performance Evaluator
+
+  To evaluate the accuracy of the performance evaluator, we randomly select 200 images from
+the test dataset and calculate the predicted PSNR values and the ground-truth PSNR values.
+The images are sorted from small to large according to the ground-truth PSNR values and
+the results are shown in Fig. 9. From the figure, we observe that the performance evaluator
+can accurately predict PSNR values with rather low prediction error. Besides, we compute the
+average prediction error on 200 images as denoted by MSE marked in the figure. As we can
+see, the prediction error in the low SNR regime is larger than that in the high SNR regime.
+Moreover, the predicted PSNR of the performance evaluator is approaching the ground-truth
+values for the images with either high or low reconstruction quality. That is, the performance
+evaluator has successfully learnt to cope with the training bias of the model. According to
+                                                                                                                                                                                                             24
+
+
+
+
+                    SNR=15dB                                              SNR=9dB                                              SNR=6dB                                              SNR=3dB
+      38                                                   38                                                   38                                                   38
+
+      35                                                   35                                                   35                                                   35
+
+      32     MSE=0.657                                     32     MSE=0.530                                     32     MSE=0.479                                     32      MSE=0.735
+PSNR/dB
+
+
+
+
+                                                     PSNR/dB
+
+
+
+
+                                                                                                          PSNR/dB
+
+
+
+
+                                                                                                                                                               PSNR/dB
+      29                                                   29                                                   29                                                   29
+
+      26                                                   26                                                   26                                                   26
+
+      23                                                   23                                                   23                                                   23
+                                  Predicted PSNR                                       Predicted PSNR                                       Predicted PSNR                                       Predicted PSNR
+                                  Groud-truth PSNR                                     Groud-truth PSNR                                     Groud-truth PSNR                                     Groud-truth PSNR
+      20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200
+                          Index                                                Index                                                Index                                                Index
+
+                          (a)                                                  (b)                                                  (c)                                              (d)
+
+                         B=160                                                B=128                                                B=64                                              B=48
+      38                                                   38                                                   38                                                   38
+
+      35                                                   35                                                   35                                                   35
+
+              MSE=0.704                                            MSE=0.803                                            MSE=0.687                                            MSE=0.734
+      32                                                   32                                                   32                                                   32
+PSNR/dB
+
+
+
+
+                                                     PSNR/dB
+
+
+
+
+                                                                                                          PSNR/dB
+
+
+
+
+                                                                                                                                                               PSNR/dB
+      29                                                   29                                                   29                                                   29
+
+      26                                                   26                                                   26                                                   26
+
+      23                                                   23                                                   23                                                   23
+                                  Predicted PSNR                                       Predicted PSNR                                       Predicted PSNR                                       Predicted PSNR
+                                  Groud-truth PSNR                                     Groud-truth PSNR                                     Groud-truth PSNR                                     Groud-truth PSNR
+      20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200                  20 0   25 50 75 100 125 150 175 200
+                          Index                                                Index                                                Index                                                Index
+
+                          (e)                                                  (f)                                                  (g)                                              (h)
+
+   Fig. 9: Prediction performance of the proposed performance evaluator. The first column shows
+   the predicted PSNR value and the ground-truth PSNR value in different SNRs. The second
+   column shows the predicted PSNR value and the ground-truth PSNR value in different CSI
+   codeword length.
+
+
+   the second column of Fig. 9, the prediction error decreases with CSI codeword length. Most
+   importantly, the reconstruction quality of these images are shown to be quite different from each
+   other. Although the performance is close to average for the majority of images (about 70%),
+   there are still some images where the reconstruction quality is rather low, introducing significant
+   unreliability. Therefore, it is necessary to investigate the way to improve the performance of
+   these images adaptively in semantic communications.
+           In Fig. 10, we perform experiments on different CSI codeword length values. Specifically,
+   in Fig. 10(a), we compare the average ground-truth PSNR values and average predicted PSNR
+   values achieved by DeepSC-MIMO and performance evaluator, respectively. We can observe
+   that the predicted PSNR values are close to the ground-truth PSNR values. In Fig. 10(b), we
+   calculate the prediction MSE on different CSI codeword length values versus SNR. In general,
+                                                                                                                             25
+
+
+
+
+                                   Channel bandwidth ratio = 1/16                       2.0 Channel bandwidth ratio = 1/16
+                                             Ground-truth: B = 160                                                 B = 128
+                              34             Predicted: B = 160                                                    B = 160
+                                             Ground-truth: B = 128                      1.8
+                              33             Predicted: B = 128
+
+                              32                                                        1.6
+
+                              31                                                        1.4
+
+
+
+
+                                                                       Prediction MSE
+                    PSNR/dB   30
+                                                                                        1.2
+                              29
+                              28                                                        1.0
+                              27
+                                                                                        0.8
+                              26
+                              25                                                        0.6
+                              24
+                                   6 3 0 3 6 9 12 15 18                                       6 3 0 3 6 9 12 15 18
+                                              SNR/dB                                                   SNR/dB
+                                              (a)                                                       (b)
+
+Fig. 10: (a) The average ground-truth PSNR values and predicted PSNR values. (b) Prediction
+MSE of performance evaluator versus SNR.
+
+                                   TABLE I: Comparison of model parameters.
+
+                                        Schemes            Prediction MSE                       Model parameters
+                                      Basic model                    0.524                            0.311M
+                                      Small model                    0.602                            0.142M
+                                      Tiny model                     0.704                            0.058M
+                                    DeepSC-MIMO                      ——                               0.488M
+
+
+
+we can see that the prediction MSE decreases with SNR, but the prediction MSE increases with
+SNR when SNR is lager than 6 dB. This is because we sample the SNR from −6 dB to 18 dB,
+where the average SNR is 6 dB, Besides, when SNR is lager than 6 dB, the ground-truth PSNR
+value will not significantly change with SNR. In this case, the performance evaluator tends to
+output similar results when SNR is lager than 6 dB, confusing the training procedure. Moreover,
+at relatively higher SNR regime, PSNR value can be predicted accurately by the performance
+evaluator. In comparison, the PSNR value is hard to predict at low SNR regime since the received
+features will be significantly disturbed by the noise, which makes the achieved PSNR vary over
+a large range.
+  Table I compares the numbers of model parameters of different schemes. It is observed that the
+                                                                                                                                                                      26
+
+
+
+
+                                 Channel bandwidth ratio = 1/16                         1.0               = [32, 48, 64, 96, 128]
+                       256                      Predicited length ( th = 26dB)                                       Average length ( th = 26dB)
+                                                Required length ( th = 26dB)                                         Average length ( th = 28dB) 120
+                       224                      Predicited length ( th = 28dB)                                       Average length ( th = 30dB)
+                                                Required length ( th = 28dB)            0.8                          SDOP ( th = 26dB)
+                                                Predicited length ( th = 30dB)                                       SDOP ( th = 28dB)           100
+                       192
+                                                Required length ( th = 30dB)                                         SDOP ( th = 30dB)
+  Compression length
+
+
+
+
+                       160                                                                                                                      80
+
+
+
+
+                                                                                                                                                     Average length
+                                                                                        0.6
+
+
+
+
+                                                                                 SDOP
+                       128
+                                                                                                                                                60
+                                                                                        0.4
+                        96
+                                                                                                                                                40
+                        64
+                                                                                        0.2
+                                                                                                                                                20
+                        32
+
+                         0                                                              0.0                                                     0
+                             6   3   0    3     6      9     12     15     18                 6   3   0      3      6     9    12    15    18
+                                              SNR/dB                                                             SNR/dB
+                                                (a)                                                                (b)
+
+Fig. 11: Performance of instance-wise SCAN. (a) The achieved codeword length when targeting
+for different PSNR thresholds. (b) The achieved SDOP and average required length when
+targeting for different PSNR thresholds.
+
+
+size of performance evaluator is much smaller than that of the DeepSC-MIMO, which shows
+the effectiveness of knowledge distillation. Besides, we also observe that the larger model is
+able to provide more accurate prediction results, hence the performance evaluator with proper
+parameters can be selected for practical uses.
+
+
+D. Results of SCAN
+
+   In this subsection, we aim to evaluate the performance of the proposed adaptive channel
+feedback scheme with respect to SDOP. The purpose is to adaptively adjust the channel feedback
+overhead according to the predicted performance. Particularly, we compare the achieved SDOP
+versus different target PSNR values, channel SNRs, and codeword length values. Moreover, the
+overhead of channel feedback is controlled by adjusting the compressed CSI codeword length,
+which is selected from the optional length set, Λ.
+   In Fig. 11, we present the performance of the instance-wise adaptive design. In particular, we
+randomly choose an image from the test dataset and consider 8 codeword length values, i.e.,
+B ∈ Λ = [32, 64, 96, 128, 160, 192, 224, 256]. Then, we try to find the required minimal codeword
+                                                                                                                                                                       27
+
+
+
+
+                            100          Channel bandwidth ratio = 1/16, SNR = 18dB                                  Channel bandwidth ratio = 1/16, SNR = 18dB
+                                                                                                                      DJSCC-fixed (B = 64)
+                                                                                                       0.40           DJSCC-fixed (B = 96)
+                             90                                                                                       DJSCC-fixed (B = 128)
+                                                                                                                      SCAN (Lth = 64)
+                             80
+                                                                                                       0.35           SCAN (Lth = 96)
+                                                                                                                      SCAN (Lth = 128)
+  Average required length
+
+
+
+
+                                                                                                       0.30
+                             70                                                                               0.12
+                                                                                                       0.25 0.10
+
+
+
+
+                                                                                                SDOP
+                             60                                                                               0.08
+                                                                                                       0.20 0.06
+                             50                                                                               0.04
+                                                                                                       0.15 0.02
+                                                                                                                25.00 25.25 25.50
+                             40                                    Optinal = [96]
+                                                                   Optinal = [64, 96]                  0.10
+                                                                   Optinal = [40, 96]
+                             30                                    Optinal = [40, 64, 96]              0.05
+                                                                   Optinal = [32, 40, 64, 96]
+                                                                   Optinal = [32, 40, 64]
+                             20                                                                        0.00
+                                  25.0       26.0   27.0    28.0    29.0 29.5 30.0 30.5 31.0                  25.0 25.5 26.0 26.5 27.0 27.5 28.0 28.5 29.0 29.5 30.0
+                                                      Target PSNR/dB                                                                Target PSNR/dB
+                                                           (a)                                                                          (b)
+
+Fig. 12: Performance comparison of group-wise SCAN. (a) Average codeword length comparison
+of SCAN with different optional length sets; (b) SDOP comparison between DJSCC and SCAN
+when using the same codeword length versus SNR.
+
+
+length according to the ground-truth PSNR value. For comparison, we employ the performance
+evaluator to predict the PSNR value of this image and determine the predicted codeword length
+when targeting for different PSNR values, including γth = 26 dB, γth = 28 dB, and γth = 30 dB.
+The results are given in Fig. 11(a). From the figure, the performance evaluator can predict the
+optimal codeword length accurately, which shows that the proposed SCAN can determine the
+optimal CSI codeword length effectively. Moreover, it is also worth noting that the target can be
+unachievable for any CSI codeword length, e.g., γth = 30 dB at SNR = −6 dB. In Fig. 11(b),
+we calculate the overall SDOP when employing instance-wise scheme on all 10, 000 images.
+Since a higher γth is harder to achieve, the SDOP decreases significantly with γth . Moreover,
+the average required CSI codeword length also decreases with SNR, which demonstrates that
+SCAN is a flexible scheme that enables variable rate feedback.
+  In Fig. 12(a), we compare the average required codeword length when achieving the same
+SDOP. Specifically, all the schemes are required to achieve the same SDOP as employing B =
+96 for all the test images. From Fig. 12(a), it is readily seen that our proposed SCAN can
+                                                                                                                           28
+
+
+
+significantly reduce the feedback overhead while keeping the same SDOP. Furthermore, it is
+shown that the feedback overhead can be reduced more with a larger codeword length set.
+  To show the relative performance gain induced by the adaptive design, we compare SCAN
+and the DJSCC with fixed codeword length overhead scheme. That is, we employ the group-wise
+adaptive design and set the average length constraint, Bth , as 64, 96, and 128, respectively. Then,
+we test the SDOP of DJSCC with fixed length by compressing the CSI for all images into the
+same length. From Fig. 12(b), it is observed that SCAN can achieve a significantly lower SDOP
+with the same average codeword length, demonstrating the superiority and flexibility of SCAN
+for realizing a more reliable semantic communication system.
+
+
+                                                VII. C ONCLUSION
+
+  In this paper, we proposed a novel metric, SDOP, to capture the reliability of a semantic
+communication system. Then, to improve the reliability of a semantic communication, we
+developed a framework of SCAN including instance-wise and group-wise schemes, which are
+able to adjust the CSI codeword length based on the PSNR value of the image. To realize SCAN,
+we first proposed a semantic communication system, DeepSC-MIMO, for MIMO scenarios. We
+then developed a performance evaluator based on knowledge distillation, which can accurately
+predict the reconstruction quality of each image. Simulation results showed that the proposed
+scheme can significantly improve the performance and reliability with much reduced feedback
+overhead. Our proposed SCAN is a general framework and the future work could generalize
+it to other modalities of data. Within the framework, more adaptive designs, such as adaptive
+coding and adaptive modulation, can be potentially realized for higher performance gain.
+
+
+                                                     R EFERENCES
+
+[1] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K. Wong, and C.-B. Chae, “Beyond transmitting
+    bits: Context, semantics, and task-oriented communications,” IEEE J. Select. Areas Commun., vol. 41, no. 1, pp. 5–41,
+    Jan. 2023.
+[2] K. Niu, J. Dai, S. Yao, S. Wang, Z. Si, X. Qin, and P. Zhang, “A paradigm shift toward semantic communications,” IEEE
+    Comm. Maga., vol. 60, no. 11, pp. 113–119, Nov. 2022.
+[3] W. Yang, H. Du, Z. Q. Liew, W. Y. B. Lim, Z. Xiong, D. Niyato, X. Chi, X. Shen, and C. Miao, “Semantic communications
+    for future internet: Fundamentals, applications, and challenges,” IEEE Commun. Surveys Tuts., vol. 25, no. 1, pp. 213–250,
+    2023.
+                                                                                                                            29
+
+
+
+ [4] E. Bourtsoulatze, D. Burth Kurka, and D. Gunduz, “Deep joint source-channel coding for wireless image transmission,”
+     IEEE Trans. Cognit. Comm. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+ [5] Z. Weng and Z. Qin, “Semantic communication systems for speech transmission,” IEEE J. Select. Areas Commun., vol. 39,
+     no. 8, pp. 2434–2444, Aug. 2021.
+ [6] G. Zhang, Q. Hu, Z. Qin, Y. Cai, G. Yu, X. Tao, and G. Y. Li, “A unified multi-task semantic communication system for
+     multimodal data,” arXiv preprint arXiv:2209.07689, 2022.
+ [7] D. B. Kurka and D. Gunduz, “DeepJSCC-f: Deep joint source-channel coding of images with feedback,” IEEE J. Select.
+     Areas Inf. Theory, vol. 1, no. 1, pp. 178–193, May 2020.
+ [8] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust semantic communications with masked VQ-VAE enabled
+     codebook,” IEEE Trans. Wireless Commun., p. to appear, 2023, doi: 10.1109/TWC.2023.3265201.
+ [9] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless image transmission using deep source channel
+     coding with attention modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, pp. 2315–2328, Apr. 2022.
+[10] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung, “Predictive and adaptive deep coding for
+     wireless image transmission in semantic communication,” IEEE Trans. Wireless Commun., p. to appear, 2023, doi:
+     10.1109/TWC.2023.3234408.
+[11] M. K. Farshbafan, W. Saad, and M. Debbah, “Curriculum learning for goal-oriented semantic communications with a
+     common language,” IEEE Trans. Commun., vol. 71, no. 3, pp. 1430–1446, Mar. 2023.
+[12] J. Liu, S. Shao, W. Zhang, and H. V. Poor, “An indirect rate-distortion characterization for semantic sources: General
+     model and the case of gaussian observation,” IEEE Trans. Commun., vol. 70, no. 9, pp. 5946–5959, Aug. 2022.
+[13] Y. Shi, S. Shao, Y. Wu, W. Zhang, X.-G. Xia, and C. Xiao, “Excess distortion exponent analysis for semantic-aware MIMO
+     communication systems,” IEEE Trans. Wireless Commun., p. to appear, 2023, doi: 10.1109/TWC.2023.3238463.
+[14] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Wireless semantic transmission via revising modules in conventional
+     communications,” arXiv preprint arXiv:2210.00473, 2023.
+[15] Z. Yang, M. Chen, Z. Zhang, and C. Huang, “Energy efficient semantic communication over wireless networks with rate
+     splitting,” arXiv preprint arXiv:2301.01987, 2023.
+[16] M. Yang, C. Bian, and H.-S. Kim, “OFDM-guided deep joint source channel coding for wireless multipath fading channels,”
+     IEEE Trans. Cognit. Comm. Netw., vol. 8, no. 2, pp. 584–599, Jun. 2022.
+[17] M. Wang, J. Li, M. Ma, and X. Fan, “Constellation design for deep joint source-channel coding,” IEEE Signal Process.
+     Lett., vol. 29, pp. 1442–1446, Jun. 2022.
+[18] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding for sentence semantic transmission with HARQ,”
+     IEEE Trans. Commun., vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[19] H. Zhang, H. Wang, Y. Li, K. Long, and A. Nallanathan, “DRL-driven dynamic resource allocation for task-oriented
+     semantic communication,” IEEE Trans. Commun., p. to appear, 2023, doi: 10.1109/TCOMM.2023.3274145.
+[20] J. Guo, C.-K. Wen, S. Jin, and G. Y. Li, “Overview of deep learning-based CSI feedback in massive MIMO systems,”
+     IEEE Trans. Commun., vol. 70, no. 12, pp. 8017–8045, Dec. 2022.
+[21] T. J. O’Shea, T. Erpek, and T. C. Clancy, “Deep learning based MIMO communications,” arXiv preprint arXiv:1707.07980,
+     2017.
+[22] H. He, S. Jin, C.-K. Wen, F. Gao, G. Y. Li, and Z. Xu, “Model-driven deep learning for physical layer communications,”
+     IEEE Wireless Commun., vol. 26, no. 5, pp. 77–83, Oct. 2019.
+                                                                                                                               30
+
+
+
+[23] D. J. Love, R. W. Heath, V. K. N. Lau, D. Gesbert, B. D. Rao, and M. Andrews, “An overview of limited feedback in
+     wireless communication systems,” IEEE J. Select. Areas Commun., vol. 26, no. 8, pp. 1341–1365, Oct. 2008.
+[24] C. A. Metzler, A. Maleki, and R. G. Baraniuk, “From denoising to compressed sensing,” IEEE Trans. Inf. Theory, vol. 62,
+     no. 9, pp. 5117–5144, Sept. 2016.
+[25] P.-H. Kuo, H. T. Kung, and P.-A. Ting, “Compressive sensing based channel feedback protocols for spatially-correlated
+     massive antenna arrays,” in Proc. IEEE Wireless Commun. Netw. Conf. (WCNC), 2012, pp. 492–497.
+[26] M. B. Mashhadi, Q. Yang, and D. Gündüz, “Distributed deep convolutional compression for massive MIMO CSI feedback,”
+     IEEE Trans. Wireless Commun., vol. 20, no. 4, pp. 2621–2633, Apr. 2021.
+[27] C.-K. Wen, W.-T. Shih, and S. Jin, “Deep learning for massive MIMO CSI feedback,” IEEE Commun. Lett., vol. 7, no. 5,
+     pp. 748–751, Oct. 2018.
+[28] S. Ji and M. Li, “CLNet: Complex input lightweight neural network designed for massive MIMO CSI feedback,” IEEE
+     Commun. Lett., vol. 10, no. 10, Apr. 2021.
+[29] J. Guo, C.-K. Wen, S. Jin, and G. Y. Li, “Convolutional neural network-based multiple-rate compressive sensing for massive
+     MIMO CSI feedback: Design, simulation, and analysis,” IEEE Trans. Wireless Commun., vol. 19, no. 4, pp. 2827–2840,
+     Apr. 2020.
+[30] J. Wang, G. Gui, T. Ohtsuki, B. Adebisi, H. Gacanin, and H. Sari, “Compressive sampled CSI feedback method based on
+     deep learning for FDD massive MIMO systems,” IEEE Trans. Commun., vol. 69, no. 9, pp. 5873–5885, Aug. 2021.
+[31] A. Romero, N. Ballas, S. E. Kahou, A. Chassang, C. Gatta, and Y. Bengio, “Fitnets: Hints for thin deep nets,” arXiv
+     preprint arXiv: 1412.6550, 2014.
+[32] J. Choi, “A distribution-free analysis of outage probability over block fading channels,” in Eur. Conf. Netw. and Commun.
+     (EuCNC), Ljubljana, Slovenia, Jun. 2018.
+[33] Y. Zhong, F. Alajaji, and L. L. Campbell, “Joint source–channel coding excess distortion exponent for some memoryless
+     continuous-alphabet systems,” IEEE Trans. Inf. Theory, vol. 55, no. 3, pp. 1296–1319, Mar. 2009.
+[34] L. Peng and A. Guillén i Fàbregas, “Distortion outage probability in MIMO block-fading channels,” in IEEE Int. Symp.
+     Inf. Theory (ISIT), Austin, Texas, U.S.A., Jun. 2010, pp. 2223–2227.
+[35] S. Woo, J. Park, J.-Y. Lee, and I. S. Kweon, “CBAM: Convolutional block attention module,” in Proc. of Eur. Conf. on
+     Comput. Vis. (ECCV), Munich, Germany, Sep. 2018, pp. 3–19.
+[36] X. Li, J. Fang, H. Li, and P. Wang, “Millimeter wave channel estimation via exploiting joint sparse and low-rank structures,”
+     IEEE Trans. Wireless Commun., vol. 17, no. 2, pp. 1123–1133, Apr. 2018.
+[37] H. Yu and S. Winkler, “Image complexity and spatial information,” in Proc. IEEE Int. Workshop Qual. Multimedia Exper.
+     (QoMEX), Klagenfurt am Wörthersee, Austria, Jul. 2013, pp. 12–17.
+[38] Y. Liu, K. Chen, C. Liu, Z. Qin, Z. Luo, and J. Wang, “Structured knowledge distillation for semantic segmentation,” in
+     Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), Long Beach, USA, Jun. 2019, pp. 2599–2608.
+[39] G. Chen, W. Choi, X. Yu, T. Han, and M. Chandraker, “Learning efficient object detection models with knowledge
+     distillation,” in Adv. Neural Inf. Process. Syst. (NeurIPS), vol. 30, Long Beach, USA, Dec. 2017.
+[40] J. H. Cho and B. Hariharan, “On the efficacy of knowledge distillation,” in Proc. IEEE Int. Conf. Comput. Vis. (ICCV),
+     Seoul, Korea (South), Oct. 2019, pp. 4793–4801.
+[41] S. S. Ioushua and Y. C. Eldar, “A family of hybrid analog–digital beamforming methods for massive MIMO systems,”
+     IEEE Trans. Signal Process., vol. 67, no. 12, pp. 3243–3257, Jan. 2019.
+

@@ -1,0 +1,595 @@
+                                                  Learned Image Transmission with Hierarchical Variational Autoencoder
+
+                                                      Guangyi Zhang* , Hanlei Li* , Yunlong Cai, Qiyu Hu, Guanding Yu, Runmin Zhang
+                                                     College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou 310027, China
+                                                                   {zhangguangyi, hanleili, ylcai, qiyhu, yuguanding, runmin zhang}@zju.edu.cn
+arXiv:2408.16340v5 [eess.IV] 27 Feb 2025
+
+
+
+
+                                                                       Abstract                                (Kingma and Welling 2022; Razavi, van den Oord, and
+                                                                                                               Vinyals 2019), a novel design paradigm for JSCC, called
+                                             In this paper, we introduce an innovative hierarchical joint      learned image transmission (LIT), has been conceived by
+                                             source-channel coding (HJSCC) framework for image trans-
+                                                                                                               formulating the communication pipeline as an end-to-end
+                                             mission, utilizing a hierarchical variational autoencoder
+                                             (VAE). Our approach leverages a combination of bottom-up          deep learning model (Bourtsoulatze et al. 2019; Zhang et al.
+                                             and top-down paths at the transmitter to autoregressively gen-    2024; Sun et al. 2023). Specifically, these methods leverage
+                                             erate multiple hierarchical representations of the original im-   powerful neural networks to implement the encoding and
+                                             age. These representations are then directly mapped to chan-      decoding processes. In this approach, the whole system is
+                                             nel symbols for transmission by the JSCC encoder. We extend       viewed as an autoencoder (AE), which can be jointly learned
+                                             this framework to scenarios with a feedback link, modeling        in a data-driven manner. A notable method proposed by
+                                             transmission over a noisy channel as a probabilistic sampling     (Bourtsoulatze et al. 2019) employed CNNs to construct the
+                                             process and deriving a novel generative formulation for JSCC      source and channel codecs for wireless image transmission,
+                                             with feedback. Compared with existing approaches, our pro-        achieving great performance by mapping the input image di-
+                                             posed HJSCC provides enhanced adaptability by dynamically
+                                                                                                               rectly into channel symbols. Moreover, Kurka and Gündüz;
+                                             adjusting transmission bandwidth, encoding these representa-
+                                             tions into varying amounts of channel symbols. Additionally,      Wu et al. investigate the JSCC with feedback. In this con-
+                                             we introduce a rate attention module to guide the JSCC en-        text, the transmission of these representations is divided into
+                                             coder in optimizing its encoding strategy based on prior in-      multiple phases, with the transmitter receiving the channel
+                                             formation. Extensive experiments on images of varying reso-       symbol vector after each phase, which simplifies the encod-
+                                             lutions demonstrate that our proposed model outperforms ex-       ing process and improves the overall performance.
+                                             isting baselines in rate-distortion performance and maintains        Beyond deterministic AEs, some studies have employed
+                                             robustness against channel noise.                                 variational autoencoders (VAE) to design JSCC systems
+                                                                                                               (Choi et al. 2019; Bo et al. 2024; Hu et al. 2023), where
+                                                                   Introduction                                the channel symbols are generated through sampling. Part of
+                                                                                                               these VAE-based methods show superior performance com-
+                                           To meet the transmission requirements of heavy data traf-           pared to deterministic AE-based methods, particularly un-
+                                           fic in future sixth-generation (6G) networks, wireless edge         der severe channel conditions. Though VAE-based methods
+                                           devices need to be equipped with higher transmission effi-          have demonstrated remarkable performance, they experi-
+                                           ciency. Most contemporary systems employ a two-step strat-          ence significant performance degradation on high-resolution
+                                           egy for data transmission: first, the raw data is compressed        images. Furthermore, most existing methods only support
+                                           using a source codec, such as JPEG (Wallace 1992) and BPG           fixed-rate coding, which contrasts with emerging works on
+                                           (Lainema et al. 2012). Then, the encoded bits are protected         transform coding-based image compression (Ballé et al.
+                                           with redundancy introduced by a carefully designed chan-            2018), where the compression rate for each image is deter-
+                                           nel codec, such as LDPC and Polar codes (Arikan 2009).              mined by the estimated entropy of its feature representation
+                                           However, in many practical applications, the bit length is          and varies with different samples. Consequently, these meth-
+                                           generally finite, making it impossible to guarantee optimal-        ods are less flexible and adaptive, potentially leading to per-
+                                           ity. In this context, joint source-channel coding (JSCC) has        formance penalties.
+                                           emerged as a potential solution, offering higher coding gains
+                                                                                                                  In this work, we aim to overcome the limitations of previ-
+                                           than the traditional separation-based coding paradigm.
+                                                                                                               ous methods while enhancing performance. Specifically, we
+                                              With the revolutionary progress of deep learning in var-
+                                                                                                               develop a hierarchical JSCC (HJSCC) framework based on
+                                           ious fields, such as image compression (Ballé et al. 2018;
+                                                                                                               a powerful hierarchical VAE architecture (Child 2020). Our
+                                           He et al. 2021; Xu et al. 2022b) and generative models
+                                                                                                               transmitter employs both bottom-up and top-down paths to
+                                               * These authors contributed equally.                            autoregressively generate multiple hierarchical representa-
+                                           Copyright © 2025, Association for the Advancement of Artificial     tions of the original image. These representations are then
+                                           Intelligence (www.aaai.org). All rights reserved.                   mapped to channel symbols using multiple JSCC encoder
+blocks. Building upon this, we further explore the applica-                                               Bias         Bias
+tion of HJSCC in a classical scenario where a feedback link                Encoding
+exists. By modeling transmission over a noisy channel as a                 Decoding
+probabilistic sampling process, we derive a novel generative
+formulation for JSCC with feedback, which achieves sig-
+nificantly better performance than most existing advanced
+schemes. While there have been attempts at variable-rate
+transmission (Dai et al. 2022; Song et al. 2023; Zhang
+et al. 2023; Yang and Kim 2022) in the realm of JSCC
+without feedback, the problem of rate-adaptive design for                                    (b) Bidirectional encoder and
+                                                                         (a) VAE
+JSCC with feedback remains underexplored. Unlike exist-                                 generative decoder of a hierarchical VAE
+ing works (Kurka and Gündüz 2020; Wu et al. 2024a; Li
+                                                                   Figure 1: Probabilistic model of VAEs and hierarchical
+et al. 2024; Jiang et al. 2022), we leverage the prior distribu-
+                                                                   ResNet VAE. The bias is a trainable parameter.
+tion (which characterizes the entropy information) of each
+representation to generate masks that control the number of
+symbols for each representation. This approach allows us to        Learned Image Transmission Unlike the separation-
+dynamically adjust the transmission rate. Additionally, we         based design described above, recent studies have delved
+introduce a rate attention module to guide the JSCC encoder        into the utilization of AE and its variants, e.g., VAE to
+in adjusting the encoding strategy according to its prior in-      design wireless image transmission systems, resulting in a
+formation.                                                         number of efficient methods (Bourtsoulatze et al. 2019; Xu
+   In summary, our contributions are as follows:                   et al. 2022a; Zhang et al. 2024; Sun et al. 2023; Xu et al.
+  • HJSCC Framework: Developing a hierarchical scheme              2022a; Yang et al. 2024; Saidutta, Abdi, and Fekri 2019).
+    that is able to support the transmission of high-resolution    In particular, (Bourtsoulatze et al. 2019; Wu et al. 2024b)
+    images.                                                        and (Yang et al. 2024) conceived of using neural networks
+  • HJSCC with Feedback: Extending HJSCC to the case               to simultaneously finish the source encoding/decoding and
+    with feedback, by viewing the transmission as a sampling       channel coding/decoding, with the goal of jointly optimiz-
+    process and deriving a generative formulation.                 ing the entire system to maximize PSNR. The VAE-based
+  • Dynamic Rate Control: By utilizing the entropy in-             methods adopted probabilistic modeling, wherein the en-
+    formation of representations to dynamically control the        coding process is characterized as a stochastic procedure.
+    transmission rate, this approach bridges the gap of lack-      In these systems, channel symbols are generated by sam-
+    ing rate-adaptive design when a feedback link is present.      pling from the probability distribution conditioned on the
+  • Rate Attention Module: Proposing a spatial grouping            input image (Bo et al. 2024; Saidutta, Abdi, and Fekri 2019).
+    strategy and a rate attention module to improve the over-      These approaches have demonstrated superior performance,
+    all rate-distortion performance.                               especially under severe transmission conditions.
+  • Experimental Studies: Providing substantial experi-
+    ments to verify the effectiveness of the proposed method,
+                                                                                      Proposed Methods
+    demonstrating that the proposed scheme achieves bet-           Background
+    ter coding gain than emerging deep learning-based JSCC         VAE and Hierarchical VAE As stated in (Cemgil et al.
+    and separation-based digital transmission schemes.             2020), VAE is a stochastic variational inference scheme that
+                                                                   can be applied to various intelligent tasks, such as recogni-
+                     Related Works                                 tion, denoising, and generation. As shown in Fig. 1(a), to
+Varational Autoencoder VAE can be employed as deep                 formulate a vision-related model, we typically start with the
+generative models capable of generating high-dimensional           following premises. Let x denote an image intensity vector,
+data based on a low-dimensional latent space, and is a vari-       which is drawn from a dataset X with distribution px . An-
+ant of autoencoder (Sø nderby et al. 2016; Cemgil et al.           other variable is the latent variable z, with a prior pz . The
+2020). By sampling from the learned latent space distribu-         main target of a VAE is to learn a generative model (de-
+tion and passing these samples through the decoder network,        coder) px|z for sampling, and a posterior density model (en-
+VAE can generate new data points that resemble the training        coder) qz|x for variational inference. The objective for learn-
+data. However, the original VAE is known to perform worse          ing a VAE model can be formulated as minimizing the (vari-
+than many other generative models, particularly when ap-           ational) upper bound on the marginal likelihood of a batch
+plied to high-resolution images. (Vahdat and Kautz 2020;           of data points, as given by
+Child 2020; Yuhta Takida 2024) addressed this by propos-                                                                  
+                                                                     L (θ, φ) = Ex∼px ,z∼qz|x DKL qz|x kpz − log px|z , (1)
+ing a deep hierarchical VAE, where the latent variable is                                                  
+divided into several disjoint groups, achieving significantly      where DKL qz|x kpz = log qz|x /pz , θ and φ represent
+better performance than standard VAEs. More recently, VAE          the parameters of the encoder qz|x and decoder px|z , respec-
+has been applied to compression tasks (Duan et al. 2023;           tively.
+Lu et al. 2024; Townsend, Bird, and Barber 2019; Kingma,               Hierarchical VAEs are a series of VAE models that par-
+Abbeel, and Ho 2019).                                              tition the latent variables into several disjoint groups. The
+          Encoder                               Decoder                   While previous studies have achieved excellent rate-
+                             Channel                                   distortion performance based on the framework depicted in
+                                                                       Fig. 2, it is evident that the transmission rate is solely de-
+                                                                       termined by the image resolution. This limitation can re-
+Figure 2: Diagram of a deep learning-based JSCC system.                sult in performance degradation in overall rate-distortion
+                                                                       due to the inability to adaptively adjust the rate for each
+                                                                       image (He et al. 2022). To address this issue, we propose
+probabilistic diagram of a classical hierarchical VAE, the             our HJSCC framework, as illustrated in Fig. 3. Given an
+ResNet VAE, is shown in Fig. 1(b), consisting of a bidi-               image x, the bottom-up path generates a set of latent fea-
+rectional encoder and a generative decoder. Specifically, the          tures, which are subsequently passed to the top-down path
+latent variables can be denoted by z , {z1 , z2 , . . . , zL },        to autoregressively generate the latent representations µ ,
+where L represents the      Q number of groups. The prior for z is     {µ1 , µ2 , . . . , µL }. These representations     are then fed to a
+modeled as pz1:L = l pQ         zl |z<l , and the approximate poste-
+                                                                                                        
+                                                                       set of JSCC encoders ge = ge1 , ge2 , . . . , geL , respectively.
+rior is denoted as qz = l qzl |z<l ,x , where z<l represents           In this way, we are able to obtain a set of channel symbol
+{z1 , z2 , . . . , zl−1 }. In general, the dimension of zl is de-      vectors s , {s1 , s2 , . . . , sL }, where sl = gel (zl ). Then,
+signed to be smaller than that of zl+1 , fulfilling the target         these channel symbol vectors are transmitted to the receiver
+of capturing the coarse-to-fine nature of images. The objec-           through the wireless link, and the received symbol vectors
+tive for training a hierarchical VAE mode can be obtained by
+                                                                       are represented by s̃ , {s̃1 , s̃2 , . . . , s̃L }. At the receiver,
+extending Eq. (1) for multiple latent variables, as given by
+                                                                       the noisy s̃ undergoes processing by the JSCC decoder gdl ,
+L (θ, φ) =                                                             and we obtain µ̃ , {µ̃1 , µ̃2 , . . . , µ̃L }. With µ̃ at hand,
+                   " L                                          #      the receiver can reconstruct the image using the top-down
+                    X                              
+   Ex∼px ,z∼qz|x          DKL qzl |z<l ,x kpzl |z<l −log px|z ,        path (decoder), and the reconstructed image is denoted by
+                    l=1
+                                                                       x̂H . Our objective is to minimize the distortion between the
+                                                         (2)           transmitted image x and x̂H .
+where we define z<1 as an empty set, and thus pz1 |z<1 = pz1
+and qz1 |z<1 ,x = qz1 |x .                                             Training Objective Formulation
+                                                                       We aim to develop a rate-adaptive JSCC model capable of
+Proposed HJSCC                                                         adjusting the transmission rate, CBR, based on the source
+System Overview Here, we aim to give a brief overview                  content. To this end, we propose an inherited training strat-
+of deep learning-based JSCC. In particular, the model of               egy motivated by (Dai et al. 2022), where the objective of
+a typical JSCC is shown in Fig. 2. The transmitter em-                 minimizing d(x, x̂H ) is guided by a learned image coder.
+ploys a JSCC encoder to map the input image x ∈ RN                     Specifically, we have designs for the posteriors, priors, and
+directly into channel symbol vector s ∈ CK for transmis-               training objectives as follows (Duan et al. 2023).
+sion, where N denotes the number of pixels and K rep-                     Posteriors: The posteriors qzl |z<l ,x is set to a uniform dis-
+resents the number of channel symbols. This process can                tribution
+                                                                                                       Y  (i)           (i)
+                                                                                                                                 
+be expressed as s = ge (x; θ e ), where ge signifies the en-               qzl |z<l ,x (zl |z<l , x) ,  U µl − 12 , µl + 21 , (3)
+coding function and θe represents its trainable parameters.                                          i
+Accounting for the limited transmission power, the trans-
+                                                                                                                                  (i)
+mitted signal should satisfy the power constraint P , imply-           where U denotes a uniform distribution centered on µl , and
+ing that ksk22 /K ≤ P . Subsequently, the channel symbol                 (i)
+                                                                       µl is the i-th element of parameter µl , which is obtained
+vector is transmitted through the wireless channel, as given           from the l-th posterior branch.
+by s̃ = s + n, where n ∼ N (0, σn2 I) is additive white                   Priors: The conditional prior distribution pzl |z<l is de-
+Gaussian noise (AWGN). At the receiver, the received noisy             fined to be a Gaussian distribution convolved with a uniform
+signal s̃ is processed by a decoder gd to obtain the recon-            distribution (Ballé et al. 2018):
+structed image x̄ = gd (s̃; φd ), with φd denoting the train-                                  Y  (i) (i)                    
+able parameters of the JSCC decoder. The optimization ob-                pzl |z<l (zl |z<l ) ,    N µ̂l , (σ̂l )2 ∗ U − 21 , 12 , (4)
+jective of a deep learning-based JSCC system is to minimize                                   i
+the difference between x and x̄, and thus mean-square er-
+ror (MSE) can be employed as the loss function. Further-               where ∗ represents the convolution operation.
+more, to evaluate the performance of a JSCC system and                   Training Loss: With the posteriors and priors defined
+ensure fairness, we define the signal-to-noise ratio (SNR)             above, the loss function (2) for an image compression model
+as SNR = 10 log σP2 (dB), which characterizes the chan-                (Duan et al. 2023) can be expressed as
+nel quality of the system. Then, we introduce the channel                                 " L                                          #
+                                                                                            X                 1
+bandwidth ratio (CBR) to describe the transmission rate                L = Ex∼px ,z∼qz|x         log                     + λ · d(x, x̂) ,
+(overhead), which is expressed as CBR = K/N . Intuitively,                                           pzl |z<l (zl |z<l )
+                                                                                             l=1
+CBR actually signifies the number of symbols for transmit-                                                                             (5)
+ting one pixel, and a higher CBR brings a higher overhead,             where λ is the introduced weight to control the tradeoff be-
+while usually resulting in a better system performance.                tween rate (the first term) and distortion (the second term)
+                                  Bias                                                                      Bias           Received
+                                             Concat.                                                                       Symbols
+                                                                     Prior             Channel
+
+                                                      JSCC encoder
+                                                                                                                     JSCC decoder
+                                          Posterior
+
+                                              Sample
+
+
+                                         (a) Transmitter framework                                          (b) Receiver framework
+
+Figure 3: The probabilistic diagram of the proposed HJSCC. The transmitter employs the bottom-up and top-down paths for
+encoding, while the receiver reconstructs the image with the received symbols.
+
+
+          Bias            Concat.
+                                                                             Bias        Concat.
+                                                                                                                                                Bias Received
+                                                                                                                                                     Symbols
+                                                                                                    Sample         Prior
+                           JSCC               Prior
+
+
+
+
+                                                                                                                                      Channel
+                          encoder                                                        JSCC           Rate
+                                                                                        encoder        Matching                                         JSCC
+                                                                                                                   Rate Loss                           decoder
+                      Posterior
+                                                                                    Posterior
+                 Channel          Sample
+                                                                                       Feedback Signal          JSCC
+                                            JSCC                                                               decoder
+                      Feedback Signal      decoder
+
+
+                                 Figure 4: The probabilistic diagram of the proposed HJSCC with feedback.
+
+
+d(x, x̂). Thus, (5) can be utilized for image compression to                        HJSCC with Feedback
+achieve a trade-off between rate and distortion. Under the                          Building upon previous designs, we further investigate the
+guidance of (5), we further develop the optimization prob-                          JSCC scenario with feedback link from the receiver to the
+lem for HJSCC as follows:                                                           transmitter. In this scenario, image transmission is divided
+L = Ex∼px ,z∼qz|x
+                                                                                   into multiple phases, allowing the transmitter to use the re-
+                                                                                    ceived channel symbol vectors from previous phases when
+     L
+     X                                                                              encoding channel symbols in the current phase.
+                                                                   
+         −α log pzl |z<l (zl |z<l ) +λ · (d(x, x̂) + d(x, x̂H )) ,                     As shown in the left framework of Fig. 4, we formulate
+                                          |         {z           }
+     l=1
+     |          {z               }           weighted distortion                    our HJSCC with feedback by viewing the received symbols
+             transmission rate                                                      vector s̃l as the latent variable. In this case, the loss function
+                                                              (6)                   for training HJSCC with feedback can be written as
+where the calculation ways of each variable can be found                                                      " L                                                 #
+in Fig. 3. Intuitively, there are two main differences from the                                                 X          qs̃l |s̃<l ,x (s̃l |s̃<l ,x)
+loss function (5). The first is the additional distortion term to                   L = Ex∼px ,s̃∼qs̃|x               log                               −log px|s̃ .
+                                                                                                                              ps̃l |s̃<l (s̃l |s̃<l )
+optimize the transmission distortion d(x, x̂H ), which helps                                                    l=1
+                                                                                                                                                                  (7)
+to obtain a robust representation against noise. The second
+                                                                                    Intuitively, we view the transmission over noisy channels
+is the scaling parameter α to control the relation between the
+                                                                                    as a process of sampling. In particular, since we consider
+entropy of the latent zl and the transmission rate for sl .
+                                                                                    AWGN channels, i.e., s̃l = sl + nl ,the posteriors qsl |s<l ,x
+   To flexibly adjust the CBR for different images, a natu-                         is actually a Gaussian distribution
+ral choice for reference is the prior of latent variable zl that
+                                                                                                                                  Y  (i)               
+is correlated to the bit length after entropy coding, where                                    qs̃l |s̃<l ,x (s̃l |s̃<l , x) ,          N sl , σn2 ,              (8)
+we assume the entropy of zl is positively related to the en-
+                                                                                                                                i
+tropy of µl . Thus, the CBR for encoding µl is designed to
+be proportional to the prior pzl |z<l . Moreover, noting that the                   where sl can be directly computed with known x and s̃<l .
+channel bandwidth is determined by reducing the number of                           Besides, with this formulation, the generation of the l-th
+the channel symbols, we achieve rate adjustment by masking                          channel symbol vector s̃l is conditioned on the received vec-
+the channel symbol vector according to the transmission rate                        tors in the former phases. It enables the HJSCC to adjust the
+αpzl |z<l , which will be introduced in the following sections.                     transmitted symbols based on feedback signals. In this way,
+                                                                 Rate Matching
+                                      ×4                               Mask                               Padding                    ×4
+
+
+
+
+                                                                                                                                    Swin Transformer
+                                     Swin Transformer
+                                                        Split                                                             Merge
+
+
+
+                    Rate Attention
+                                                                       Mask                               Padding
+
+                       module
+
+
+
+
+                                                                                                                                         Block
+                                          Block
+                                                                                        Channel
+                                                                       Mask                               Padding
+
+
+                                                         Split         Mask                               Padding        Merge
+
+                                                    Generate mask                vector length
+
+   Figure 5: The illustration of the process of the JSCC encoder and JSCC decoder for transmitting latent representation µl .
+
+
+we also fortunately find that the term log qs̃l |s̃<l ,x (s̃l |s̃<l ,x)                      indicating that only the former klo elements of rol will be
+in (7) is only related to the channel noise and will not in-                                 used as the channel symbols, i.e., sol = rol ⊙ mol , where ⊙
+troduce gradient to the whole model. Thus, this term can be                                  denotes the element-wise multiplication.
+directly dropped from the loss function.                                                         Though this enables the transmitter to determine the trans-
+   We aim to achieve rate-adaptive transmission for HJSCC                                    mission rate adaptively for each image, this design intro-
+in the presence of feedback link. Similar to the scenario                                    duces a length-matching issue. Specifically, the receiver
+without feedback, we are able to take the prior informa-                                     needs to know the length of each transmitted symbol vector
+tion ps̃l |s̃<l (s̃l |s̃<l ) as a rate indicator. However, the calcu-                        to identify the channel symbols from different spatial posi-
+lation of this prior depends on the values of s̃l , which is un-                             tions and layers. This requirement, however, adds an over-
+known before transmission. As shown in the right of Fig.                                     head of communicating this information to the receiver. To
+4, we address this by proposing a new prior pzl |s̃<l (zl |s̃<l )                            mitigate this overhead, we propose two practical designs:
+as a substitution, where zl is sampled from a uniform dis-
+                                                                                                 Firstly, instead of considering infinite precision, we opt
+tribution centered on µl . This is inspired by the fact that
+                                                                                             for a finite set of length options, comprising {2Nq } inte-
+pzl |s̃<l (zl |s̃<l ) is positively related to ps̃l |s̃<l (s̃l |s̃<l ), and
+                                                                                             gers, where Nq is a selected integer. We define the op-
+thus can be employed as the rate term when training the
+                                                                                             tional length set as Q = {q1 , q2 , . . . , q2Nq }. Then, for
+model. As a result, the loss function for training the HJSCC
+with feedback can be                                                                         each sol , the transmission rate is quantilized to k̂lo =
+                             " written as                           #                                         PC                        (o,c)
+                              XL
+                                          const                                              Q(klo ) = Q( c=1 −α log pz(o,c) |z (zl |z<l )) with the
+                                                                                                                             l     <l
+  L = Ex∼px ,s̃∼qs̃|x              log               + λd(x, x̂H )) ,                        optional length set Q. Therefore, we incorporate an extra
+                                       pzl |s̃<l · β
+                              l=1                                                            link to transmit Nq bits as side information to inform the
+                                                                         (9)                 length for each sol , where we assume this information should
+where β denotes the scaling factor.                                                          be transmitted without errors. The additional overhead for
+                                                                                                          log N
+                                                                                             each sol is C2r q , where Cr denotes the channel capacity.
+Masking and Length Information Reduction
+A visualized example of our proposed masking strategy is                                         Secondly, for each sl we need in total HW Nq extra bits
+shown in Fig. 5. Particularly, we employ the Swin Trans-                                     as the side information. In comparison to the transmission
+                                                                                                                          PHW
+former blocks to implement our JSCC encoder, since we                                        overhead at the l-th layer, o=1 k̂lo , this amount of side in-
+find that this architecture presents better robustness against                               formation will be quite significant when C is small. To ad-
+channel noise. In this way, the shape of the output fea-                                     dress this issue, we design a spatial grouping strategy. As
+ture at the l-th layer, rl , can be denoted as C × H × W ,                                   shown in the middle part of Fig. 5, we split the rl into mul-
+which is the same as that of µl . We split the output of                                     tiple patches along the width and height dimensions, where
+the Swin Transformer blocks, rl , into HW sequences rol ,                                    the channel symbol sequence at each patch is assigned with
+for o = 1, 2, . . . , HW , where the length of each rol is C.                                the same length value (number of symbols). This grouping
+Then, we include a rate-matching layer after the Swin Trans-                                 strategy is inspired by the findings that the allocated rates
+former blocks. It accepts two inputs, rl and αpzl |z<l , and                                 within the kind of patch are rather similar, and thus it will
+generates the masked channel symbol vector sl . Specifi-                                     not lose much flexibility even if we force the vectors within
+cally, the length for each vector sol will be constrained to                                 a patch to have the same length. With the spatial grouping,
+klo =
+        PC                              (o,c)                                                only one length scalar is required for multiple sequences in
+            c=1 −α log pzl(o,c) |z<l (zl      |z<l ), which actually
+                                                                                             rl , and thus the overhead can be mitigated.
+represents the summation of entropy along all the C dimen-
+                                                                                                 Furthermore, as the JSCC encoder is required to encode
+sions of zol . We adjust the length by generating a mask vector
+                                                                                             the images into symbols of different numbers, we devise a
+mol , which can be written as
+                                                                                             rate attention module by incorporating the prior information
+                  mol = [1, 1, . . . , 1, 0, . . . , 0],        (10)                         in the encoding process. The rate attention involves two in-
+                          | {z }
+                                              klo                                            puts, the latent representation µl of shape (H, W, C) and the
+                       (a)                                          (b)                                         (c)
+
+Figure 6: The end-to-end distortion performance versus over different datasets. The results are evaluated on (a) Kodak and (b)
+CLIC2022 datasets, at SNR = 10 dB. (c) The end-to-end distortion performance on Kodak dataset versus the SNR.
+
+
+prior information pzl |z<l . We calculate the length value for            + LDPC”, and “JPEG2000 + LDPC”, respectively. In addi-
+different vectors in µl , obtaining in total HW real length               tion to these hand-crafted image codecs, we also consider
+values. Then, we calculate the merged length values after                 the learning-based image codecs combined with LDPC,
+the spatial grouping. As we allocate the same length value                (Ballé et al. 2018) and (Minnen, Ballé, and Toderici 2018).
+to the vectors within a patch, the merged value is calculated             For the feedback JSCC schemes, we consider the most ad-
+by averaging the real length values in a sample patch. The                vanced JSCCformer-f (Wu et al. 2024a) and the classical
+rate attention operation accepts two inputs. The first is the             DeepJSCC-f (Kurka and Gündüz 2020). In our experiments,
+concatenated information from the representation and prior                we test various schemes across different CBRs and SNRs
+information, while the second is the concatenated matrix of               under AWGN channels. We take the architecture in (Duan
+the real length value vector and the merged length value vec-             et al. 2023) as the backbone model.
+tor. Through this operation, the index information can be
+fused to the encoding process, enabling the JSCC encoder                  Comparisons and Results Analysis
+block to adaptively adjust the encoding process.                          In Fig. 6 (a) and (b), we evaluate the transmission perfor-
+                                                                          mance at different CBRs under AWGN channels, with the
+                         Experiments                                      test SNR set to 10 dB. To ensure a reliable transmission
+Metrics and Test Datasets For performance evalua-                         link, we adopt 16-order quadrature amplitude modulation
+tion, we consider the pixel-wise peak signal-to-noise ratio               (16QAM) combined with an LDPC rate of 2/3, in accor-
+(PSNR)1 . We quantify the performance by considering the                  dance with the 3GPP standard. The results indicate that
+following datasets of different resolutions with necessary                our proposed HJSCC significantly outperforms the fixed-
+preprocessing. Kodak (Kodak 1993): The dataset consists of                rate schemes, DeepJSCC and SwinJSCC. Compared with
+24 images of resolution 512 × 768 or 768 × 512. CLIC2022                  NTSCC, the proposed scheme achieves comparable perfor-
+Test (Toderici et al. 2022): The test set contains 30 images              mance. The performance gap widens with increasing image
+up to size 1365 × 2048.                                                   resolution and CBR. Additionally, compared to hand-crafted
+                                                                          schemes, the proposed method achieves substantially better
+Benchmarks To verify the performance of our image                         PSNR performance. This demonstrates the potential of uti-
+transmission models, we compare them with a range of                      lizing HJSCC in practical wireless communication systems.
+benchmarks. First, we consider emerging deep learning-                       Fig. 6 (c) demonstrates the transmission performance
+based schemes, including DeepJSCC (Bourtsoulatze et al.                   across varying channel SNR levels. To ensure fairness, the
+2019), SwinJSCC (Yang et al. 2024), and the nonlinear                     CBR for these schemes is constrained to 0.0625. For Deep-
+transform source-channel coding (NTSCC) (Dai et al. 2022).                JSCC and NTSCC, the training SNR equals the testing SNR
+Second, we compare our methods with separation-based                      to achieve optimal performance. For the separation-based
+schemes widely used in real transmission systems. These                   methods, we test these schemes across different channel
+include powerful image codecs such as BPG, JPEG, and                      coding rates and modulation orders to determine the op-
+JPEG2000, combined with a practical LDPC code (Shahid                     timal settings2 , and then the image codec needs to com-
+and Yahampath 2013), labeled as “BPG + LDPC”, “JPEG                       press the source with the resulted bits per pixel (bpp) value.
+   1                                                                         2
+       Codes are given in https://github.com/zhang-guangyi/HJSCC.                Given a bpp value, the CBR ρ can be calculated as ρ =
+                                                                                   λ     CBR      CBR (s)    CBR (k̂)   PSNR
+
+                                                                    Grouping      64    0.0403    0.0378     0.0025     32.03
+                                                                   No grouping    64    0.0590    0.0390     0.0200     32.24
+                                                                    Grouping      16    0.0249    0.0224     0.0025     29.96
+                                                                   No grouping    16    0.0430    0.0230     0.0200     30.13
+
+                                                                  Table 1: Ablation analysis on the spatial grouping strategy.
+
+
+
+
+     Figure 7: PSNR performance with feedback links.
+
+
+Our results indicate that the proposed HJSCC significantly
+outperforms other schemes. Additionally, HJSCC achieves
+a substantial performance gain compared to the emerging
+method (Minnen, Ballé, and Toderici 2018), with the perfor-
+mance gap becoming more pronounced at SNR levels above
+10 dB. Furthermore, separation-based systems are known to          Figure 8: Ablation analysis on the rate attention module.
+suffer from the cliff effect, where reliable transmission can-
+not be maintained when the channel coding and modulation
+schemes fail. In contrast, the proposed HJSCC provides a          information k̂ in Table 1. All the models are optimized on
+graceful degradation as the SNR decreases, demonstrating          ImageNet dataset. From the results, the overall CBR can be
+its robustness in varying channel conditions.                     significantly reduced by the spatial merging strategy, at the
+   Fig. 7 presents the PSNR performance of different              cost of a slight performance degradation.
+schemes, where JSCCformer-f (Wu et al. 2024a) and
+DeepJSCC-f (Kurka and Gündüz 2020) are JSCC schemes             Ablation on rate attention module. Moreover, we also
+with a feedback link. Compared with them, our proposed            verify the effect of the proposed rate attention module, as
+HJSCC shows much better PSNR performance, with a gain             shown in Fig. 8. We compare the performance of using and
+of about 1 dB at high CBR region. Besides, the introduc-          not using this module on the Kodak and CLIC2022 datasets,
+tion of the feedback link also provides significantly larger      over the AWGN channels, where the SNR is set to 10 dB.
+gain, especially at high average CBR values. This stems           From the results, we find that the proposed rate attention
+from rate-adaptive capability of HJSCC-feedback as well           module significantly improves the PSNR performance over
+as its generative formulation, making it the state-of-the-art     different average CBR values. This performance gain stems
+JSCC schemes in the presence of a feedback link. In addi-         from the ability of the rate attention module in guiding the
+tion, when the feedback is noisy, we can see a slight degra-      JSCC encoder to encode the latent representation into chan-
+dation in PSNR performance. Besides, the performance im-          nel symbol vectors of different length values, demonstrating
+proves with the feedback link quality, where a higher feed-       the effectiveness of this module.
+back SNR can produce better PSNR performance.
+                                                                                 Conclusion & Discussion
+Ablation Studies
+Ablation on the spatial grouping. In this work, we pro-           In this work, we introduced a high-efficiency JSCC frame-
+pose a spatial grouping strategy to reduce the transmission       work for wireless image transmission based on hierarchical
+overhead to inform the receiver of the vector length for rate     VAE. Unlike conventional methods, our proposed scheme
+matching. To show the effectiveness, we report the perfor-        learns a hierarchical latent representation and employs mul-
+mance on CBR saving. Particularly, we compare the CBRs            tiple JSCC encoder/decoder pairs to transmit these latent
+for transmitting the channel symbols s and the vector length      representations. We formulate a novel generative formula-
+                                                                  tion for HJSCC with feedback by viewing the transmission
+  K
+C×H×W
+         = C×logbppM ×Rc = C×logbppM ×Rc , where M is the se-     as a sampling process. By leveraging the learned prior in the
+                  2               2
+lected modulation order and Rc denotes the channel coding rate.   JSCC encoder, our proposed HJSCC can dynamically adjust
+For example, ρ = bpp/8 when 16QAM and rate 2/3 are selected       the transmission rate according to the data distribution, mak-
+for SNR = 10 dB.                                                  ing it a rate-adaptive scheme compared to existing solutions.
+                  Acknowledgments                                Hu, Q.; Zhang, G.; Qin, Z.; Cai, Y.; Yu, G.; and Li, G. Y.
+                                                                 2023. Robust Semantic Communications with Masked VQ-
+The corresponding author is Yunlong Cai. This work was
+                                                                 VAE Enabled Codebook. IEEE Trans. Wireless Commun.,
+supported in part by the National Natural Science Founda-
+                                                                 22(12): 8707–8722.
+tion of China under Grant U22A2004, and in part by Zhe-
+jiang Provincial Key Laboratory of Information Process-          Jiang, P.; Wen, C.-K.; Jin, S.; and Li, G. Y. 2022. Deep
+ing, Communication and Networking (IPCAN), Hangzhou              Source-Channel Coding for Sentence Semantic Transmis-
+310027, China.                                                   sion With HARQ. IEEE Transactions on Communications,
+                                                                 70(8): 5225–5240.
+                       References                                Kingma, D. P.; and Welling, M. 2022. Auto-Encoding Vari-
+                                                                 ational Bayes. arXiv:1312.6114.
+Arikan, E. 2009. Channel Polarization: A Method for Con-
+structing Capacity-Achieving Codes for Symmetric Binary-         Kingma, F.; Abbeel, P.; and Ho, J. 2019. Bit-Swap: Recur-
+Input Memoryless Channels. IEEE Transactions on Infor-           sive Bits-Back Coding for Lossless Compression with Hier-
+mation Theory, 55(7): 3051–3073.                                 archical Latent Variables. In Chaudhuri, K.; and Salakhut-
+                                                                 dinov, R., eds., Proceedings of the 36th International Con-
+Ballé, J.; Minnen, D.; Singh, S.; Hwang, S. J.; and Johnston,   ference on Machine Learning, volume 97 of Proceedings of
+N. 2018. Variational image compression with a scale hyper-       Machine Learning Research, 3408–3417. PMLR.
+prior. arXiv:1802.01436.
+                                                                 Kodak. 1993. Kodak PhotoCD dataset. http://r0k.us/
+Bo, Y.; Duan, Y.; Shao, S.; and Tao, M. 2024. Joint Coding-      graphics/kodak/.
+Modulation for Digital Semantic Communications via Vari-
+                                                                 Kurka, D. B.; and Gündüz, D. 2020. DeepJSCC-f: Deep
+ational Autoencoder. IEEE Transactions on Communica-
+                                                                 Joint Source-Channel Coding of Images With Feedback.
+tions, 1–1.
+                                                                 IEEE Journal on Selected Areas in Information Theory,
+Bourtsoulatze, E.; Burth Kurka, D.; Gunduz, D.; and Gun-         1(1): 178–193.
+duz, D. 2019. Deep Joint Source-Channel Coding for Wire-
+                                                                 Lainema, J.; Bossen, F.; Han, W.-J.; Min, J.; and Ugur, K.
+less Image Transmission. IEEE Transactions on Cognitive
+                                                                 2012. Intra Coding of the HEVC Standard. IEEE Transac-
+Communications and Networking, 5(3): 567–579.
+                                                                 tions on Circuits and Systems for Video Technology, 22(12):
+Cemgil, T.; Ghaisas, S.; Dvijotham, K.; Gowal, S.; and           1792–1801.
+Kohli, P. 2020. The Autoencoding Variational Autoencoder.        Li, X.; Bi, S.; Wang, S.; Li, X.; and Zhang, Y.-J. A. 2024.
+In Larochelle, H.; Ranzato, M.; Hadsell, R.; Balcan, M.; and     Digital Semantic Device-Edge Co-Inference With Task-
+Lin, H., eds., Advances in Neural Information Processing         Oriented ARQ. IEEE Transactions on Vehicular Technol-
+Systems, volume 33, 15077–15087. Curran Associates, Inc.         ogy, 73(9): 13986–13990.
+Child, R. 2020. Deep VAEs Generalize Autoregressive              Lu, M.; Duan, Z.; Zhu, F.; and Ma, Z. 2024. Deep Hierar-
+Models and Can Outperform Them on Images. arXiv                  chical Video Compression. Proceedings of the AAAI Con-
+preprint arXiv:2011.10650.                                       ference on Artificial Intelligence, 38(8): 8859–8867.
+Choi, K.; Tatwawadi, K.; Weissman, T.; and Ermon, S. 2019.       Minnen, D.; Ballé, J.; and Toderici, G. D. 2018. Joint
+NECST: Neural Joint Source-Channel Coding. Proceedings           Autoregressive and Hierarchical Priors for Learned Im-
+of the 36th International Conference on Machine Learning         age Compression. In Bengio, S.; Wallach, H.; Larochelle,
+(ICML), 1182–1192.                                               H.; Grauman, K.; Cesa-Bianchi, N.; and Garnett, R., eds.,
+Dai, J.; Wang, S.; Tan, K.; Si, Z.; Qin, X.; Niu, K.; and        Advances in Neural Information Processing Systems, vol-
+Zhang, P. 2022. Nonlinear transform source-channel cod-          ume 31. Curran Associates, Inc.
+ing for semantic communications. IEEE Journal on Selected        Razavi, A.; van den Oord, A.; and Vinyals, O. 2019. Gen-
+Areas in Communications, 40(8): 2300–2316.                       erating Diverse High-Fidelity Images with VQ-VAE-2. In
+Duan, Z.; Lu, M.; Ma, Z.; and Zhu, F. 2023. Lossy Image          Wallach, H.; Larochelle, H.; Beygelzimer, A.; d'Alché-Buc,
+Compression With Quantized Hierarchical VAEs. In Pro-            F.; Fox, E.; and Garnett, R., eds., Advances in Neural Infor-
+ceedings of the IEEE/CVF Winter Conference on Applica-           mation Processing Systems (NeurIPS), volume 32. Curran
+tions of Computer Vision (WACV), 198–207.                        Associates, Inc.
+He, D.; Yang, Z.; Peng, W.; Ma, R.; Qin, H.; and Wang,           Saidutta, Y. M.; Abdi, A.; and Fekri, F. 2019. Joint Source-
+Y. 2022. ELIC: Efficient Learned Image Compression               Channel Coding for Gaussian Sources over AWGN Chan-
+With Unevenly Grouped Space-Channel Contextual Adap-             nels using Variational Autoencoders. In IEEE International
+tive Coding. In Proceedings of the IEEE/CVF Conference on        Symposium on Information Theory (ISIT), 1327–1331.
+Computer Vision and Pattern Recognition (CVPR), 5718–            Shahid, I.; and Yahampath, P. 2013. Distributed Joint
+5727.                                                            Source-Channel Coding Using Unequal Error Protection
+He, D.; Zheng, Y.; Sun, B.; Wang, Y.; and Qin, H. 2021.          LDPC Codes. IEEE Transactions on Communications,
+Checkerboard context model for efficient learned image           61(8): 3472–3482.
+compression. In Proc. IEEE/CVF Conf. Comput. Vis. Pat-           Sø nderby, C. K.; Raiko, T.; Maalø e, L.; Sø nderby, S. r. K.;
+tern Recog. (CVPR), 14771–14780.                                 and Winther, O. 2016. Ladder Variational Autoencoders. In
+Lee, D.; Sugiyama, M.; Luxburg, U.; Guyon, I.; and Gar-        Zhang, G.; Hu, Q.; Qin, Z.; Cai, Y.; Yu, G.; and Tao, X. 2024.
+nett, R., eds., Advances in Neural Information Processing      A Unified Multi-Task Semantic Communication System for
+Systems (NIPS), volume 29. Curran Associates, Inc.             Multimodal Data. IEEE Transactions on Communications,
+Song, M.; Ma, N.; Dong, C.; Xu, X.; and Zhang, P. 2023.        72(7): 4101–4116.
+Deep Joint Source-Channel Coding for Wireless Image            Zhang, W.; Zhang, H.; Ma, H.; Shao, H.; Wang, N.; and Le-
+Transmission with Adaptive Models. Electronics, 12(22).        ung, V. C. M. 2023. Predictive and Adaptive Deep Cod-
+Sun, L.; Yang, Y.; Chen, M.; Guo, C.; Saad, W.; and Poor,      ing for Wireless Image Transmission in Semantic Commu-
+H. V. 2023. Adaptive Information Bottleneck Guided Joint       nication. IEEE Transactions on Wireless Communications,
+Source and Channel Coding for Image Transmission. IEEE         22(8): 5486–5501.
+Journal on Selected Areas in Communications, 41(8): 2628–
+2644.
+Toderici, G.; Shi, W.; Timofte, R.; Theis, L.; Balle,
+J.; Agustsson, E.; Johnston, N.; and Mentzer, F. 2022.
+Workshop and challenge on learned image compression
+(clic2022). In CVPR.
+Townsend, J.; Bird, T.; and Barber, D. 2019. Practical loss-
+less compression with latent variables using bits back cod-
+ing. International Conference on Learning Representations.
+Vahdat, A.; and Kautz, J. 2020. NVAE: A Deep Hierar-
+chical Variational Autoencoder. In Larochelle, H.; Ranzato,
+M.; Hadsell, R.; Balcan, M.; and Lin, H., eds., Advances in
+Neural Information Processing Systems, volume 33, 19667–
+19679. Curran Associates, Inc.
+Wallace, G. 1992. The JPEG still picture compression stan-
+dard. IEEE Transactions on Consumer Electronics, 38(1):
+xviii–xxxiv.
+Wu, H.; Shao, Y.; Ozfatura, E.; Mikolajczyk, K.; and
+Gündüz, D. 2024a. Transformer-aided Wireless Image
+Transmission with Channel Feedback. IEEE Transactions
+on Wireless Communications, 1–1.
+Wu, H.; Shao, Y.; Ozfatura, E.; Mikolajczyk, K.; and
+Gündüz, D. 2024b. Transformer-aided Wireless Image
+Transmission with Channel Feedback. IEEE Transactions
+on Wireless Communications, 1–1.
+Xu, J.; Ai, B.; Chen, W.; Yang, A.; Sun, P.; and Rodrigues,
+M. 2022a. Wireless image transmission using deep source
+channel coding with attention modules. IEEE Transac-
+tions On Circuits And Systems For Video Technology, 32(4):
+2315–2328.
+Xu, T.; Wang, Y.; He, D.; Gao, C.; Gao, H.; Liu, K.; and
+Qin, H. 2022b. Multi-Sample Training for Neural Image
+Compression. In Koyejo, S.; Mohamed, S.; Agarwal, A.;
+Belgrave, D.; Cho, K.; and Oh, A., eds., Advances in Neu-
+ral Information Processing Systems (NeurIPS), volume 35,
+1502–1515. Curran Associates, Inc.
+Yang, K.; Wang, S.; Dai, J.; Qin, X.; Niu, K.; and Zhang, P.
+2024. SwinJSCC: Taming Swin Transformer for Deep Joint
+Source-Channel Coding. IEEE Transactions on Cognitive
+Communications and Networking, 1–1.
+Yang, M.; and Kim, H.-S. 2022. Deep Joint Source-Channel
+Coding for Wireless Image Transmission with Adaptive
+Rate Control. In ICASSP 2022 - 2022 IEEE International
+Conference on Acoustics, Speech and Signal Processing
+(ICASSP), 5193–5197.
+Yuhta Takida, T. S., Yukara Ikemiya. 2024. HQ-VAE: Hier-
+archical Discrete Representation Learning with Variational
+Bayes. arXiv preprint arXiv:2401.00365.
+

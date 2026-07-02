@@ -1,0 +1,1952 @@
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+14859
+
+Robust Information Bottleneck Guided
+Non-Autoregressive Semantic Communication
+With Synonymous Mapping
+Mingtong Zhang , Member, IEEE, Haixia Zhang , Senior Member, IEEE,
+Dongfeng Yuan , Senior Member, IEEE, and Ping Zhang , Fellow, IEEE
+
+Abstract—Semantic communication emerges as a pivotal
+technology for realizing the 6G vision. However, existing
+semantic-aware reconstruction systems rely on syntactic-level
+loss functions for optimization, failing to focus on the precise
+recovery of semantic information and resulting in suboptimal semantic fidelity. Meanwhile, the autoregressive decoding
+architecture adopted in text semantic communication introduces
+prohibitive high latency. To address these two issues, we propose
+a robust information bottleneck (RIB) guided non-autoregressive
+semantic communication (NASC) scheme, named RIB-NASC.
+First, we pioneer the integration of the RIB criterion into
+semantic-aware reconstruction systems, formulating a direct
+optimization objective tailored for underlying semantic recovery
+and establishing an informativeness-robustness trade-off. Second,
+we derive a tractable variational lower bound for the RIB
+objective via variational approximation and a novel synonymous
+mapping-based semantic posterior estimation strategy. Third,
+we design a lightweight non-autoregressive semantic decoder
+architecture based on Transformer encoder, enabling high-speed
+parallel semantic decoding during inference. Extensive simulation
+results demonstrate that the RIB-NASC scheme significantly
+outperforms baseline schemes in terms of semantic recovery
+performance (BLEU score and sentence similarity) and achieves a
+decoding delay reduction of nearly 96.7% compared to traditional
+autoregressive decoding.
+Index Terms—Semantic communication, information bottleneck, non-autoregressive, synonymous mapping, deep learning.
+
+Received 6 August 2025; revised 7 January 2026; accepted 26 March 2026.
+Date of current version 8 April 2026. This work was supported in part by the
+Mobility Program of Sino-German Cooperation and Exchange NSFC under
+Grant M-0626, in part by the Joint Funds of the NSFC under Grant U22A2003
+and Grant U23A20277, and in part by Shandong Institute of Chinese Engineering Science and Technology (S&T) Strategy for Development under Grant
+202501SDZD02. The associate editor coordinating the review of this article
+and approving it for publication was Z. Cai. (Corresponding author: Haixia
+Zhang.)
+Mingtong Zhang is with the School of Control Science and Engineering
+and Shandong Key Laboratory of Intelligent Communication and SensingComputing Integration, Shandong University, Jinan 250061, China (e-mail:
+zmt@mail.sdu.edu.cn).
+Haixia Zhang is with the Institute of Intelligent Communication Technology
+and Shandong Key Laboratory of Intelligent Communication and SensingComputing Integration, Shandong University, Jinan 250061, China (e-mail:
+haixia.zhang@sdu.edu.cn).
+Dongfeng Yuan is with Shandong Key Laboratory of Intelligent Communication and Sensing-Computing Integration, Shandong University, Jinan
+250061, China (e-mail: dfyuan@sdu.edu.cn).
+Ping Zhang is with the State Key Laboratory of Networking and Switching
+Technology, Beijing University of Posts and Telecommunications, Beijing
+100876, China (e-mail: pzhang@bupt.edu.cn).
+Digital Object Identifier 10.1109/TWC.2026.3679533
+
+I. I NTRODUCTION
+HE sixth-generation communications (6G) are anticipated to realize deep integration with intelligence and
+ubiquitous connectivity [1]. Achieving this vision demands
+stringent requirements for delay and transmission rates.
+Semantic communication emerges as a critical enabling technology, focusing on extracting essential semantic information
+and ensuring its reliable reconstruction at the receiver, thereby
+addressing these 6G requirements [2], [3]. By leveraging endto-end joint optimization, semantic communication systems
+offer enhanced intelligence, efficiency, and robustness compared to traditional communication paradigms [4].
+Recent advances in deep learning (DL) have significantly
+advanced semantic information extraction and transmission.
+DL-based semantic communication utilizes deep neural networks (DNNs) to learn compact semantic representations from
+large datasets and map them to transmission symbols via datadriven methods [5]. Existing research generally falls into two
+categories: task-oriented and semantic-aware reconstruction
+[6]. Task-oriented systems extract explicit semantic information tailored for specific downstream tasks (e.g., object
+detection or classification), directly used for task execution
+at the receiver. In contrast, semantic-aware reconstruction
+systems capture the underlying global semantics within data
+to achieve high semantic-fidelity reconstruction at the receiver.
+This paper investigates the second paradigm, specifically
+focusing on text sources as the predominant modality in human
+communications [7].
+Despite the DL-based semantic-aware reconstruction systems having achieved empirical success in diverse wireless
+data transmission scenarios [8], [9], [10], [11], [12], some
+challenges remain in their practical applications. Firstly, the
+invisibility of underlying semantics makes existing works
+have to indirectly optimize DL models through syntactic-level
+metrics (e.g., cross-entropy or mean squared error (MSE)),
+which prioritize token- or pixel-level reconstruction over
+semantic fidelity [8], [11]. This discrepancy between optimization objective and the actual demand inevitably results in
+suboptimal semantic recovery performance. Secondly, there is
+a lack of systematic quantitative analysis for semantic feature
+informativeness throughout transmission [13], which hinders
+the system from achieving full potential given the available resources. Besides, current text semantic communication
+
+T
+
+1536-1276 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14860
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+systems universally employ autoregressive decoders whose
+computational complexity scales linearly with sequence length
+[8], [9], [10]. Decoding a sentence with L tokens thus requires
+O(L) serial operations, causing prohibitive latency for realtime applications.
+To address these issues, we conduct systematic informativeness analysis of the encoding-decoding process based on the
+robust information bottleneck (RIB) criterion [14] and the synonymous mapping [15], thereby constructing an optimization
+objective directly oriented to underlying semantic recovery.
+Moreover, we propose a novel non-autoregressive semantic
+decoder architecture that enables parallel token generation and
+fast inference. This dual advancement not only effectively
+improves the semantic recovery performance but also significantly reduces the decoding delay.
+A. Related Works and Motivations
+This subsection provides a brief review of the related works
+on the semantic-aware reconstruction systems, information
+bottleneck (IB)-based semantic communications, and the nonautoregressive decoding.
+1) Semantic-Aware Reconstruction Systems: DL-based
+semantic-aware reconstruction system typically employs an
+encoder-decoder framework, relying on shared training data
+as an implicit common knowledge base [16]. The goal of
+this framework is to jointly train the encoder and decoder
+to improve the semantic recovery performance, and it has
+been widely applied to different data modalities. For text data,
+Farsad et al. [17] initially established a deep joint sourcechannel coding (JSCC) scheme. Subsequent advancements by
+Xie et al. [8] yielded DeepSC, a Transformer-based semantic communication model demonstrating superior semantic
+extraction capabilities. Building upon DeepSC, a lightweight
+version named L-DeepSC, incorporating parameter quantization and pruning, is proposed for Internet of Things (IoT)
+deployment [7]. Besides, there are many works conducted
+for diverse scenarios such as multi-user transmission [9],
+semantic noise resistance [18], adaptive rate [19], and channel
+state information (CSI)-free transmission [10]. For image data,
+Bourtsoulatze et al. [20] proposed a convolutional neural
+network (CNN)-based deep JSCC scheme, later enhanced
+by Kurka et al. [21] through channel feedback mechanisms.
+Yang et al. [11] and Cheng et al. [22] respectively developed
+new codec backbone networks based on the Swin Transformer
+and the Transformer-CNN architecture to enhance the model
+capacity. Zhang et al. [23] explored prediction-based adaptive semantic transmission. In the context of speech data,
+Weng et al. [24] developed a squeeze-and-excitation network
+based on attention mechanism to reconstruct speech signals.
+Zhou et al. [12] used Swin Transformer to effectively integrate multi-dimensional semantic features. Han et al. [25]
+proposed an end-to-end DL-based transceiver to minimize
+semantic redundancy. It is worth noting that the aforementioned works all adopt cross-entropy (for text) or MSE (for
+image and speech) as the training loss functions. Essentially,
+these loss functions focus more on data recovery metrics (e.g.,
+bilingual evaluation understudy (BLEU) score, peak signalto-noise ratio (PSNR)) rather than semantic fidelity. This
+
+fundamental discrepancy between optimization objectives and
+semantic preservation motivates the pursuit of semantic-level
+optimization.
+2) IB-Based Semantic Communications: The IB criterion,
+pioneered by Tishby et al. [26], [27], offers an informationtheoretic framework for analyzing the trade-off between
+data compression and relevant information preservation in
+DNNs. By maximizing the mutual information (MI) with
+target variables while minimizing redundancy in compressed
+representations, the IB criterion has found applications in
+diverse domains, including robustness enhancement against
+adversarial attacks [28], representation disentanglement [29],
+and domain shift mitigation [30]. Moreover, the advantage
+of the IB criterion in the systematic analysis of feature
+informativeness has recently prompted its adoption in taskoriented semantic communications. For instance, Shao et al.
+[13] employed the IB criterion to model the rate-distortion
+trade-off between encoded feature informativeness and image
+classification accuracy, enabling efficient task-relevant feature
+extraction. Similarly, Wei et al. [31] integrated IB principle
+into federated semantic learning to guide feature extraction and
+model training. Meanwhile, Lyu et al. [32] and Wang et al. [33]
+leveraged IB principle to capture fine-grained robust semantic features and enhance privacy preservation, respectively.
+Besides, the recent works [34], [35], [36] adopted a distributed
+IB (DIB) variant to optimize multi-user collaborative feature
+extraction under rate constraint. Xie et al. [14] developed
+an RIB criterion to formulate the trade-off between feature
+informativeness and robustness against channel variations.
+Although the effectiveness of the IB criterion has been proven
+in task-oriented scenarios, it faces limitations when being
+applied to semantic-aware reconstruction systems. This is
+because IB criterion relies on explicit target variables for MI
+computation, which makes it incompatible with underlying
+semantic recovery [37]. The latest research [37] has attempted
+to modify IB criterion to guide the semantic-aware reconstruction of images in discrete binary channels, but how to apply
+IB criterion in more general continuous feature representation
+remains unexplored.
+3) Non-Autoregressive Decoding: Current text semantic
+communication systems predominantly employ autoregressive
+models for semantic decoding, relying on left-to-right tokenby-token generation where each prediction is conditioned
+on preceding outputs [7], [8], [9], [10]. Such a sequential
+nature inevitably leads to inherent delay during inference.
+To mitigate this limitation, recent advancements in natural
+language processing (NLP) have developed non-autoregressive
+decoding, which attempts to generate each token in the target sequence simultaneously and independently to speed-up
+the decoding process [38]. Fig. 1 illustrates the comparison
+between autoregressive and non-autoregressive decoding. As
+shown in Fig. 1, non-autoregressive decoding operates under
+the conditional independence assumption that each token
+prediction is independent given the encoded source input.
+While enabling parallel generation, this strong assumption is
+unnatural in reality and leads to low fluency and degraded
+generation quality [39]. Recent NLP researchers to alleviate
+this issue focus on reducing output diversity in training data
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+Fig. 1. Illustration of autoregressive and non-autoregressive decoding.
+
+[40], relaxing conditional independence assumptions [41],
+or refining training objectives [42], yet performance gaps
+persist compared to autoregressive counterparts. Fortunately,
+semantic-aware reconstruction exhibits unique advantages for
+non-autoregressive implementation. Unlike general text generation requiring linguistic creativity, this task demands strict
+semantic equivalence and structural alignment between source
+and reconstructed sentences [8]. This intrinsic input-output
+alignment naturally satisfies the conditional independence
+assumption, making non-autoregressive decoding particularly
+suitable for semantic-aware reconstruction. Recent work by
+Peng et al. [18] further validates this potential, demonstrating superior semantic recovery through a specialized
+non-autoregressive decoding scheme. Nevertheless, their architecture retains conventional Transformer decoders originally
+designed for diverse text generation [43], which prioritize
+linguistic fluency over precise semantic preservation [44]. This
+observation motivates our development of a dedicated nonautoregressive decoder architecture specifically optimized for
+semantic reconstruction.
+B. Contributions
+This paper proposes a RIB-guided non-autoregressive
+semantic communication (NASC) scheme with synonymous
+mapping, named RIB-NASC, to improve the semantic recovery performance and reduce the decoding delay of text
+semantic transmission. The major contributions of this paper
+are summarized as follows:
+• We pioneer the integration of the RIB criterion into
+semantic-aware reconstruction systems by modeling
+underlying semantic sources, and design an RIB optimization objective directly aligned with underlying
+semantic recovery. Based on the RIB criterion, we conduct a systematic analysis of the informativeness in
+the encoding and decoding processes, and formulate
+
+14861
+
+the informativeness-robustness trade-off in the encoded
+representations. As a general and model-agnostic framework, the proposed RIB objective addresses the core
+requirements of semantic-aware reconstruction, thereby
+facilitating superior recovery performance.
+• To address the computational intractability of MI, we
+develop a new tractable and differentiable lower bound
+of the RIB objective via a variational lower bound, a
+variational contrastive log-ratio upper bound (vCLUB)
+[45], and a lower bound based on MI neural estimation
+[46]. Moreover, to tackle the invisibility of the underlying
+semantics, we propose a novel synonymous mappingbased posterior estimation strategy, enabling the joint
+approximation of the semantic posterior using the posterior probabilities of multiple synonymous messages.
+• We propose a novel Transformer encoder-based nonautoregressive semantic decoder architecture specifically
+for text reconstruction. By eliminating sequential dependencies in token prediction, this architecture enables
+parallel, fast decoding. Leveraging the profound semantic
+understanding capabilities of Transformer encoder, the
+proposed decoder serves as an effective platform to
+realize the RIB objective. Specifically, it facilitates the
+exploration of synonymous expressions at the receiver,
+thereby further enhancing semantic recovery performance.
+• The effectiveness of the proposed RIB-NASC scheme
+is validated under diverse channel conditions, including
+the additive white Gaussian noise (AWGN), perfectchannel state information (CSI) Rayleigh fading, and
+imperfect-CSI Rayleigh fading channels. Extensive simulation results show that compared to the baseline schemes,
+the proposed scheme effectively improves the semantic
+recovery performance in terms of the bilingual evaluation
+understudy (BLEU) score and sentence similarity, significantly reduces the decoding delay, and exhibits robustness
+across different channel conditions.
+C. Organization
+The rest of the paper is organized as follows. The system model is introduced and the problems are described in
+Section II. In Section III, we comprehensively present the
+proposed RIB-NASC scheme. In Section IV, we provide
+extensive simulation results to evaluate the performance of
+the proposed scheme. Finally, Section V concludes the paper.
+II. S YSTEM N ODEL AND P ROBLEM D ESCRIPTION
+In this section, we first present the proposed text semantic
+communication system with synonymous mapping, which is
+specifically designed for recovering the underlying semantic
+information rather than the exact form of the transmitted sentence. Then, we describe the RIB criterion and the
+RIB-based optimization problem.
+A. System Model
+Fig. 2 shows the proposed point-to-point text semantic
+communication system, which is composed of the transmitter,
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14862
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+AWGN channel, h is a all-one vector, i.e. h = 1N ×1 . The
+signal-to-noise ratio (SNR) γ is defined as
+γ=
+
+E[||h z̃||22 ]
+P
+= 10 log10 2 dB.
+2
+E[||n||2 ]
+σn
+
+(4)
+
+At the receiver, with the estimated CSI, the semantic feature
+vector is recovered by using the zero-forcing detector as
+ẑ = y
+
+Fig. 2. The proposed text semantic communication system with synonymous
+mapping.
+
+the physical channel, and the receiver. In the system, a source
+message x associated with its underlying semantic information
+s is encoded and transmitted through the physical channel. The
+system aims to recover s by estimating multiple synonymous
+messages of x based on the received encoding features.
+The input data x = [w1 , w2 , · · · wL ] is a sentence generated by s from an unknown and complicated probability
+distribution p(x|s), where wl denotes the l-th token of the
+input and L is the length of the sentence. Consequently, x
+serves as a representation of s, implicitly containing all the
+semantic information. The input sentence x is encoded into
+a complex semantic feature vector z using a probabilistic
+encoder pθ (z|x) with the learnable parameter set θ. The
+probabilistic encoder pθ (z|x) is composed of a semantic
+encoder and a joint source channel (JSC) encoder, and the
+encoding process is expressed as
+z = Jen (Sen (x; θ 1 ) ; θ 2 ) ,
+
+(1)
+
+where z ∈ CN ×1 , N is the number of the semantic symbols to be transmitted, Sen (·; θ 1 ) and Jen (·; θ 2 ) denote the
+semantic encoder parameterized by θ 1 and the JSC encoder
+parameterized by θ 2 , respectively. The complete parameter
+set at the transmitter is denoted by θ = {θ 1 , θ 2 }. This
+paper quantifies the transmission overhead using the semantic
+coding rate (SCR), defined as the average number of complex
+semantic symbols required per unit source message [47]. The
+SCR R is given by R = N/L.
+Then, the power normalization operation is applied at the
+encoded semantic feature vector z to satisfy the average power
+constraint P . The normalized signal z̃ is written as
+√
+z
+z̃ = N P √
+.
+(2)
+zHz
+Then, z̃ is transmitted to the receiver over the physical
+channel. The received signal y is written as
+y=h
+
+z̃ + n,
+
+(3)
+
+where denotes the operation of element-wise product,
+ h∈
+CN ×1 is the channel coefficients and n ∼ CN 0, σn2 IN is the
+circular symmetric complex AWGN, σn2 is the channel noise
+power. For Rayleigh fading channel, h ∼ CN (0, IN ), and for
+
+ĥ,
+
+(5)
+
+where
+denotes the operation of element-wise division, ẑ
+is the recovered semantic feature vector, ĥ = h + ∆h
+is the estimated CSI, in which ∆h is the estimation error
+with ∆h ∼ CN (0, σe2 IN ). From the perspective of semantic
+feature vector transmission, the power normalization, physical
+channel, and signal detection can be regarded as an equivalent
+channel model from z to ẑ with a conditional distribution
+p(ẑ|z). Then, the underlying semantic information is recovered by feeding ẑ into a probabilistic decoder pφ (s|ẑ) with
+the learnable parameter set φ.
+Theoretically, the optimal semantic communication model
+is obtained by maximizing the semantic posterior probability pφ (s|ẑ). However, direct computation of the semantic
+posterior is intractable due to the invisibility of s. To overcome this, we resort to the synonymous mapping relationship
+between the source message and the semantic information [15]. The synonymous mapping is one-to-many, i.e.,
+one semantic information has multiple manifestations, which
+means that we can use a set of synonymous messages xsyn =
+(M )
+(2)
+(1)
+{xsyn , xsyn , · · · xsyn } to indicate the same semantic information s (detailed analysis shown in Section III-B). Thus, we
+jointly approximate the intractable semantic posterior pφ (s|ẑ)
+using the posterior probabilities pφ (xsyn |ẑ) of multiple synonymous terms of x.
+Accordingly, the probabilistic decoder pφ (s|ẑ) consists of a
+semantic decoder, a JSC decoder, and a deterministic mapping
+function Fmp (·). The decoding process is expressed as
+x̂syn = Sde (Jde (ẑ; φ1 ) ; φ2 ) ,
+ŝ = Fmp (x̂syn ) ,
+
+(6)
+(7)
+
+(2)
+(M )
+where x̂syn = {x̂(1)
+syn , x̂syn , · · · x̂syn } denotes the set of
+estimated M synonymous sentences of x, ŝ is the recoved
+semantic information, Jde (·; φ1 ) and Sde (·; φ2 ) denote the
+JSC decoder parameterized by φ1 and the semantic decoder
+parameterized by φ2 , respectively. The complete parameter set
+at the receiver is denoted by φ = {φ1 , φ2 }.
+Finally, from the perspective of probabilistic graphical
+model, the underlying semantic s, source message x, encoded
+feature z, recovered feature ẑ, and the recovery semantic
+ŝ are instantiated by random variables SX, Z, Ẑ, and Ŝ,
+respectively, which constitutes the following Markov chain,
+
+S ←→ X ←→ Z ←→ Ẑ ←→ Ŝ,
+
+(8)
+
+which satisfies p(x, z, ẑ, ŝ) = pφ (ŝ|ẑ)p(ẑ|z)pθ (z|x)p(x).
+B. Problem Description
+In the considered communication system, for a given SCR,
+the available symbol resources are fixed. Efficient utilization of
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+14863
+
+The three MI terms in Eq. (9) are mathematically intractable
+due to the invisibility of the semantics S, the high dimensionality of Z, and the unknow of the distributions p(ẑ), p(s|ẑ),
+p(z), p(ẑ|z), and p(ẑ|x). To tackle this challenge, we develop
+a tractable and differentiable form of the RIB objective based
+on variational approximation and the synonymous mapping,
+which will be illustrated in the next section.
+III. T HE P ROPOSED RIB-NASC S CHEME
+This section elaborates the proposed RIB-NASC scheme,
+comprising the variational lower bound of the RIB objective,
+a synonymous mapping-based posterior estimation strategy, a
+non-autoregressive semantic decoder for fast inference, and the
+model implementation.
+Fig. 3. The relation among the semantic information, the coded redundancy,
+and the semantic irrelevant information [14].
+
+these resources is essential for high-fidelity semantic recovery
+at the receiver. This requires both the effective representation
+of the key semantic information and the resilience against
+channel distortion. On the one hand, the encoder pθ (z|x)
+needs to extract the informative components about semantic
+S in message X, while neglecting the irrelevant components.
+On the other hand, the encoder needs to effectively use part
+of these symbol resources to deliberately introduce coded
+redundancy, thereby improving robustness against channel
+distortion. So there is an inherent trade-off between informativeness and robustness, which is a key ingredient for
+the design of semantic communication systems. Following
+the RIB principle [14], we formulates their trade-off as the
+optimization problem,
+max I(S; Ẑ) + β[I(Z; Ẑ) − I(X; Ẑ)],
+pθ (z|x)
+
+(9)
+
+where β ≥ 0 is a hyperparameter that adjusts the trade-off.
+The objective function is a weighted sum of three MI terms,
+where I(S; Ẑ) is comprehended as the amount of preserved
+semantic information in Ẑ about S, I(Z; Ẑ) is the amount of
+information about Z retained in Ẑ after channel transmission,
+and I(X; Ẑ) is the amount of information carried in Ẑ about
+X. Thus, I(X; Ẑ)−I(S; Ẑ) quantifies the semantic irrelevant
+information in Ẑ, and I(Z; Ẑ)−I(X; Ẑ) quantifies the coded
+redundancy information that is deliberately introduced in Z.
+Fig. 3 shows the relation among the semantic information,
+the coded redundancy, and the semantic irrelevant information.
+In Fig. 3, C = maxp(z) I(Z; Ẑ) denotes the channel capacity
+of equivalent channel p(ẑ, z). Regardless of the value of β,
+the maximization of the above objective function is equivalent
+to maximizing the amount of information I(Z; Ẑ) transmitted
+per semantic symbol while minimizing the amount of semantic
+irrelevant information. Thus, the key idea of the above objective is to keep minimal but sufficient semantic information and
+leave the rest redundancy for robust encoding [14].
+By solving the above optimization problem, the optimal
+trade-off between informativeness and robustness adjusted by
+β can be found. However, there is a main challenge when
+applying it to develop actual semantic communication systems:
+
+A. Variational Lower Bound of The RIB Objective
+The RIB objective in Eq. (9) consists of three MI items,
+each of which is analyzed and approximated as follows.
+1) Variational Lower Bound of I(S; Ẑ): The maximization
+of I(S; Ẑ) can be achieved by maximizing its tight lower
+bound. This paper uses the variational approximation method
+to obtain the lower bound of I(S; Ẑ) [48], as follows
+I(S; Ẑ) = H(S) − H(S|Ẑ)
+= H(S) + Ep(s,x) Epθ (ẑ|x) [log p(s|ẑ)]
+
+
+p(s|ẑ)
+= H(S) +Ep(ẑ) Ep(s|ẑ) log
+| {z }
+pφ (s|ẑ)
+|
+{z
+constant
+}
+DKL p(s|ẑ) pφ (s|ẑ)
+
++ Ep(s,x) Epθ (ẑ|x) [log pφ (s|ẑ)],
+|
+{z
+}
+
+(10)
+
+IVLB (S;Ẑ)
+
+where pφ (s|ẑ) is the probabilistic decoder at the receiver, serving as a variational approximation to the true posterior p(s|ẑ).
+The first term H(S) is a non-negative constant given the data
+source. The second term is the expectation of the KullbackLeibler (KL) divergence between p(s|ẑ) and pφ (s|ẑ), and it
+is non-negative. Thus, the variational lower bound of I(S; Ẑ)
+is IVLB (S; Ẑ), as defined in Eq. (10). The lower bound will
+be tighter if pφ (s|ẑ) is closer to p(s|ẑ).
+The expression of IVLB (S; Ẑ) involves two expectation
+operations on the distribution p(s, x) and the distribution
+pθ (ẑ|x) with the effect of stochastic channels, and we use
+Monte Carlo sampling to obtain an unbiased estimation of the
+expectation. With a mini-batch of B data {x(i) }B
+i=1 and sampling K realizations of ẑ with the probabilistic encoder p(z|x)
+and the equivalent channel p(ẑ|z) for each input meaasge x(i) ,
+we have the Monte Carlo estimation of IVLB (S; Ẑ), as follows
+"
+#
+B
+K
+X
+X
+1
+1
+(i,k)
+log pφ (s(i) |ẑ
+) , (11)
+IˆVLB (S; Ẑ) =
+B i=1 K
+k=1
+
+(i)
+
+where s denotes the undelying semantic associated with the
+i-th input x(i) , ẑ (i,k) denotes the k-th realization among K
+realizations corresponding to x(i) . It is worth noting that the
+computation of pφ (s(i) |ẑ (i,k) ) is still intractable due to the
+invisibility of s.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14864
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+2) Variational Upper Bound of I(X; Ẑ): Since I(X; Ẑ)
+is mathematically intractable, this paper minimizes its upper
+bound instead. One well recognized
+variational MI upper
+
+bound is DKL p(ẑ|x) q(ẑ) , where q(ẑ) is the variational
+approximation of the prior distribution p(ẑ) [13], [49]. However, this bound typically requires the explicit form of p(ẑ|x),
+limiting its applicability primarily to simple channel models
+like the AWGN channel. Furthermore, its practical implementation often fixes q(ẑ) as a standard normal distribution,
+potentially leading to high-biased MI estimates. Therefore, to
+obtain a more accurate upper bound of I(X; Ẑ) with unknown
+p(ẑ|x) and p(ẑ), this paper utilizes another MI upper bound
+called vCLUB [45] as
+IvCLUB (X; Ẑ) = Ep(x,ẑ) [log qψ (x|ẑ)]
+− Ep(x) Ep(ẑ) [log qψ (x|ẑ)] ,
+
+(12)
+
+where qψ (x|ẑ) is the variational approximation of the conditional distribution p(x|ẑ), and it is implemented with a
+designed NN module with the learnable parameter set ψ. In
+practice, given a mini-batch of B independent sample pairs
+(i)
+{x(i) , ẑ (i) }B
+denotes the i-th input message and
+i=1 , where x
+(i)
+ẑ denotes the corresponding i-th recovered feature vector,
+IvCLUB (X; Ẑ) has the following unbiased estimation as
+B
+1 X
+ˆ
+log qψ (x(i) |ẑ (i) )
+IvCLUB (X; Ẑ) =
+B i=1
+B
+
+−
+
+B
+
+1 XX
+log qψ (x(j) |ẑ (i) ).
+B 2 i=1 j=1
+
+(13)
+
+Theorem 3.2 in [45] provides insight that vCLUB remains
+an upper bound if the variational joint distribution qψ (x, ẑ) =
+qψ (x|ẑ)p(ẑ) is “closer” to p(x, ẑ) than to p(x)p(ẑ). Thus,
+we need to minimize the KL divergence between qψ (x, ẑ) and
+p(x, ẑ), which can be achieved by minimizing the negative
+log-likelihood of qψ (x|ẑ) as follows
+LNLL (ψ) = −Ep(x,ẑ) [log(qψ (x|ẑ)] .
+
+(14)
+
+In practice, LNLL (ψ) is used to undate the parameter set ψ.
+3) Lower Bound of I(Z; Ẑ): The MI I(Z; Ẑ) is equivalent
+to the KL divergence between the joint probabilities p(z, ẑ)
+and the marginal probabilityp(z)p(ẑ), which is given by
+I(Z; Ẑ) = DKL (p(z, ẑ) p(z)p(ẑ)).
+
+(15)
+
+According to [46], the KL divergence has the following dual
+representation
+DKL (p(z, ẑ) p(z)p(ẑ)) = sup Ep(z,ẑ) [T ]
+T :Ω→R
+
+− log(Ep(z)p(ẑ) [eT ]),
+
+(16)
+
+where the supremum is taken over all functions T such that
+the two expectations are finite. By choosing T to be a designed
+NN module Tχ with the learnable parameter set χ, we have
+the lower bound of I(Z; Ẑ) as following
+I(Z; Ẑ) ≥ Ep(z,ẑ) [Tχ ] − log(Ep(z)p(ẑ) [eTχ ])
+= ILB (Z; Ẑ).
+
+(17)
+
+In practice, with a mini-batch of B independent sample pairs
+(i)
+{z (i) , ẑ (i) }B
+denotes the i-th semantic feature
+i=1 , where z
+vector, ILB (Z; Ẑ) has the empirical estimation as
+B
+1 X
+IˆLB (Z; Ẑ) =
+Tχ (z (i) , ẑ (i) )
+B i=1
+
+
+B X
+B
+X
+(i)
+(j)
+1
+− log  2
+eTχ (z ,ẑ )  .
+B i=1 j=1
+
+(18)
+
+According to Eq. (16), to make the lower bound ILB (Z; Ẑ)
+tight, we need to update the parameter set χ to make
+ILB (Z; Ẑ) as large as possible, which can be achieved by
+minimizing the following loss function
+LNLB (χ) = −Ep(z,ẑ) [Tχ ] + log(Ep(z)p(ẑ) [eTχ ]).
+
+(19)
+
+Overall, by replacing I(S; Ẑ), I(X; Ẑ), and I(Z; Ẑ)
+in Eq. (9) with IˆVLB (S; Ẑ), IˆvCLUB (X; Ẑ), and
+IˆLB (Z; Ẑ), respectively, the estimated variational lower
+bound R̂VLB (θ, φ) of the RIB objective is obtained. The
+corresponding optimization problem is written as
+
+
+max IˆVLB (S; Ẑ) + β IˆLB (Z; Ẑ) − IˆvCLUB (X; Ẑ)
+θ,φ
+(
+B
+K
+1 X 1 X
+log pφ (s(i) | ẑ (i,k) )
+= max
+θ,φ B
+K
+i=1
+k=1
+
+
+
+B
+X
+(i)
+(j)
+1
+eTχ (z ,ẑ ) 
++ β Tχ (z (i) , ẑ (i) ) − log 
+B j=1
+)
+B
+1 X
+(i)
+(i)
+(j)
+(i)
+log qψ (x | ẑ )
+− log qψ (x | ẑ ) +
+B j=1
+4
+
+= max R̂VLB (θ, φ).
+θ,φ
+
+(20)
+
+In the next subsection, a synonymous mapping-based posterior estimation strategy is proposed to tackle the computation
+of pφ (s(i) |ẑ (i,k) ) in Eq. (20).
+B. Synonymous Mapping-Based Posterior Estimation
+This paper resorts to the synonymous mapping defined in
+[15] to deal with the invisibility of semantic information, and
+the definition is recalled as follows.
+Definition 1: Given a message set X = {x1 , x2 , · · · , xQ }
+and its corresponding semantic information set S =
+{s1 , s2 , · · · , sQ̃ } with Q ≥ Q̃, the synonymous mapping is a
+one-to-many mapping function f : S → X \ {∅} that assigns
+each semantic entity si ∈ S to a non-empty subset Xsi ⊆ X .
+The properties of this mapping are characterized by uniqueness
+and completeness, terms introduced here for formal clarity.
+In the definition, Xsi denotes the set of messages associated
+with the same semantic si . Uniqueness refers to that for any
+x ∈ X , there exists exactly one semantic entity si ∈ S such
+that x ∈ Xsi . Equivalently, the induced semantic partitions
+{Xsi }Q̃
+i=1 are pairwise disjoint, i.e., Xsi ∩ Xsj = ∅ for i 6= j,
+which eliminates ambiguity in semantic assignments. Completeness refers to that the union of all semantic partitions
+SQ̃
+covers the entire message set, i.e., i=1 Xsi = X . Together,
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+Fig. 4. An illustration of synonymous mapping [15].
+
+these two properties enforce that {Xsi }Q̃
+i=1 forms a strict
+partition of X into non-overlapping subsets. Fig. 4 depicts
+an example of synonymous mapping.
+Based on the Markov chain shown in Eq. (8), the posterior
+p(s|ẑ) can be rewritten as
+Z
+Z
+p(s, x, ẑ)
+dx = p(s|x)p(x|ẑ)dx.
+(21)
+p(s|ẑ) =
+p(ẑ)
+Then, based on the uniqueness and completeness of synonymous mapping, the conditional probability of s given message
+x is deterministic, written as
+(
+1 if x ∈ Xs ,
+p(s|x) = I{x∈Xs } =
+(22)
+0 otherwise,
+where I(·) denotes the indicator function. The derivation of
+Eq. (22) is provided in Appendix A. By substituting Eq. (22)
+into Eq. (21), the posterior p(s|ẑ) is rewritten as
+Z
+X
+p(s|ẑ) =
+p(x|ẑ)dx =
+p(x|ẑ),
+(23)
+Xs
+
+x∈Xs
+
+where the second equivalence holds as the fact that text
+messages are discrete. Since it is impossible to enumerate all
+the synonymous messages in Xs , the summation in Eq. (23)
+is still mathematically intractable. To tackle this issue, we use
+the uniform sampling in Xs to obtain an unbiased estimation
+of the posterior p(s|ẑ) as follows
+M
+
+p̂(s|ẑ) =
+
+|Xs | X
+p(x(m)
+syn |ẑ),
+M m=1
+
+(24)
+
+where |Xs | denotes the cardinality of Xs , and it is a constant,
+(m)
+xsyn denotes the m-th message sampled from Xs . The proof
+of unbiasedness of Eq. (24) is in Appendix B. By doing so, the
+posterior computation of underlying semantics is transformed
+into that of explicitly synonymous messages.
+In practice, for the input message x with semantic s,
+M sampling operations from Xs are equivalent to randomly
+generating M synonymous messages of x. For text data, this
+can be achieved through synonym substitution, context-aware
+word replacement, etc [50]. For simplicity and without loss of
+generality, this paper uses synonym substitution to generate
+synonymous messages. Algorithm 1 details the process.
+
+14865
+
+Algorithm 1 Synonymous Sentence Generation Algorithm
+Input: Pre-trained embedding layer E, vocabulary V, input
+x = [w1 , w2 , · · · wL ], similarity threshold η, substitution
+probability pr , number of synonymous sentences M .
+1: Initial the set of synonymous sentences: xsyn ← ∅;
+2: // Synonym Identification
+3: while l = 1 to L do
+4:
+Initial the set of synonyms of wl : Cl ← ∅;
+5:
+Calculate the embedding vector of wl : v l ← E(wl );
+6:
+for each token w ∈ V \ {wl } do
+7:
+rsim (w, wl ) ← E(w) · v T
+l /(kv l kkE(w)k);
+8:
+if rsim (w, wl ) ≥ η then
+9:
+Cl ← Cl ∪ {w};
+10:
+end if
+11:
+end for
+12: end while
+13: // Synonymous Sentence Generation
+14: while m = 1 to M do
+(m)
+15:
+Initial the m-th synonymous sentence: xsyn ← [];
+16:
+while l = 1 to L do
+17:
+if Cl 6= ∅ and pr < p ∼ U(0, 1) then
+18:
+wsyn ← RandomSample(Cl );
+(m)
+19:
+append wsyn to xsyn ;
+20:
+else
+(m)
+21:
+append wl to xsyn ;
+22:
+end if
+23:
+end while
+(m)
+24:
+xsyn ← xsyn ∪ {xsyn }
+25: end while
+Output: Set of M synonymous sentences xsyn .
+
+In Algorithm 1, synonyms are identified by calculating the
+cosine similarity between the target token’s embedding and
+the remaining vectors in vocabulary V. We utilize embeddings from pre-trained language models (e.g., GloVe [51]
+and BERT [44]), since they have been shown to be effective in encoding semantic similarities for their extensive
+training on large-scale corpora. This ensures that semantically related words are positioned closely within the vector
+space [51]. Notably, the pre-trained model is employed only
+during the offline preprocessing stage, acting as a static
+similarity metric. As evidenced by the ablation studies in
+Section IV-C, the proposed RIB-NASC scheme remains robust
+across different synonym identification methods, indicating
+that its performance does not rely on a particular pre-trained
+model.
+Specifically, given a token wl in x with its corresponding
+embedding vector v l obtained from the pre-trained embedding
+layer E, we recognize w ∈ V as a synonym of wl when their
+embedding vector’s cosine similarity rsim (w, wl ) exceeds a
+predefined threshold η. After determining the synonym sets
+{Cl }L
+l=1 for all L tokens in x, we generate synonymous
+sentences by iterating through each token in x and randomly
+replacing it with its synonym with a preset probability pr .
+By repeating this process M times, we obtain a set of M
+(1)
+(2)
+(M )
+synonymous messages of x as xsyn = {xsyn , xsyn , · · · xsyn }.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14866
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+Thus, for the i-th sample x(i) associated with s(i) in the
+mini-batch, the computation of pφ (s(i) |ẑ (i,k) ) in Eq. (20) can
+be approximated as
+M
+
+pφ (s(i) |ẑ (i,k) ) ≈
+
+|Xsi | X
+(i,k)
+pφ (x(i,m)
+),
+syn |ẑ
+M m=1
+
+(25)
+
+By substituting Eq. (25) into Eq. (20), the variational lower
+bound R̂VLB (θ, φ) has the following tractable and differentiable approximation,
+R̂VLB (θ, φ)
+
+B 
+X
+1
+≈
+log |X |
+| {z si}
+B
+i=1
+
+Fig. 5. The architecture of the proposed non-autoregressive semantic decoder.
+
+constant
+
+K
+M
+
+
+1 X
+1 X
+(i,k)
+log
+pφ x(i,m)
++
+syn | ẑ
+K
+M m=1
+k=1
+
+
+B
+
+
+X
+(i)
+(j)
+1
++ β Tχ z (i) , ẑ (i) − log 
+eTχ (z ,ẑ ) 
+B j=1
+
+B
+
+X
+1
+− log qψ (x(i) | ẑ (i) ) +
+log qψ (x(j) | ẑ (i) ) ,
+
+B
+j=1
+
+(26)
+(i,m)
+
+where log |Xsi | is a constant given the data source, xsyn
+denotes the generated m-th synonymous message of x(i) , and
+it is explicit.
+C. Non-Autoregressive Semantic Decoder for Fast Inference
+To address the inference delay bottleneck in autoregressive
+semantic decoding, this paper adopts non-autoregressive modeling paradigms. This approach enables parallel prediction of
+all tokens in the target sequence, achieving significant speedup.
+Formally, for an input sequence X = [x1 , x2 , · · · , xL1 ], the
+model independently outputs each token in the target sequence
+Y = [y1 , y2 , · · · , yL2 ], with its probability modeling as
+pφ (Y|X) =
+
+L2
+Y
+
+pφ (yl |X),
+
+(27)
+
+l=1
+
+where pφ (yl |X) denotes the probability that the l-th token
+in Y is yl given input X. Although the conditional independence assumption in Eq. (27) enables parallel prediction, it
+typically compromises performance in context-sensitive tasks
+(e.g., machine translation) due to misalignment between input
+and output distributions.
+Fortunately, semantic-aware reconstruction tasks exhibit
+inherent consistency between input and target sequences. For
+text semantic-aware reconstruction with synonymous mapping,
+given the input message
+x = [w1 , w2 , · · · wiL ], the target
+h
+(m)
+(m)
+(m)
+(m)
+sequence xsyn = wsyn,1 , wsyn,2 , · · · wsyn,L is the m-th
+synonymous message of x, probability modeling in Eq. (27)
+is re-writen as follows
+pφ (x(m)
+syn |x) =
+
+L
+Y
+l=1
+
+(m)
+
+pφ (wsyn,l |x).
+
+(28)
+
+Due to the high consistency between x and xm
+syn in terms of
+semantics and form, the elements in xm
+syn naturally exhibit
+mutual independence given x, making non-autoregressive
+models highly compatible with semantic-aware reconstruction.
+Conventional non-autoregressive models in NLP typically
+adopt the Transformer encoder-decoder architecture [38],
+[39], [40], [41], [42]. In such frameworks, the encoder captures global contextual dependencies via self-attention, while
+the decoder employs cross-attention to model the mapping
+between input and output sequences, making it well-suited
+for generating diverse, fluent text. However, semantic-aware
+reconstruction prioritizes precise semantic preservation—the
+primary goal of the RIB objective—over linguistic diversity.
+Although the RIB objective is inherently model-agnostic, its
+effective realization requires the semantic decoder to possess
+powerful semantic understanding capabilities to facilitate the
+exploration of synonymous semantic spaces at the receiver.
+Given that the Transformer encoder’s global context modeling capabilities align perfectly with these requirements,
+we propose a lightweight, Transformer encoder-based nonautoregressive semantic decoder.
+As depicted in Fig. 5, the proposed semantic decoder comprises LD stacked Transformer encoder layers and an output
+layer. Unlike traditional Transformer decoder-based semantic
+decoders, which require additional receiver input sequences
+and masking mechanisms as input, the proposed semantic
+decoder need only the JSC decoder’s output O ∈ RL×D
+as input, where D is the feature dimension. By passing
+O through LD Transformer encoder layers, the intermediate
+output U ∈ RL×D is obtained as follows
+U = Ten (O; φ02 ).
+
+(29)
+
+where Ten (·; φ02 ) represents the cascaded LD Transformer
+encoder layers parameterized by φ02 . Subsequently, U is
+projected to the vocabulary dimension V via an output layer
+consisting of a fully connected (FC) layer and softmax activation function, yielding the predicted probability distribution
+of all L target tokens P out in parallel,
+P out = Softmax(F C(U ; φ002 )) ∈ RL×V .
+
+(30)
+
+where F C(·; φ002 ) denotes the FC layer parameterized by φ002 .
+(m)
+At training phase, the target token wsyn,l is known. Its
+(m)
+predicted probability pφ (wsyn,l |ẑ) corresponds to the element
+(m)
+at the l-th row and idx(wsyn,l )]-th column of P out , expressed
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+14867
+
+Fig. 6. The proposed neural network architecture for text semantic communication with non-autoregressive semantic decoder.
+
+R̂VLB (θ, φ) of the RIB objective. By introducing the conditional independence assumption into Eq. (26) and ignoring
+constant term, the loss function L̂VRIB (θ, φ) is expressed as,
+L̂VRIB (θ, φ)
+= −R̂VLB (θ, φ)
+
+B
+K
+M L(i)
+
+
+1 X 1 X
+1 XY
+(i,m)
+− log
+pφ wsyn,l | ẑ (i,k)
+=
+B i=1  K
+M m=1
+k=1
+l=1
+
+
+
+B
+
+
+X
+(i)
+(j)
+1
+(i)
+T
+(z
+,ẑ
+)
+(i)
+
+e χ
+− β Tχ z , ẑ
+− log 
+B j=1
+
+B
+
+X
+1
+− log qψ (x(i) | ẑ (i) ) +
+log qψ (x(j) | ẑ (i) ) .
+
+B
+
+Fig. 7. The architecture of the proposed MI estimation module.
+
+j=1
+
+(32)
+(m)
+
+as P out [l, idx(wsyn,l )], where idx(wl ) denotes the index of
+token wl in the vocabulary V. Then, the model parameters
+(m)
+are updated to maximize pφ (wsyn,l |ẑ). At inference phase,
+the target token is unknown and predicted via an arg max
+operation over the learned probability distribution. We have
+the l-th token in target sequence as
+"
+#
+ŵl = V
+
+arg max P out [l, k] .
+
+(31)
+
+k∈1,2,··· ,|V|
+
+where the arg max operation is treated as an implementation
+of the deterministic mapping function Fmp (·) in Eq. (7).
+D. Model Implementation
+The architecture of the NN for text semantic communication
+proposed in this paper, named RIB-NASC model, is shown
+in Fig. 6, which incorporates the proposed non-autoregressive
+semantic decoder. Additionally, as shown in Fig. 7, two
+lightweight NN modules are proposed to estimate the upper
+and lower bounds of MI. Among them, the upper bound
+module parameterized by ψ utilizes multiple FC layers and
+a Transformer encoder layer, while the lower bound module
+parameterized by χ is composed solely of multiple FC layers.
+It is worth noting that these two MI estimation modules
+serve as auxiliary components at the training phase of the
+RIB-NASC model, and they are excluded from the inference
+stage upon actual deployment.
+For the training of the RIB-NASC model, the loss function
+L̂VRIB (θ, φ) used is the negative variational lower bound
+
+where L(i) denotes the length of x(i) .
+The training process of the RIB-NASC model is summarized in Algorithm 2. Within each training batch, the
+parameters ψ and χ of both MI estimation modules are first
+updated. The variational loss L̂VRIB (θ, φ) is then evaluated
+using the updated MI estimation modules, followed by optimization of the RIB-NASC parameters θ and φ.
+IV. S IMULATIONS AND P ERFORMANCE A NALYSIS
+The performance of the proposed RIB-NASC scheme is
+evaluated through extensive simulations in terms of the BLEU
+score and sentence similarity. An ablation study is also conducted to verify the effectiveness of both the RIB optimization
+objective and the non-autoregressive semantic decoder.1
+A. Simulation Settings
+1) The Dataset: The adopted dataset is the English version
+of the proceedings of the European Parliament [52], which
+consists of around 2.2 million sentences. The dataset is preprocessed into lengths of sentences with 4 to 30 words. The
+dataset is partitioned into 90% for training and 10% for testing.
+2) Training Settings: The model was trained over
+C = 60 epochs with a batch size of B = 384 using the Adam
+optimizer, where the RIB-NASC model used an initial learning
+rate of 1 × 10−3 (halved every 20 epochs) while both MI
+estimation modules employed a fixed learning rate of 5×10−4 .
+For synonymous sentence generation, the adopted pre-trained
+1 Codes are available at: https://github.com/zmt123sdu/RIB-NASC
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14868
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+Algorithm 2 RIB-NASC Model Training Algorithm
+Input: Training dataset K, epochs C, batch size B, Monte
+Carlo samples K, number of synonymous sentences M .
+1: Initial model parameters θ, φ, ψ, χ;
+2: while epoch c = 1 to C do
+3:
+Sample a batch of data {x(i) }B
+i=1 from K;
+4:
+// MI Estimation Module Optimization
+5:
+for each sample x(i) do
+6:
+Compute semantic feature vector z (i) by Eq. (1);
+7:
+Sample channel SNR γ ∼ U (0, 24);
+8:
+Generate ẑ (i) ∼ p(ẑ|z (i) ) {Channel transmission};
+9:
+Compute qψ (x(i) |ẑ (i) ) {MI upper bound};
+10:
+Compute Tχ (z (i) , ẑ (i) ) {MI lower bound};
+11:
+end for
+12:
+Compute LNLL (ψ) and LNLB (χ) by Eq. (14) and
+Eq. (19), respectively;
+13:
+Update model parameters ψ and χ by gradient descent;
+14:
+// RIB-NASC model Optimization
+15:
+for each sample x(i) do
+(i)
+16:
+Get K channel outputs {ẑ (i,k) }K
+k=1 ∼ p(ẑ|z );
+(i) (i)
+17:
+Compute qψ (x |ẑ ) {MI upper bound};
+18:
+Compute Tχ (z (i) , ẑ (i) ) {MI lower bound};
+(i,m)
+19:
+Generate {xsyn }M
+m=1 by Algorithm 1;
+(i,m)
+20:
+Get the predicted probability pφ (wsyn,l | ẑ (i,k) ) by
+(i,k)
+passing ẑ
+through the decoder;
+21:
+end for
+22:
+Compute L̂VRIB (θ, φ) by Eq. (32);
+23:
+Update model parameters θ and φ by gradient descent;
+24: end while
+Output: The trained RIB-NASC model.
+
+embedding layer E is obtained from the bert-base-uncased
+model,2 similarity threshold η = 0.5, substitution probability
+pr = 0.2, number of synonymous sentences M = 1. If not
+specified, the number of Monte Carlo sampling K = 1, the
+hyperparameter β is set 1 × 10−3 for AWGN channels and
+1 × 10−2 for Rayleigh fading channels to balance semantic
+informativeness and transmission robustness.
+3) Evaluation Metric: Semantic recovery performance is
+evaluated using two widely recognized metrics: the BLEU
+score and sentence similarity.
+• BLEU score: This metric quantifies the token-level similarity between transmitted sentence x and recovered
+sentence x̂ by comparing n-gram matches, where n
+denotes the token group size. Following the formulation
+in [8], the BLEU score is computed as
+log BLEU = min(1 − L/L0 , 0) +
+
+N
+X
+
+un log pn , (33)
+
+n=1
+
+where L and L0 denote the length of x and x̂, respectively, un is the n-gram weight(set to 0.25 for n = 1, 2,
+3, 4), and pn is the n-gram precision expressed as
+P
+min (Ck (x), Ck (x̂))
+pn = k P
+(34)
+k Ck (x̂)
+2 https://huggingface.co/google-bert/bert-base-uncased
+
+where Ck (·) counts occurrences of the k-th n-gram.
+The BLEU score ranges within [0, 1], with higher values
+indicating better token alignment. While computationally efficient, this metric only compares the difference
+between tokens in two sentences and does not have
+insight into the meaning of different tokens.
+• Sentence similarity: This metric quantifies the sentencelevel similarity, and its calculation is based on a
+pre-trained sentence embedding model B Φ (specifically,
+all-roberta-large-v1 model3 in this paper), which has
+been trained on billions of sentences and fine-tuned on
+semantic textual similarity tasks. The metric is computed
+as
+B Φ (x) · B Φ (x̂)T
+(35)
+sim(x, x̂) =
+kB Φ (x)k kB Φ (x̂)k
+The metric ranges within [0, 1], and a higher score implies
+a higher semantic fidelity. As demonstrated in [18], this
+metric aligns closely with human judgment.
+4) Baselines: We chose two DL-based text semantic communication schemes and a traditional separate source channel
+coding scheme as baselines. They are
+• DeepSC [8]: A DL-based autoregressive text semantic
+communication scheme. It adopts cross-entropy loss and
+employs Transformer decoder for semantic decoding.
+• NA-DeepSC [18]: A non-autoregressive variant of
+DeepSC, that utilizes a similar Transformer decoder and
+cross-entropy loss, but requires a placeholder sequence
+with known target length as decoder input.
+• Huffman-LDPC: A traditional separation-based scheme
+comprising: (i) token-level Huffman coding (using a
+codebook generated from the test dataset); (ii) quadrature
+amplitude modulation (QAM); (iii) Low-density paritycheck (LDPC) channel coding (using min-sum decoding
+algorithm with 20 iterations, and block length 648).
+To facilitate fair comparison in simulations, the QAM
+modulation order and LDPC code rate are adjusted to
+match or exceed the SCR of the DL-based counterparts.
+In the simulations, all schemes are evaluated over AWGN
+and Rayleigh fading channels at different SCRs. For the
+Rayleigh channel, perfect CSI and imperfect CSI obtained by
+the least square (LS) channel estimation are considered by
+assuming σe2 = 0 and σe2 = σn2 /P , respectively [47].
+B. Semantic Recovery Performance
+We first investigate the impact of SNR variations on the
+proposed RIB-NASC scheme under a fixed SCR R = 4. For
+fair comparison, Huffman-LDPC employs (324, 648) LDPC
+coding with 16-QAM, yielding an equivalent SCR of 4.55.
+Fig. 8 shows the BLEU score performance of RIB-NASC
+and the three baselines across diverse channel conditions.
+It is seen that RIB-NASC consistently achieves the highest BLEU score across nearly all SNR regimes, indicating
+superior token-level semantic recovery fidelity. As shown in
+Fig. 8a for AWGN channel, RIB-NASC significantly outperforms DeepSC and NA-DeepSC in low-to-medium SNR
+3 https://huggingface.co/sentence-transformers/all-roberta-large-v1
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+14869
+
+Fig. 8. BLEU scores of RIB-NASC, NA-DeepSC, DeepSC, and Huffman-LDPC over different channels at R = 4: (a) AWGN channel, (b) Rayleigh fading
+channel with perfect CSI, (c) Rayleigh fading channel with imperfect CSI.
+
+Fig. 9. Sentence similarities of RIB-NASC, NA-DeepSC, DeepSC, and Huffman-LDPC over different channels at R = 4: (a) AWGN channel, (b) Rayleigh
+fading channel with perfect CSI, (c) Rayleigh fading channel with imperfect CSI.
+
+regimes (<9 dB). Huffman-LDPC exhibits negligible performance in this range due to the cliff effect of LDPC
+coding. Beyond 15 dB in SNR, all schemes achieve comparable performance as they approach error-free sentence
+reconstruction. Under Rayleigh fading channels with perfect
+CSI in Fig. 8b, RIB-NASC shows more substantial gains,
+achieving approximately 56% and 85% higher BLEU scores
+than DeepSC and NA-DeepSC at 9 dB SNR, respectively.
+This improvement stems from the Transformer encoder-based
+semantic decoder’s deep semantic understanding capabilities and the non-autoregressive architecture. The consistent
+superiority of NA-DeepSC over DeepSC further validates
+the compatibility of non-autoregressive decoding with text
+semantic reconstruction. Under imperfect CSI conditions as
+shown in Fig. 8c, RIB-NASC maintains a 30–40% average
+BLEU score advantage over semantic communication baselines, demonstrating robustness enabled by the RIB objective.
+Conversely, Huffman-LDPC exhibits inferior performance to
+all semantic communication schemes and converges to a
+limited performance region at high SNR due to fading effects.
+The sentence similarity performance at SCR R = 4
+is shown in Fig. 9. The observed trends align with the
+BLEU score results in Fig. 8. In medium-to-high SNR
+regimes, RIB-NASC demonstrates significant performance
+
+advantages in sentence similarity compared to DeepSC and
+NA-DeepSC, consistent with its optimization directly targeting
+underlying semantic recovery. Notably, under extremely low
+SNR conditions over Rayleigh fading channels, as shown in
+Fig. 9b and Fig. 9c, RIB-NASC and NA-DeepSC exhibit
+slightly inferior performance to DeepSC. This occurs because
+DeepSC’s autoregressive decoding inherently preserves linguistic fluency, which becomes critical under severe channel
+degradation. Nonetheless, RIB-NASC consistently outperforms NA-DeepSC due to its advanced optimization objective
+and decoder structure.
+we further analyze the performance of the proposed scheme
+under imperfect CSI Rayleigh fading channels across different
+SCRs, specifically, R = 2, 4, 6, and 8. For benchmarking,
+Huffman-LDPC employs distinct configurations: (324, 648)
+LDPC coding with 256-QAM (R ≈ 2.27), (324, 648) with
+16-QAM (R ≈ 4.55), (486, 648) with 4-QAM (R ≈ 6.07),
+and (324, 648) with 4-QAM (R ≈ 9.10).
+As shown in Figs. 10 and 11, RIB-NASC achieves optimal or near-optimal BLEU scores and sentence similarity
+across all SCRs and SNR regimes, demonstrating its robustness and versatility. As SCR increases, the performance
+gap between DeepSC and NA-DeepSC narrows significantly,
+particularly when the SNR exceeds 12 dB. This reveals
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14870
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+Fig. 10. BLEU score versus SNR over Rayleigh fading channel with imperfect
+CSI.
+
+Fig. 11. Sentence similarity versus SNR over Rayleigh fading channel with
+imperfect CSI at different SCRs: (a) R = 2 and R = 6, (b) R = 4 and
+R = 8.
+
+that abundant symbolic resources diminish the impact of
+decoding-methodology on semantic recovery performance for
+the same NN architecture. In addition, owing to the dedicated Transformer encoder-based non-autoregressive decoder
+and the RIB-guided optimization, RIB-NASC consistently
+outperforms both DeepSC and NA-DeepSC. This advantage
+is especially pronounced in medium-to-high SNR regions
+(>6 dB) for low SCRs (R = 2 or 4), where efficient semantic
+compression is paramount.
+C. Ablation Study
+A ablation study is conducted to evaluate the performance
+gains of two primary components in RIB-NASC: the RIB
+objective with synonymous mapping and the Transformer
+encoder-based non-autoregressive semantic decoder. The study
+is further extended to investigating the impact of critical
+parameters, including the trade-off hyperparameter β, synonym identification methods, the similarity threshold η, and
+the number of synonymous sentences M , to provide a comprehensive analysis of the system’s behavior.
+1) Optimation Objective and Semantic Decoder: To isolate
+the individual contributions of the proposed components, we
+evaluate three ablated variants against the full RIB-NASC
+scheme: (1) NASC, which replaces the RIB objective with
+cross-entropy loss; (2) RIB-NA-DeepSC, which substitutes
+our Transformer encoder-based semantic decoder with a standard semantic decoder; and (3) RIB-DeepSC, which integrates
+the RIB objective into the original DeepSC scheme.
+The performance comparisons over Rayleigh fading channel with imperfect CSI are prensented in Fig. 12. It is
+
+Fig. 12. BLEU scores and sentence similarities of different schemes over
+Rayleigh fading channel with imperfect CSI at R = 2: (a) BLEU score,
+(b) Sentence similarity.
+
+Fig. 13. Sentence similarities of RIB-NASC with different β ∈ [0, 1] at
+R = 2: (a) AWGN channel, (b) Rayleigh fading channel with imperfect CSI.
+
+shown that RIB-NASC and NASC significantly outperform
+RIB-NA-DeepSC and NA-DeepSC in sentence similarity
+across most SNRs. This effectively demonstrates the superiority of the proposed semantic decoder in semantic recovery.
+Furthermore, the incorporation of the RIB objective consistently enhances performance, yielding a 5.9% gain in
+sentence similarity for RIB-NASC over NASC, and a 2.2%
+gain for RIB-NA-DeepSC over NA-DeepSC (and similarly
+for RIB-DeepSC over DeepSC). This validates the general
+effectiveness of the RIB objective, with the gain being
+more pronounced when paired with our semantic decoder.
+This is attributed to the Transformer encoder-based semantic
+decoder’s profound semantic understanding capacity, which
+ideally complements the RIB principle. Conversely, the BLEU
+scores of RIB-aided versions are marginally lower, which is
+because the RIB optimize semantic fidelity rather than tokenlevel exact match measured by BLEU score.
+2) Trade-Off Hyperparameter β: The impact of the hyperparameter β in the RIB objective is investigated by evaluating
+the proposed RIB-NASC schemes with different β ∈ [0, 1]. As
+shown in Fig. 13, for both AWGN and imperfect CSI Rayleigh
+fading channels, RIB-NASC with an optimally tuned β > 0
+achieves higher sentence similarity across all SNR regimes
+compared to β = 0, the baseline. Notably, the optimal β is
+channel-dependent: it is 0.01 for the imperfect CSI Rayleigh
+fading channel, an order of magnitude larger than the 0.001
+optimal for the AWGN channel. This result confirms that the
+RIB objective, via β, effectively regulates coding redundancy,
+thereby achieving a superior trade-off between robustness and
+informativeness tailored to the channel conditions.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+Fig. 14. Sentence similarity of RIB-NASC with different synonym identification methods and η ∈ (0, 1) over Rayleigh fading channel with imperfect CSI
+at R = 2: (a) Performance across different synonym identification methods,
+(b) Performance across different η.
+
+TABLE I
+
+14871
+
+Fig. 15. Convergence analysis of RIB-NASC under different hyperparameters:
+(a) training loss versus epochs with varied initial learning rates, (b) mutual
+information versus epochs with different β, evaluated over Rayleigh fading
+channel with imperfect CSI at R = 2.
+TABLE II
+C OMPARISONS OF M ODEL S IZE AND C OMPUTATIONAL C OMPLEXITY
+
+T RAINING T IME AND S ENTENCE S IMILARITY C OMPARISON OF
+RIB-NASC (W ITH VARYING M ), NASC, AND D EEP SC U NDER
+I MPERFECT CSI R AYLEIGH FADING C HANNEL W ITH
+D IFFERENT SNR S AT R = 2
+
+D. Model Training Performance
+
+3) Synonym Identification Method and Similarity Threshold: The sensitivity of RIB-NASC to different synonym
+identification methods and similarity thresholds η is then
+evaluated under Rayleigh fading channels with imperfect CSI
+at R = 2. Three distinct identification paradigms are compared: BERT (context-aware embeddings), GloVe (global word
+vectors), and WordNet (lexical database) [53]. As illustrated
+in Fig. 14a, RIB-NASC achieves nearly invariant performance
+across all three paradigms at a representative threshold of
+η = 0.5. This consistency suggests that the performance
+gains are primarily attributed to the RIB optimization objective
+and the proposed semantic decoder, rather than a reliance
+on specific synonym identification methods. Furthermore,
+Fig. 14b demonstrates that the system performance maintains
+stable over a wide threshold range (e.g., η ∈ [0.3, 0.5]),
+indicating robustness to the choice of η. These results confirm
+that RIB-NASC is effectively decoupled from external NLP
+tools, ensuring its generalizability and reliability in diverse
+operational environments.
+4) The Number of Synonymous Sentences: The effect of
+the number of synonymous sentences M is investigated and
+summarized in Table I. It is observed that increasing M yields
+a marginal decline in sentence similarity across various SNRs,
+accompanied by a linear increase in training complexity. Such
+a trend suggests that larger M values increase the complexity
+of the learning objective, thereby impeding optimal training.
+Since M = 1 provides a sufficient stochastic approximation
+of the semantic posterior with minimal computational cost, it
+is selected as the default setting.
+
+The convergence characteristics of the RIB-NASC are analyzed in Fig. 15. Specifically, Fig. 15a illustrates the training
+loss over epochs under different initial learning rates, while
+Fig. 15b tracks the evolution of the MI terms, I(X; Ẑ) and
+I(Z; Ẑ), for different β. As shown in Fig. 15a, RIB-NASC
+exhibits stable convergence across all evaluated learning rates.
+The periodic step-wise reductions in the loss curves correspond to the scheduled learning rate decay implemented every
+20 epochs. Among the candidates, an initial learning rate
+of 10−3 yields the minimum steady-state loss and is thus
+adopted as the default configuration. Fig. 15b demonstrates
+the convergence of the MI terms. In accordance with the
+RIB objective, a larger β promotes higher converged I(Z; Ẑ)
+and a lower converged I(X; Ẑ). This trend confirms that
+the adopted MI estimation modules accurately facilitate the
+intended information-theoretic trade-off.
+Furthermore, Table I shows that the training overhead of
+RIB-NASC is approximately twice that of the baseline NASC.
+This increase stems from the auxiliary gradients required to
+update the MI estimation modules in each iteration. Notably,
+these modules are only active during training and will be
+removed during inference. Consequently, RIB-NASC retains
+the same inference latency as the NASC.
+E. Computational Complexity
+Table II shows the model size and computational complexity of RIB-NASC, DeepSC, and NA-DeepSC. Owing
+to its lightweight semantic decoder and non-autoregressive
+decoding paradigm, RIB-NASC model demonstrates superior
+hardware efficiency and inference speed compared to the two
+baseline schemes. With only 10.45 million parameters (31%
+fewer than NA-DeepSC and DeepSC), RIB-NASC saves the
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14872
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+system memory significantly, but maintains superior performance. Meanwhile, we calculate the floating-point operations
+(FLOPs) for all schemes and test their average decoding time
+during inference for a single sentence on an Nvidia Tesla
+V100 GPU. As detailed in Table II, the proposed Transformer encoder-based non-autoregressive decoder architecture
+reduces the number of FLOPs to 60.39 million–an order-ofmagnitude reduction compared to DeepSC’s 526.12 million
+FLOPs. Furthermore, RIB-NASC achieves a revolutionary
+96.7% reduction in decoding latency compared to autoregressive DeepSC, while still outperforming the non-autoregressive
+NA-DeepSC baseline by 19% in inference speed. This substantial acceleration improves the efficiency of RIB-NASC for
+semantic communications, making it a practical solution for
+online services.
+V. C ONCLUSION
+In this work, we proposed RIB-NASC, a novel semantic
+communication structure that integrates the RIB principle,
+synonymous mapping, and non-autoregressive decoding to
+address the dual challenges of suboptimal semantic fidelity and
+prohibitive decoding latency in semantic-aware reconstruction
+systems. By pioneering the RIB framework for semanticaware reconstruction, we established an optimization objective
+that directly maximizes semantic information preservation
+and formulated an informativeness-robustness trade-off in the
+encoded representations. We propose a novel synonymous
+mapping-based posterior estimation strategy, together with
+which and variational approximation, we further derived a
+computationally tractable lower bound for the RIB objective.
+With the lower bound, the intractability of MI computation and
+semantic invisibility are solved. Furthermore, a lightweight
+Transformer encoder-based non-autoregressive decoder architecture was proposed to eliminate sequential dependency in
+token generation, achieving parallel decoding while maintaining deep semantic understanding. Extensive simulation
+results over diverse channel conditions demonstrate that
+RIB-NASC significantly outperforms the state-of-the-art baselines in terms of BLEU score and sentence similarity, while
+reducing decoding latency by 96.7% compared to autoregressive approaches. These breakthroughs position RIB-NASC as a
+foundational framework for high-fidelity, low-latency semantic
+communications in next-generation intelligent networks.
+The proposed RIB objective with synonymous mapping
+is modality-agnostic and can be generalized to semanticaware reconstruction for other modalities, such as images or
+audio. Specifically, in image-based semantic communication,
+synonymous samples can be generated via standard data
+augmentation techniques (e.g., rotation, brightness adjustment,
+or sharpening). However, in contrast to textual sequences
+that often exhibit token-level alignment, semantically similar
+images may possess significant pixel-level discrepancies. This
+disparity poses challenges for directly computing the semantic
+posterior from reconstructed images. A viable solution is to
+employ projection networks from contrastive learning, which
+enable posterior estimation in a mapped semantic space. Such
+an extension aligns with our framework and represents a
+promising direction for future research.
+
+A PPENDIX A
+D ERIVATION OF THE C ONDITIONAL P ROBABILITY p(s|x)
+Recall that Definition 1, the synonymous mapping is characterized by uniqueness and completeness. These properties
+ensure that the collection of subsets {Xsi }Q̃
+i=1 constitutes a
+partition of the message space X , such that each message
+x ∈ X belongs to exactly one subset Xsi . Consequently,
+for any message x, the associated semantic information s is
+uniquely determined as the entity si satisfing x ∈ Xsi .
+The conditional probability p(s|x) thus characterizes the
+deterministic relationship between a message and its semantic
+meaning. Given that each x is associated with a unique semantic entity s∗ , the conditional distribution p(s|x) collapses to
+a point mass:
+(
+1, if s = s∗ , (x ∈ Xs ),
+(36)
+p(s|x) =
+0, if s 6= s∗ , (x ∈
+/ Xs ).
+
+A PPENDIX B
+P ROOF OF U NBIASEDNESS FOR U NIFORM S AMPLING
+(m)
+
+Since the samples xsyn are independently and identically
+distributed following a uniform distribution over Xs , the
+probability of drawing any specific message x ∈ Xs is 1/|Xs |.
+(m)
+Therefore, for a sample xsyn , its expectation is:
+
+h
+i
+X  1
+·
+p(x|ẑ)
+Ex(m) ∼U (Xs ) p(x(m)
+|ẑ)
+=
+syn
+syn
+|Xs |
+x∈Xs
+X
+1
+=
+p(x|ẑ).
+(37)
+|Xs |
+x∈Xs
+
+Utilizing the linearity of expectation, the expectation of the
+estimator is:
+#
+"
+M
+|Xs | X
+(m)
+p(xsyn |ẑ)
+E [p̂(s|ẑ)] = E
+M m=1
+=
+
+M
+i
+|Xs | X h
+E p(x(m)
+|ẑ)
+syn
+M m=1
+
+M
+|Xs | X
+=
+M m=1
+
+=
+
+1 X
+p(x|ẑ)
+|Xs |
+
+!
+
+x∈Xs
+
+M
+X
+
+X
+1
+p(x|ẑ).
+M m=1
+
+(38)
+
+x∈Xs
+
+P
+The inner summation
+x∈Xs p(x|ẑ) is exactly the true posP
+terior p(s|ẑ) = x∈Xs p(x|ẑ) from Eq. (23). As this term is
+a constant with respect to the index m, we have:
+M
+
+E [p̂(s|ẑ)] =
+
+1 X
+p(s|ẑ) = p(s|ẑ).
+M m=1
+
+(39)
+
+This completes the proof, confirming that p̂(s|ẑ) is an
+unbiased estimator of p(s|ẑ).
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+ZHANG et al.: ROBUST INFORMATION BOTTLENECK GUIDED NASC WITH SYNONYMOUS MAPPING
+
+R EFERENCES
+[1]
+
+X. You, Y. Huang, C. Zhang, J. Wang, H. Yin, and H. Wu,
+“When AI meets sustainable 6G,” Sci. China Inf. Sci., vol. 68, no. 1,
+pp. 110301:1–110301:19, Jan. 2025.
+[2] M. Xu et al., “Semantic-aided parallel image transmission compatible
+with practical system,” IEEE Trans. Wireless Commun., vol. 24, no. 10,
+pp. 8476–8491, Oct. 2025, doi: 10.1109/TWC.2025.3566886.
+[3] S. Gao, X. Qin, L. Chen, Y. Chen, K. Han, and P. Zhang, “Importance of
+semantic information based on semantic value,” IEEE Trans. Commun.,
+vol. 72, no. 9, pp. 5443–5457, Sep. 2024.
+[4] H. Xie, Z. Qin, and G. Y. Li, “Semantic communication with memory,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2658–2669, Aug. 2023.
+[5] H. Xie, Z. Qin, X. Tao, and Z. Han, “Toward intelligent communications:
+Large model empowered semantic communications,” IEEE Commun.
+Mag., vol. 63, no. 1, pp. 69–75, Jan. 2025.
+[6] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+pp. 2584–2597, Sep. 2022.
+[7] H. Xie and Z. Qin, “A lite distributed semantic communication system
+for Internet of Things,” IEEE J. Sel. Areas Commun., vol. 39, no. 1,
+pp. 142–153, Jan. 2021.
+[8] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+semantic communication systems,” IEEE Trans. Signal Process.,
+vol. 69, pp. 2663–2675, 2021.
+[9] H. Hu, X. Zhu, F. Zhou, W. Wu, R. Q. Hu, and H. Zhu, “One-to-many
+semantic communication systems: Design, implementation, performance
+evaluation,” IEEE Commun. Lett., vol. 26, no. 12, pp. 2959–2963, Dec.
+2022.
+[10] J. Mao et al., “A GAN-based semantic communication for text
+without CSI,” IEEE Trans. Wireless Commun., vol. 23, no. 10,
+pp. 14498–14514, Oct. 2024.
+[11] K. Yang, S. Wang, J. Dai, X. Qin, K. Niu, and P. Zhang, “SwinJSCC:
+Taming Swin transformer for deep joint source-channel coding,” IEEE
+Trans. Cognit. Commun. Netw., vol. 11, no. 1, pp. 90–104, Feb. 2025.
+[12] Z. Zhou, S. Zheng, J. Chen, Z. Zhao, and X. Yang, “Speech semantic communication based on Swin transformer,” IEEE Trans. Cognit.
+Commun. Netw., vol. 10, no. 3, pp. 756–768, Jun. 2024.
+[13] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+[14] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+bottleneck for task-oriented communication with digital modulation,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+[15] K. Niu and P. Zhang, “A mathematical theory of semantic
+communication,” 2024, arXiv:2401.13387.
+[16] P. Si, R. Liu, L. Qian, J. Zhao, and K.-Y. Lam, “Post-deployment
+fine-tunable semantic communication,” IEEE Trans. Wireless Commun.,
+vol. 24, no. 1, pp. 35–50, Jan. 2025.
+[17] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint sourcechannel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+Process. (ICASSP), Calgary, AB, Canada, Apr. 2018, pp. 2326–2330.
+[18] X. Peng, Z. Qin, X. Tao, J. Lu, and L. Hanzo, “A robust semantic text
+communication system,” IEEE Trans. Wireless Commun., vol. 23, no. 9,
+pp. 11372–11385, Sep. 2024.
+[19] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+control in semantic communication with incremental knowledge-based
+HARQ,” IEEE Open J. Commun. Soc., vol. 3, pp. 1076–1089, 2022.
+[20] E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cognit.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[21] D. B. Kurka and D. Gunduz, “Deep joint source-channel coding of
+images with feedback,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+Process. (ICASSP), May 2020, pp. 5235–5239.
+[22] G. Cheng, B. Chong, and H. Lu, “TCC-SemCom: A transformer-CNN
+complementary block-based image semantic communication,” IEEE
+Commun. Lett., vol. 29, no. 3, pp. 625–629, Mar. 2025.
+[23] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,
+“Predictive and adaptive deep coding for wireless image transmission
+in semantic communication,” IEEE Trans. Wireless Commun., vol. 22,
+no. 8, pp. 5486–5501, Aug. 2023.
+[24] Z. Weng and Z. Qin, “Semantic communication systems for
+speech transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+pp. 2434–2444, Aug. 2021.
+[25] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-aware speech
+to text transmission with redundancy removal,” in Proc. IEEE Int. Conf.
+Commun. Workshops (ICC Workshops), May 2022, pp. 717–722.
+
+14873
+
+[26] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” 2000, arXiv: physics/0004057.
+[27] N. Tishby and N. Zaslavsky, “Deep learning and the information
+bottleneck principle,” in Proc. IEEE Inf. Theory Workshop (ITW), Apr.
+2015, pp. 1–5.
+[28] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep
+variational information bottleneck,” in Proc. Int. Conf. Learn. Representations, 2016, pp. 1–19. [Online]. Available: https://openreview.net/
+forum?id=HyxQzBceg
+[29] Z. Goldfeld and Y. Polyanskiy, “The information bottleneck problem
+and its applications in machine learning,” IEEE J. Sel. Areas Inf. Theory,
+vol. 1, no. 1, pp. 19–38, May 2020.
+[30] Y. Du et al., “Learning to learn with variational information bottleneck
+for domain generalization,” in Proc. Eur. Conf. Comput. Vis. Cham,
+Switzerland: Springer, 2020, pp. 200–216.
+[31] H. Wei, W. Ni, W. Xu, F. Wang, D. Niyato, and P. Zhang, “Federated
+semantic learning driven by information bottleneck for task-oriented
+communications,” IEEE Commun. Lett., vol. 27, no. 10, pp. 2652–2656,
+Oct. 2023.
+[32] S. Lyu et al., “Improving channel resilience for task-oriented semantic
+communications: A unified information bottleneck approach,” IEEE
+Commun. Lett., vol. 28, no. 11, pp. 2623–2627, Nov. 2024.
+[33] Y. Wang, S. Guo, Y. Deng, H. Zhang, and Y. Fang, “Privacypreserving task-oriented semantic communications against model
+inversion attacks,” IEEE Trans. Wireless Commun., vol. 23, no. 8,
+pp. 10150–10165, Aug. 2024.
+[34] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for multidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+vol. 22, no. 1, pp. 73–87, Jan. 2023.
+[35] C. Cai, X. Yuan, and Y.-J.-A. Zhang, “End-to-end learning for
+task-oriented semantic communications over MIMO channels: An
+information-theoretic framework,” IEEE J. Sel. Areas Commun., vol. 43,
+no. 4, pp. 1292–1307, Apr. 2025.
+[36] Y. Yang, Y. Wu, S. Ma, and Y. Shi, “Multi-task-oriented broadcast for
+edge AI inference via information bottleneck,” in Proc. IEEE Global
+Commun. Conf., Dec. 2023, pp. 3142–3147.
+[37] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+information bottleneck guided joint source and channel coding for
+image transmission,” IEEE J. Sel. Areas Commun., vol. 41, no. 8,
+pp. 2628–2644, Aug. 2023.
+[38] J. Gu and X. Kong, “Fully non-autoregressive neural machine translation: Tricks of the trade,” 2021, arXiv:2012.15833.
+[39] J. Gu, J. Bradbury, C. Xiong, V. O. Li, and R. Socher, “Nonautoregressive neural machine translation,” in Proc. Int. Conf. Learn.
+Represent., 2018, pp. 1–13. [Online]. Available: https://openreview.net/
+forum?id=B1l8BtlCb
+[40] L. Ding, L. Wang, S. Shi, D. Tao, and Z. Tu, “Redistributing
+low-frequency words: Making the most of monolingual data in nonautoregressive translation,” in Proc. 60th Annu. Meeting Assoc. Comput.
+Linguistics, May 2022, pp. 2417–2426.
+[41] M. Ghazvininejad, O. Levy, Y. Liu, and L. Zettlemoyer, “Maskpredict: Parallel decoding of conditional masked language models,” in
+Proc. Conf. Empirical Methods Natural Lang. Process., Nov. 2019,
+pp. 6111–6120.
+[42] C. Du, Z. Tu, and J. Jiang, “Order-agnostic cross entropy for nonautoregressive machine translation,” in Proc. Int. Conf. Mach. Learn.,
+2021, pp. 2849–2859.
+[43] A. Radford et al., “Language models are unsupervised multitask
+learners,” OpenAI Blog, vol. 1, no. 8, p. 9, 2019.
+[44] N. Reimers and I. Gurevych, “Sentence-BERT: Sentence embeddings
+using Siamese BERT-networks,” in Proc. Conf. Empirical Methods
+Natural Lang. Process. 9th Int. Joint Conf. Natural Lang. Process.
+(EMNLP-IJCNLP), 2019, pp. 3980–3990.
+[45] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “CLUB: A
+contrastive log-ratio upper bound of mutual information,” in Proc. Int.
+Conf. Mach. Learn., vol. 1, 2020, pp. 1779–1788.
+[46] M. I. Belghazi et al., “Mutual information neural estimation,” in Proc.
+Int. Conf. Mach. Learn., 2018, pp. 531–540.
+[47] M. Zhang, H. Zhang, W. Liu, H. Ding, and D. Yuan, “Bidimensional
+joint mask learning enabled multi-rate semantic communications,” IEEE
+Wireless Commun. Lett., vol. 14, no. 9, pp. 2967–2971, Sep. 2025, doi:
+10.1109/LWC.2025.3584370.
+[48] D. Barber and F. Agakov, “The IM algorithm: A variational approach
+to information maximization,” in Proc. Adv. Neural Inf. Process. Syst.,
+2003, pp. 201–208.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+14874
+
+IEEE TRANSACTIONS ON WIRELESS COMMUNICATIONS, VOL. 25, 2026
+
+[49] Y. Bo, Y. Duan, S. Shao, and M. Tao, “Joint coding-modulation for
+digital semantic communications via variational autoencoder,” IEEE
+Trans. Commun., vol. 72, no. 9, pp. 5626–5640, Sep. 2024.
+[50] C. Shorten, T. M. Khoshgoftaar, and B. Furht, “Text data augmentation
+for deep learning,” J. Big Data, vol. 8, no. 1, p. 101, Dec. 2021.
+[51] J. Pennington, R. Socher, and C. Manning, “GloVe: Global vectors for
+word representation,” in Proc. Conf. Empirical Methods Natural Lang.
+Process. (EMNLP), 2014, pp. 1532–1543.
+[52] P. Koehn, “Europarl: A parallel corpus for statistical machine
+translation,” in Proc. Mach. Transl. Summit X, Papers, vol. 80, 2005,
+pp. 79–86.
+[53] (2010). WordNet: A Lexical Database for English. [Online]. Available:
+https://wordnet.princeton.edu/
+
+Mingtong Zhang (Member, IEEE) received the B.E.
+degree from the University of Jinan, China, in 2018,
+and the M.Eng. degree in information and communication engineering from Shandong University,
+China, in 2021, where he is currently pursuing the
+Ph.D. degree. His research interests include semantic
+communication, channel estimation, and intelligent
+communication technologies.
+
+Haixia Zhang (Senior Member, IEEE) received the
+B.E. degree from the Department of Communication
+and Information Engineering, Guilin University of
+Electronic Technology, Guilin, China, in 2001, and
+the M.Eng. and Ph.D. degrees in communication and
+information systems from the School of Information Science and Engineering, Shandong University,
+Jinan, China, in 2004 and 2008, respectively. From
+2006 to 2008, she was with the Institute for Circuit and Signal Processing, Munich University of
+Technology, Munich, Germany, as an Academic
+Assistant. From 2016 to 2017, she was a Visiting Professor with the University
+of Florida, Gainesville, FL, USA. She is currently a Distinguished Professor
+with Shandong University. She is actively participating in many professional
+services. Her research interests include wireless communication and networks,
+industrial Internet of Things, wireless resource management, and mobile edge
+computing. She serves/served as the symposium chair, a TPC member, the
+session chairs, and a keynote speaker for many conferences. She is/was an
+Editor of IEEE T RANSACTIONS ON W IRELESS C OMMUNICATIONS, IEEE
+W IRELESS C OMMUNICATION L ETTERS, and China Communications.
+
+Dongfeng Yuan (Senior Member, IEEE) received
+the M.S. degree from the Department of Electrical
+Engineering, Shandong University, China, in 1988,
+and the Ph.D. degree from the Department of Electrical Engineering, Tsinghua University, China, in
+January 2000. From 1993 to 1994, he was with
+the Electrical and Computer Department, University of Calgary, Alberta, Canada. He was with the
+Department of Electrical Engineering, University
+of Erlangen, Germany, from 1998 to 1999; the
+Department of Electrical Engineering and Computer
+Science, University of Michigan, Ann Arbor, USA, from 2001 to 2002;
+the Department of Electrical Engineering, Munich University of Technology,
+Germany, in 2005; and the Department of Electrical Engineering, Heriot-Watt
+University, U.K., in 2006. Currently, he is a Full Professor with the School
+of Qilu Transportation, Shandong University, China. His current research
+interests include intelligent communication systems, mobile edge computing
+and cloud computing, AI, and big data processing for communications.
+
+Ping Zhang (Fellow, IEEE) is currently a Professor
+with the School of Information and Communication Engineering, Beijing University of Posts and
+Telecommunications; the Director of the State Key
+Laboratory of Networking and Switching Technology; a member of IMT-2020 (5G) Experts Panel;
+and a member of Experts Panel for China’s 6G
+Development. He served as the Chief Scientist
+for the National Basic Research Program (973
+Program), an Expert with the Information Technology Division of the National High-Tech Research
+and Development Program (863 Program), and a member for the Consultant Committee on International Cooperation of the National Natural
+Science Foundation of China. He is an Academician of Chinese Academy
+of Engineering (CAE). His research interests mainly focus on wireless
+communication.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:05 UTC from IEEE Xplore. Restrictions apply.
+
+

@@ -1,0 +1,276 @@
+                                              DEEP JOINT SOURCE-CHANNEL CODING FOR WIRELESS IMAGE TRANSMISSION
+                                                                 WITH ADAPTIVE RATE CONTROL
+
+                                                                                         Mingyu Yang, Hun-Seok Kim
+
+                                                                               University of Michigan, Ann Arbor, MI, USA
+
+
+                                                                  ABSTRACT                                   of its ability to extract complex features, deep learning also
+arXiv:2110.04456v1 [eess.SP] 9 Oct 2021
+
+
+
+
+                                          We present a novel adaptive deep joint source-channel coding       has been extended to JSCC systems for wireless image trans-
+                                          (JSCC) scheme for wireless image transmission. The pro-            mission [9–14] to achieve better performance than separated
+                                          posed scheme supports multiple rates using a single deep neu-      source and channel coding. In this paper, we focus on the
+                                          ral network (DNN) model and learns to dynamically control          scenario where the communication resource is limited or ex-
+                                          the rate based on the channel condition and image contents.        pensive as in typical Internet-of-Things applications. For such
+                                          Specifically, a policy network is introduced to exploit the        applications, it is desirable that the JSCC scheme dynamically
+                                          tradeoff space between the rate and signal quality. To train the   adjusts the rate to save the channel bandwidth while com-
+                                          policy network, the Gumbel-Softmax trick is adopted to make        municating sufficient amount of source information contents.
+                                          the policy network differentiable and hence the whole JSCC         However, most existing deep JSCC methods are only trained
+                                          scheme can be trained end-to-end. To the best of our knowl-        with a fixed rate, thus requiring multiple trained models to
+                                          edge, this is the first deep JSCC scheme that can automatically    achieve a multi-rate JSCC scheme. Recently, the concept of
+                                          adjust its rate using a single network model. Experiments          multi-rate deep JSCC has been investigated in [10, 15] where
+                                          show that our scheme successfully learns a reasonable policy       a single model is trained with multiple rates. However, the
+                                          that decreases channel bandwidth utilization for high SNR          models in [10, 15] are not adaptive to the channel condition
+                                          scenarios or simple image contents. For an arbitrary target        as they are only trained with a single SNR. Besides, they do
+                                          rate, our rate-adaptive scheme using a single model achieves       not consider a built-in mechanism or policy that enables au-
+                                          similar performance compared to an optimized model specif-         tomatic rate control given the multi-rate model.
+                                          ically trained for that fixed target rate. To reproduce our re-         In this paper, we propose a novel JSCC scheme that adapts
+                                          sults, we make the source code publicly available at https:        its rate conditioned on the channel SNR and image contents
+                                          //github.com/mingyuyng/Dynamic_JSCC.                               with a single network model. To train the JSCC model with
+                                                                                                             various SNRs, we adopt the SNR-adaptive modules intro-
+                                              Index Terms— deep joint source-chanenl coding, wire-           duced in [14] to modulate the intermediate features based on
+                                          less image transmission, adaptive learning, gumbel-softmax         the SNR. Furthermore, motivated by the adaptive computa-
+                                                                                                             tion idea in [16–19], we introduce a policy network that learns
+                                                             1. INTRODUCTION                                 to dynamically decide the number of active features for trans-
+                                                                                                             mission. We adopt the Gumbel-Softmax trick [20] to make
+                                          Based on Shannon’s separation theorem [1], most modern             the decision process differentiable. Our experiment results
+                                          systems adopt a separate source coding (e.g., JPEG, BPG)           show that our deep learning model can be trained to learn a
+                                          and channel coding (e.g., LDPC, Polar, etc.) for wireless          policy that assigns a various rate for different SNRs and image
+                                          image transmission. However, to achieve optimality, the            contents. Specifically, it learns to reduce channel bandwidth
+                                          length of the codeword needs to be (infinitely) long. Besides,     utilization when the SNR is high and/or the source image con-
+                                          the optimality also breaks down with non-ergodic source or         tains less information. At the same time, the proposed scheme
+                                          channl distribution. Thus, using joint source channel cod-         maintains the equivalent image quality compared to a special-
+                                          ing (JSCC) can enable significant gains as demonstrated in         ized model trained for that particular rate.
+                                          various schemes such as vector quantization and index as-
+                                          signment [2–4].                                                                  2. ADATIVE JSCC METHOD
+                                              In recent years, due to the significant performance im-
+                                                                                                             2.1. Overview
+                                          provement over traditional analytical methods, deep learn-
+                                          ing has been applied to various applications such as com-          The overall structure of the proposed deep JSCC scheme
+                                          puter vision [5] and wireless communications [6–8]. Because        is shown in Fig. 1. First, the source-encoder Es extracts
+                                             This work was funded in part by DARPA YFA #D18AP00076 and NSF   the image features Xs from a source image X. Then Xs is
+                                          CAREER #1942806.                                                   fed to the channel-encoder Ec which generates (Gs + Gn )
+Fig. 1. Overall structure of the proposed deep JSCC with rate control. Multiple rates are achieved by activating different subsets
+of the selective features. The mask is a thermometer code and is regularized by an efficiency loss.
+
+
+                                                                    H × W dimension for RGB (3 channel) pixels. Then the CPP
+                                                                                               G̃L
+                                                                    is defined as CP P = 2HW       , which is within the range of
+                                                                      Gn L (Gn +Gs )L
+                                                                    [ 2HW , 2HW ] depending on the number of active feature
+                                                                    groups. The 1/2 factor in CPP is because of complex-valued
+                                                                    (quadrature) transmission over the wireless channel. We only
+                                                                    consider the AWGN wireless channel such that Yc = Xc +Nc
+                                                                    holds where Nc is the complex Gaussian noise vector. The
+                                                                    channel condition/quality is fully captured by the signal-to-
+                                                                    noise ratio (SNR), which is assumed to be known at both
+                                                                    transmitter and receiver. The SNR value is fed to Ec , Dc , and
+                                                                    P so that the model adapts to the wireless channel condition.
+
+                                                                    2.2. SNR-adaptive channel encoder and decoder
+                                                                    The structures of the channel-encoder Ec and channel-
+Fig. 2. The structure of the channel encoder (top), channel         decoder Dc networks are shown in Fig. 2, where additional
+decoder (middle) and SNR adaptive module (bottom). The              SNR-adaptive modules are inserted between layers to mod-
+parameters of DNN layers are in the format of input channel         ulate the intermediate features. The structure of the SNR-
+× output channel × kernel size. All layers have a stride of 1.      adaptive module is inspired by [14] and shown at the bottom
+                                                                    of Fig. 2. The input features are first average pooled across
+groups of length-L features. The first Gs groups contain            each channel1 and then concatenated with the SNR value.
+selective features that can be either active or inactive as con-    After that, they are passed through two multi-layer percep-
+trolled by the policy network, whereas the last Gn groups           trons (MLP) to generate the factors for channel-wise scaling
+only have non-selective features that are always active. In-        and addition. In the channel-encoder Ec , the input features
+stead of handcrafting the selection, we introduce a policy          are first fed to a series of ResNet and SNR-adaptive modules.
+network P that outputs a binary mask W ∈ {0, 1}Gs ×1 to             After that, they are projected to a specific output size through
+select active features for each input X. The                        2D convolution and reshaping. In the channel-decoder Dc ,
+                                               PGtotal
+                                                    s
+                                                         number
+                                                                    since we only receive symbols in G̃ active groups selected by
+of active groups is denoted as G̃ = Gn + i=1          Wi . After
+selection, all active features are passed through the power         the transmitter, we simply zero-pad the deactivated ones to
+normalization module to generate complex-valued transmis-           keep the input size same regardless of the CPP.
+sion symbols Xc ∈ CG̃×L/2 with unit average power using
+                                                                    2.3. Learning adaptive policy for rate control
+the first half of features as the real part and the other half as
+the imaginary part. Yc is received as Xc is transmitted over        2.3.1. Policy Network
+the noisy wireless channel. Then at the receiver, Yc is fed to
+the channel-decoder Dc and source-decoder Ds sequentially           The proposed policy network learns to select the num-
+to reconstruct the source image.                                    ber of active feature groups conditioned on the SNR and
+    We quantify the transmission rate in term of wireless              1 We use ‘channel’ to indicate a feature channel of a neural network and
+
+channel usage per pixel (CPP). Suppose an input image has           ‘wireless channel’ to indicate the wireless transmission channel.
+                                                                    where τ is a temperature parameter that controls the discrete-
+                                                                    ness of P̃ . The distribution converges to a uniform distribu-
+                                                                    tion when τ goes to infinity, whereas τ ≈ 0 makes P̃ close to
+                                                                    a one-hot vector and indistinguishable from the discrete dis-
+                                                                    tribution. For the forward pass during network training, we
+                                                                    sample the policy from the discrete distribution (1) whereas
+                                                                    the continuous relaxation (2) is used for the backward pass
+                                                                    to approximate the gradient. When the trained model is used
+                                                                    for the adaptive-rate JSCC, we transform the one-hot vector
+                                                                    output Pto a thermometer encoded mask vector W satisfying
+           Fig. 3. Structure of the policy network                            Gs
+                                                                    Wk = i=k       P̄i , k = 1, ..., Gs .
+
+image content. The whole process can be modeled as                  2.4. Loss function
+sampling a categorical distribution whose sample space is           During training, we minimize the following loss to encour-
+Ω = {0, 1, 2, ..., Gs }. The structure of the policy network        age improving the image reconstruction accuracy as well as
+is shown in Fig. 3, where the image feature Xs is first av-         minimizing the number of active feature groups to reduce the
+erage pooled and concatenated with the SNR. Then, it is             bandwidth usage (i.e., lower CPP).
+passed through a two-layer MLP with a softmax function at
+the end to generate the probabilities for each option. After                                "               Gs
+                                                                                                            X
+                                                                                                                   #
+                                                                                                      2
+that, we sample the decision as an one-hot vector through                      EX∼Dtrain kX − Y k2 + α         Wi            (3)
+Gumbel-Softmax (discussed later) and further transform it to                                                  i=1
+a thermometer-coded vector as the final adaptive transmis-
+                                                                    The first term in (3) is the reconstruction loss and the second
+sion mask W . This thermometer encoding of W ensures that
+                                                                    term is the channel usage with a weight parameter α.
+we always activate consecutive groups of features from the
+beginning. Thus, no extra control messages (except the end
+of transmission signaling) are needed to inform the receiver                             3. EXPERIMENTS
+which groups of features are activated vs. deactivated.
+                                                                    3.1. Training and implementation details
+2.3.2. Gumbel Softmax
+                                                                    We evaluate the proposed method with the CIFAR-10 dataset
+Training the policy network is not trivial because the sampling     which consists of 50000 training and 10000 testing images
+process is discrete in nature, which makes the network non-         with 32 × 32 pixels. The Adam optimizer [23] is adopted to
+differentiable and hard to optimize with back-propagation.          train the model. We first train the networks for 150 epochs
+One common choice is to use a score function estimate to            with a learning rate of 5 × 10−4 and another 150 epochs
+avoid back-propagation through samples (e.g., REINFORCE             with a learning rate of 5 × 10−5 . Then, we fix the encoder
+[21]). However, that approach often has slow convergence is-        Es and policy network P , and fine-tune the other modules
+sues for many applications and also has a high variance prob-       for another 100 epochs. The batch size is 128. The ini-
+lem [22]. As an alternative, we adopt the Gumbel-Softmax            tial temperature τ is 5 and it gradually decreases with an
+scheme [20] to resolve non-differentiability by sampling from       exponential decay of −0.015. During training, we sample
+the corresponding Gumbel-Softmax distribution.                      the SNR uniformly between 0dB and 20dB. For all experi-
+     Suppose the probability for each category is pk for k =        ments, we set Gn = 4, Gs = 4, and L = 128. Thus the
+0, ..., Gs . Then, with the Gumbel-Max trick [20], the discrete     proposed method provides 5 possible rates (CPP) in total:
+samples from the distribution can be drawn as:                      0.25, 0.313, 0.375, 0.438, 0.5. To serve as the baseline, we
+                                                                    also train multiple fixed-rate models that use pre-determined
+      P̂ = argmax(log pk + gk ),      k ∈ [0, 1, ..., Gs ],   (1)   sub-group-level feature masking to obtain a constant target
+                k
+                                                                    CPP.
+where gk = − log(− log Uk ) is a standard Gumbel distribu-
+tion with Uk sampled from a uniform distribution U (0, 1).          3.2. Results on CIFAR-10
+Since the argmax operation is not differentiable, Gumbel-
+Softmax distribution is used as a continuous relaxation to          We first show the trade-off between the average rate and im-
+argmax. With a goal to represent P̂ as a one-hot vector P̄ , we     age quality from the proposed method in Fig. 4. Image qual-
+use a relaxed form P̃ using the softmax function:                   ity is evaluated with the peak signal-to-noise ratio (PSNR).
+                                                                    The PSNR of baselines with the maximum (CPP = 0.5) and
+         exp((log pk + gk )/τ )                                     minimum (CPP = 0.25) fixed rate are plotted in black as a
+ P̃k = PGs                         ,     k = 0, 1, ..., Gs , (2)
+        j=0 exp((log pj + gj )/τ )
+                                                                    reference. When the SNR is low (0dB), our method tends to
+                                                                  Fig. 6. The average rate for different classes in CIFAR-10.
+Fig. 4. The average rate and average PSNR of the proposed
+method for different SNRs and α’s.
+                                                                  though our method only uses a single trained model adapting
+                                                                  to different SNRs.
+                                                                      Finally, we fix the SNR as well as α to observe the vari-
+                                                                  ation of the rate across different image classes. In Fig. 6, we
+                                                                  plot the average rates and PSNR for all 10 classes in CIFAR-
+                                                                  10. It can be seen that uneven rate is adopted to different
+                                                                  classes because the policy network tends to assign higher CPP
+                                                                  to classes with richer information (e.g., Automobile, Truck)
+                                                                  while assigning lower CPP to the classes with relatively sim-
+                                                                  ple contents (e.g., Ship, Airplane). With such a strategy, our
+     (a) α = 5 × 10−4                (b) α = 1.5 × 10−3           scheme tends to decrease the variation of reconstructed im-
+                                                                  age quality (PSNR) across all classes compared to a fixed-rate
+                                                                  baseline which assigns the same CPP to all classes. For this
+Fig. 5. Attainable PSNR comparison between the proposed           particular SNR and α, the standard deviations of PSNR across
+method and baselines.                                             different classes are 1.017, 0.991, 0.985, 0.947, and 0.923 for
+                                                                  five fixed-rate baseline models with CPP = 0.25, 0.313, 0.375,
+select the maximum possible rate. As we gradually increase        0.438, and 0.5, respectively. By contrast, our method with
+the SNR, the average rate drops. This trend shows that our        adaptive rate control exhibits a significantly lower standard
+method can successfully learn a policy that utilizes less chan-   deviation of 0.613. It indicates that when the average CPP is
+nel resources (lower CPP rate) when the channel condition         the same, our method produces more equalized image qual-
+(SNR) is good and vice versa. As we increase α in the loss        ity across difference classes (with an adaptive rate per class)
+function, the policy network pays more attention to the rate      while the fixed rate scheme generates unbalanced quality im-
+than the image quality, and thus the rate decreases faster when   ages to force the CPP same for all classes.
+SNR increases.
+    Next, we compare the performance of the proposed                                   4. CONCLUSION
+method with 1) the state-of-the-art image codec BPG com-
+bined with idealistic error-free transmission based on Shan-      In this paper, we present a novel deep JSCC scheme that
+non capacity, and 2) collection of fixed-rate baseline models     supports multiple rates with a single model. The policy net-
+each trained for one particular rate. The result is shown in      work automatically assigns the rate conditioned on the chan-
+Fig. 5. With a relatively small α = 5 × 10−4 , our method         nel SNR and image content by dynamically producing a bi-
+chooses a relatively high CPP (compared to a high α counter-      nary mask to activate or deactivate image features. To make
+part) given SNR and it outperforms the BPG+Capacity in the        the policy network differentiable, the Gumbel-Softmax trick
+low SNR region. Whereas when trained with α = 1.5×10−3 ,          is adopted. Experiments show that our method can learn a rea-
+the resulting CPP is relatively small and our method outper-      sonable policy that distributes less bandwidth when the SNR
+forms the BPG+Capacity baseline for all SNRs. Compared            is high and the image contains less information. With the ad-
+with baseline models specifically trained for a fixed rate with   vantage of adaptive rate control, our method only experiences
+a pre-determined activation masking, our method always            negligible performance degradation compared with multiple
+achieves a similar performance for each comparison point al-      single-rate models at each operating condition.
+                    5. REFERENCES                                 [12] Mingyu Yang, Chenghong Bian, and Hun-Seok
+                                                                       Kim, “Deep joint source channel coding for wire-
+ [1] Claude E Shannon, “A mathematical theory of commu-                lessimage transmission with ofdm,” arXiv preprint
+     nication,” The Bell system technical journal, vol. 27, no.        arXiv:2101.03909, 2021.
+     3, pp. 379–423, 1948.
+                                                                  [13] Kristy Choi, Kedar Tatwawadi, Aditya Grover, Tsachy
+ [2] Arash Vosoughi, Pamela C Cosman, and Laurence B                   Weissman, and Stefano Ermon, “Neural joint source-
+     Milstein, “Joint source-channel coding and unequal er-            channel coding,” in International Conference on Ma-
+     ror protection for video plus depth,” IEEE Signal Pro-            chine Learning. PMLR, 2019, pp. 1182–1192.
+     cessing Letters, vol. 22, no. 1, pp. 31–34, 2014.
+                                                                  [14] Jialong Xu, Bo Ai, Wei Chen, Ang Yang, Peng Sun,
+ [3] Stefan Heinen and Peter Vary, “Transactions papers                and Miguel Rodrigues, “Wireless image transmission
+     source-optimized channel coding for digital transmis-             using deep source channel coding with attention mod-
+     sion channels,” IEEE transactions on communications,              ules,” IEEE Transactions on Circuits and Systems for
+     vol. 53, no. 4, pp. 592–600, 2005.                                Video Technology, 2021.
+ [4] V Bozantizis and FH Ali, “Combined vector quantisa-          [15] David Burth Kurka and Deniz Gündüz, “Bandwidth-
+     tion and index assignment with embedded redundancy                agile image transmission with deep joint source-channel
+     for noisy channels,” Electronics Letters, vol. 36, no. 20,        coding,” IEEE Transactions on Wireless Communica-
+     pp. 1711–1713, 2000.                                              tions, 2021.
+ [5] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hin-         [16] Michael Figurnov, Maxwell D Collins, and et.al, “Spa-
+     ton, “Imagenet classification with deep convolutional             tially adaptive computation time for residual networks,”
+     neural networks,” in Advances in neural information               in Proceedings of the IEEE Conference on Computer Vi-
+     processing systems, 2012, pp. 1097–1105.                          sion and Pattern Recognition, 2017, pp. 1039–1048.
+ [6] Hao Ye, Geoffrey Ye Li, and Biing-Hwang Juang,               [17] Xin Wang, Fisher Yu, Zi-Yi Dou, Trevor Darrell, and
+     “Power of deep learning for channel estimation and sig-           Joseph E Gonzalez, “Skipnet: Learning dynamic rout-
+     nal detection in ofdm systems,” IEEE Wireless Commu-              ing in convolutional networks,” in Proceedings of
+     nications Letters, vol. 7, no. 1, pp. 114–117, 2017.              the European Conference on Computer Vision (ECCV),
+                                                                       2018, pp. 409–424.
+ [7] Mingyu Yang, Li-Xuan Chuo, Karan Suri, Lu Liu, Hao
+     Zheng, and Hun-Seok Kim, “ilps: Local position-              [18] Xitong Gao, Yiren Zhao, Łukasz Dudziak, Robert
+     ing system with simultaneous localization and wireless            Mullins, and Cheng-zhong Xu, “Dynamic channel prun-
+     communication,” in IEEE INFOCOM 2019-IEEE Con-                    ing: Feature boosting and suppression,” arXiv preprint
+     ference on Computer Communications. IEEE, 2019, pp.               arXiv:1810.05331, 2018.
+     379–387.
+                                                                  [19] Andreas Veit and Serge Belongie, “Convolutional net-
+ [8] Yao-Shan Hsiao, Mingyu Yang, and Hun-Seok Kim,                    works with adaptive inference graphs,” in Proceed-
+     “Super-resolution time-of-arrival estimation using neu-           ings of the European Conference on Computer Vision
+     ral networks,” in 2020 28th European Signal Processing            (ECCV), 2018, pp. 3–18.
+     Conference (EUSIPCO). IEEE, 2021, pp. 1692–1696.
+                                                                  [20] Eric Jang, Shixiang Gu, and Ben Poole, “Categori-
+ [9] Eirina Bourtsoulatze, David Burth Kurka, and Deniz                cal reparameterization with gumbel-softmax,” arXiv
+     Gündüz, “Deep joint source-channel coding for wire-             preprint arXiv:1611.01144, 2016.
+     less image transmission,” IEEE Transactions on Cogni-
+                                                                  [21] Ronald J Williams,       “Simple statistical gradient-
+     tive Communications and Networking, vol. 5, no. 3, pp.
+                                                                       following algorithms for connectionist reinforcement
+     567–579, 2019.
+                                                                       learning,” Machine learning, vol. 8, no. 3, pp. 229–256,
+[10] David Burth Kurka and Deniz Gündüz, “Successive re-             1992.
+     finement of images with deep joint source-channel cod-
+                                                                  [22] Zuxuan Wu, Tushar Nagarajan, and et. al, “Blockdrop:
+     ing,” in 2019 IEEE 20th International Workshop on Sig-
+                                                                       Dynamic inference paths in residual networks,” in Pro-
+     nal Processing Advances in Wireless Communications
+                                                                       ceedings of the IEEE Conference on Computer Vision
+     (SPAWC). IEEE, 2019, pp. 1–5.
+                                                                       and Pattern Recognition, 2018, pp. 8817–8826.
+[11] David Burth Kurka and Deniz Gündüz, “Deepjscc-f:
+                                                                  [23] Diederik P Kingma and Jimmy Ba,        “Adam: A
+     Deep joint source-channel coding of images with feed-
+                                                                       method for stochastic optimization,” arXiv preprint
+     back,” IEEE Journal on Selected Areas in Information
+                                                                       arXiv:1412.6980, 2014.
+     Theory, 2020.
+

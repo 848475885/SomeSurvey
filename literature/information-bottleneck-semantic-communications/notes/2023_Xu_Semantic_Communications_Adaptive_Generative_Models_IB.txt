@@ -1,0 +1,797 @@
+1
+
+Semantic Communications Based on Adaptive
+Generative Models and Information Bottleneck
+
+arXiv:2309.02387v1 [eess.SP] 5 Sep 2023
+
+Sergio Barbarossa, Fellow, IEEE, Danilo Comminiello, Senior, IEEE, Eleonora Grassucci, Graduate, IEEE
+Francesco Pezone, Student, IEEE, Stefania Sardellitti, Member, IEEE, Paolo Di Lorenzo, Senior, IEEE
+
+Abstract—Semantic communications represent a significant
+breakthrough with respect to the current communication
+paradigm, as they focus on recovering the meaning behind
+the transmitted sequence of symbols, rather than the symbols
+themselves. In semantic communications, the scope of the destination is not to recover a list of symbols symbolically identical
+to the transmitted ones, but rather to recover a message that is
+semantically equivalent to the semantic message emitted by the
+source. This paradigm shift introduces many degrees of freedom
+to the encoding and decoding rules that can be exploited to make
+the design of communication systems much more efficient. In
+this paper, we present an approach to semantic communication
+building on three fundamental ideas: 1) represent data over
+a topological space as a formal way to capture semantics, as
+expressed through relations; 2) use the information bottleneck
+principle as a way to identify relevant information and adapt
+the information bottleneck online, as a function of the wireless
+channel state, in order to strike an optimal trade-off between
+transmit power, reconstruction accuracy and delay; 3) exploit
+probabilistic generative models as a general tool to adapt the
+transmission rate to the wireless channel state and make possible
+the regeneration of the transmitted images or run classification
+tasks at the receiver side.
+Index Terms—Semantic communications, information bottleneck, deep generative models.
+
+I. I NTRODUCTION
+
+N
+
+OTHWISTANDING the enormous potentials of 5G networks and their expected evolution, significant efforts
+are already being devoted to designing a future generation of
+networks, namely Sixth Generation (6G), which is expected
+to create a cyber-physical continuum between the connected
+physical world of senses, actions, and experiences and its programmable digital representation. Next-generation networks
+will need to provide intelligence, limitless connectivity, and
+full synchronization of the physical and digital worlds. One of
+the distinguishing features of 6G networks will be the synergy
+between Artificial Intelligence (AI) and networking: On the
+one hand, the new networks will need AI to become more
+autonomous and possibly zero-touch; on the other hand, the
+new networks will bring AI services as close as possible to
+Pezone is with Department of Computer, Control and Management Engineering, Sapienza University of Rome, Italy. Barbarossa, Comminiello,
+Grassucci, Sardellitti, and Di Lorenzo are with the Dept. of Information Engineering, Electronics, and Telecommunications, Sapienza University of Rome,
+Italy. Email: {sergio.barbarossa, danilo.comminiello, eleonora.grassucci, stefania.sardellitti, paolo.dilorenzo}@uniroma1.it. This work was partially supported by the European Union under the Italian National Recovery and
+Resilience Plan (NRRP) of NextGenerationEU, partnership on “Telecommunications of the Future” (PE00000001 - program RESTART; the PRIN
+2017 Project Liquid Edge; the EU-Taiwan project 5G-CONNI, under Grant
+861459; and by Huawei Technology France SASU, under agreement N.
+TC20220919044.
+
+the end users, to satisfy service delay constraints or minimize
+energy consumption [1]. The new networks will need to be
+AI-native, meaning that AI tools will constitute the building
+blocks of the network itself, rather than just applications
+running on top of the network.
+One of the main motivations underlying the need for a new
+generation of communication networks is sustainability: The
+current exponential growth of data traffic is not sustainable
+in the long run. To promote sustainability, it is necessary to
+envisage new communication paradigms able to support new
+services, but without necessarily increasing the data rates. A
+possible way out comes from a better understanding of human
+intelligence and social interaction mechanisms.
+A distinguishing feature of humans with respect to other
+animals is their apparatus of sophisticated social interaction
+skills. To communicate with each other and share meaningful
+experiences, humans create symbols to represent their perceptual experiences. Natural language is the paramount example
+of human interaction based on the association of sounds to
+objects of the real world, as well as to abstractions of the real
+world created by the human brain. Building on the composition
+of basic sounds, humans form structures, from phonemes to
+words to sentences, etc., that enable a very complex interaction. A key point to highlight in this association is the trade-off
+between the complexity of the representation and the relevance
+of the used symbols to convey the intended meaning, within
+a certain approximation or distortion. The other fundamental
+interaction mechanism involves vision. Also in this case, the
+scene that our brain builds from the signals coming from the
+optical nerve is a representation of the outside world that
+is simple enough to convey the relevant information, while
+discarding a lot of information as irrelevant with respect to
+the context.
+Both examples show that the association between mental
+states and symbols (either sounds or visual signs) used to
+represent them satisfies a fundamental parsimony principle:
+The association must be simple enough to require small
+effort and time, while at the same time keeping the relevant
+information about the intended meaning or the goal of communication. We believe that next-generation networks should take
+inspiration from these principles, by focusing on the extraction
+of the relevant information and the retrieval of the semantics
+associated with the transmitted symbols. In this paper, we
+propose an approach to semantic communication over wireless
+channels based on three important pillars:
+• topology-based knowledge representation,
+• information bottleneck principle,
+
+2
+
+probabilistic generative models.
+The first pillar is based on the idea that semantics may
+be formally represented through the set of relations between
+the basic elements of a language, to be intended in a very
+general way. The formal way to represent relations is to define
+the associated topological space. Graphs are an important
+example of a topological space, widely used for example in
+Natural Language Processing (NLP). However, in general,
+graphs are unable to capture all the information and it is
+necessary to resort to higher-order structures, like simplicial
+or cell complexes, which we assume as the basis for our
+knowledge representation.
+Secondly, we start from the assumption that a communication typically occurs to fulfill a shared goal between source
+and destination. Then, as the second pillar of our approach,
+we introduce a variation of the information bottleneck (IB)
+principle to identify the information relevant to the intended
+goal of communication and we derive the trade-off between
+complexity and accuracy of the representation. The IB principle is used to guide the design of the source encoder to the
+goal of communication, which is not necessarily the recovery
+of the transmitted bits but rather the fulfillment of a goal.
+Furthermore, we propose an online mechanism to adapt the
+bottleneck to cope with the wireless channel variability in
+order to induce some desired behavior, like minimization of
+average energy consumption or average delay necessary to
+reach a decision on the transmitted data.
+However, finding the source encoder from the information
+bottleneck principle in a general scenario is a rather complex
+task. For this reason, we propose, as the third pillar, a
+numerically efficient coding method based on probabilistic
+deep generative models. These models are used to represent
+the relevant parameters to be used at the receiver to regenerate
+a message that is semantically equivalent to the transmitted
+message, using only a reduced subset of symbols. Then, using
+the IB idea, we adapt the amount of symbols to be transmitted
+to the channel conditions and to the accuracy in the fulfillment
+of the communication goal.
+The rest of the paper is organized as follows. Section II
+reviews the state of the art. Section III illustrates a general
+scheme of semantic communication. In Section IV, we formulate a formal way to represent semantics through topological
+spaces, like graphs, simplicial or cell complexes, and show
+how different spaces can lead to different trade-offs between
+representation complexity and accuracy. In Section V, we
+propose a principled way to design a wireless communication
+system based on a generalization of the Information Bottleneck principle. Then, in Section VI, we illustrate a practical
+application of the IB approach exploiting generative models
+based on variational autoencoders.
+•
+
+II. S TATE OF THE ART
+Current communication systems are still based on Shannon
+paradigm, which is firmly rooted in probability theory. As
+already suggested by Shannon’s collaborator, Warren Weaver,
+communication takes place on three levels [2]:
+1) “transmission of symbols (the technical problem)”;
+
+2) “semantic exchange of transmitted symbols (the semantic problem)”;
+3) “effect of semantic information exchange (the effectiveness problem)”.
+Shannon deliberately focused on the technical problem only
+and derived the fundamental limits for the reliable recovery of
+the sequence of symbols transmitted by the source after propagation through a noisy channel. Shannon provided also the
+fundamental rate-distortion tradeoffs, relating the complexity
+of the representation and the distortion of the reconstruction.
+Shannon’s theory has nothing to do with the meaning that
+the symbols represent, but only with the frequency of the
+symbols occurrence. Pressing keys of a computer keyboard
+at random produces a sequence of symbols that has maximum
+entropy, i.e., the maximum amount of average information, in
+the Shannon sense, but it has almost zero semantic information
+because there is essentially no meaning associated with it.
+More recently, a Shannon-like rate–distortion theory has been
+indicated as a principled mathematical framework for understanding human perception and visual perceptual memory
+[3]. But clearly, the formulation of a semantic information
+theory, based on firm principles, is still an open problem. A
+first step in the search for meaning beyond symbols entails
+incorporating the logic of the language used to communicate.
+A first attempt to move in this direction was developed by
+Carnap and Bar-Hillel in [4]. Since then, several schools
+of thought have proposed different alternative approaches
+to generalize Shannon’s information theory, each aimed at
+emphasizing different perspectives: philosophy of information,
+logic and information, information algebra, information flow,
+and algorithmic information theory.
+Recently, semantic communication has been identified as
+a possible breakthrough of 6G networks in [5]. Joint sourcechannel encoders exploiting the structure of images or natural
+language have been proposed in [6]–[8]. In applications such
+as text transmission, the semantics underlying the text has also
+been explicitly exploited in designing a joint source/channel
+coding (JSCC) technique [8]. The authors of [9] designed
+speech recognition-oriented semantic communications to directly recognize the speech signals in texts. More recently,
+a transformer-based approach has also been investigated in
+[10] to support both image and text transmission. Alternative
+methods were also proposed in [11] to define an optimized
+common-language between a listener and a speaker, employing reinforcement learning and curriculum learning. Very
+recently, a semantic framework for video conferencing has
+been proposed, by exploiting semantically relevant keypoints
+representing the facial expressions [12].
+III. S EMANTIC COMMUNICATION ARCHITECTURES
+A possible semantic communication system is sketched in
+Fig. 1, where the semantic level is represented on top of
+the symbolic level. In this block diagram, it is important
+to distinguish the semantic message w from its symbolic
+representation x, which we denote as the symbolic message.
+The distinguishing feature of semantic communication, as
+opposed to conventional (i.e., symbolic) communication, is
+
+Semantic level
+
+3
+
+Knowledge
+sharing
+
+KBS
+
+Source
+
+KBD
+
+Destination
+
+w’
+Semantic
+message
+generator
+
+Semantic
+message
+interpreter
+semantic feedback
+
+Symbolic level
+
+w
+Source/
+channel
+encoder
+
+symbolic feedback
+
+x
+
+Physical
+channel
+
+x’
+Source/
+channel
+decoder
+
+y
+
+Fig. 1. Block diagram of a semantic communication system.
+
+that, whichever is the set of symbols used by the source to
+represent and communicate a semantic message, the scope
+of the receiver is not to recover the sequence of transmitted
+symbols, but only to recreate a message that is semantically
+equivalent to the transmitted one. This means that there is no
+(semantic) error even if the symbolic message x′ regenerated
+at the receiver side is completely different from x, as far
+as the corresponding symbolic message w′ is semantically
+equivalent to w. This property is what makes semantic communication potentially much more efficient than conventional
+communication because it adds many degrees of freedom in
+the reconstruction process. This advantage is paid in terms of
+the complexity needed to represent semantics.
+As depicted in Fig. 1, the mapping from a semantic message
+to its symbolic representation occurs via a knowledge base
+(KB) system, which incorporates the rules underlying the
+language used to communicate 1 . A language, in very general
+terms, is composed of a set of elements (objects) and a grammar, i.e. a set of rules used to combine the elements in order to
+create messages that have a meaning in the given language. A
+KB system is typically composed of a computational ontology,
+facts, rules, and constraints [13]. As we will see in Section VI,
+a possible implementation of a knowledge base system may
+be given by a variational autoencoder (VAE).
+An important feature of the scheme of Fig. 1 is the presence
+of a feedback from the destination to the source. Feedback
+can occur within levels (i.e. technical or semantic level), or
+1 Ideally, source and destination should possess the same KB. In practice,
+the two KB systems can be different, as in Fig. 1, but a knowledge-sharing
+mechanism needs to be implemented to adapt the destination KB to the source
+KB.
+
+across levels, i.e. from the semantic to the technical level.
+This feedback is important because it makes possible to adapt
+the transmission rate as a function of how well the destination
+is able to take correct decisions about the semantics conveyed
+by the symbols or to fulfill the goal of communication. In
+Section V, we will show how to implement this feedback by
+adapting the IB to the channel variability and to the accuracy
+of the decision at the destination side.
+IV. K NOWLEDGE REPRESENTATION OVER TOPOLOGICAL
+SPACES
+
+A shared definition of semantics is still missing. Nevertheless, we may think of representing semantics through the set of
+relations between the elements of a language. The formal way
+to represent relations is by introducing the corresponding topological space, i.e. a space composed of a set of elements along
+with a set of relations among them. The simplest example of a
+topological space is a graph, representing pairwise or dyadic
+relations (edges) between pairs of objects (vertices). Graphbased knowledge representation mechanisms have been largely
+investigated for example, in Natural Language Processing
+(NLP), where graphs play a key role in associating a meaning
+to a sentence and in solving disambiguation problems. In
+computer vision, semantic relationships are typically expressed
+as graphs grouping portions of the image representative of the
+same object class, or to recognize the shape of 3D objects.
+However, graphs are limited as they are only able to encode
+pairwise relations. In many applications, the semantic relations
+may not be restricted to pairwise relations, but should incorporate higher-order (multiway) relations. Examples of higherorder graphs, still endowed with a rich algebraic structure,
+
+4
+
+0.8
+0.7
+Simplicial triangulation
+
+0.6
+
+Cell complex
+
+NSE
+
+0.5
+0.4
+0.3
+0.2
+0.1
+0
+1000
+
+2000
+
+3000
+
+4000
+
+5000
+
+6000
+
+Sparsity
+
+Fig. 2. Accuracy vs. representation complexity.
+
+are simplicial or cell complexes. In most applications, the
+data to be transmitted are defined over a topological space.
+The idea we wish to highlight is that the identification of the
+space, through the relations among its constitutive elements,
+has a deep impact on our capability to find a data representation that yields a good trade-off between accuracy and
+complexity. To investigate how higher-order topological spaces
+can successfully encode the semantic relationships among the
+observed data, we consider as a numerical example an image
+segmentation task. The goal is to find a semantic segmentation
+of the image based on cell complexes by associating each
+segment to a polygonal cell over which the same semantic
+information is observed. We considered a gray-scale version
+of Mona Lisa portrait of Leonardo da Vinci, represented using
+12 gray levels. As a first example of space, we build a
+gradient-based Delaunay triangulation of the image using 6100
+triangles. The signal associated with this space is the image
+intensity over each triangle. Then, as a second example of
+space, we glued all triangles having similar image intensity,
+thus forming a cell (polygonal) complex. In the example, the
+resulting cell complex is composed of 969 cells. Then, to
+compare the representations over different spaces, we built
+a dictionary using the eigenvectors of the Laplacian matrices
+associated with each space and computed the optimal tradeoff between the accuracy of the signal representation over
+each dictionary and the corresponding complexity (number of
+dictionary elements used to represent the image). In Fig. 2,
+we plot the accuracy (normalized squared error (NSE)) vs.
+complexity. From Fig. 2, it is evident the considerable gain in
+terms of accuracy/complexity trade-off achievable using a cell
+complex instead of a simplicial complex.
+V. S OURCE ENCODING BASED ON THE I NFORMATION
+B OTTLENECK P RINCIPLE
+In this section, we dig further into knowledge representation
+and put it in the context of goal-oriented communication
+over a wireless channel. An example can be an IoT device
+that sends images to a server that runs an image recognition
+application. Denoting by X the transmitted vector (image)
+and by Y the corresponding decision (label) to be taken at
+the receiver side, our first task is to identify the information
+
+strictly relevant to the fulfillment of the (decision) goal. Our
+second task is to derive the structure of the source encoder
+that extracts this relevant information while achieving the best
+trade-off between complexity of the representation (number of
+bits used to represent the relevant information) and accuracy
+on the decision variable Y . To approach this problem formally, we introduce a variation of the Information Bottleneck
+(IB) principle [14] as a basic principle to design the source
+encoder in order to minimize the complexity (number of
+bits) of the representation, while preserving only the relevant
+information about Y . More specifically, denoting by T the
+compressed variables, the conventional IB method finds the
+probabilistic compression rule, given by the conditional probability pT /X (t/x), that minimizes a linear combination, with
+nonnegative coefficients, of the mutual information I(X; T )
+between the input X and the encoded variable T and the
+mutual information I(T ; Y ) between and the encoded variable
+T and the decision variable Y . In this formulation, I(X; T )
+represents the complexity of the encoding rule (measured in
+number of bits), while I(T ; Y ) represents the relevance of the
+encoded variable T for the retrieval of Y . In this paper, we
+modify the IB principle to make it suitable for transmission
+over wireless communications. First of all, we consider the
+real case where the transmitted data are corrupted by noise,
+so that the receiver does not have direct access to T , but only
+to a version T + η corrupted by the channel noise η. Second,
+we redefine the bottleneck optimization problem as
+min I(X; T ) + β · M SE(Y, Ŷ ),
+
+A,M
+
+(1)
+
+where T = A · X + ξ denotes a linear encoder, including
+additive noise ξ, while Ŷ = M · (T + η) is a linear estimate
+of Y ; β is a scalar parameter that allows us to tune the
+trade-off between complexity and relevant information: small
+values of β lead to small complexity encoders, but possibly
+large distortion, whereas large values of β yield a small
+distortion, but with greater complexity. Even though the
+new optimization problem in (1) is nonconvex, we managed
+to find a closed-form solution for the case where all the
+involved variables are Gaussian. The linear structure of
+the encoder/decoder is optimal in the Gaussian case, but
+suboptimal in general. For this reason, in Section VI we will
+use a more general structure based on variational autoencoders.
+Our idea is to adapt β as a function of the channel state
+and of the required classification task accuracy, while also
+enforcing a constraint on the decision delay, defined as the
+sum of the processing and communication delay. To cope
+with the unpredictable wireless channel variability, we adopt
+a stochastic optimization framework, able to work without
+knowledge of the channel probabilistic model and of the task
+arrival rates. In this framework, time is slotted in intervals of
+equal duration. In each time slot, the problem is converted into
+the optimization of a deterministic problem, for each time slot,
+taking into account what has been done in the previous slot
+by introducing a set of real and virtual queues that quantify
+how well the method is satisfying the optimization constraints.
+The optimization variables are the transmit power of all the
+
+5
+
+10
+
+-3
+
+TABLE I
+R ESULTS FOR DYNAMIC AND STATIC CHANNEL CONDITIONS UNDER
+DIFFERENT PSNR VALUES DURING THE TRANSMISSION .
+
+Delay [s]
+
+Power (device) [W]
+
+0.003
+0.005
+0.007
+
+10
+
+-4
+
+10 -5
+
+10
+
+-6
+
+0
+
+0.05
+
+0.1
+
+0.15
+NMSE
+
+0.2
+
+0.25
+
+0.3
+
+Fig. 3. Trade-off between Power-Delay-Error
+
+devices, the clock rates used at both source and destination
+sides to process the data, and the trade-off parameter β used
+to adjust the bottleneck. The objective of the optimization is to
+minimize the average energy consumption, under constraints
+on average accuracy and service delay. A numerical result is
+reported in Fig. 3, showing the average power consumption vs.
+the Normalized Mean Square Error (NMSE), in a regression
+problem, for three different values of the average delay. The
+delay is composed of the sum of the transmission delay plus
+the time necessary to process the data. As expected, imposing
+smaller average delays forces the system to use more power
+to achieve the same NMSE value. The above results refer to
+a simple regression task and adopt linear encoders because
+they represent the optimal choice in the Gaussian case. In
+the next section, we generalize the idea to the general case,
+implementing the IB principle using a variational autoencoder.
+VI. S EMANTIC COMMUNICATION BASED ON
+G ENERATIVE M ODELS
+Generative models are experiencing an increasing interest
+in the AI (and not only) community due to their impressive
+results in a plethora of tasks including image super-resolution,
+denoising, image-to-audio translation, 3D synthesis. The core
+idea of generative modeling is to build a sufficiently complex
+and powerful model for learning the data distribution so as
+to acquire the ability to draw representative samples from the
+learned distribution. When learning the distribution, the model
+grasps the semantic information of the samples and it is able
+to generate samples with similar semantic information. As an
+example, when learning to generate human faces, the neural
+model begins generating semantic aspects of them, such as
+eyes, nose, and mouth, while progressively building also other
+contents such as hair and ears.
+In this work, we use generative models as the basic building
+block of a semantic communication system. In particular, we
+focus on a broad class of generative models called generative
+latent variable models (GLVMs) [15], which first transform
+the input data into a low-dimensional space, the latent space,
+containing the semantic characteristics of such data, and then
+
+Channel condition
+
+PSNR (dB)
+
+Latent dim
+
+Classification Accuracy↑
+CIFAR10
+MNIST
+
+No channel
+Static
+Static
+Static
+Static
+Static
+Dynamic
+
+100
+25
+15
+12.5
+10
+Varying
+
+4, Fixed
+4, Fixed
+4, Fixed
+4, Fixed
+4, Fixed
+3, Varying
+
+92.701
+88.262
+87.804
+87.982
+88.238
+86.934
+86.840
+
+98.880
+96.433
+97.381
+97.648
+97.266
+96.273
+96.305
+
+sample from this space to generate data having semantically
+similar features in the data space. GLVMs are composed by
+a pair of deep neural networks: i) an encoder, or recognition
+model, whose objective is to learn the latent variables that
+contain the semantic features of the input, and ii) a deep
+neural network called decoder, or generative model, whose
+aim is to transform the received latent representation into new
+reconstructed samples with preserved semantic characteristics.
+In our approach, the two blocks of a GLVM are used as
+the encoder and decoder components of our communication
+scheme, as depicted in Figure 4.
+In our semantic communication scheme the transmitted
+symbols are the latent variables, which live in a low-dimension
+space, while the receiver uses the received variables to regenerate an image using the generative model. The recognition
+and generative models are trained jointly offline, incorporating
+a non-trainable channel model in the middle, as to simulate
+the presence of channel noise during the training phase.
+The scheme of Fig. 4 has enormous potentials in terms of
+source compression with respect to conventional schemes, and
+thus reduction of the transmit data rate, because it exploits
+the shared knowledge between transmitter and receiver. This
+information is encoded in the GLVM. The advantage comes
+from the fact that the generated image at the destination side
+may not coincide in any single pixel with the transmitted
+image, and yet it may well represent the transmitted image.
+The distinguishing feature of a GLVM used in this way is that
+the dimension of the latent space can be adapted over time,
+depending on channel conditions, without retraining the two
+networks. The scheme of Fig. 4 is an example of the general
+scheme of Fig. 1, where the source and destination KB’s are
+the recognition and generative models, and the feedback from
+destination to source is given by a parameter that represents
+the channel state (symbolic feedback) and a parameter that
+represents the goodness of the task implemented at the receiver (semantic feedback), like image classification or image
+regeneration: when the channel is very good, more parameters
+are sent, thus enabling an accurate recovery; conversely, when
+the channel is very poor, fewer parameters are transmitted, but
+they are still the most relevant ones.
+As an example of application, we evaluated the proposed
+architecture under different channel conditions and using two
+image benchmarks, namely MNIST and CIFAR10. The goal
+of the receiver is to classify the images by processing the
+received latent variables. However, the receiver does not have
+
+6
+
+Recognition
+Model
+
+Latent Space
+
+Channel
+
+...
+
+Source
+
+Generative
+Model
+
+Corrupted
+Received Information
+Destination
+
+Fig. 4. A generative semantic communication framework based on latent variable models.
+
+VII. C ONCLUSION
+In this paper, we have proposed an approach to semantic
+communications based on three main tools: knowledge representation using topological spaces; design of the source encoder based on the information bottleneck; use of a variational
+
+   
+  
+ & O D V V L I L F D W L R Q  $ F F X U D F \
+
+access to the true latent variables, as they are corrupted from
+the propagation through the wireless channel. Then we tested
+how robust is the generative model, and as a consequence the
+classification task, as a function of the distortion, assessed
+through the Peak-Signal-to-Noise-Ratio (PSNR), defined as
+the ratio between the maximum power of a signal and the
+power of the corrupting noise. Furthermore, to simulate the
+variability of the wireless channel, we conducted our tests
+on a dynamic channel scenario, where the channel varies at
+random over different time slots. To simulate channel random
+fading, we vary the PSNR randomly over different time slots.
+In the static channel condition, we always transmit the same
+amount of information by fixing the dimension of the latent
+vector to 4, for each benchmark. The information is therefore
+only degraded due to the channel noise, but it maintains the
+same dimension. On the contrary, under dynamic channel
+conditions, we dynamically adapt the dimension of the latent
+vector to be sent as a function of the channel state. Table I
+shows the results of the experimental evaluation as a function
+of the PSNR, while Figure 5 shows the classification accuracy
+for different latent dimensions. From Table I, we observe that
+the classification accuracy decreases as the PSNR decreases,
+as expected, but the scheme is rather robust against noise. It is
+worth noting that the dynamic adaptation of the latent space
+dimension achieves similar performance, even sending fewer
+latent variables, on average. However, the most striking feature
+of the proposed architecture is that the system works quite well
+even sending very few data. This aspect is made more evident
+in Fig. 5, where we plot the classification accuracy vs. the
+dimension of the transmitted latent vector, for two different
+values of the PSNR. From the figure it is evident how, in the
+MNIST case, the number of features to be sent to achieve good
+classification accuracy can be extremely low. The situation is
+a bit more complex with the CFAR 10 data-set, but still the
+number of data to be sent is strikingly low compared to the
+original images. Again, we can observe a relative robustness
+against channel noise.
+
+  
+  
+ & , ) $ 5    3 6 1 5     
+ & , ) $ 5    3 6 1 5    
+ 0 1 , 6 7  3 6 1 5     
+ 0 1 , 6 7  3 6 1 5    
+
+  
+
+ 
+
+ 
+
+ 
+  
+ / D W H Q W  ' L P H Q V L R Q
+
+  
+
+  
+
+Fig. 5. Classification accuracy with channel conditions equal to PSNR=100
+and PSNR=10 varying the latent dimension from 1 to 64.
+
+autoencoder to apply the information bottleneck to the most
+general case. More specifically, we used a generative latent
+variable model as a way to extract semantic information in
+the form of latent variables. The distinguishing feature of
+our scheme is that we can adapt the number of variables to
+be transmitted, depending on the wireless channel state and
+on the accuracy of the decisions taken at the receiver side.
+Furthermore, we tested the robustness of the generative part
+when working on a set of latent variables distorted by the
+propagation through a wireless channel.
+R EFERENCES
+[1] E. Strinati Calvanese and S. Barbarossa, “6G networks: Beyond Shannon towards semantic and goal-oriented communications,” Computer
+Networks, vol. 190, pp. 1–17, 2021.
+[2] Warren Weaver, “Recent contributions to the mathematical theory of
+communication,” ETC: a review of general semantics, pp. 261–281,
+1953.
+[3] Chris R Sims, “Rate–distortion theory and human perception,” Cognition, vol. 152, pp. 181–198, 2016.
+[4] Rudolf Carnap, Yehoshua Bar-Hillel, et al., “An outline of a theory of
+semantic information,” Tech. Rep. no. 247, MIT, Oct. 27, 1952.
+[5] Marios Kountouris and Nikolaos Pappas, “Semantics-empowered communication for networked intelligent systems,” IEEE Communications
+Magazine, vol. 59, no. 6, pp. 96–102, 2021.
+[6] Eirina Bourtsoulatze, David Burth Kurka, and Deniz Gündüz, “Deep
+joint source-channel coding for wireless image transmission,” IEEE
+
+7
+
+Transactions on Cognitive Communications and Networking, vol. 5, no.
+3, pp. 567–579, 2019.
+[7] Mikolaj Jankowski, Deniz Gündüz, and Krystian Mikolajczyk, “Wireless
+image retrieval at the edge,” IEEE Journal on Selected Areas in
+Communications, vol. 39, no. 1, pp. 89–100, 2020.
+[8] Huiqiang Xie, Zhijin Qin, Geoffrey Ye Li, and Biing-Hwang Juang,
+“Deep learning enabled semantic communication systems,” IEEE
+Transactions on Signal Processing, vol. 69, pp. 2663–2675, 2021.
+[9] Zhenzi Weng, Zhijin Qin, and Geoffrey Ye Li, “Semantic communications for speech recognition,” arXiv preprint arXiv:2107.11190, 2021.
+[10] Huiqiang Xie, Zhijin Qin, Xiaoming Tao, and Khaled B Letaief, “Taskoriented multi-user semantic communications,” IEEE Journal on Selected Areas in Communications, vol. 40, no. 9, pp. 2584–2597, 2022.
+[11] Mohammad Karimzadeh Farshbafan, Walid Saad, and Merouane Debbah, “Common language for goal-oriented semantic communications:
+A curriculum learning framework,” in ICC 2022-IEEE International
+Conference on Communications. IEEE, 2022, pp. 1710–1715.
+[12] Peiwen Jiang, Chao-Kai Wen, Shi Jin, and Geoffrey Ye Li, “Wireless
+semantic communications for video conferencing,” IEEE Journal on
+Selected Areas in Communications, vol. 41, no. 1, pp. 230–244, 2023.
+[13] Michel Chein and Marie-Laure Mugnier, Graph-based knowledge representation: computational foundations of conceptual graphs, Springer
+Science & Business Media, 2008.
+[14] Naftali Tishby, Fernando C Pereira, and William Bialek, “The information bottleneck method,” arXiv preprint physics/0004057, 2000.
+[15] Arash Vahdat, Karsten Kreis, and Jan Kautz, “Score-based generative
+modeling in latent space,” in Advances in Neural Information Processing
+Systems (NeurIPS), 2021, vol. 34, pp. 11287–11302.
+
+Sergio Barbarossa is a Full Professor at Sapienza University of Rome and a
+Senior Research Fellow with the Sapienza School of Advanced Studies, Rome,
+Italy. He is an IEEE Fellow and a EURASIP Fellow. His current research
+interests include semantic and goal-oriented communications, topological
+signal processing and learning.
+
+Danilo Comminiello is an Associate Professor with the DIET Dept. at
+Sapienza University of Rome, Italy. His research interests concern the design
+of modern artificial intelligence algorithms, including neural networks and
+generative models. He is an elected member of the IEEE Machine Learning
+for Signal Processing Technical Committee.
+
+Eleonora Grassucci is currently an assistant professor at DIET Dept. of
+Sapienza University of Rome, Italy. She was awarded of the Best Track
+Manuscript Recognition by the IEEE Circuits and Systems Society in 2022.
+
+Francesco Pezone is a Ph.D. student in Data Science at Sapienza University
+of Rome, Italy, jointly with the Technical University of Berlin, Germany.
+His current research interests include Semantic Communication and Deep
+Learning for Data Compression.
+
+Stefania Sardellitti is an assistant professor at Sapienza University of Rome.
+She received the 2014 and the 2020 IEEE Best Paper Awards from the IEEE
+Signal Processing Society. Her current research interests are in the area of
+topological signal processing.
+
+Paolo Di Lorenzo is an Associate Professor at Sapienza University of
+Rome. His research interests include topological signal processing, distributed
+optimization, wireless edge intelligence, goal-oriented and semantic communications. He is recipient of the 2022 EURASIP Early Career Award. He has
+received three best student conference paper awards sponsored by the IEEE
+signal processing society and EURASIP.
+
+

@@ -1,0 +1,591 @@
+UNDER REVIEW FOR IEEE COMMUNICATIONS LETTERS
+
+1
+
+Improving Channel Resilience for Task-Oriented
+Semantic Communications: A Unified Information
+Bottleneck Approach
+
+arXiv:2405.00135v1 [cs.IT] 30 Apr 2024
+
+Shuai Lyu, Yao Sun, Senior Member, IEEE, Linke Guo, Member, IEEE, Xiaoyong Yuan, Fang Fang, Senior
+Member, IEEE, Lan Zhang, Member, IEEE, Xianbin Wang, Fellow, IEEE
+
+Abstract—Task-oriented semantic communications (TSC) enhance radio resource efficiency by transmitting task-relevant
+semantic information. However, current research often overlooks
+the inherent semantic distinctions among encoded features. Due
+to unavoidable channel variations from time and frequencyselective fading, semantically sensitive feature units could be more
+susceptible to erroneous inference if corrupted by dynamic channels. Therefore, this letter introduces a unified channel-resilient
+TSC framework via information bottleneck. This framework
+complements existing TSC approaches by controlling information
+flow to capture fine-grained feature-level semantic robustness.
+Experiments on a case study for real-time subchannel allocation
+validate the framework’s effectiveness.
+Index Terms—Channel resilience, Information bottleneck, Taskoriented semantic communications, Radio resource allocation.
+
+I. I NTRODUCTION
+
+F
+
+UTURE wireless networks are expected to support dramatically increased data traffic, driven primarily by the
+prevalence of sensing capabilities, distributed computing resources, and ongoing convergence with vertical applications,
+including transportation, online gaming and smart utilities. To
+support the unprecedented traffic growth with limited radio
+resources, task-oriented semantic communications (TSC) have
+garnered considerable interest [1], [2]. Unlike conventional bitlevel communications, TSC leverages both distributed computing resources as well as the most recent artificial intelligence
+(AI) techniques to extract and transmit task-relevant semantic
+information, thereby reducing unnecessary traffic and enhancing
+radio resource utilization efficiency.
+In TSC, a transceiver typically integrates semantic and channel coding functions to extract task-relevant semantic features
+and enable efficient transmissions [2]. Yang et al. introduced a
+novel compression method for AI tasks to improve transmission
+efficiency, demonstrated with a prototype for surface defect
+detection [3]. Instead of focusing solely on semantic coding,
+This work was supported by the US National Science Foundation (NSF)
+under Grants CCF-2106754, CCF-2221741, CCF-2418308, and CCF-2151238.
+Shuai Lyu, Linke Guo, Xiaoyong Yuan, and Lan Zhang (the corresponding
+author) are with the Department of Electrical and Computer Engineering, Clemson University, SC, USA (e-mail: {slv; linkeg; xiaoyon; lan7}@clemson.edu).
+Yao Sun is with the James Watt School of Engineering, University of
+Glasgow, Glasgow, U.K. (e-mail: Yao.Sun@glasgow.ac.uk).
+Xianbin Wang and Fang Fang are with the Department of Electrical and
+Computer Engineering, and Fang Fang is also with the Department of Computer
+Science, Western University, London, ON, Canada (e-mail: {xianbin.wang;
+fang.fang}@uwo.ca).
+
+Shao et al. [4] and Sun et al. [5] proposed to jointly optimize
+semantic and channel coding based on information bottleneck to
+balance semantic distortion and transmission efficiency. Moreover, TSC problems have been investigated in multi-user and
+multi-modality scenarios [6]–[8].
+Despite considerable efforts, existing TSC research primarily
+focuses on statistical channel conditions, assuming a certain
+channel condition when transmitting an input sample [2]–[7].
+However, the encoded features may encounter distinct physical
+impairments during transmission. For instance, in orthogonal
+frequency division multiplexing (OFDM) systems, multiple
+subcarriers with different frequency-selective fading are used
+for signal transmission across a wide bandwidth [9]. Consequently, if semantically sensitive feature units are allocated
+to poorly performing subcarriers, the corrupted features are
+more susceptible to erroneous task inference. While channel
+estimation techniques can evaluate instantaneous channel conditions in practice [9], the evaluation results cannot effectively
+guide feature-level transmissions due to the neglected semantic
+distinctions among encoded feature units.
+To bridge the gap between feature-level semantic distinctions
+and channel variations, this letter introduces an innovative TSC
+framework to improve channel resilience by evaluating and
+prioritizing encoded feature units of input data based on their robustness against channel variations. This framework is designed
+to be complementarily leveraged by existing TSC approaches to
+capture fine-grained feature-level semantic robustness, thereby
+adjusting transmission strategies for channel-resilient TSC. The
+primary contributions of this letter are summarized below.
+• Unified channel-resilience framework: We develop a unified approach to analyze a well-trained TSC transceiver for
+channel resilience, providing a soft robustness mask for the
+encoded feature space without modifying the established
+TSC encoding and decoding functions. This mask will
+be utilized to prioritize robust feature units and adapt
+the transmission strategies against instantaneous channel
+variations in practice.
+• Robustness mask based on information bottleneck (IB): We
+construct the robustness mask for encoded feature units by
+leveraging IB to regulate information flow with explicitly
+added artificial noise. Based on the task inference sensitivity, this mask softly disentangles the encoded features
+into robust and non-robust from the semantic level.
+• Numerical evaluation. We conduct experiments for real-
+
+UNDER REVIEW FOR IEEE COMMUNICATIONS LETTERS
+
+2
+
+time subchannel allocation problems as a case study.
+Evaluation results under two image tasks demonstrate
+the framework’s effectiveness, especially under highly dynamic adverse channel conditions.
+II. S YSTEM M ODEL
+This paper considers a typical task-oriented semantic communications (TSC) system. As illustrated in Fig. 1, the source
+transceiver comprises semantic and channel encoders. Given
+an input sample x ∈ XT of task T with the inherent taskspecific semantic information y ∈ YT , e.g., the target label,
+the source transceiver first extracts the semantic information
+of x with the semantic encoder and then processes it via the
+channel encoder. The encoded features are given by z = Eφ (x),
+which is also represented as z = {z1 , . . . , zm }, consisting m
+vectors. Note that we denote Eφ as the joint semantic and
+channel encoding function for ease of representation, which
+is consistent with many existing TSC works [4], [8], [10].
+Encoded features z are then transmitted through the physical
+channel to the destination transceiver, and the received signal
+can be given by ẑ = Hz + n, ẑ = {ẑ1 , . . . , ẑm }, where H
+denotes the channel matrix and n ∼ N (0, γ 2 I) denotes the
+additive white Gaussian noise (AWGN). The received signal is
+subsequently processed via a channel decoder and a semantic
+decoder. Similar to the source transceiver, we denote Dθ as the
+joint channel and semantic decoding function and derive the
+reconstructed semantic information ŷ = Dθ (ẑ).
+The workflow of the above TSC system can be formulated
+as a probabilistic graphical model: Y ↔ X ↔ Z ↔ Ẑ ↔ Ŷ .
+In the following, we use upper-case letters, e.g., X, and lowercase letters, e.g., x, to represent random matrices and their realizations, respectively. Existing TSC research primarily focused
+on reducing the size of encoded features z = {z1 , . . . , zm }
+while ensuring reconstruction performance of semantic information [2]–[7]. To achieve this, encoding and decoding functions, i.e., Eφ at the source transceiver and Dθ at the destination
+transceiver, are strategically optimized. We refer readers to
+recent TSC works [1]–[7] for more details.
+III. C HANNEL -R ESILIENT TSC F RAMEWORK
+A. Design Intuition
+While TSC systems have been extensively studied [1]–[7],
+existing research mainly considers statistical channel conditions
+to optimize semantic and channel coding functions, assuming
+that all encoded features of an input sample are transmitted
+under the same channel condition. However, this assumption
+may not hold true in practice. For instance, in OFDM systems, multiple subcarriers are used to simultaneously transmit
+data across a wide band [9]. Hence, encoded features may
+suffer distinct channel impairments due to different frequencyselective fading between subcarriers. Although instantaneous
+channel state information (CSI) can be monitored using estimation techniques, such as pilot symbols embedded in OFDM
+symbols, the adaptation of transmission strategies is designed to
+maximize the successful delivery of OFDM symbols. The focus
+remains on optimizing bit-level transmission performance, i.e.,
+
+Fig. 1. Overview of channel-resilient TSC framework. Blue arrows indicate IBbased channel-resilient analysis; black arrows indicate transmission procedures
+in the TSC system.
+
+duplicating all encoded features, rather than semantic inference.
+In other words, feature units across the encoded signal are
+assumed equally robust against channel variations. However,
+feature units may affect semantic inference differently, e.g., the
+semantically sensitive or non-robust units are more susceptible
+to erroneous task inference if corrupted by poor channel conditions. To address these limitations, this letter introduces an
+innovative framework for channel-resilient TSC by evaluating
+and prioritizing encoded feature units based on their robustness
+against channel variations. The framework offers a unified
+solution to complement existing TSC approaches from two
+perspectives:
+The framework seamlessly integrates with existing TSC
+approaches by analyzing a well-trained TSC transceiver.
+Specifically, a soft robustness mask is created for the
+encoded feature space without modifying the established
+TSC encoding and decoding functions, i.e., Eφ and Dθ .
+• The robustness mask aims to align semantic-level feature
+units with instantaneous channel variations. The mask with
+feature-level semantic distinctions guides transceivers to
+efficiently adjust transmission strategies based on instantaneous CSI, aiming for task-specific semantic inference.
+
+•
+
+To achieve this goal, we leverage information bottleneck
+(IB) [11] to analyze the encoded feature space by explicitly
+adding artificial noise to synthesize channel variations. Based on
+the semantic inference sensitivity of artificial noise intervention,
+a soft feature robustness mask is generated to indicate how
+encoded feature units corrupted by channel variations affect
+semantic inference with assigned information. In the following,
+we first present the IB reformulation to control information flow
+for channel resilience purposes and then provide a tractable
+solution to obtain the robustness mask. Finally, a case study of
+leveraging the mask for subchannel allocation is introduced.
+
+B. Information Bottleneck Reformulation
+IB is an information theoretical design principle that aims to
+find the best tradeoff between accuracy and complexity [11].
+Several recent works leveraged the IB principle in TSC to seek
+the tradeoff between transmission rate and semantic information
+distortion [4], [12]. Following the aforementioned probabilistic
+graphical model in Section II, Y ↔ X ↔ Z ↔ Ẑ ↔ Ŷ , the
+
+UNDER REVIEW FOR IEEE COMMUNICATIONS LETTERS
+
+3
+
+objective of optimizing the encoding and decoding functions,
+i.e., φ and θ, based on the IB principle can be given by
+min L(φ, θ) = −I(Ẑ, Y ) + βI(Ẑ, X),
+
+s.t. Z̃ = Z + σ · ϵ,
+
+(5)
+
+(1)
+
+where I is the mutual information; β is the Lagrange multiplier
+that regulates the amount of information in feature space Ẑ. In
+(1), the first term minimizes semantic distortion by allowing
+the received encoded features Ẑ to be predictive on semantic
+information Y , and the second term maximizes transmission
+rate by enforcing the compression from the input X to received
+encoded features Ẑ.
+Instead, this paper intends to improve the channel resilience
+of a well-trained TSC transceiver, whose encoding and decoding
+functions (φ, θ) are frozen. To estimate how each encoded feature corrupted by channel variations affect semantic inference,
+we resue the objective in (1) by introducing the artificial noise
+σ to control the information flow and estimate the robustness of
+the encoded features. Thus, the objective function of robustness
+estimation for channel-resilient TSC can be formulated as
+min L(σ) = −I(Z̃, Y |φ, θ) + βI(Z̃, X|φ, θ),
+
+Then, we derive the new form of I(Z̃, Y ) as
+Z
+I(Z̃, Y ) ∼
+= p(y, z̃) log p(y|z̃)dydz̃
+
+(2)
+
+where Z̃ stands for artificially corrupted encoded features by
+injecting the artificial noise σ to encoded features Z = Eφ (X).
+Hence, we derive Z̃ ∼ N (Eφ (X), σ 2 ). The operator · in (2)
+denotes the Hadamard product, and ϵ represents the Gaussian
+noise sampled from N (0, I). The noise variation here measures
+the correlation between the encoded features and the inferred
+semantic information based on the fact that robustness refers to
+a high correlation on semantic inference and non-robustness is
+opposite [13]. As (φ, θ) are frozen throughout the optimization
+for channel resilience analysis, we exclude φ and θ in the
+following notation for simplicity.
+
+=
+
+To calculate the achievable artificial noise, we resolve the
+difficulty of mutual information computation in (2) by deriving
+the upper bound of the objective function. We start with the
+first term I(Z̃, Y ). Writing it out in full, this becomes
+Z
+p(y, z̃)
+dydz̃
+I(Z̃, Y ) = p(y, z̃) log
+p(y)p(z̃)
+Z
+(3)
+= p(y, z̃) log p(y|z̃)dydz̃ + H(Y ),
+where p(y) and p(z̃) are the probability of the semantic information and encoded features with artificial noise, respectively.
+H(Y ) is the entropy of the semantic information that is independent to the optimization and thus ignored. Recalling the
+probabilistic graphical model Y ↔ X ↔ Z, we rewrite p(y, z̃)
+based on the underlying characteristics of the Markov chain,
+Z
+p(y, z̃) = p(x)p(z|x)p(z̃|z)p(y|z̃)dxdz.
+(4)
+
+[−L(Y, Dθ (Z̃))].
+
+X∼p(X),Z∼pφ (Z|X),Z̃∼p(Z̃|Z)
+
+Since we evaluate the robustness of the encoded features from
+a well-trained TSC transceiver, we have pφ (Z|X) and Dθ (Z̃).
+Besides, the corrupted features with artificial noise are given
+by Z̃ ∼ N (Eφ (X), σ 2 ). Thus, we can obtain the upper bound
+of I(Z̃, Y ).
+Next, we focus on the second mutual information, I(Z̃, X),
+in (2) and have
+Z
+p(z̃, x)
+dz̃dx
+I(Z̃, X) = p(z̃, x) log
+p(z̃)p(x)
+Z
+p(z̃|x)
+= p(z̃, x) log
+dzdz̃dx
+p(z)
+(6)
+Z
+p(z)
++ p(z̃, x) log
+dzdz̃dx
+p(z̃)
+= KL[p(Z̃|X)||p(Z)] − KL[p(Z̃)||p(Z)],
+where KL represents Kullback–Leibler divergence that measures the difference between two probability distributions. Since
+KL[p(Z̃)||p(Z)] ≥ 0, we have
+I(Z̃, X) ≤ KL[p(Z̃|X)||p(Z)]
+m
+δ2
+1 X σk2
+[ 2 + log k2 − 1],
+=
+2
+δk
+σk
+
+(7)
+
+k=1
+
+where k denotes the index of the artificial noise variation added
+to the kth encoded feature unit, i.e., σ = [σ1 , · · · , σm ], and
+δ = [δ1 , · · · , δm ] represents the inherent variation of an input
+reflected in the encoded feature space for task T .
+Built on the above derivation, we obtain the upper bound of
+the objective function in (2) as
+L(σ) ≤
+
+C. Upper Bound of the IB-based Robustness Estimation
+
+E
+
+E
+
+X∼p(X),Z∼pφ (Z|X),Z̃∼N (Eφ (X),σ 2 )
+n
+1 X σk2
+δ2
+− β(
+[ 2 + log k2 − 1]).
+2
+δ
+σk
+k=1 k
+
+[−L(Y, Dθ (Z̃))]
+
+(8)
+Therefore, by propagating Z̃ through the decoding function,
+the artificial noise can be optimized by σ = σ − ∂L(σ)
+∂σ .
+D. Robustness Mask and Case Study
+After optimizing artificial noise σ, we analyze the artificially
+corrupted encoded features Z̃ and assess the robustness of each
+feature unit based on its sensitivity to semantic inference. Define
+the encoded feature variation of task T by R = max(δ 2 ),
+which represents the maximal input variations mapping to the
+encoded feature space Z. Intuitively, the injected artificial noise
+should be restricted below R to ensure inference reliability.
+However, recent research indicates that the correlation between
+different units in the feature space and inference performance
+are different [13]. Thus, feature unit zk ∈ z = {z1 , . . . , zm }
+with a high correlation to inference results should have σk2 > R,
+
+UNDER REVIEW FOR IEEE COMMUNICATIONS LETTERS
+
+IV. N UMERICAL E VALUATION
+We consider two tasks for TSC on image classification, i.e.,
+CIFAR-10 [14] and Street View House Numbers (SVHN) [15]
+datasets. We adopt the VGG16 [16] architecture as the encoding
+function Eφ and three fully connected layers as the decoding
+function Dθ . Without loss of generality, we use the widely
+used additive white Gaussian noise (AWGN) channel as the
+general channel model to train the TSC transceiver, i.e., the
+encoding and decoding functions, Eφ and Dθ , that are frozen
+for channel resilience analysis. Besides, we consider a typical
+OFDM symbol structure with a total of 272 subcarriers. For
+each OFDM symbol, 16 pilots are evenly distributed across
+256 data subcarriers [17]. The number of encoded feature units
+is 512. The hyperparameter β of IB is empirically set as 0.3.
+B. Evaluation Results
+We first evaluate the effectiveness of the robustness mask for
+encoded feature units on the CIFAR-10 task. According to the
+robustness scores, we rerank encoded feature units. The units in
+the first half, which have higher scores, are expected to be more
+resilient against channel variations than those in the second
+
+Dimension 1
+
+Dimension 1
+
+(a) First-half feature units,
+ideal channel
+
+Dimension 2
+
+A. Evaluation Setup
+
+Dimension 2
+
+This mask can be leveraged by a well-trained TSC transceiver
+(i.e., given Eφ and Dθ ) for a specific task T to accommodate
+instantaneous channel variations. Based on the robustness score,
+priority is provided for transmitting the encoded feature units
+to achieve reliable semantic inference.
+We conduct a case study to leverage the robustness mask r
+for subchannel allocation. Feature units with a small robustness
+score are considered non-robust against channel impairments,
+which should be assigned to high-quality subchannels that are
+measured by channel estimation techniques [9]. Given a total of
+s available subchannels with distinct subchannel conditions, we
+leverage a greedy-based method to assign the s subchannels to
+the m encoded feature units based on their robustness mask r.
+The allocation problem is thus redefined as a direct one-to-one
+pairing problem, which is greedily solved with a computational
+complexity of O(m), where m represents the count of encoded
+feature units. The pseudocode of the robustness mask-based
+subchannel allocation is given in Algorithm 1.
+
+(b) Second-half feature
+units, ideal channel
+
+Dimension 2
+
+Remark: By optimizing σk ∈ σ for each unit of the encoded
+features, the IB-based problem formulation in (2) controls the
+information flow to the decoding function and evaluates feature
+unit robustness. For task T , we approximate X ∼ p(X) with
+empirical risk minimization. Hence, the soft robustness mask
+of feature unit zk ∈ z = {z1 , . . . , zm } is given by
+P
+m
+X
+σki
+T
+,
+rk = 1.
+(9)
+rk = P xi ∈XP
+m
+j
+xj ∈XT
+l=1 σl
+k=1
+
+Algorithm 1 Channel-Resilient TSC: Subchannel Allocation
+Input: (1) a well-trained TSC transceiver with encoding function Eφ and decoding function Dθ ; (2) input data and its
+corresponding semantic information (x, y) ∈ (XT , YT ); (3)
+instantaneous CSI = {CSI1 , . . . , CSIs } for s subchannels;
+Output: (1) robustness mask (2) subchannel assignment
+// Robustness mask generation
+1) Encode: z = Eφ (x) = {z1 , . . . , zm }, x ∈ XT .
+2) Initialize artificial noise: σ = 0 with a neutral noise.
+3) For each iteration:
+a) Adjust noise: σ = log(1+exp(σ)), ensure positive
+through SoftPlus.
+b) Inject noise: z̃ = z + σ · ϵ based on (2).
+c) Decode: ŷ = Dθ (z̃).
+based on (8).
+d) Update: σ = σ − ∂L(σ)
+∂σ
+4) End For
+5) Robustness mask: r = {r1 , . . . , rm } based on (9).
+// Robustness mask implementation: assign subchannels
+1) For iteration l ∈ {1, . . . , m} do:
+a) Select the smallest ri ∈ r and remove ri from r;
+b) Select the best CSIj ∈ CSI;
+c) Assign zi to the jth subchannel;
+d) If the jth subchannel is fully occupied, remove it
+from CSI;
+2) End for
+
+Dimension 2
+
+i.e., robust against channel impairment, and zk with σk2 < R is
+non-robust since small channel impairment behaves as a strict
+restriction to retain semantic inference performance. Therefore,
+we explicitly disentangle encoded features into robust and nonrobust against channel variations for TSC.
+
+4
+
+Dimension 1
+
+(c) First-half feature units,
+noisy channel
+
+Dimension 1
+
+(d) Second-half feature
+units, noisy channel
+
+Fig. 2. Comparison of feature-level channel resilience between the ideal (noise
+= 0) and noisy (SNR = 0) channel conditions.
+
+half, which have lower scores. Fig. 2 visualizes the featurelevel inference performance between ideal and noisy channel
+conditions using 2D t-SNE. In ideal channel environments,
+i.e., no noise, both robust (first-half) feature units and nonrobust (second-half) feature units achieve comparable inference
+performance. However, under noisy conditions, i.e., SNR = 0,
+
+UNDER REVIEW FOR IEEE COMMUNICATIONS LETTERS
+
+5
+
+V. C ONCLUSION
+
+(a) High Variance, CIFAR-10
+
+(b) Low Variance, CIFAR-10
+
+This letter introduced an innovative framework for channelresilient task-oriented semantic communications (TSC), which
+analyzes the encoded feature space of a well-trained TSC
+transceiver. A robustness mask for encoded feature units is
+created based on the information bottleneck, which was implemented for subchannel allocation as a case study. The
+effectiveness of this framework was validated on two TSC tasks.
+To the best of our knowledge, this letter is the first to explore
+feature-level channel resilience for TSC against instantaneous
+channel variations.
+R EFERENCES
+
+(c) High Variance, SVHN
+
+(d) Low Variance, SVHN
+
+Fig. 3. Comparison of inference performance between dynamic (high variation,
+15) and stable (low variation, 2) subchannel environments on CIFAR-10 and
+SVHN tasks.
+
+the performance disparity between the robust and non-robust
+feature units becomes apparent. Despite channel impairments,
+the first half of the units with higher robustness scores maintain
+performance levels similar to those in ideal conditions ((a) vs.
+(c)), whereas the performance of the second half deteriorates
+significantly ((b) vs. (d)). This contrast demonstrates the effectiveness of the robustness mask in evaluating feature-level
+channel resilience.
+We then evaluate the effectiveness of using the robustness
+mask for subchannel allocation between two AWGN environments characterized by low and high variations. The low
+variation represents stable subchannel environments, while the
+high variation denotes highly dynamic discrepancies between
+subcarriers, regardless of their average performance. Fig. 3
+illustrates the inference accuracy with on-average subchannel
+performance (SNR) between different channel variances on two
+image classification tasks. Specifically, Fig. 3(a) and Fig. 3(c)
+present inference performance under highly dynamic subchannel conditions. We compare our method against two baselines:
+random and worst-case allocations, the latter assigning the
+lowest-quality subchannels (low SNR) to the least robust feature
+units (low robustness score). We observe that our method
+consistently outperforms the baselines across all SNR levels,
+which demonstrates its effectiveness. As the SNR increases, the
+performance gap between our method and the baselines narrows
+on both datasets. This suggests that satisfactory average subchannel performance can compensate for subchannel variations.
+The advantage of our method is particularly notable in highly
+dynamic and challenging channel conditions. Furthermore, by
+comparing Fig. 3(b) and Fig. 3(d), we observe a marginal difference between the three methods in stable channel environments.
+This consistently validates our finding above.
+
+[1] T. M. Getu, G. Kaddoum, and M. Bennis, “A survey on goal-oriented
+semantic communication: Techniques, challenges, and future directions,”
+IEEE Access, vol. 12, pp. 51 223–51 274, 2024.
+[2] D. Gündüz, Z. Qin, I. E. Aguerri, H. S. Dhillon, Z. Yang, A. Yener, K. K.
+Wong, and C.-B. Chae, “Beyond transmitting bits: Context, semantics,
+and task-oriented communications,” IEEE Journal on Selected Areas in
+Communications, vol. 41, no. 1, pp. 5–41, 2022.
+[3] Y. Yang, C. Guo, F. Liu, C. Liu, L. Sun, Q. Sun, and J. Chen, “Semantic
+communications with artificial intelligence tasks: Reducing bandwidth
+requirements and improving artificial intelligence task performance,”
+IEEE Industrial Electronics Magazine, vol. 17, no. 3, pp. 4–13, 2022.
+[4] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE Journal
+on Selected Areas in Communications, vol. 40, no. 1, pp. 197–211, 2021.
+[5] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+information bottleneck guided joint source and channel coding for image
+transmission,” IEEE journal on selected areas in communications, vol. 41,
+no. 8, pp. 2628–2644, 2023.
+[6] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic communications for VQA,” IEEE Wireless Communications Letters, vol. 11,
+no. 3, pp. 553–557, 2021.
+[7] C. Liu, C. Guo, Y. Yang, and N. Jiang, “Adaptable semantic compression and resource allocation for task-oriented communications,”
+IEEE Transactions on Cognitive Communications and Networking, 2023,
+doi:10.1109/TCCN.2023.3346481.
+[8] F. Zhao, G. Bagwe, E. Mohammed, L. Feng, L. Zhang, and Y. Sun,
+“Joint computing resource and bandwidth allocation for semantic communication networks,” in 2023 IEEE 98th Vehicular Technology Conference
+(VTC2023-Fall). IEEE, 2023, pp. 1–5.
+[9] S. Coleri, M. Ergen, A. Puri, and A. Bahai, “Channel estimation techniques based on pilot arrangement in ofdm systems,” IEEE Transactions
+on broadcasting, vol. 48, no. 3, pp. 223–229, 2002.
+[10] S. Ma, W. Qiao, Y. Wu, H. Li, G. Shi, D. Gao, Y. Shi, S. Li,
+and N. Al-Dhahir, “Task-oriented explainable semantic communications,”
+IEEE Transactions on Wireless Communications, vol. 22, no. 12, pp.
+9248–9262, 2023.
+[11] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” arXiv preprint physics/0004057, 2000.
+[12] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+bottleneck for task-oriented communication with digital modulation,”
+IEEE Journal on Selected Areas in Communications, vol. 41, no. 8, pp.
+2577–2591, 2023.
+[13] D. Tsipras, S. Santurkar, L. Engstrom, A. Turner, and A. Madry, “Robustness may be at odds with accuracy,” arXiv preprint arXiv:1805.12152,
+2018.
+[14] A. Krizhevsky, G. Hinton et al., “Learning multiple layers of features
+from tiny images,” 2009.
+[15] Y. Netzer, T. Wang, A. Coates, A. Bissacco, B. Wu, A. Y. Ng et al.,
+“Reading digits in natural images with unsupervised feature learning,” in
+NIPS workshop on deep learning and unsupervised feature learning, vol.
+2011, no. 5. Granada, Spain, 2011, pp. 1–9.
+[16] K. Simonyan and A. Zisserman, “Very deep convolutional networks for
+large-scale image recognition,” arXiv preprint arXiv:1409.1556, 2014.
+[17] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. Quek, “OFDM-based digital
+semantic communication with importance awareness,” arXiv preprint
+arXiv:2401.02178, 2024.
+
+

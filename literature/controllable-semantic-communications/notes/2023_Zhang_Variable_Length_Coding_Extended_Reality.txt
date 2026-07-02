@@ -1,0 +1,852 @@
+                                                                                                                                                                                     1
+
+
+
+
+                                                Semantic Communications with Variable-Length
+                                                         Coding for Extended Reality
+                                            Bowen Zhang Graduated Student Member, IEEE, Zhijin Qin Member, IEEE, and Geoffrey Ye Li Fellow, IEEE
+
+
+
+
+                                              Abstract—Wireless extended reality (XR) has attracted wide        to conduct a specific task is not considered. These semantic-
+arXiv:2302.08645v2 [eess.SP] 12 Mar 2023
+
+
+
+
+                                           attentions as a promising technology to improve users’ mobility      unaware or task-unaware transmission method usually requires
+                                           and quality of experience. However, the ultra-high data rate         high data transmission rate or wide bandwidth. Sometimes,
+                                           requirement of wireless XR has hindered its development for
+                                           many years. To overcome this challenge, we develop a semantic        even if there are some bit errors during transmission, humans
+                                           communication framework, where semantically-unimportant in-          will not misunderstand the semantic meaning of the recovered
+                                           formation is highly-compressed or discarded in semantic coders,      data or task accuracy will not decrease significantly. This
+                                           significantly improving the transmission efficiency. Besides, con-   phenomenon inspires us to develop semantic communications
+                                           sidering the fact that some source content may have less amount      for wireless XR.
+                                           of semantic information or have higher tolerance to channel noise,
+                                           we propose a universal variable-length semantic-channel coding          Semantic communications transmits the semantic meaning
+                                           method. In particular, we first use a rate allocation network        in the source data, which is usually the content contributing
+                                           to estimate the best code length for semantic information and        more to the humans’ understanding of the source data or task
+                                           then adjust the coding process accordingly. By adopting some         accuracy. Earlier attempt on semantic communications has
+                                           proxy functions, the whole framework is trained in an end-to-
+                                                                                                                developed the joint source and channel coding method (JSCC)
+                                           end manner. Numerical results show that our semantic system
+                                           significantly outperforms traditional transmission methods and       for images [5] and texts [6], which first takes source coding
+                                           the proposed variable-length coding scheme is superior to the        into consideration and optimizes the system to minimize
+                                           fixed-length coding methods.                                         word/pixel-level errors rather than bit error. Semantic commu-
+                                                                                                                nications have first brought into wide attentions in [7], where
+                                                                                                                BERT, a pre-trained natural language processing (NLP) model,
+                                                                 I. I NTRODUCTION                               is used to measure the sentence similarity in a semantic-aware
+
+                                           E     XTENDED reality (XR), including augmented reality
+                                                 (AR), mixed reality(MR), and virtual reality (VR), has
+                                           shown great potential in immersive gaming, teleconferencing,
+                                                                                                                wireless text transmission framework. The similar idea is then
+                                                                                                                extended to the transmission of other data modalities, such as
+                                                                                                                speech [8], images [9], [10], [11], and videos [12]. In addi-
+                                           and remote education, and is changing the way that humans            tion to these reconstruction-oriented transmission works, task-
+                                           interact with the computer-simulated environments. In XR,            oriented semantic communications have also been developed,
+                                           the users need to wear head-mounted devices (HMDs) to                which are more effective in reducing data traffic as only task-
+                                           perceive the virtual contents. These XR HMDs usually have            related semantic information is transmitted. Some representa-
+                                           strict restrictions on weight, energy consumption, and heat          tive works consider wireless image retrieval [13], [9], machine
+                                           dissipation, especially when the users have to wear them for         translation [14], visual question answering [15] and so on.
+                                           a long time. Therefore, XR offloading, as a way to offload           Despite the fast development of semantic communications, a
+                                           storage and computational costive tasks of XR to remote GPU-         semantic communication framework dedicated to wireless XR
+                                           accelerated servers, has been widely considered.                     is still under-developed.
+                                              Recently, wireless XR has been proposed to increase users’           Besides, most existing semantic communication systems
+                                           mobility and quality of experience (QoE) [1], [2]. However,          adopt fixed code length for transmitting different source in-
+                                           XR offloading through wireless networks is a challenging             puts [7], [5], ignoring the fact that different source inputs
+                                           task. In some latency-critical XR applications, high-resolution      may contain different amounts of semantic information. A
+                                           images or three-dimensional (3D) data need to be transmitted         straightforward example is that the amount of semantic in-
+                                           in several milliseconds, resulting in the data rate requirements     formation contained in a picture of a coffee shop changes
+                                           as high as tens of Gbps [3], which is far above the achievable       with the number of customers inside. Therefore, a shorter code
+                                           capacity of the existing wireless networks with peak from 0.1        should be used for source data with less semantic information.
+                                           Gbps to 2.0 Gbps. Therefore, a new communication framework           Also, different source inputs may have different anti-noise
+                                           for supporting wireless XR is more than desired.                     capabilities. For example, if we calculate the first derivative
+                                              To overcome the ultra-high data rate requirement in wireless      of the task performance index to the semantic information
+                                           XR, one promising solution is to exploit semantic communi-           extracted from source data, a higher value usually means
+                                           cations to significantly reduce the data rate requirements [4].      this information is more sensitive to channel noise and a
+                                           In the existing communication systems, the source data is            longer code 1 should be used to conquer channel noise. Thus,
+                                           transmitted in the form of bit streams and the communication
+                                           system is optimized to minimize the bit-error rate. However,          1 when the number of information symbols is fixed, a longer code here
+                                           how the semantic meaning of the source data will be used             means adding more parity symbols
+                                                                                                                                   2
+
+
+
+variable-length coding scheme shall be introduced.                  generation, and semantic-aware rendered results transmission.
+   In this paper, we design a universal variable-length             To facilitate the understanding of semantic-aware transmission
+semantic-channel coding method for different semantic-aware         modules, we first provide a brief description for the overall
+transmission tasks. In particular, we first use a rate-allocation   architecture.
+network to analyze the amount of semantic information and              1) Sensor data acquisition: In many XR applications, the
+anti-noise capability extracted from the source data, and then      virtual contents are generated according to the actions or
+generate a rate-allocation index/map. The rate-allocation in-       environmental surroundings of XR users. For example, virtual
+dex/map will then be used to guide the semantic-channel cod-        object insertion requires users’ environmental information; VR
+ing network and achieve rate adaption at the transmitter side.      gaming servers will generate game scenes according to users’
+We also design a training loss function to realize the explicit     actions. To map objects, scenes, and human actions from
+trade-off between code length and transmission performance.         the real environments to the virtual world, some sensors are
+By adopting some proxy functions, the whole system is trained       required, such as microphones, RGB cameras, depth sensors,
+in an end-to-end manner.                                            and so on. These sensors are usually deployed on XR HMDs,
+   Some prior works have considered exploiting variable-            or integrated into some external devices, like haptic gloves and
+length coding scheme to semantic communications, but their          omnidirectional treadmills. Depending on the sensor type, the
+methods differ from ours in certain ways. For instance, J. Dai      sensed data can be of various data formats. After collecting the
+et al. [10] estimate the entropy of the semantic information        sensed raw data, data aggregation, coding, and compression
+and assign the code length proportionally to the estimated          will be performed at the user side. In XR offloading, these
+entropy. D. Huang et al. [11] divide the semantic features          sensed data will be transmitted to remote servers to process.
+into different classes and adjust the quantization level for each   Here, we define the users who send sensed data to remote
+class. However, these works have used strong hand-crafted           servers as source users, and the remote servers who receive
+assumptions on the coding rate allocation scheme while the          sensed data from these source users as destination servers.
+optimal coding scheme may change from one transmission                 2) Semantic-aware sensor data transmission: In traditional
+task to another. Therefore, we propose to learn the rate            communication systems, the sensed data is first transmitted to
+allocation scheme in an end-to-end manner. The most relevant        the remote destination servers, and then used for different com-
+work to ours is the one proposed in Q. Hu et al. [9], where         puting tasks, such as light estimation, 3D object reconstruction,
+an importance weight is learned for each semantic feature.          and object insertion. Considering the fact that task-related
+Different from [9], we provide an explicit trade-off between        semantic information only occupies a small proportion of the
+code length and performance through the training loss.              overall information contained in the sensed data, transmitting
+   Our contribution can be summarized as follows:                   the whole sensed data wastes wireless resources. Therefore,
+   1) We design a general semantic communication frame-             we design a semantic-aware sensor data transmission (SSDT)
+       work for supporting wireless XR offloading. We also          module.
+       identify the key transmission tasks under the developed         In our SSDT module, a semantic encoder deployed at
+       framework, and provide task-aware network architec-          the XR source user side, is responsible for extracting task-
+       tures for semantic coding modules.                           related semantic information from the sensed data. By dis-
+   2) We design a universal variable-length semantic and            carding semantically-unimportant information, the data traffic
+       channel coding module that can be used in different          for transmitting sensor data can be reduced. At the same time,
+       semantic communication systems. The rate-allocation          a semantic decoder deployed at the XR destination server side
+       scheme is learned in an end-to-end manner by intro-          will use these semantic information directly for task execution.
+       ducing some proxy functions.                                 The whole system is then optimized for transmitting these
+   3) Experiments on both human mesh reconstruction and             task-related information under the guidance of task accuracy.
+       image transmission tasks demonstrate the superiority of      More details will be provided in Section II-B.
+       the proposed semantic communication framework for               3) Rendered results generation: Based on the semantic
+       wireless XR over the traditional communication systems,      decoding results from the SSDT module, a series of rendering
+       and the variable-length coding scheme over fix-length        operations will be conducted at the XR server side. Specif-
+       coding scheme.                                               ically, for VR applications, the status of the pre-stored 3D
+                                                                    models of objects or scenes will first be updated. This includes
+   II. S EMANTIC CODING IN WIRELESS XR OFFLOADING                   adding new 3D object models to the virtual environments,
+  In this section, we will first introduce the overall semantic     changing the orientations and actions of the 3D object models,
+communication framework for wireless XR offloading. After           and refurbishing the outlooks of the 3D object models. After-
+that, we will introduce the semantic coding modules deployed        wards, photo-realistic viewpoint-dependent perspective images
+for the uplink and downlink of wireless XR offloading, re-          or 360° panoramic images will be rendered for XR users to
+spectively.                                                         perceive these 3D scenes, depending on the XR users’ current
+                                                                    field of views (FoVs). As for AR/MR applications, in addition
+A. Overall architecture                                             to changing the orientations or appearances of the 3D object
+   As shown in Fig.1, semantic-aware wireless XR offloading         models, light or shadow effects will also be added to these
+usually consists of the following steps: sensor data acquisi-       models according to the environmental changes near XR users.
+tion, semantic-aware sensor data transmission, rendered results     After rendering, these 3D object models will be transmitted
+                                                                                                                                        3
+
+
+
+
+                                                                                                              Task-execution
+                                                                                                          (destination server side)
+
+
+
+      voice      RGB       Depth
+                image      image            Semantic Semantic and        Semantic and     Semantic
+                                             encoder channel encoder    channel decoder    decoder
+        A. Sensor data acquisition
+            (source user side)                  B. Semantic-aware sensor data transmission
+                                                                 (SSDT)
+                                                                                                     C. Rendered Results Generation
+                                                                                                           (source server side)
+         Human perception
+       (destination user side)                                                                                               360°
+                                                                                                                          image/video
+
+
+                                           Semantic Semantic and        Semantic and      Semantic                         3D mesh
+                                            decoder channel decoder    channel encoder    encoder
+                                                 D. Semantic-aware rendered results transmission
+                                                                    (SRRT)
+
+                         Fig. 1: The overall architecture of semantic communications for extended reality.
+
+
+for targeted users to perceive.                                        B. Uplink SSDT module
+   In some XR applications, the users who receive rendered                In XR applications, the sensed data is used for task exe-
+results from XR servers can be the same ones who send                  cution. Sometimes, both the sensed data and the task outputs
+sensor data. For example, AR game servers will require users’          can be with a large size and unsuitable for transmission. To
+to send their environment information and integrate virtual            reduce the data traffic, we develop the SSDT module for
+game elements into the physical environments of the same               XR offloading. In the proposed SSDT module, task-related
+users. While in other applications like VR conferencing and            semantic information, which lies in a hidden space smaller
+multiplayer VR games, the sensed data transmitted by one user          than both the sensed data space and task outputs space, is
+will be used to render the virtual contents designed for other         extracted from the sensed data and used for task execution
+users. Without loss of generality, we call the servers who send        through a semantic encoder and decoder. Different from the
+rendered results as source servers while the users who receive         traditional coding modules, the semantic information extracted
+rendered results as destination users.                                 by semantic coding modules has clear semantic meanings,
+   4) Semantic-aware rendered results transmission: In tradi-          which is learnt either by proving extra labels or under the
+tional communication systems, the rendered images or 3D ob-            guidance of a model-based decoder. In the subsequent discus-
+ject models are transmitted to destination users pixel-by-pixel        sion, We take some classic computing tasks in XR offloading
+or point-by-point. However, as discussed in the previous works         as examples and introduce the corresponding semantic coding
+[16], [17], simply minimizing the per-pixel error between              modules.
+the original images and the reconstructed images does not                 1) Light estimation: Light estimation aims to recover a
+necessarily result in high perceptual quality. To improve users’       high-dynamic-range (HDR) panoramic illumination map from
+QoE, perceptual quality is considered in our SRRT module.              a single image with limited FoV, which can later be used in
+Besides, due to the round-trip latency in XR offloading, XR            many AR/MR applications for realistic virtual object relight-
+users’ FoVs at the time of receiving these rendered results            ing. In light estimation tasks, the inputs are high-resolution
+may be different from the FoVs in the sensor data acquisition          (HR) perspective RGB images captured by HMD cameras
+stage. In this case, these rendered results shall be transmitted       and the outputs are HDR panoramic illumination map. XR
+in a way that is friendly to local view-synthesis process. To          source users can choose to either send the HR images to
+address these issues, we design a semantic-aware rendered              XR destination servers or process HR images locally and
+results transmission (SRRT) module.                                    send estimated illumination map to destination XR servers.
+   In our SRRT module, a semantic encoder is deployed at the           However, due to the large data volume of HR images and
+XR source server side to extract perceptual-friendly or view-          panoramic images, both ways are challenging to wireless
+synthesis-friendly semantic information from the rendered              networks. To address this issue, we refer to the recent light
+results. Similarly, a semantic decoder deployed at destina-            estimation method EMLight [18] and design the semantic
+tion user side will generate or synthesis viewpoint-dependent          coding modules accordingly.
+images and 3D object models using the received semantic                   In particular, a semantic encoder, composed of a regression
+information. The whole system is then optimized to maximize            neural network (DenseNet-121) and a feature encoder, is
+perceptual experience, as we will discuss in more details in           deployed at the XR user side. The regression network extracts
+Section II-C.                                                          high-level semantic features from input RGB images and
+                                                                                                                                  4
+
+
+
+regresses these features into N (= 128) 3D anchor points           C. Downlink SRRT module
+representing light distribution, a 3D light intensity value,
+and a 3D ambient term. Simultaneously, the feature encoder            After rendering, the downlink SRRT module will transmit
+encodes the input images and generates a L (≤ 2048)-feature        rendered results to destination users in a semantic-aware
+vector representing source users’ surrounding environments.        manner. In particular, semantic information that is important
+At the destination server side, a spherical convolution network,   for users’ visual QoE will consume more channel resources
+served as the semantic decoder, takes the received semantic        during the transmission process so that users’ visual QoE can
+information as inputs and synthesizes the illumination map         increase. Here, we consider two factors affecting users’ visual
+via conditional image synthesis process. Therefore, the total      QoE, i.e., perceptual quality, and FoV mismatch. We will
+number of semantic information after the semantic coding           design semantic coding modules for these factors as follows.
+modules is 3(N +2)+L, which is significantly smaller than the         1) Perceptual-friendly XR contents transmission: To im-
+original HR images and expected HDR panoramic illumination         prove the perceptual quality of reconstructed XR images,
+output.                                                            we use three perceptual-friendly semantic losses to enhance
+                                                                   the semantic information extraction and reasoning process
+   2) 3D mesh recovery: 3D mesh recovery of human hand,            in semantic coding modules: learned perceptual image patch
+face, and body shape from a single RGB image has wide              similarity (LPIPS) [24] loss, generative adversarial network
+applications in VR conferencing and gaming. In this field, a       (GAN) loss [17], and salience-weighted loss [25]. LPIPS loss
+popular direction is to train a regression network for fitting     measures the distance of the original images and the recovered
+parameters of parametric 3D hand/face/body models, such            images in the feature space of a deep neural network originally
+as hand model with articulated and non-rigid deformation           trained for image classification. Minimizing the discrepancy
+(MANO) for hands [19], 3D morphable model (3DMM) for               in feature space has been regarded as a way to improve
+faces [20], and skinned multi-Person linear model (SMPL) for       perceptual quality in earlier works [24]. GAN uses a learned
+body shape [21], and use estimated parameters for 3D mesh          discriminator to detect the artifacts in the recovered images
+reconstruction. These methods are quite suitable for semantic      and adopts adversarial training to encourage the semantic
+communications, as we only need to transmit these estimated        coding modules to generate artifact-free contents. Salience-
+parameters among the source users and destination servers, and     weighted loss imposes a higher penalty to the pixels belong
+the latter can use received parameters for 3D mesh recovery.       to salient objects so that the salient objects in images can be
+Compared with the original RGB images or generated 3D              constructed better. As users first notice the salient objects in
+meshes, these parameters are quite small. For example, 76          images, salience-weighted loss can help improve visual QoE.
+semantic features are required for 3D hand mesh recovery,          Under the guidance of these semantic-aware losses, semantic
+among which 3 features are for camera orientation, 10 features     information affecting human’s visual perception process can
+for hand shape, and 21 3D keypoints for hand pose. In this         be extracted more effectively.
+case, the semantic encoder is the regression network while            The implementation details of LPIPS and GAN losses will
+the semantic decoder is the MANO model. Similar process            be provided in Section IV. To implement salience-weighted
+can be applied to face mesh (257 semantic features) and            loss, a salience detection network is required [26], whose
+human body and shape mesh (85 semantic features). A detailed       outputs will be used to design the weighted loss. To boost
+transmission paradigm for human mesh recovery will be given        the performance of salience-weighted loss, a spatially-varying
+in Section IV-A.                                                   coding scheme shall be implemented, so that pixels do not
+                                                                   belong to any salient object can be assigned a short code, as
+   3) 3D scene reconstruction: 3D scene reconstruction from        they are more likely to be ignored by users. In Section III-B,
+a sequence of RGB images is widely used in AR applications         we will develop a spatially-varying coding method.
+for virtual object placement. In 3D scene reconstruction task,        2) View-Synthesis for XR contents: Due to fast changes
+the 3D scene will be represented by a 4D truncated signed          of users’ viewing directions and standing points, XR users’
+distance function (TSDF) volume with color values. Both            current FoVs may be different from the FoVs in the sensor
+the image sequences and TSDF volume are with large sizes.          data acquisition process, leading to the FoV mismatch between
+Recent studies on sparse TSDF representation [22] and TSDF         rendered contents and ideal contents. Despite the FoV mis-
+completion [23] inspire us to transmit a sparse representation     match caused by viewing direction changes can be solved by
+of TSDF for data traffic reduction. In our SSDT module, the        transmitting panoramic images, FoV mismatch resulting from
+semantic encoder at the source user side first finds a sparse      standing points changes requires further signal processing
+TSDF volume representation from image sequences using the          techniques. In the SRRT module, we adopt existing view-
+similar process shown in [22], where only voxels representing      synthesis technologies [27] to address this problem and design
+surfaces have non-zero values. And then, a downsampling op-        the semantic coding modules correspondingly. Specifically, a
+eration is applied to the sparse TSDF volume, as an incomplete     semantic encoder consists of a feature predictor and a depth
+3D scan of these 3D surfaces. At the destination server side,      regressor is deployed at the source server side. The extracted
+a ScanComplete network [23] is used as the semantic decoder        semantic features and depth map are then transmitted to the
+to reconstruct the original sparse TSDF volume, followed by        destination users. Based on users’ current FoV, a neural render
+a global TSDF volume replacement defined in [22] for final         and a refinement module are used as a semantic decoder to
+TSDF volume reconstruction.                                        synthesize the targeted views. Transmitting these semantic
+                                                                                                                                                                  5
+
+
+
+
+                                               r(x)           q(x)
+                                                                                            010                   010
+              x                                                         Mask          1             Error-free
+                                                      Quantization                                 transmission
+                             Rate allocation                          generation      1
+                                                                                      1
+                                network
+                                 (RAN)
+                                                                             M(x) 0
+                                                                                      0
+                                                                                                                                  q(x)
+                                                                                      0
+
+                                                              y                       z                                 z         p                  x
+
+                      x                                              Element-wise
+                                                                     multiplication       Transmitted       Received
+                          Semantic and channel                                                                               Semantic and channel
+                                                                                            symbols         symbols               decoder       Reconstructed
+              Semantic         encoder                Modulated                                                     Zero-padded
+                                                                                             (z)              (z)                   (SCD)           semantic
+            information          (SCE)                 symbols                                                        symbols
+                                                                                                                                                  information
+              (x)                                       (y)                                                                 (p)                          (x)
+
+                    Fig. 2: The variable-length semantic-channel coding method for 1D semantic information.
+
+
+features with clear semantic meanings and functionalities                                   Simultaneously, q(x), indicating the adopted variable-length
+enables the fast viewpoint adaptation at the destination user                               coding scheme at the encoder side, will also be transmitted to
+side.                                                                                       the decoder. Different from z, q(x) will be transmitted in an
+                                                                                            error-free manner. As the quantization level, L, is chosen as a
+III. VARIABLE - LENGTH SEMANTIC AND CHANNEL CODING                                          small value, q(x) can be represented by several bits and can
+                                                                                            be easily transmitted without error.
+   In this section, we first introduce the proposed variable-
+                                                                                               After receiving the noise-corrupted symbols ẑ, we first apply
+length semantic-channel coding method (VL-SCC) for 1D
+                                                                                            zero-padding to them to ensure that they have a length of
+semantic information. And then, we will extend it to 2D/3D
+                                                                                            N . After this, these zero-padded symbols, p, and q(x) are
+semantic information with spatially-varying coding scheme.
+                                                                                            concatenated and fed into a semantic and channel decoder
+                                                                                            (SCD), which has symmetric architecture with the SCE. Fi-
+A. VL-SCC for 1D semantic information                                                       nally, semantic information is reconstructed at the decoder
+   1) Overall architecture: The overall architecture of the                                 side, which is annotated as x̂.
+proposed VL-SCC is shown in Fig. 2. Given a 1D seman-                                          As we can see from Fig. 2, the quantizer and mask gener-
+tic information x, we first apply a rate allocation network                                 ation process restrict the end-to-end training property of the
+(RAN) to x to analyze its amount of semantic information                                    whole architecture. Also, a training loss should be designed
+and anti-noise capability and output a rate allocation index,                               to train the SCE, SCD, and rate allocation network. In the
+r(x) ∈ (0, 1). Then, r(x) is used to guide the coding process                               following, we will address these issues sequentially.
+and generates a 0-1 mask for rate control.                                                     2) Quantizer: We first solve the gradient problem of quan-
+   In particular, a semantic and channel encoder (SCE), another                             tizer. In our network, the quantization process is defined as as
+neural network, takes both x and r(x) as inputs and generates                               follows,
+N modulated symbols y ∈ RN . Under the guidance of r(x),                                                               q(x) = l, if                       (1)
+y will be generated in a specific way, i.e., the most important
+                                                                                             l−0.5         l+0.5
+information symbols and parity symbols for x transmission                                     L−1 ≤ r(x) ≤ L−1 , for l = 0, 1, . . . , L − 1. As mentioned
+are selected and put in the first N r(x) symbols of y while                                 above, r(x) ∈ (0, 1). Therefore, q(x) may take one of L
+the other symbols are generated in an importance-descending                                 different quantity values, i. e. 0, 1, . . . , L − 1. After using
+way.                                                                                        this quantization formulation, the gradient is zero almost
+   At the same time, a 0-1 mask, M (x) ∈ RN , will be                                       everywhere. To address this issue, we use a straight-through
+generated according to the rate index r(x). Specifically, we                                estimator of the gradient [28] and define the gradient in the
+first apply a uniform quantizer to r(x), and quantify r(x) into                             back-propagation process as,
+L discreet values. Denote the quantization result as q(x). And
+then, we generate M (x) according to the value of q(x) in a                                                                           qx′ = L − 1.              (2)
+way that 1 values are all generated ahead of 0 values. The                                  In this way, the gradient can be back-propagated from q(x) to
+details of the quantizer and mask generation operation will                                 r(x).
+be given hereafter. Once generated, M (x) will be element-
+                                                                                               3) Mask generation: Next, we will introduce the design
+wisely multiplied with y to get transmitted symbols, z, and
+                                                                                            of mask generation operation. In the forward-propagation
+the symbols with 0 values in the mask can be safely discarded
+                                                                                            process, we first initialize an all-zero vector M (x). Then, we
+before transmission process. We now finish the coding rate
+                                                                                            define the value of each element in M (x) as follows,
+adaption at the encoder side.
+   After encoding, the shortened transmitted symbols, z, will                                                                     N
+                                                                                                                     
+                                                                                                                        1, i < L−1   q(x),
+be transmitted to the decoder through noisy wireless channels.                                               mi =                                        (3)
+                                                                                                                        0, else,
+                                                                                                                                                     6
+
+
+
+for i = 0, . . . , N −1, where mi is the i-th element in M (x). As     B. Spatially-variant VL-SCC
+shown in Eq. (3), the value of mi is decided by a step function           In the previous subsection, the variable-length coding
+of i. Given a specific q(x) value, all elements of M (x), whose        scheme is deigned for 1D semantic information. Here, we
+                                                            N
+corresponding locations in M (x) are smaller than L−1          q(x),   will extend it for 2D/3D semantic information by introducing
+have 1 values while the rests have 0 values, In this way, we           spatially-variant coding. Parts of the design here are inspired
+can ensure all 1 values are generated before 0 values in the           by the early deep compression work in [31]. Different from
+                                                            N
+final 0-1 mask. Also, when q(x) has a larger value, L−1         q(x)   [31], we jointly consider source and channel coding and
+will increase, making more elements in M (x) taking 1 values.          directly map semantic information into modulated symbols
+   Similar to the quantization operation, the gradient is zero         without bit transition.
+                    dq
+everywhere for dx      . To address this issue, we first rewrite Eq.
+                                                                          1) Motivation: Given a 2D/3D semantic information, es-
+(3) as,
+                                                                       pecially those extracted from images/videos, its information
+                              1, q(x) > L−1
+                           
+                     mi =                    N i,                (4)   amount is spatially-variant2. For example, the semantic infor-
+                              0, else,                                 mation extracted from a sky region in images has less amount
+for i = 0, . . . , N − 1, to make each mi as a step function of        of information than those extracted from a human region. And
+q(x). Under this formulation, we can again adopt a straight-           if the average information amount of all regions is relatively-
+through estimator of the gradient. We define the gradient in           smaller, a shorter code should be used. This motivates us to
+the back-propagation process as,                                       design a spatially-variant coding.
+                                                                          2) Overall architecture: The architecture of the proposed
+                 1/3, ⌈ L−1                 L−1
+           
+      ′
+   miq =                  N i⌉ − 2 < q(x) ≤ N i⌉ + 1,       (5)        VL-SCC for 2D/3D semantic information is shown in Fig.
+                 0,    else,
+                                                                       3. Given a semantic information X ∈ RH1 ×W1 ×C1 extracted
+where ⌈⌉ is the ceil operation. Here, the gradient is defined as       from an original image of shape (H, W, 3), we first adopt a
+an interval of 3 units to stabilize the training process. Under        rate allocation network to analyze its semantic information
+this formulation, only mi , whose location in m is close to            amount and anti-noise capability in different spatial locations
+  N
+L−1 q(x), will contribute gradients to q(x).                           and generate a rate allocation map R(X) ∈ RH2 ×W2 , which
+   4) Model learning: At last, we will define the training pro-        indicates the final code length at each spatial location of
+cess for the whole network. Specifically, we want the encoded          modulated symbols.
+representation of semantic information to be compact when                 Different from the rate index in Section III-A, R(X) here
+measured in symbols while at the same time we want distortion          is a matrix. The burden of transmitting its quantified version
+Ld (x, x̂) to be small, where Ld is some measurement of the            is proportional to its spatial size. To address this issue, down-
+reconstruction error. Under this design goal, we can formulate         sampling operation is adopted in the rate allocation network.
+the training loss as the well-known rate-distortion trade-off             Similarly, R(X) is used in two ways. It is first concatenated
+[17], [29], [30]. Let X be a set of semantic information used          with X and fed into a SCE. The SCE will generate modulated
+for training and x ∈ X be a training example from the set,             symbols Y of shape (H2 , W2 , N ). Under the guidance of
+the training loss is defined as,                                       R(X), Y will be generated to satisfy the following properties:
+                      X
+                 L=        LD (x, x̂) + γLr (x),             (6)          1) The most important information symbols and parity
+                      x∈X                                                     symbols at spatial location (i, j) will be selected and
+where Lr (x) represents the rate loss and γ is an introduced                  put in the first R(X)i,j N symbols at that location3 ;
+trade-off parameter between distortion loss and rate loss.                2) For location (i, j) where the number of important sym-
+Increasing the value of γ will penalize more on the coding                    bols is smaller than R(X)i,j N , it will accept important
+length and reduce the average code length of X sets.                          symbols from neighbouring locations (m, n) where the
+   Distortion loss: Distortion loss is used to evaluate the                   number of important symbols is larger than R(X)m,n N ;
+transmission quality of semantic information. In semantic                 3) The rest symbols are generated in an importance-
+communications, it is a combination of a data-fidelity term (for              descending way along the channel dimension.
+faithful reconstruction) and a semantic loss term (for human           In SCE, down-sampling operation is also used to ensure that
+understanding). As its formulation is task-specific, we do not         the modulated symbols Y have the same spatial size as R(X).
+give its detailed mathematical expression here but leave it               Simultaneously, R(X) will be quantified by Eq. (1) to get
+to Section IV, where some semantic-aware XR applications               Q(X). After that, a mask tensor, M (X) ∈ RH2 ×W2 ×N , is
+transmission task will be given.                                       calculated, where each mask vector in the spatial dimension
+   Rate loss: As shown in Fig. 2, the number of transmitted            of M (X) is generated using Eq. (3). Next, we will conduct
+symbols is completely decided by the value of r(x). Therefore,
+                                                                          2 Given a 3D tensor of shape (H × W × C), we define the first two
+r(x) can be regarded as a continuous indicator of code length.
+                                                                       dimensions as spatial dimension, and the last as channel dimension
+We define the rate loss as Lr (x) = r(x).                                 3 In semantic communications, different information symbols have different
+   By minimizing LD (x, x̂), more elements in M (x) will               importance levels according to their contributions to the transmission task.
+be driven to be 1 values while by minimizing Lr (x), more              Usually, each parity symbol is only used to protect several information sym-
+elements in M (x) will be 0 values, achieving an explicit trade-       bols, like LDPC coding. In this case, parity symbols will also have importance
+                                                                       differences according to the information symbols they are protecting. By
+off between the performance and the code length. Through Eq.           training, the networks can learn to distinguish important information and parity
+(6), the best code for each x can be learnt.                           symbols from others, and adjust their locations.
+                                                                                                                                                                                                                 7
+
+
+
+
+                  I                            R(X)                   Q(X)
+                                                                                           010110            Error-free            010110
+                                             (H2 x W2)               (H2 x W2 )                             transmission
+                                                                               Mask
+    Original
+                                                                             generation
+     image
+  (H x W x 3)                                         Quantization
+                      X                                                                M(X)
+                           Rate allocation                                          (H2 x W2 x N)
+                              network
+                                                                                                                                                     Q(X)          Q(X)
+
+                                                              Y                              Z                                                                                              X
+
+
+
+
+                                                                                                     ...
+
+
+
+
+                                                                                                                                      ...
+                  X                                               Element-wise                                                                                    P
+                                               Modulated          multiplication                                                                        Zero-padded
+                                                                                                                                                          symbols          Semantic and          Reconstructed
+    Semantic               Semantic and         symbols
+                                                                                                 Transmitted                       Received                               channel decoder           semantic
+  information             channel encoder     (H2 x W2 x N)                                        symbols                         symbols             (H2 x W2 x N)                              information
+                                                                                                                                                                              (SCD)
+ (H1 x W1 x C1)               (SCE)                                                                                                                         (P)
+                                                  (Y)                                                (Z)                                                                                        (H1 x W1 x C1)
+                                                                                                                                    (Z)
+      (X)                                                                                                                                                                                             (X)
+
+
+
+                           Fig. 3: The variable-length semantic-channel coding method for 2D/3D semantic information.
+
+
+an element-wise multiplication operation between M (X) and
+Y , and discard symbols at locations in which the mask value
+is 0. Finally, the rest symbols will be reshaped into a vector                                                                                                                                       Real human?
+Z.                                                                                                                 224x224x3                                                                    Discriminator
+
+
+
+
+                                                                                                                                            Camera
+                                                                                                             224x224x3
+   After encoding, the symbol vector Z will be transmitted to
+the decoder via noisy channels. Simultaneously, Q(x) will be
+                                                                                                                      Regression
+                                                                                                       ResNet50
+
+
+
+
+                                                                                                                                                            VL-SCC
+
+
+
+
+                                                                                                                                            Pose
+                                                                                                          V2
+
+
+
+transmitted in an error-free way. The bit length of Q(x) will                                                                                                (1D)
+                                                                                                                                                                             SMPL
+
+be H2 W2 log2 (L). Considering the spatial size of the original                                                                                                        Semantic decoder
+image HW , the bit rate for this error-free transmission link                                         Semantic encoder                      Shape
+will be H2 W2 log2 (L)/HW bits per pixel (bpp), which must                                                                                                                                      L2D L3D
+be set as a small value to reduce the transmission costs for this
+error-free side link. In our methods, we set L = 16, H2 = 16  H
+                                                                ,                                   Fig. 4: Semantic communications for human mesh recovery in
+              W
+and W2 = 16 , resulting in 0.0156 bpp. Also, as this is an                                          uplink SSDT.
+error-free link, entropy coding can be used to further decrease
+the bit rates of transmitting Q(x).
+   At the decoder side, Q(x) will guide the process of re-                                          the figure, a semantic encoder, consisted of a ResNet50 and
+shaping the received symbol vector Ẑ back to a 3D tensor of                                        a regressor, will take a RGB image as input and estimate
+shape (H2 , W2 , N ). Zero-padding is applied in this process                                       task-related semantic information at XR source user side. The
+to pixels that are discarded at the encoder side. After getting                                     semantic information, x ∈ R85 , parameterizes the camera
+zero-padded symbols P , a SCD will reconstruct the 2D/3D                                            parameters (t ∈ R3 ), human pose (α ∈ R72 , 3D rotation
+semantic information, X̂.                                                                           of 23 joints + 1 global rotation), and human body shape
+   Rate loss: As shown in Fig. 3, the code length at each                                           (β ∈ R10 ). These semantic information is then transmitted to
+spatial location (i, j) is decidedPbyPR(x)i,j . Therefore, we                                       and reconstructed at the destination server using the VL-SCC
+define the rate loss as Lr (x) = i i R(x)i,j .                                                      module introduced in Section III-A. For the networks used in
+                                                                                                    the VL-SCC module, we set them as fully-connected network
+                                                                                                    with 1024 hidden units (6 layer used for SCE and SCD, 4 layer
+IV. J OINT S EMANTIC C ODING AND S EMANTIC -C HANNEL
+                                                                                                    for rate allocation network). The VL-SCC module will output
+                        C ODING
+                                                                                                    the reconstructed semantic information x̂ = (t̂, α̂, β̂). At last,
+   In this sections, we will show how the semantic coding                                           a SMPL model is used to reconstruct the final 3D triangulated
+modules developed in Section II and the VL-SCC module                                               human mesh with N = 6980 vertices, z ∈ RN ×3 , from x̂.
+designed in Section III are jointly optimized in semantic                                              To jointly train the semantic coding module and the VL-
+communications. Specifically, we will introduce the imple-                                          SCC module, a training dataset and a training loss are required.
+mentation details for human mesh recovery task in the uplink                                        In this task, we have access to three kinds of data sets:
+SSDT module and the perceptual-friendly wireless image
+transmission in the downlink SRRT module.                                                                  1) A large RGB image dataset where all are annotated with
+                                                                                                              ground truth 2D joints;
+                                                                                                           2) A small dataset in which some have 3D joints annota-
+A. Human mesh recovery                                                                                        tions;
+  The semantic communication framework for human mesh                                                      3) A 3D human mesh dataset of varying shape and pose
+recovery task in the uplink SSDT is shown in Fig. 4. From                                                     but without corresponding images.
+                                                                                                                                                8
+
+
+
+                                    d                                  TABLE I: Networks for Wireless Image Transmission
+                              VGG                                             Semantic Encoder                     SCE
+                                                                           Type    Para.    Out c           Type    Para.          Out c
+                              L2                                          S-Conv  9x9,S2     256          S-Conv   5x5,S2           512
+                                                                          PReLu      -         -           PReLu      -              -
+                                                                          S-Conv  5x5,S2     256          S-Conv   5x5,S1           512
+               Semantic     VL-SCC       Semantic                         PReLu      -         -           PReLu      -              -
+               -Encoder      (2D)        -Decoder
+                                                                          S-Conv  5x5,S1     256          S-Conv   5x5,S1           512
+                                                                                                          S-Conv   3x3,S2           512
+Fig. 5: Semantic communications for perceptual-friendly im-                                 Rate Allocaion Network
+age transmission in downlink SRRT.                                         Type       Para.      Act.      Out c
+                                                                          S-Conv     3x3,S2     PReLu       256
+                                                                          S-Conv     3x3,S1     PReLu       256
+                                                                          S-Conv     3x3,S1     PReLu       256
+   Based on the available datasets and earlier work [21], we              S-Conv     3x3,S1     PReLu       256
+design the training loss correspondingly. The training loss is            S-Conv     3x3,S2     PReLu       128
+composed of three terms: a data fidelity term Ll , a semantic             S-Conv     3x3,S1    Sigmoid       1
+loss Ls , and a rate loss Lr .
+   Data fidelity term: The data fidelity term is used to
+minimize the distance of 2D joints’ locations and 3D joints’       transmit the semantic information from the server side to user
+location between true data labels and those calculated from        side. Finally, a semantic decoder reconstructs the image from
+reconstructed 3D human mesh. Specifically, 3D joints’ loca-        recovered semantic information. Denote the reconstructed im-
+tions can be obtained by linear regression from the recon-         age as y. We show the networks used in this task in Table.
+structed mesh vertices z; 2D joints’ locations are calculated      I, where networks that have symmetrical architectures with
+by projecting 3D joints locations to 2D using estimated camera     the listed ones are omitted. In Table. I, S-Conv denotes signal
+parameters t. Thus, the data fidelity term can be represented      convolution4, out c denotes output channels, and k × k S1 or
+as Lf = L2D + L3D .                                                S2 denotes k × k convolution with stride 1 or 2. In this image
+   Semantic loss: Semantic loss is designed for realistic-         transmission task, the training loss is also composed of three
+looking reconstruction of the 3D human mesh. This is because       terms, a data fidelity term, a semantic loss, and a rate loss.
+a low data fidelity term does not always mean that the                Data fidelity term: The data fidelity term is defined as l2
+reconstructed 3D human mesh has a good visual quality,             loss between original images x and reconstructed images y.
+especially when we only have partial observations on 2D and        By minimizing this term, we are optimizing pixel-level error.
+3D joints, and have no access to a labelled human mesh                Semantic loss: In this task, We use LPIPS loss, LLP IP S ,
+dataset. To address this problem, a semantic loss based on         as the semantic loss. LPIPS is defined as the distance of
+GAN is developed. Specifically, we introduce a discriminator       two images  P in the P feature space of a network, defined as
+D, which is trained by minimizng E(Θ∼pT ) (D(Θ − 1)2 ) +           d(x, y) = l Hl1Wl h,w ||wl · ((Fx )lhw − (Fy )lhw )||22 , where
+                                                  ˆ pT denotes
+E(Θ̂∼pR ) (D(Θ̂)2 ), where Θ = (α, β); Θ̂ = (α̂, β);               Fxl ∈ RHl ×Wl is the features extracted from x in the l-th layer
+the distribution of θ in true mesh dataset; pR denotes the         of the network; wl is a weight designed for the l-th layer.
+distribution of estimated parameters. D(Θ) ∈ (0, 1) denotes           Rate loss: The rate loss Lr for the VL-SCC module is
+the output of the discriminator when Θ is input. With this         defined in Section III-B.
+training loss, the discriminator is able to distinguish the           Finally, the total training loss can be represented as,
+true parameters from the estimated ones. Simultaneously, the
+semantic loss, LGan , is defined as E(Θ̂∼pR ) (D(Θ̂−1)2 ), which                    L = l2 (x, y) + λLLP IP S + γLr ,                         (8)
+will encourage the estimated parameters to have the same
+distribution with the true parameters.                             where λ is an introduced trade-off parameter between data
+   Rate loss: Rate loss is adopted to train the variable-length    fidelity term and semantic loss.
+coding scheme in the VL-SCC module. It is formulated as Lr
+as before.
+   Finally, the total training loss can be represented as,                                    V. E XPERIMENTS
+                   L = Lf + λLGan + γLr ,                   (7)       In this section, we compare semantic communications with
+where λ is an introduced trade-off parameter between data          traditional communications in human mesh recovery task and
+fidelity term and semantic loss. A high value will penalize        wireless image transmission task. We also present experiments
+more on the distribution discrepancy.                              to verify the proposed variable-length coding scheme.
+
+B. Perceptual-friendly wireless image transmission
+                                                                   A. Human mesh recovery
+   The semantic communication framework for perceptual-
+friendly wireless image transmission is shown in Fig. 5. As          In this subsection, we conduct experiments on human mesh
+shown in the figure, a semantic encoder is first used to extract   recovery task.
+semantic information from input images x. And then, the VL-
+SCC module described in Section III-B will be adopted to             4 https://www.tensorflow.org/api   docs/python/tfc/layers/SignalConv2D
+                                                                                                                                                             9
+
+
+
+   1) Dataset: We use the following image datasets annotated
+                                                                                                           0.26
+with 2D joints: LSP, LSP-extended [32], and MPII [33]. The                                                                    BPG+LDPC
+                                                                                                                              SCC(2k)
+adopted image dataset with 3D joints we use is MPI-INF-                                                                       VL-SCC
+                                                                                                           0.24               SCC(4k)
+3DHP [34]. Due to the lack of 3D joints annotations, we only                                                                  Ideal
+
+
+
+
+                                                                                               MPJPE(3D)
+randomly select 5% samples for validation, 5% samples for
+testing, and use the rest for training. All images are scaled                                              0.22
+to 224 × 224 before feeding into ResNet50v2. The images
+are also randomly scaled, translated, and flipped as a data                                                 0.2
+augmentation method.
+   2) Experimental environments: We consider additive white                                                0.18
+Gaussian noise (AWGN) channels, and the signal-to-noise-                                                      -20   -10   0      10      20
+ratio (SNR) per symbol changes from −20dB to 10dB. We                                                                     SNR(dB)
+evaluate the performance of different methods under the same
+                                                                                    Fig. 6: MPJPE vs SNR for different transmission methods.
+average number of modulated symbols sent by XR users.
+In this experiment, we set it as 2, 000 (1, 000 in complex
+number).                                                                           is the number of joints. Suppose     there are M training sam-
+   3) Considered transmission methods: We now describe the                                                          PM     PK      1        T
+                                                                                   ples. MPJPE is calculated by        i=1    j=1 MK (||l3D i (j) −
+considered transmission methods for human mesh recovery                                F
+                                                                                   l3D i (j)||2 ). A lower MPJPE indicates the estimated 3D joints
+task.
+                                                                                   locations are more accurate. We show the performance of
+   • benchmark: In traditional communications, XR users
+                                                                                   different transmission methods in Fig. 6, where the ideal
+      will first transmit the images to the remote server, and the                 case is the performance limit when the source is transmitted
+      remote server will use received images for task execution.                   over noiseless channels. As we can see from Fig. 6, our
+      To simulate this process, we first transmit all the training                 proposed designs under different settings work significantly
+      images over noisy channels, and then train a human mesh                      better than the traditional method with BPG and LDPC. This
+      recovery network based on the received images and true                       is because we only transmit the task-related information and
+      labels. During the image transmission process, we use                        the information can be protected better when transmitted
+      better portable graphics (BPG) [35] for source coding,                       alone compared with when transmitted alongwith images, as
+      and low-density parity-check (LDPC) for channel coding.                      all wireless resources are only used for these task-related
+      For each SNR situation, we first fine-tune the channel                       information. Moreover, from Fig. 6, VL-SCC outperforms
+      coding rate and modulation order to ensure bit-error rate                    SCC (2K), which verifies the effectiveness of VL-SCC in
+      smaller than a threshold. After that, we adjust the BPG                      improving coding efficiency.
+      compression rate under the bandwidth constraint.                                5) Semantic loss validation: We show the visual effects
+   • VL-SCC: In this method, we adopt the semantic com-
+                                                                                   of human mesh recovery task with and without semantic
+      munication framework designed in Section IV-A. The                           loss on some testing examples in Fig. 7. From the figure,
+      semantic coding module and the VL-SCC module are                             when semantic loss is not considered, the reconstructed human
+      jointly trained for each SNR situation. We set N =                           meshes have terrible visual effects, even if the corresponding
+      4, 000, which means the maximum number of modulated                          MPJPE is nearly the same as or even better than the method
+      symbols available for each sample is 4, 000. By fine-                        with semantic loss. This verifies the importance of introducing
+      tuning to the value of γ in different SNR situations, we                     a semantic loss.
+      ensure that the average number of modulated symbols
+      sent by users is smaller than 2, 000 to satisfy system
+      requirement.                                                                 B. Perceptual-friendly wireless image transmission
+   • SCC(2k): By deleting the rate allocation network and its                         In this part, we consider the wireless image transmission
+      output, we can get a fixed-length semantic communica-                        task. The details are as follows.
+      tion network, where the N = 2, 000 modulated symbols                            1) Dataset: We choose MS-COCO 2014 [36] as the
+      are transmitted directly to the receiver without any rate                    dataset6 , in which we use 82, 783 training samples, 2, 000
+      control.                                                                     validation samples, and 2, 000 testing samples. During the
+   • SCC(4k): In this case, we show the performance of                             training, 128 × 128 image patches are randomly cropped.
+      fixed-length SCC systems with N = 4, 000, which is                              2) Experimental environments: We consider additive white
+      unrealistic in the current experimental settings but served                  Gaussian noise (AWGN) channels, and the signal-to-noise-
+      as a performance indicator.                                                  ratio (SNR) per symbol is set as 10dB. The average number
+   4) Performance metrics: We use mean per joint position                          of modulated symbols sent by XR servers varies in this
+error (MPJPE)5 [21] as the performance matrix, which is                            experiment.
+                                                    T
+calculated based on the true 3D joints labels, l3D      ∈ RK×3 ,                      6 As discussed above, the spatial size of the modulated symbols will be
+                                           F      K×3
+and the estimated 3D joints locations, l3D ∈ R         , where K                   only 1/256 of the input images to reduce the overhead of the side link. This
+                                                                                   means the training images cannot be very small. Also, the number of training
+   5 We do not multiply the predicted joints with the image size here, therefore   data should be large enough to show diversity in the amount of semantic
+the reported MPJPE belong to (0,1)                                                 information. Based on this considerations, we choose MS-COCO 2014
+                                                                                                                                10
+
+
+
+
+                                                            Without semantic loss
+
+
+
+
+              MPJPE:0.0823               MPJPE:0.4248                  MPJPE:0.0482                          MPJPE:0.0136
+
+                                                            With semantic loss
+
+
+
+
+               MPJPE:0.08                 MPJPE:0.4765                MPJPE:0.04637                           MPJPE:0.01134
+
+
+                     Fig. 7: The visual effects of human mesh recovery task with/without semantic loss.
+
+
+  3) Considered transmission methods: We now describe the
+                                                                                       34
+considered transmission methods for semantic-aware wireless
+image transmission.                                                                   33.5
+
+  • BPG+LDPC: Similar to the previous experiment, we use                               33
+
+    BPG for source coding and LDPC for channel coding.
+                                                                           PSNR(dB)
+
+
+                                                                                      32.5
+    Following the experimental settings in [10], when SNR=                             32
+    10dB, we use 16QAM and 2/3 LDPC.
+                                                                                      31.5
+  • VL-SCC(λ): In this method, we adopt the semantic
+    communication framework design in Section I. We set                                31                       SCC( =0)
+                                                                                                                JSCC( =0)
+    N = 512, which is the maximum code length for each                                30.5                      BPG+LDPC
+    spatial location. We fine-tune the value of γ to adjust                            30
+                                                                                                                VL-SCC( =0)
+    average number of modulated symbols. When λ = 0, the                                0.1     0.15          0.2        0.25
+    network is not trained with LPISP loss.                                                            SPP
+  • SCC(λ): This is the fixed-length coding version of VL-       Fig. 8: PSNR vs symbols per pixel for different transmission
+    SCC by neglecting the rate allocation network. We adjust     methods.
+    the average number of modulated symbols by changing
+    the channel dimension of the modulated symbols.
+  • JSCC: JSCC proposed in [5] is also presented as a            of SCC, which also shows the proposed VL-SCC is universal
+    benchmark of deep learning based image transmission          and can be applied to various tasks and data types.
+    scheme. We use the JSCC architecture proposed in [37]           The LPIPS loss versus SPP is shown in Fig. 9. From
+    for this method.                                             the figure, without giving a LPIPS loss during training, VL-
+   4) Performance metrics: We first compare the peak signal-     SCC(λ = 0), SCC(λ = 0), and BPG all lead to high semantic
+to-noise ratio (PSNR) versus the number of symbols per pixel     errors. However, once the semantic error is considered during
+(SPP) of different transmission methods, where the SPP is        the training processing, such as VL-SCC(λ = 0.1) and
+defined as the average number of modulated symbols (in           SCC(λ = 0.1), it can be suppressed significantly. Furthermore,
+complex numbers) assigned to each color pixel. The PSNR          the proposed variable-length coding method VL-SCC(λ =
+value reflects the per-pixel reconstruction quality of images.   0.1) also outperforms the fixed-length method SCC(λ = 0.1
+A higher value indicates a better reconstruction quality. The    in semantic measurements.
+results are shown in Fig. 8. From the figure, our fixed-
+length coding method SCC(λ = 0) outperforms the JSCC                                          VI. C ONCLUSION
+and traidtional methods with BPG and LDPC as the source
+coding and channel coding schemes, respectively, showing the       In this work, we design a semantic communication frame-
+semantic coders and the SCC module used in our work are ef-      work for XR. Particularly, we develop the semantic coding
+fective. Also, the proposed variable-length coding method VL-    modules for different XR tasks, including light estimation, 3D
+SCC(λ = 0) can significantly increase the coding efficiency      mesh recovery, image transmission, and so on. We propose a
+                                                                                                                                                          11
+
+
+
+                                                                                [15] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+                     0.2                                                             communications for VQA,” IEEE Wirel. Commun. Lett., vol. 11, no. 3,
+                                             SCC( =0)
+                                             BPG+LDPC                                pp. 553–557, 2021.
+                                             VL-SCC( =0)                        [16] Y. Blau and T. Michaeli, “The perception-distortion tradeoff,” in Proc.
+                                             VL-SCC( =0.1)                           IEEE Comput. Soc. Conf. Comput. Vis. Pattern Recognit., 2018, pp.
+                    0.15
+                                             SCC( =0.1)
+                                                                                     6228–6237.
+                                                                                [17] F. Mentzer, G. D. Toderici, M. Tschannen, and E. Agustsson, “High-
+            LPIPS
+
+
+
+                                                                                     fidelity generative image compression,” Adv. Neural Inf. Process Syst.,
+                     0.1
+                                                                                     vol. 33, pp. 11 913–11 924, 2020.
+                                                                                [18] F. Zhan, C. Zhang, Y. Yu, Y. Chang, S. Lu, F. Ma, and X. Xie, “Emlight:
+                                                                                     Lighting estimation via spherical distribution approximation,” in Proc.
+                    0.05                                                             Conf. AAAI Artif. Intell., vol. 35, no. 4, 2021, pp. 3287–3295.
+                                                                                [19] X. Zhang, Q. Li, H. Mo, W. Zhang, and W. Zheng, “End-to-end hand
+                                                                                     mesh recovery from a monocular RGB image,” in Proc. IEEE Int. Conf.
+                      0                                                              Comput. Vis., 2019, pp. 2354–2364.
+                       0.1     0.15          0.2          0.25                  [20] A. Tewari, M. Zollhofer, H. Kim, P. Garrido, F. Bernard, P. Perez, and
+                                      SPP                                            C. Theobalt, “MoFA: Model-based deep convolutional face autoencoder
+                                                                                     for unsupervised monocular reconstruction,” in Proc. IEEE Int. Conf.
+Fig. 9: LPIPS vs symbols per pixel for different transmission                        Comput. Vis. Workshops, 2017, pp. 1274–1283.
+methods.                                                                        [21] A. Kanazawa, M. J. Black, D. W. Jacobs, and J. Malik, “End-to-end
+                                                                                     recovery of human shape and pose,” in Proc. IEEE Comput. Soc. Conf.
+                                                                                     Comput. Vis. Pattern Recognit., 2018, pp. 7122–7131.
+                                                                                [22] J. Sun, Y. Xie, L. Chen, X. Zhou, and H. Bao, “Neuralrecon: Real-
+novel differentiable variable-length coding mechanism for se-                        time coherent 3d reconstruction from monocular video,” in Proc. IEEE
+mantic communications, where the best code length allocation                         Comput. Soc. Conf. Comput. Vis. Pattern Recognit., Jun. 2021, pp.
+                                                                                     15 598–15 607.
+scheme is learnt in an end-to-end manner. Moreover, we verify                   [23] A. Dai, D. Ritchie, M. Bokeloh, S. Reed, J. Sturm, and M. Nießner,
+the effectiveness of the proposed semantic coding scheme and                         “Scancomplete: Large-scale scene completion and semantic segmenta-
+variable-length semantic-channel coding scheme in both the                           tion for 3D scans,” in Proc. IEEE Comput. Soc. Conf. Comput. Vis.
+                                                                                     Pattern Recognit., Jun 2018, pp. 4578–4587.
+uplink and downlink of wireless XR, showing the generality                      [24] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The
+of the proposed methods.                                                             unreasonable effectiveness of deep features as a perceptual metric,” in
+                                                                                     Proc. IEEE Comput. Soc. Conf. Comput. Vis. Pattern Recognit., Jun.
+                                                                                     2018, pp. 586–595.
+                             R EFERENCES                                        [25] S. Wang, S. Yang, H. Su, C. Zhao, C. Xu, F. Qian, N. Wang, and Z. Xu,
+                                                                                     “Robust saliency-driven quality adaptation for mobile 360-degree video
+ [1] I. F. Akyildiz and H. Guo, “Wireless extended reality (xr): Challenges
+                                                                                     streaming,” IEEE Trans. Mob. Comput., Jan. 2023.
+     and new research directions,” ITU J. Future Evol. Technol, vol. 3, pp.
+     1–15, 2022.                                                                [26] L. Wang, H. Lu, X. Ruan, and M.-H. Yang, “Deep networks for saliency
+ [2] D. G. Morı́n, P. Pérez, and A. G. Armada, “Toward the distributed              detection via local estimation and global search,” in Proc. IEEE Comput.
+     implementation of immersive augmented reality architectures on 5G               Soc. Conf. Comput. Vis. Pattern Recognit., Jun. 2015, pp. 3183–3192.
+     networks,” IEEE Commun. Mag., vol. 60, no. 2, pp. 46–52, Feb. 2022.        [27] O. Wiles, G. Gkioxari, R. Szeliski, and J. Johnson, “Synsin: End-to-end
+ [3] B. Zhang, Z. Qin, Y. Guo, and G. Y. Li, “Semantic sensing                       view synthesis from a single image,” in Proc. IEEE Comput. Soc. Conf.
+     and communications for ultimate extended reality,” arXiv preprint               Comput. Vis. Pattern Recognit., Jun. 2020, pp. 7467–7477.
+     arXiv:2212.08533, 2022.                                                    [28] M. Courbariaux, I. Hubara, D. Soudry, R. El-Yaniv, and Y. Ben-
+ [4] Z. Qin, X. Tao, W. Tong, J. Lu, and G. Y. Li, “Semantic communications:         gio, “Binarized neural networks: Training deep neural networks with
+     Principles and challenges,” arXiv preprint arXiv:2201.01389, 2021.              weights and activations constrained to+ 1 or-1,” arXiv preprint
+ [5] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-             arXiv:1602.02830, 2016.
+     channel coding for wireless image transmission,” IEEE Trans. Cogn.         [29] J. Ballé, V. Laparra, and E. P. Simoncelli, “End-to-end optimized image
+     Commun. Netw., vol. 5, no. 3, pp. 567–579, 2019.                                compression,” arXiv preprint arXiv:1611.01704, 2016.
+ [6] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-      [30] F. Mentzer, E. Agustsson, M. Tschannen, R. Timofte, and L. Van Gool,
+     channel coding of text,” in Proc. IEEE Int. Conf. Acoust. Speech Signal         “Conditional probability models for deep image compression,” in Proc.
+     Process. (ICASSP). IEEE, 2018, pp. 2326–2330.                                   IEEE Comput. Soc. Conf. Comput. Vis. Pattern Recognit., Jun. 2018, pp.
+ [7] H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled               4394–4402.
+     semantic communication systems,” IEEE Trans. Signal Process., vol. 69,     [31] M. Li, W. Zuo, S. Gu, D. Zhao, and D. Zhang, “Learning convolutional
+     pp. 2663–2675, Apr. 2021.                                                       networks for content-weighted image compression,” in Proc. IEEE
+ [8] Z. Weng and Z. Qin, “Semantic communication systems for speech                  Comput. Soc. Conf. Comput. Vis. Pattern Recognit., 2018, pp. 3214–
+     transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8, pp. 2434–            3223.
+     2444, 2021.                                                                [32] S. Johnson and M. Everingham, “Clustered pose and nonlinear ap-
+ [9] Q. Hu, G. Zhang, Z. Qin, Y. Cai, G. Yu, and G. Y. Li, “Robust                   pearance models for human pose estimation.” in BMVC, vol. 2, no. 4.
+     semantic communications with masked VQ-VAE enabled codebook,”                   Aberystwyth, UK, 2010, p. 5.
+     arXiv preprint arXiv:2206.04011, 2022.                                     [33] M. Andriluka, L. Pishchulin, P. Gehler, and B. Schiele, “2d human pose
+[10] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear        estimation: New benchmark and state of the art analysis,” in Proc. IEEE
+     transform source-channel coding for semantic communications,” IEEE              Comput. Soc. Conf. Comput. Vis. Pattern Recognit., 2014, pp. 3686–
+     J. Sel. Areas Commun., vol. 40, no. 8, pp. 2300–2316, 2022.                     3693.
+[11] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic               [34] D. Mehta, S. Sridhar, O. Sotnychenko, H. Rhodin, M. Shafiei, H.-P.
+     communications: Deep learning-based image semantic coding,” IEEE                Seidel, W. Xu, D. Casas, and C. Theobalt, “Vnect: Real-time 3d human
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, 2022.                         pose estimation with a single rgb camera,” ACM Trans. on Graph.
+[12] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Wireless semantic communi-          (TOG), vol. 36, no. 4, pp. 1–14, 2017.
+     cations for video conferencing,” IEEE J. Sel. Areas Commun., vol. 41,      [35] G. J. Sullivan, J.-R. Ohm, W.-J. Han, and T. Wiegand, “Overview of
+     no. 1, pp. 230–244, 2022.                                                       the high efficiency video coding (hevc) standard,” IEEE Trans. Circuits
+[13] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Wireless image re-              Syst. Video Technol., vol. 22, no. 12, pp. 1649–1668, 2012.
+     trieval at the edge,” IEEE J. Sel. Areas Commun., vol. 39, no. 1, pp.      [36] T.-Y. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan,
+     89–100, 2020.                                                                   P. Dollár, and C. L. Zitnick, “Microsoft coco: Common objects in
+[14] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user            context,” in Computer Vision–ECCV 2014: 13th European Conf., Zurich,
+     semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,           Switzerland, Sept. 6-12, 2014, Proc., Part V 13. Springer, 2014, pp.
+     pp. 2584–2597, July 2022.                                                       740–755.
+                                                                            12
+
+
+
+[37] D. B. Kurka and D. Gündüz, “Deepjscc-f: Deep joint source-channel
+     coding of images with feedback,” IEEE J. Sel. Areas Commun., vol. 1,
+     no. 1, pp. 178–193, 2020.
+

@@ -1,0 +1,1854 @@
+                                                                                                                                                                                           1
+
+
+
+
+                                                      Entropy-and-Channel-Aware Adaptive-Rate
+                                                     Semantic Communication with MLLM-Aided
+                                                                Feature Compensation
+                                           Weixuan Chen, Graduate Student Member, IEEE, Qianqian Yang, Member, IEEE, Yuhao Chen, Student Member,
+                                            IEEE, Chongwen Huang, Qian Wang, Member, IEEE, Zehui Xiong, Zhaoyang Zhang, Senior Member, IEEE
+
+
+
+                                              Abstract—Despite the transmission efficiency gains of seman-                                        I. I NTRODUCTION
+arXiv:2501.15414v4 [eess.IV] 10 Mar 2026
+
+
+
+
+                                           tic communication (SemCom) over traditional methods, most
+                                           existing SemCom schemes still operate at a fixed transmission                       In recent years, semantic communication (SemCom) has
+                                           rate regardless of channel conditions and transmitted content,                   gained significant attention as a promising alternative commu-
+                                           resulting in wasted resources in favorable channels and degraded
+                                           performance in harsh channels. To address this issue, we propose                 nication paradigm with the potential to surpass the traditional
+                                           a novel SemCom framework that incorporates an entropy-and-                       Shannon capacity limit [2], [3]. SemCom [4], [5] enhances
+                                           channel-aware adaptive rate control mechanism over MIMO                          bandwidth efficiency by selectively extracting and transmitting
+                                           Rayleigh fading channels. Specifically, we embed a joint repre-                  only the crucial information relevant to specific transmis-
+                                           sentation of the channel state information (CSI) and the signal-                 sion tasks, i.e., semantic information, while discarding non-
+                                           to-noise ratio (SNR) into both the semantic encoder and decoder,
+                                           thereby realizing channel-aware semantic coding and decoding.                    essential content. This makes SemCom an attractive solution
+                                           Moreover, the proposed method jointly exploits the CSI, the                      for wireless communication applications that generate large
+                                           SNR, the feature maps, and their 2D entropy via two policy                       volumes of data traffic. Existing SemCom approaches typically
+                                           networks to selectively transmit only a subset of feature maps                   leverage advanced deep learning techniques to extract semantic
+                                           and, within each selected feature map, only a subset of symbols.                 information from the source data at the transmitter and to
+                                           Thereby, it achieves finer-grained adaptive rate control than
+                                           existing methods. At the receiver, leveraging the strong visual                  reconstruct the source data at the receiver through end-to-
+                                           understanding capability of multimodal large language models                     end training. These approaches have demonstrated excellent
+                                           (MLLMs), we deploy the lightweight visual encoder (InternViT-                    performance in transmitting various data types, including
+                                           300M) of the pre-trained InternVL3.5 model to compensate                         text [6], [7], speech [8], [9], images/videos [10]–[14], and
+                                           for discarded feature maps and symbols, and we fine-tune                         multimodal data [15]–[17].
+                                           InternViT using low-rank adaptation (LoRA) for parameter-
+                                           efficient training. Experimental results show that, with a carefully                However, most existing SemCom methods [10], [18]–[20]
+                                           designed channel-aware loss function, our system automatically                   directly map source data to channel input symbols without
+                                           allocates more communication resources under poor channels to                    explicitly modeling the task-dependent importance of different
+                                           enhance task performance while reducing resource usage under                     symbols. This uniform treatment overlooks the varying signifi-
+                                           favorable channels and maintaining high task performance. Our
+                                                                                                                            cance of transmitted symbols for the downstream task, thereby
+                                           approach consistently outperforms both conventional separation-
+                                           based source and channel coding and state-of-the-art (SOTA)                      missing the opportunity to improve task performance through
+                                           adaptive-rate SemCom methods in terms of rate-distortion per-                    more judicious allocation of communication resources. More-
+                                           formance, achieving about 0.4-0.9 dB higher PSNR than the                        over, many SemCom systems adopt a fixed neural network and
+                                           SOTA adaptive-rate method at similar compression ratios.                         a fixed transmission rate for coding and decoding, which limits
+                                              Index Terms—Semantic communications, adaptive rate con-                       their adaptability to varying channel conditions and prevents
+                                           trol, entropy-and-channel-aware, large language models.                          them from fully exploiting available communication resources
+                                                                                                                            to enhance task performance.
+                                                                                                                               Regarding importance-aware SemCom systems, Liu et al.
+                                              This paper was presented partially in IEEE GLOBECOM, Kuala Lumpur,            [21] proposed a semantic importance measurement method for
+                                           Malaysia, Dec. 2023 [1].                                                         OFDM-based SemCom systems, incorporating both feature-
+                                              Weixuan Chen, Qianqian Yang† , Yuhao Chen, Chongwen Huang, and
+                                           Zhaoyang Zhang are with the College of Information Science and                   task correlations and inter-feature correlations to dynamically
+                                           Electronic Engineering, Zhejiang University, Hangzhou 310027, China.             allocate more reliable subcarriers to higher-priority semantic
+                                           (e-mails: {weixuanchen, qianqianyang20† , csechenyh, chongwenhuang,              features. Gao et al. [22] introduced a metric, termed semantic
+                                           ning ming}@zju.edu.cn).
+                                              Qian Wang is with the Institute of Cyberspace Security, Zhejiang University   value, to measure the importance of semantic features for text
+                                           of Technology, Hangzhou 310023, China. (e-mail: wangqian18@zjut.edu.cn).         transmission based on Zipf’s distribution, where word fre-
+                                              Zehui Xiong is with the School of Electronics, Electrical Engineering and     quency influences semantic value. Liang et al. [23] proposed a
+                                           Computer Science, Queen’s University Belfast, Belfast, BT7 1NN, U.K. (e-
+                                           mail: z.xiong@qub.ac.uk).                                                        semantic-importance-aware MIMO SemCom framework that
+                                              This work is partly supported by the NSFC under grant No. 62293481, No.       learns unequal importance levels of semantic symbols via
+                                           62571487, No. 62201505, by the National Key R&D Program of China under           bilateral progressive training and exploits them for importance-
+                                           Grant 2024YFE0200802, and by the Zhejiang Provincial Natural Science
+                                           Foundation of China under Grant No. LZ25F010001. (Corresponding author:          aware eigenmode mapping and power allocation through sin-
+                                           Qianqian Yang.)                                                                  gular value decomposition (SVD)-based precoding. Overall,
+                                                                                                                                   2
+
+
+
+these studies prioritize important semantic features to improve     sources based on manually defined importance metrics, which
+task performance and communication efficiency.                      may not fully capture the true task relevance of semantic
+   Several studies have also explored multi-rate or adaptive-       features. Allowing neural networks to automatically learn how
+rate SemCom systems. For example, Kurka et al. [24], [25]           to assess feature importance and allocate resources accordingly
+proposed bandwidth-agile deep joint source-channel coding           has the potential to yield more effective strategies. Second,
+(DeepJSCC) schemes that encode an image into multiple               some adaptive-rate SemCom methods only select those fea-
+layered codewords for successive refinement and multiple            tures that are globally important for the task, but overlook the
+descriptions, enabling reconstruction from different subsets        fact that even within an important feature map, a consider-
+of received layers, with reconstruction quality improving as        able portion of symbols may be semantically redundant and
+more layers become available. Bian et al. [26] investigated         thus removable. Third, existing methods rarely consider ex-
+bandwidth- and signal-to-noise ratio (SNR)-adaptive Deep-           plicit receiver-side compensation for features discarded at the
+JSCC, where the channel SNR and bandwidth ratio are fed into        transmitter, which could otherwise enhance task performance.
+the model as side information to optimize performance under         Moreover, several multi-rate SemCom systems are trained
+different channel SNRs and transmission rates. Luo et al.           under fixed channel conditions. When the actual channel state
+[27] proposed ADMIT for one-to-many image transmission,             deviates significantly from the training setting, this mismatch
+enabling a single model to adapt to different bandwidth             can cause non-negligible performance degradation. Finally, the
+ratios and channel SNRs through latent-channel prioritization       transmission rates in many existing multi-rate or adaptive-
+and bandwidth-aware truncation, together with an SNR-aware          rate systems [24]–[26], [32], [34], [40] are restricted to a few
+decoder, while requiring no channel awareness at the encoder.       predetermined discrete values rather than any continuous value
+Other approaches, such as entropy-based rate control, have          within a range, resulting in limited rate flexibility.
+been developed to adaptively select symbols according to their         To overcome the limitations of existing multi-rate or
+semantic content. For instance, Bao et al. [28] proposed the        adaptive-rate SemCom approaches, we propose a novel Sem-
+MDVSC framework, which employs entropy-based semantic               Com system with entropy-and-channel-aware adaptive rate
+importance coding to discard low-entropy symbols under              control over MIMO Rayleigh fading channels. Specifically,
+bandwidth constraints, enabling explicit and precise control        we incorporate several channel condition adaptive modules
+of code length while maintaining communication quality.             (CCAMs) into both the semantic encoder and decoder. These
+   Furthermore, Yang et al. [29] designed a policy-network-         modules modulate the feature maps based on the current
+based scheme that automatically adjusts the number of trans-        feature maps and a joint embedding of the channel state in-
+mitted feature groups according to both the channel SNR and         formation (CSI) and the SNR, enabling the system to perform
+the image content. Zhang et al. [30] proposed a predictive and      adaptive coding and decoding under varying channel condi-
+adaptive coding framework that predicts reconstruction quality      tions. In addition, we introduce two policy networks to achieve
+from the channel conditions, compression ratio, and image           fine-grained rate adaptation. The first policy network performs
+content, and then selects the optimal compression ratio under       feature map selection by discarding unnecessary feature maps,
+a target quality constraint to automatically set the coding rate.   while the second prunes the retained feature maps by removing
+Shi et al. [31] built a cross-attention-based probabilistic graph   semantically redundant symbols. The policy networks take
+to construct a hierarchical semantic parse tree and performed       as input the feature maps, their 2D entropy [49], the CSI,
+multi-level variable-length coding on semantic feature nodes,       and the SNR to make transmission decisions. Moreover, since
+assigning longer codewords to patches with stronger semantic        multimodal large language models (MLLMs) possess strong
+connectivity and shorter ones to less important regions, thus       visual understanding capabilities [50], we employ the visual
+enabling content-aware adaptive coding rates under a given          encoder (InternViT-300M) of the pre-trained InternVL3.5-
+bandwidth constraint. Yang et al. [32] proposed SwinJSCC,           1B model [51] at the receiver to explicitly compensate for
+which employs the Swin Transformer as the codec backbone            discarded feature maps and symbols, thereby further enhancing
+and introduces channel and rate adaptation modules. The latter      task performance. To reduce the training overhead, we fine-
+takes a pre-specified target rate as input and learns binary        tune InternViT using low-rank adaptation (LoRA) [52].
+masks over latent channels to select informative components,           The main contributions of this paper are as follows:
+enabling a single model to support adaptive-rate wireless              • Entropy-and-Channel-Aware Adaptive Rate Control: We
+image transmission across different bandwidth ratios. For mul-      propose a novel entropy-and-channel-aware adaptive rate con-
+timodal tasks, He et al. [33] proposed a multimodal SemCom          trol scheme that enables the semantic encoder and decoder to
+framework with rate-adaptive coding, where the semantic             adapt to varying channel conditions. Moreover, the proposed
+importance of each modality is defined by its noise sensitivity     method jointly exploits the feature maps, their 2D entropy,
+and coding rates are assigned accordingly to reduce inference       the CSI, and the SNR to determine which feature maps and
+delay. Additional studies can be found in [34]–[46]. The above      symbols should be transmitted, effectively reducing redun-
+works mainly consider SISO SemCom systems. Meanwhile,               dancy while maintaining high task performance under diverse
+several recent studies have explored multi-rate or adaptive-rate    conditions.
+strategies [47], [48] for MIMO SemCom systems.                         • Fine-Grained Joint Feature Map Selection and Pruning:
+   Nevertheless, existing studies on importance-aware and           Unlike most existing methods that only select task-relevant
+multi-rate/adaptive-rate SemCom still exhibit several limi-         feature maps, our approach further removes redundancy at
+tations. First, many approaches allocate communication re-          the symbol level. We design two specialized policy networks
+                                                                                                                                                                                                                                                            3
+
+
+
+ Transmitter                                                                                                                                           The semantic encoder exploits both the source image and the
+                                                                   Feature Map                           Feature Map                                   channel-condition embedding,      which is a joint
+                                                                                                                                                                             Entropy+CSI+SNR                 embedding of
+                                                                                                                                                                                                          Entropy+CSI+SNR
+  Source                     Semantic
+  Image                      Encoder
+                                                                    Selection                              Pruning                                                               Embeddingchannel-adaptive Embedding
+                                                                                                                                                       the CSI and the SNR, to extract                        feature maps,
+                                                                     Module                                Module
+                                                                                                                                                       denoted by
+                                                                                                                                                                        Z1 = fsePolicy
+                                                                                                                                                                                   (X, CH ˆ emb ; θ se ),       Policy    (1)
+                                                                 Entropy+CSI+SNR                       Entropy+CSI+SNR                                                               Network 1                           Network 2
+                                                                     Embedding                             Embedding
+                    CSI+SNR                                                                                                     MIMO                   where fse (·) represents the semantic encoder, θ se refers to
+                    Embedding                                                                                                  Channels
+                                                                   CSI+SNR
+                                                                   Embedding
+                                                                                                                                                       its learnable parameters, X is the image to be transmitted,
+                                                                                                            CSI                                                                             Select                Select
+                                                                                                                                                       CHˆ emb is the channel-condition embedding,     and Z1 denotes
+ Receiver                                                                                                                                              the corresponding output feature maps. Notably, CH    ˆ emb is
+ Recovered                   Semantic                               InternViT                             L-MMSE                                       obtained by
+                                                                                                                                                                                       Entropy+CSI+SNR
+  Image                      Decoder                                Backbone                              Detector
+                                                                                                                                                                                           Embedding
+                                                                                                                                                                      ˆ emb = fce ([vec(Ĥ),     ˆ θ ce ),
+                                                                                                                                                                     CH                       SNR];               (2)
+
+
+
+
+                                                                                                                                                                                                                                                        Thermometer
+                                                                                                                                                                                                                                                          Encoding
+                                                                                                                                                                                      Pooling
+
+
+
+
+                                                                                                                                                                                                                                 Gumbel-
+                                                                                                                                                                                                                                 Softmax
+                                                                                                                                                                                                                   MLP
+Fig. 1: The overall architecture of the proposed SemCom                                                                                                                             channel-state
+                                                                                                                                                       where fce (·) denotes the (Symbol          Concat.encoder implemented
+                                                                                                                                                                                  dimension)
+system.
+                                              xM                                                                                                       by a two-layer multilayer perceptron (MLP), θ ce refers to its
+                                                                                         x N1                             x N2                         learnable parameters, Ĥ ∈ CNr ×Nt is the estimated MIMO
+                                                                                                                                                       channel matrix (CSI) whose (i, j)-th entry represents the
+                                                                                       Channel-aware
+
+
+
+
+                                                                                                                        Channel-aware
+that are conditioned on the image content, the CSI, and the
+
+
+
+
+                                                                                                                                                          Linear Head
+                                                                                                                                          Layer Norm
+                                                                                        Swin Block
+
+
+
+
+                                                                                                                         Swin Block
+                                                                       Embedding
+
+
+
+
+                                                                                                           Merging
+
+                                                                                                                                                       channel gain between the j-th transmit antenna and the i-th
+                                                                         Patch
+
+
+
+
+                                                                                                            Patch
+
+
+
+SNR. They first select informative feature maps and then prune                                                                                                                   ˆ is theEntropy+CSI+SNR
+                                                                                                                                                       receive antenna, and SNR                 estimated average received
+semantically unimportant symbols within them. By generating
+                                                                                                                                                       SNR of the link. Considering a Embedding    conventional setting, we
+
+
+
+
+                                                                                                                                                                                                                                                         Thermometer
+the selection and pruning masks via thermometer encoding,
+
+
+
+
+                                                                                                                                                                                                                                                           Encoding
+                                                                                                                                                                                     Pooling
+
+
+
+
+                                                                                                                                                                                                                                     Gumbel-
+                                                                                                                                                                                                                                     Softmax
+                                                                                                                                                       assume Nt = Nr .                                                                                                Broadcast
+
+
+
+
+                                                                                                                                                                                                                   MLP
+only a single cut-off index for the pruning                CSI+SNRto be
+                                             CSI+SNR mask needs
+                                                                                                                                                                          ˆ
+                                                                                                                                                                                    (Channel       Concat.
+                                             Embedding    Embedding                                                                                       The pair (Ĥ, SNR)       dimension) the estimated channel con-
+                                                                                                                                                                                constitutes
+specified at the receiver, incurring negligible overhead.                                                                                                                    ˆ used in this work. In practice, we first
+                                                                                                                                                       dition, denoted by CH,
+   • Channel-Aware Rate-Semantic Tradeoff : We design a
+                                                                                                                                                       reshape Ĥ into a real-valued vector vec(Ĥ), concatenate it with
+channel-aware rate-distortion
+                         xM           loss that couples semantic task                                                                                    ˆ and then feed the resulting
+                                                                                                                                                       SNR,                                       (2Nr Nt + 1)-dimensional
+                                                                                                                                                                                            CSI+SNR
+performance with transmission
+                    x N               x N rate (channel usage) across
+                                      1                                           2
+                                                                                                                                                                                                             ˆ emb . To acquire
+                                                                                                                                                       real-valued vector into the MLP        to obtain CH
+                                                                                                                                                                                           Embedding
+varying channel conditions. By imposing different penalties
+
+
+
+
+                                                                                                                                                                                                                         InternViT
+                                                                                                                                                                                                                         Backbone
+                             Channel-aware
+
+
+
+
+                                                                     Channel-aware
+                                                 Patch Reverse
+
+
+
+
+                                                                                      Patch Reverse
+
+
+
+
+                                                                                                                                                        ˆ the transmitter first sends a sequence of known pilot
+            Linear Head
+
+
+
+
+                                                                                                                                                                                                                                               Linear
+                                                                                                                                                                                                          Linear
+                              Swin Block
+
+
+
+
+                                                                      Swin Block
+
+
+
+
+                                                                                                                                                       CH,
+                                                   Merging
+
+
+
+
+                                                                                        Merging
+
+
+
+
+on channel usage at different channel conditions, the proposed                                                                                                                               Concat.
+                                                                                                                                                       symbols. Based on the received pilots, the receiver performs
+loss encourages the system to allocate more channel resources
+                                                                                                                                                       channel estimation to obtain Ĥ and estimates the average
+under poor channels to enhance task performance, while                                                                                                                   ˆ and then feeds these estimates back to
+                                                                                                                                                       received SNR SNR,
+saving unnecessary resources under favorable channels without
+                 CSI+SNR            CSI+SNR                                                                                                            the transmitter. The length of the pilot sequence   LoRA      is set
+                                                                                                                                                                                                                        +   to 1/16
+sacrificing task      performance.
+                 Embedding         Embedding                                                                                                                                                                                 A
+                                                                                                                                                       of the number of semantic information symbols.       Pre-trainedThe detailed
+   • MLLM-Aided Feature Compensation: We leverage a pre-                                                                                                                                                     Weights
+                                                                                                                                                                                                ˆ will be discussed later.   B
+                                                                                                                                                       procedures for obtaining Ĥ and SNR
+trained MLLM with strong visual understanding capabilities
+                                                                                                                                                          Then the feature maps Z1 , together with the entropy-and-
+to explicitly compensate for discarded features and symbols.
+                                                                                                                                                       channel-condition (EC) embedding, are fed into the feature
+In particular, we use the MLLM’s visual encoder to recover
+                                                                                                                                                       map selection module, which adaptively selects a subset of
+and denoise the received feature maps and symbols, bringing
+                                                                                                                                                       important feature maps for transmission, i.e.,
+them    closer to the original complete representations that         are
+                Layer Norm
+
+
+
+
+                                                                     Layer Norm
+                             Window-
+
+
+
+
+    Input                                                       Output
+                             MHSA
+
+
+
+
+                                                                                                                       CCAM
+                                                                                       MLP
+
+
+
+
+                                                                                                                                                                          Z2 = ffms (Z1 , ECemb ; θ fms ),                                              (3)
+                                                    Add
+
+
+
+
+                                                                                                          Add
+
+
+
+
+obtained before selection and pruning, and adopt an efficient
+fine-tuning strategy to adapt the visual encoder to our task.                                                                                          where ffms (·) denotes the feature map selection module pa-
+This MLLM-aided feature compensation further enhances                                                                                                  rameterized by θ fms . Z2 is the selected subset of feature maps
+overall task performance.                                CSI+SNR
+                                                                                                                                                       that will be transmitted, where all non-selected feature maps
+                                                         Embedding
+   Experimental results show that the proposed system consis-                                                                                          are set to zero. ECemb is the entropy-and-channel-condition
+tently outperforms
+            CSI+SNR
+                           conventional separation-based source and                                                                                    embedding that encodes the CSI, the SNR, and the information
+             coding schemes as well as state-of-the-art (SOTA)
+channel Embedding                                                                                                                                      content of Z1 .
+adaptive-rate SemCom    Two-layer
+                                 methods in terms of rate-distortion                                                                                      The EC embedding ECemb is obtained by first computing
+performance,
+     Pooling
+                   achieving
+                           MLP  about  0.4-0.9 dB higher peak signal-                                                                                  the 2D entropy [49] of each feature map in Z1 and aggregating
+     (Symbolratio (PSNR) than the SOTA adaptive-rate method at
+to-noise                                                                                                                                               them into a per-sample entropy descriptor EN, and then fusing
+   dimension)
+similar    compression ratios.                                                                                                                         EN with the estimated channel condition CH   ˆ via a two-layer
+                                             Two-layer
+                                                                                           Multiply
+                                               MLP
+                                                                                                                Add
+                                                                                                                                                       MLP, i.e.,
+                                               II. S YSTEM M ODEL                                                                                                       ECemb = fec ([CH,ˆ EN]; θ ec ),             (4)
+   In this paper, we consider the image SemCom problem in an
+                                                                                                                                                       where fec (·) denotes the entropy-and-channel-condition en-
+Nt × Nr MIMO uplink scenario, with a transmitter equipped
+                                                                                                                                                       coder with parameters θ ec .
+with Nt antennas and a receiver equipped with Nr antennas.
+                                                                                                                                                          Afterward, the selected feature maps Z2 and ECemb are
+The transmitter Alice aims to transmit an image X to the
+                                                                                                                                                       further processed by the feature map pruning module, which
+receiver Bob through the MIMO Rayleigh fading channels,
+                                                                                                                                                       adaptively prunes the symbol dimension of each selected
+as shown in Fig. 1.
+                                                                                                                                                       feature map. Specifically, this operation can be written as
+   The transmitter consists of a semantic encoder, a feature
+map selection module, and a feature map pruning module.                                                                                                                   Z3 = ffmp (Z2 , ECemb ; θ fmp ),                                              (5)
+                                                                                                                                    4
+
+
+
+where ffmp (·) denotes the feature map pruning module param-       matrix, having the same dimension as Z̄3 . Then, Ỹ2 is rear-
+eterized by θ fmp , and Z3 denotes the resulting pruned feature    ranged back into the real-valued feature map format, yielding
+maps where the chosen symbols remain unchanged and all             Y2 with the same dimension as Z3 .
+pruned symbols are set to zero.                                       To further mitigate channel distortion and compensate
+   Then, the feature maps Z3 are rearranged into a transmit        for discarded feature maps and symbols, we introduce an
+symbol matrix, converted to a complex-valued representation,       InternViT-based feature compensation module. Its inputs are
+and normalized to satisfy an average power constraint P . We       the distorted and partially received feature maps Y2 and the
+                                                       T
+denote the normalized feature maps by Z̄3 ∈ CNt × 2 . The          channel-condition embedding CH   ˆ emb , and its output is the
+normalized feature maps are then transmitted over the Nt ×Nr       refined feature maps Y3 , formally given by
+MIMO Rayleigh fading channel, and the received signal at the
+receiver is given by                                                                                 ˆ emb ; θ vit ),
+                                                                                    Y3 = fvit (Y2 , CH                          (11)
+                       Y1 = H Z̄3 + N,                       (6)
+                                                                   where fvit (·) denotes the InternViT-based feature compensa-
+where Y1 ∈ C     Nr × T2
+                          denotes the received feature maps,       tion module parameterized by θ vit . In our design, fvit (·) is
+                                                                   trained to produce Y3 that is as close as possible to the original
+                                                              T
+H ∈ CNr ×Nt is the MIMO channel matrix, and N ∈ CNr × 2
+is the additive white Gaussian noise (AWGN) matrix. The            feature maps Z1 . This feature refinement helps compensate
+channel coefficients follow an i.i.d. circularly symmetric com-    for the performance loss caused by channel impairments and
+plex Gaussian distribution hi,j ∼ CN (0, σh2 ) corresponding       adaptive feature selection and pruning.
+to Rayleigh fading, and the noise samples are i.i.d. circularly       Finally, the refined feature maps Y3 are fed into the seman-
+symmetric complex Gaussian CN (0, σn2 ), with σn2 determined       tic decoder together with the channel-condition embedding
+by the target SNR.                                                 to reconstruct the source image. The semantic decoder is
+   The channel SNR can be calculated as                            largely symmetric to the encoder and performs channel-aware
+                               ∥H Z̄3 ∥2F                          semantic decoding, which can be expressed as
+                     SNR =                  ,                (7)
+                             ∥H Z̄3 ∥0 σn2
+                                                                                                     ˆ emb ; θ sd ),
+                                                                                     X̂ = fsd (Y3 , CH                          (12)
+where ∥ · ∥F denotes the Frobenius norm. This definition
+corresponds to the average received SNR per nonzero received       where fsd (·) denotes the semantic decoder parameterized by
+symbol. However, since the SNR is required in our encoding         θ sd , and X̂ is the reconstructed image.
+process, we need to estimate it beforehand using the trans-           We use the PSNR as the performance metric to evaluate the
+mission of pilot signals. To achieve this, we employ the least     fidelity of the reconstructed images, which is defined as
+squares (LS) algorithm to obtain the estimated MIMO channel
+matrix Ĥ based on the received pilot signals. Specifically,                                                MAX2
+                                                                                                                  
+a block of known pilot symbols collected in the matrix                             PSNR = 10 log10                      ,       (13)
+                                                                                                            MSE
+PI ∈ CNt ×Tp is transmitted, and the corresponding received
+pilot signal at the receiver can be written as                     where MAX represents the maximum pixel value of the source
+                                                                   image (255 in this paper), and MSE denotes the mean squared
+                       Yp = H P I + N p ,                    (8)
+                                                                   error between the source image and the reconstructed image.
+where Yp ∈ CNr ×Tp denotes the received pilot matrix and              The number of real-valued channel symbols used to trans-
+Np ∈ CNr ×Tp is the AWGN matrix. Based on Yp and the               mit one image is denoted by S, and the size of the source
+known pilot matrix PI , the LS estimator yields an estimate Ĥ     image is H × W × 3. The effective compression ratio (CR) of
+of the true MIMO channel matrix. The SNR is then estimated         the proposed system is defined as
+as
+                                       2
+                   SNRˆ = ∥Ĥ PI ∥F ,                      (9)                            CR =
+                                                                                                      S
+                                                                                                          .                     (14)
+                             ∥Ĥ PI ∥0 σn2                                                        2 × 3HW
+where σn2 is assumed to be known to the receiver. Then,            The objective of our proposed system is to optimize image
+  ˆ together with the estimated CSI Ĥ, is sent back to the
+SNR,                                                               reconstruction performance while minimizing the required
+transmitter.                                                       compression ratio under varying channel conditions.
+   The receiver consists of a linear minimum mean square error
+(L-MMSE) detector, an InternViT backbone, and a semantic
+decoder. The L-MMSE detector is employed to recover an                                III. P ROPOSED M ETHOD
+estimate of the transmitted symbols from the received feature
+maps Y1 . Using the estimated CSI Ĥ and the noise variance           In this section, we present the proposed SemCom frame-
+σn2 , the L-MMSE detection can be written as                       work in detail. We first describe the channel-aware semantic
+                     H               −1 H                        encoder and decoder, then introduce the joint feature map
+              Ỹ2 = Ĥ Ĥ + σn2 INt       Ĥ Y1 ,         (10)     selection and pruning module for entropy-and-channel-aware
+                                                                   adaptive rate control, followed by the InternViT-based feature
+where INt denotes the Nt × Nt identity matrix, and Ỹ2 ∈           compensation module. Finally, we discuss the design of our
+      T
+CNt × 2 is the L-MMSE estimate of the transmitted symbol           channel-aware multi-objective loss function.
+                                                                                                                                                                                                             Image                         Decoder                 Pooling Backbone                                               Detector
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                             Encodin
+                                                                                                                                                                                                                                                                                                                                          Gumbel
+  antic                              InternViT                                                    L-MMSE                                                                                                                                                                                                                                                                                 B
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                   Thermometer Softma
+
+
+                                                                                                                                                                                                                                                                                                                                                                           Thermom
+                                                                                                                                                                                                                  L
+
+
+
+
+                                                                                                                                                                                                                                                                         L
+
+
+
+
+                                                                                                                                                                                                                                                                                                                        MLP
+                                                                                                                                        CSI+SNR                                CSI+SNR                                                                      Entropy+CSI+SNR
+                                                                                                                                                                                                                                                                  (Channel      Concat.
+  oder                               Backbone                                                     Detector                                                                                                                                                       dimension)
+                                                                                                                                        Embedding                              Embedding                                                                        Embedding
+                                                                                                                                                                                                                                                                                                                        CSI+SNR 5
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                     Encoding
+                                                                                                                                                                                                                                           Pooling
+
+
+
+
+                                                                                                                                                                                                                                                                                                                    Gumbel-
+                                                                                                                                                                                                                                                                                                                    Softmax
+                                                                                                                                                                                                                                                                                                                        Embedding
+
+
+
+
+                                                                                                                                                                                                                                                                                                  MLP
+                                                                                                                                                                                                                                          (Symbol                      Concat.                                                                             xM
+                                                                                   xM
+                                                                                                                                                                                                                                         dimension)
+                                                                 x N1                                              xxM
+                                                                                                                     N2                                                                                           CSI+SNR                                                       CSI+SNR                    x N1                                                            x N2
+                                                                                                                                                                                                                  Embedding                                                     Embedding
+                                                                              x N1                                                  x N2
+
+
+
+
+                                                                                                                                                                                                                                                                                                         Channel-aware
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                         Channel-aware
+                                                                                                                                                                                                                                                                                                                              InternViT
+                                                                                                                                                                                                                                                                                                                              Backbone
+                                                              Channel-aware
+
+
+
+
+                                                                                                                 Channel-aware
+                                                                                           Patch Reverse
+
+
+
+
+                                                                                                                                             Reverse
+                                             Linear Head
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                              Linear
+                                                                                                                                                                                                                                                                                                          Swin Block
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                          Swin Block
+                                                                                                                                                                                                                                                                                    Embedding
+
+                                                                                                                                                                                                                                                                                                               Linear
+                                                                              Swin Block
+
+
+
+
+                                                                                                                  Swin Block
+                                                                                                                                                                                                                                            Two-layer
+
+
+
+
+                                                                                             Merging
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                    Merging
+                                                                                                                                                       Merging
+                                                                                                                                                                                                                                                                                 Concat.
+
+
+
+
+                                                                                                                                                                                                                                                                                      Patch
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                     Patch
+                                                                       Channel-aware
+
+
+
+
+                                                                                                                                 Channel-aware
+                                                                                                                                                                                                                                              MLP
+
+
+
+
+                                                                                                                                                                                  Linear Head
+                                                                                                                                                                 Layer Norm
+                                                                        Swin Block
+
+
+
+
+                                                                                                                                       Block
+                                        Embedding
+
+                                                                                                                                                                                                             Pooling
+
+
+
+
+                                                                                                       Merging
+
+
+
+                                                                                                                                  Swin Patch
+                                          Patch
+
+
+
+
+                                                                                                        Patch
+                                                                                                                                                                                                            (Symbol
+                                                                                                                                                                                                           dimension)
+                                                                                                                                                                                                                                                   Entropy+CSI+SNR
+                                                                                                                                                                                                                                            Two-layer
+                                                            CSI+SNR                                        CSI+SNR                                                                                                                            MLP      Embedding Multiply LoRA
+                                                                                                                                                                                                                                                                             Add        +
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                     Thermometer
+                                                            Embedding                                      Embedding                                                                                                                                                     CSI+SNR                                                                       A          CSI+SNR
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                       Encoding
+                                                                                                                                                                                                                                           Pooling                          Pre-trained
+
+
+
+
+                                                                                                                                                                                                                                                                                                                        Gumbel-
+                                                                                                                                                                                                                                                                                                                        Softmax
+                                                                                                                                                                                                                                                                                                                                                           Broadc
+
+
+
+
+                                                                                                                                                                                                                                                                                                  MLP
+                                                                                                                                                                                                                                                        Concat.         Embedding
+                                                                                                                                                                                                                                                                             Weights                                                                   B Embeddin
+                                                             CSI+SNR                                                          CSI+SNR                                                                    Fig. 4: The network architecture of the channel condition
+                                                                                                                                                                                                                                          (Channel
+                                                             Embedding                                                        Embedding                                                                                   dimension)
+                                                                                                                                                                                                         adaptive module (CCAM).
+                                    Fig. 2: The network architecture of the semantic encoder.                                                                                                                                                              xM
+
+             xM                                                                                                                                                                                                                             x N1                                    x N2
+                                                                                                                                                                                                                                                           CSI+SNR
+                                               Layer Norm
+
+
+
+
+                                                                                                                 Layer Norm
+
+
+
+
+                                  Input x N2
+
+
+
+
+                                                                                                                                                                                                                                           Channel-aware
+
+
+
+
+                                                                                                                                                                                                                                                                                  Channel-aware
+                                                                        Window-
+
+
+
+
+                                                                                                                                                                                                                                                                Patch Reverse
+
+
+
+
+                                                                                                                                                                                                                                                                                                        Patch Reverse
+    1
+                                                                                                                                                                                                Output
+                                                                         MHSA
+
+
+
+
+                                                                                                                                                                                                                        Linear Head
+                                                                                                                                                                                 CCAM
+
+
+
+
+                                                                                                                                                                                                                                            Swin Block
+
+
+
+
+                                                                                                                                                                                                                                                                                   Swin Block
+                                                                                                                                                                                                                                                           Embedding
+                                                                                                                                              MLP
+                                                                                              Add
+
+
+
+
+                                                                                                                                                                   Add
+
+
+
+
+                                                                                                                                                                                                                                                                  Merging
+
+
+
+
+                                                                                                                                                                                                                                                                                                           Merging
+                                                                                                                                                                                                                                                                                                        InternViT
+                                                                                                                                                                                                                                                                                                        Backbone
+                                      Channel-aware
+                  Patch Reverse
+
+
+
+
+                                                              Patch Reverse
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                    Linear
+                                                                                                                                                                                                                                                                                   Linear
+Swin Block
+
+
+
+
+                                       Swin Block
+                    Merging
+
+
+
+
+                                                                Merging
+
+
+
+
+                                                                                                                                                                                                                                                            Concat.
+
+                                                                                                                                                                              CSI+SNR
+                                                                                                                                                                              Embedding
+                                                                                                                                                                                                                                         CSI+SNR                                CSI+SNR
+                                  Fig. 3: The network architecture of the channel-aware Swin                                                                                                                                             Embedding                              Embedding
+                                        CSI+SNR                                                                                                                                                                                                                                   LoRA                          +
+SNR                                    Embeddingblock.
+                                  Transformer
+                                    CSI+SNR
+ ding                               Embedding                                                                                                                                                                                                     semantic decoder.
+                                                                                                                                                                                                          Fig. 5: The network architecture of thePre-trained   A
+                                                                                  Two-layer                                                                                                                                                                                                    Weights
+                                                    MLPand Decoder                                                                                                                                                                                                                                                             B
+                                       Semantic Encoder
+                                  A.Pooling
+                                                                                                                                                                                                         representation, where L = 2Hi × W     2i is the symbol dimension,
+                                   (Symbol
+                                     1) Semantic Encoder: As illustrated in Fig. 2, the semantic
+                                  dimension)                                                                                                                                                             and CU is a user-defined channel dimension that controls the
+                                  encoder maps the   input RGB image X ∈ RH×W ×3 into
+                                                  Two-layer
+                                                                                                                                                                                                         overall compression ratio.
+                                                                        Multiply   Add
+                                  a compact latent MLP
+                                                    representation while taking the channel                                                                                                                 2) Channel-Aware Swin Transformer Block: As illustrated
+                                                                                                                                                                                                                            Layer Norm
+
+
+
+
+                                                                                                                                                                                                                                                                                  Layer Norm
+                       conditions into account. The encoder is designed based on the                                                                                                                     in Fig.  3, each channel-aware Swin Transformer block takes as
+                                                                                                                                                                                                               Input                       Window-                                   Out
+                                                                                                                                                                                                                                           MHSA
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                        CCAM
+                                                                                                                                                                                                                                                                                                         MLP
+                                                                                                                                                                                                                                                                   Add
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                  Add
+                       SwinJSCC architecture [32], but each Swin Transformer block                                                                                                                       input the feature maps and the channel-condition embedding,
+                                      Layer Norm
+
+
+
+
+                                                               Output
+MHSA
+
+
+
+
+                                                                                                                               CCAM
+
+
+
+
+                       is extended to be channel-aware via        the channel-condition                                                                                                                  and outputs refined feature maps that are adapted to the current
+                                                                      MLP
+                     Add
+
+
+
+
+                                                                                                    Add
+
+
+
+
+                       embedding CH  ˆ emb . Specifically, the encoder is organized into                                                                                                                 channel conditions. The overall structure follows the standard
+                       a stack of channel-aware Swin Transformer stages. The first                                                                                                                       Swin Transformer block with residual connections, augmented
+                       stage takes the input image, divides it into non-overlapping                                                                                                                      by an additional channel condition adaptive module (CCAM) CSI+SNR
+                                                                                                                                                                                                                                                                              Embedding
+                       patches, applies a patch embedding
+                                                       CSI+SNR layer to project each                                                                                                                     at the end. Given the input feature maps, the block first applies
+                       patch into a low-dimensional Embedding
+                                                       token in the feature space (a 1D                                                                                                                  layer normalization, followed by a window-based multi-head
+                       feature map along the symbol dimension), and then processes                                                                                                                                        module with optional window shifting. The at-
+                                                                                                                                                                                                         self-attentionCSI+SNR
+                                                                                                                                                                                                         tention outputEmbedding
+                                                                                                                                                                                                                          is then added to the input through a residual con-
+                       the resulting token sequence with N1 channel-aware Swin
+                       Transformer blocks. Each block employs window-based multi-                                                                                                                        nection. Subsequently, the features are processed by another
+                                                                                                                                                                                                                                     Two-layer
+                       head self-attention (W-MHSA). The subsequent stages consist                                                                                                                       layer normalization and an MLP MLP, whose output is again added
+                                                                                                                                                                                                                 Pooling
+                                                                                                                                                                                                         to the input of this sublayer via a second residual connection.
+             Two-layer of patch-merging layers that reduce the spatial resolution while
+                                                                                                                                                                                                                (Symbol
+               MLP     increasing the channel (feature map) dimension, together with                                                                                                                     To incorporate
+                                                                                                                                                                                                               dimension)
+                                                                                                                                                                                                                            channel awareness, the block further includes
+                       several channel-aware Swin Transformer blocks (N2 , N3 , . . .).                                                                                                                  a CCAM that takes both the intermediate feature maps and
+                       As a result of the hierarchical patch-merging operations, the                                                                                                                                                 Two-layer as inputs and produces the
+                                                                                                                                                                                                         the channel-condition embedding                        Multiply     Add
+                       spatial resolution of the feature maps is gradually reduced                                                                                                                       final output of the block. MLPThe CCAM exploits the channel-
+             Two-layer
+                       (e.g., from H × Multiply
+                                         W to H     Add                                                                                                                                                  condition embedding to modulate the channel-wise activations
+                                                2 × 2 , then to 4 × 4 , and so on
+                                                       W            H     W
+               MLP
+                       at each downsampling stage), while the channel dimension                                                                                                                          of the feature maps, thereby adapting the features to current
+                       is increased accordingly. To enable adaptation to the channel                                                                                                                     channel conditions.
+                       conditions, CHˆ emb is provided as a global conditioning vector                                                                                                                      3) Channel Condition Adaptive Module: The network ar-
+                       to each channel-aware Swin Transformer block and is used                                                                                                                          chitecture of the proposed channel condition adaptive module
+                       to modulate the intermediate features within the block. After                                                                                                                     is illustrated in Fig. 4. Let zcc ∈ RLz ×Cz denote the input
+                       passing through all stages, a layer normalization is applied, fol-                                                                                                                feature maps to this module, where Lz is the symbol dimension
+                       lowed by a linear projection layer that maps the final channel                                                                                                                    and Cz is the channel dimension. First, a global average
+                       dimension to a fixed size CU . The resulting feature maps are                                                                                                                     pooling is applied to zcc along the symbol dimension to obtain
+                       denoted by Z1 and have spatial dimension 2Hi × W  2i and channel                                                                                                                  a channel-wise summary vector z̄cc ∈ RCz . This vector is then
+                       dimension CU , where i is the number of downsampling stages                                                                                                                       concatenated with the channel-condition embedding, yielding
+                       (i.e., patch-merging operations). Equivalently, after flattening                                                                                                                                  ˆ emb ]. The vector zcs is fed into two separate
+                                                                                                                                                                                                         zcs = [ z̄cc , CH
+                       the spatial dimensions, Z1 can be viewed as an L × CU latent                                                                                                                      two-layer MLPs to produce a channel-wise scaling factor
+                                                                                                                                                                                       dimension)
+                                                                                  xM
+
+
+
+
+                                                                                                                                                                                                                                                                 Th
+                                                         x N1                              x N2
+                                                                                                                                                                                                                                                                                           6
+
+
+
+
+                                                       Channel-aware
+
+
+
+
+                                                                                        Channel-aware
+
+
+
+
+                                                                                                                                                  Linear Head
+                                                                                                                      Layer Norm
+                                                        Swin Block
+
+
+
+
+                                                                                         Swin Block
+                                      Embedding
+
+
+
+
+                                                                        Merging
+                                        Patch
+
+
+
+
+                                                                         Patch
+                                                 Entropy+CSI+SNR                                        Entropy+CSI+SNR                                                                              Entropy+CSI+SNR
+                                                     Embedding
+                                                 Entropy+CSI+SNR                                            Embedding
+                                                                                                         Entropy+CSI+SNR                                                                                 Embedding
+
+
+
+
+                                                                                                                                                                                                                                                                 Thermometer
+                                                                                                                                                                                                                                                                   Encoding
+                                                     Embedding                                               Embedding                                                                    Pooling
+
+
+
+
+                                                                                                                                                                                                                                              Gumbel-
+                                                                                                                                                                                                                                              Softmax
+                                                                                                                                                                                                                                                                               Broadcast
+
+
+
+
+                                                                                                                                                                                                                            MLP
+                                                     CSI+SNR                       CSI+SNR                                                                                               (Channel        Concat.
+                                                     Policy
+                                                     Embedding                     Embedding                      Policy                                                                dimension)
+                                                    Network
+                                                      Policy 1                                                     Policy2
+                                                                                                                 Network
+                                                    Network 1                                                    Network 2
+             xM                                                                                                                                                                    Fig. 8: The network architecture of the policy network 2.
+                                                                         Select                                                                                 Select                         CSI+SNR
+    1                                 x N2
+                                                                         Select                                                                                 Select                         Embedding
+                                  Fig. 6: The network architecture of the joint feature map
+
+
+
+
+                                                                                                                                                                                                                                  InternViT
+                                                                                                                                                                                                                                  Backbone
+                                    Channel-aware
+                  Patch Reverse
+
+
+
+
+                                                      Patch Reverse
+
+
+
+
+                                                                                                                  network outputs a channel-wise binary mask Ma that indicates
+
+
+
+
+                                                                                                                                                                                                                                                        Linear
+                                                                                                                                                                                                                   Linear
+Swin Block
+
+
+
+
+                                     Swin Block
+
+
+
+
+                                  selection and pruning module.
+                    Merging
+
+
+
+
+                                                        Merging
+
+
+
+
+                                                                                                                                 Concat.
+                                                                                                                  which feature maps should be preserved. By applying this
+                                                        Entropy+CSI+SNR
+                                                            Embedding                                             mask to Z1 , we obtain a selected subset of feature maps,
+                                                        Entropy+CSI+SNR
+
+
+
+
+                                                                                                                                                                   Thermometer
+                                                                                                                  denoted by Z2 , where the discarded feature maps are set
+
+
+
+
+                                                                                                                                                                     Encoding
+                                              Pooling       Embedding
+                                                                                                                                       Gumbel-
+                                                                                                                                       Softmax
+                                                                                                                  to zero. Next, the selected feature maps Z2 are processed
+
+
+
+                                                                                                                                                                Thermometer
+                                                                                                    MLPMLP
+
+
+
+                                             (Symbol         Concat.
+
+
+
+
+                                                                                                                                                                  Encoding
+                                              Pooling                                                                              Gumbel-
+                                                                                                                                   Softmax
+    NR                             CSI+SNRdimension)                                                                                          LoRA         +
+                                                              Concat.                                             together with ECemb by the second policy network (P N2 ).
+    ding                          Embedding(Symbol                                                                                             Pre-trained     A
+                                            dimension)                                                            This network produces a symbol-wise binary mask Mb for the
+                                                                                                                                                Weights        B
+                                                                                                                  selected feature maps, specifying how many           symbols within
+                                                                                                                  them should be preserved. By applying this mask, we obtain
+                                    Fig. 7: The network architecture of the policy network 1.                     the final pruned feature maps Z3 , where the pruned symbols
+                                                        Entropy+CSI+SNR
+                                                                                                                  are set to zero.
+                                                            Embedding                                                Overall, the joint module realizes a two-stage, entropy-
+                                  zsf and a channel-wise           bias factor zbf , respectively. Finally,
+                                                         Entropy+CSI+SNR
+                                                                                                                                                                     Thermometer
+
+
+
+
+                                                                                                                  and-channel-aware    rate adaptation mechanism: P N1 performs
+                                    Layer Norm
+
+
+
+
+                                                                                                                                                                       Encoding
+
+
+
+
+                                  the input Pooling          Embedding
+                                                                                                                                        Gumbel-
+
+
+
+
+                                                feature maps               Output via channel-wiseBroadcast
+                                                                  are modulated                          affine
+                                                                                                                                        Softmax
+MHSA
+
+
+
+
+                                                                                       CCAM
+
+
+                                                                                                        MLPMLP
+
+
+
+
+                                                                                                                                                                 Thermometer
+
+
+
+
+                                                                                                                  coarse   channel-wise   selection, while P N2 conducts fine-
+                                                       MLP
+                     Add
+
+
+
+
+                                                                       Add
+
+
+
+
+                                              (Channel        Concat.
+                                                                                                                                                                   Encoding
+
+
+
+
+                                  transformationPoolingas
+                                                                                                                                    Gumbel-
+                                                                                                                                    Softmax
+
+
+
+
+                                             dimension)                                                 Broadcast
+                                               (Channel        Concat.                                            grained symbol-wise pruning. The resulting pruned feature
+                                             dimension)      z′cc = zcc ⊙ zsf + zbf ,                             maps Z3 are then normalized and transmitted over the MIMO
+                                                                                                                  Rayleigh fading channel. It is worth noting that the masks Ma
+                                  where ⊙ denotes element-wise     CSI+SNRmultiplication. zsf and zbf are
+                                                                   Embedding
+                                                                                                                  and  Mb do not need to be transmitted to the receiver. Since
+                                  broadcast alongCSI+SNR the symbol     dimension to match the shape of
+                                                                                                                  both   masks follow a monotonic, prefix-preserving pattern,
+                                  zcc . z′cc is the output
+                                                      Embeddingof the CCAM. By injecting the channel-
+                                                       CSI+SNR                                                    that is, each row is of the form [1, . . . , 1, 0, . . . , 0] along the
+                                                                                                                      InternViT
+                                                                                                                      Backbone
+
+
+
+
+                                  condition embedding Embedding into the computation of the scaling and
+                                                                                                                                                      Linear
+                                                                                           Linear
+
+
+
+
+                                                       Concat.                                                    channel or symbol dimension, the discarded feature maps and
+                                  bias factors, the        CCAM enables the model to adaptively
+                                                                                                                 InternViT
+                                                                                                                 Backbone
+
+
+
+
+                                                                                                                  symbols always correspond to trailing zero positions. Hence,
+                                                                                                                                                  Linear
+                                                                                       Linear
+
+
+
+
+                                  emphasize or suppress Concat. different feature channels under varying
+             Two-layer                                                                                            there is no ambiguity in their ordering, and the receiver can
+               MLP                channel conditions.
+                                                                                                                  fully recover the structure of the feature maps from a single
+                                     4) Semantic Decoder: As illustrated in Fig. 5, the semantic
+                                                                                                                  cut-off index that specifies how many symbols per feature
+                                  decoder is largely symmetricLoRA      to the encoder.
+                                                                                      +   It takes the refined
+                                                                                                                  map are retained. This is because the same symbol-wise cut-
+             Two-layer            feature maps        Y3 as input      and
+                                                                        LoRA first applies
+                                                                         Pre-trained   +  A a linear head to
+               MLP
+                                                  Multiply       Add                                              off is applied to all feature maps, and the retained symbols
+                                  map the channel dimension CU                 back to the
+                                                                          Weights         BA decoder feature
+                                                                          Pre-trained                             are concatenated in a predetermined order, by channel index.
+                                  dimension. Then, in each decoder         Weights stage, Bseveral channel-       Given the cut-off index, the receiver can partition the received
+                                  aware Swin Transformer blocks are followed by a patch
+                                                                                                                  symbol stream into equal-length groups for each feature map
+                                  reverse-merging layer, which gradually increases the spatial
+                                                                                                                  and zero-pad the missing (discarded) symbols to recover the
+                                  resolution while reducing the channel dimension. The channel-
+                                  condition embedding CH           ˆ emb is injected into all channel- original feature-map structure without any extra side infor-
+                                                                                                                  mation. According to [32], to ensure lossless transmission of
+                                  aware Swin Transformer blocks in the same way as in the
+                                                                                                                  the cut-off index, we adopt entropy coding. Since only one
+                                  encoder. After the final stage, the feature maps are reshaped
+                                                                                                                  symbol needs to be additionally transmitted to the receiver per
+                                  and projected to three channels to obtain the reconstructed
+                                                                                                                  image, the corresponding bandwidth overhead is negligible and
+                                  image X̂ ∈ RH×W ×3 .
+                                                                                                                  is therefore ignored in our rate calculation. Next, we introduce
+                                                                                                                  the 2D entropy [49] and the two policy networks for feature
+                                  B. Joint Feature Map Selection and Pruning Module                               map selection and pruning.
+                                     As illustrated in Fig. 6, the proposed joint feature map                        1) 2D Entropy: To quantify the information content of each
+                                  selection and pruning module consists of a feature map feature map, we adopt the 2D entropy measure proposed in
+                                  selection module and a feature map pruning module, and [49]. Consider a latent representation with dimensions Hf ×
+                                  operates on the feature maps Z1 and the entropy-and-channel- Wf × Cf , where Cf is the number of feature maps (channels),
+                                  condition embedding ECemb . The goal of this module is while Hf and Wf denote the height and width of each feature
+                                  to adaptively discard unimportant feature maps and prune map, respectively. For the i-th feature map, denoted by FMi ∈
+                                  redundant symbols within the retained feature maps, thereby RHf ×Wf , its 2D entropy is computed as follows. For each
+                                  achieving fine-grained, entropy-and-channel-aware adaptive pixel in FMi , let m be its gray value and n be the mean gray
+                                  rate control under varying channel conditions. First, Z1 and value of its local neighborhood. By scanning over all spatial
+                                  ECemb are fed into the first policy network (P N1 ). This positions, we count how many times each pair (m, n) appears
+             CSI+SNR                      CSI+SNR                                                   (Channel
+
+
+
+
+                                                                                                                                                    Sof
+                                                                                                                                                    Gu
+                                                                                                   dimension)
+
+
+
+
+                                                                                                                                                                     En
+                                                                                                                                                                   Ther
+             Embedding                    Embedding
+                                                                                                                                                                             7
+
+
+
+
+     2
+                              in the feature map, denoted by q(m, n). This induces a joint                 CSI+SNR
+                              probability distribution                                                     Embedding
+
+
+
+
+                                                                                                                                        InternViT
+                                                                                                                                        Backbone
+              Patch Reverse
+
+
+
+
+                                                                                                                                                          Linear
+                                                                                                                           Linear
+Swin Block
+
+
+
+
+                                                            q(m, n)
+                                                                                        (15)
+                Merging
+
+
+
+
+                                                   Pm,n =             ,                                      Concat.
+                                                            Hf × Wf
+                              where Pm,n is the empirical probability that a pixel with gray
+                              value m appears together with neighborhood mean n. The 2D
+                              entropy of FMi , denoted by H(FMi ), is then defined as the
+    NR                        Shannon entropy of this joint distribution:                                                   LoRA              +
+    ding                                                                                                                                              A
+                                                         X
+                                          H(FMi ) = −        Pm,n log2 Pm,n .           (16)                                    Pre-trained
+                                                          m,n                                                                    Weights              B
+                        This 2D entropy simultaneously captures the intensity statistics
+                        and local spatial structure of the feature map, providing a              Fig. 9: The network architecture of the InternViT-based feature
+                        comprehensive measure of its information richness.                       compensation module.
+                           2) Policy Network 1–Feature Map Selection: Policy net-
+                        work 1 (P N1 ) is designed to perform feature map selection,
+                        as illustrated in Fig. 7. Given Z1 ∈ RL×CU , P N1 first                  loss caused by MIMO Rayleigh fading channels and joint
+                        applies a global average                                                 feature map selection and pruning. In particular, we em-
+                                             Output pooling over the symbol dimension
+                                            CCAM
+               MLP
+
+
+
+                                 Add
+
+
+
+
+                        to obtain a channel-wise summary vector in RCU , which is                ploy the visual encoder (InternViT-300M) of the pre-trained
+                        then concatenated with ECemb . The concatenated vector is                InternVL3.5-1B model [51] developed by Shanghai AI Lab as
+                        fed into a two-layer MLP to produce a (CU + 1)-dimensional               the backbone of our feature compensation module, and the
+                        logit vector, where CU is the number of feature maps. Each               overall architecture of this module is illustrated in Fig. 9.
+                        entry of this  logit vector corresponds to a candidate decision
+                                    CSI+SNR                                                      To adapt the pre-trained InternViT backbone to our latent
+                        on how many Embedding
+                                         feature maps should be preserved, i.e., from            feature space while keeping both training and inference costs
+                        “preserve none” to “preserve all”. To obtain a discrete yet              manageable, we use a truncated InternViT consisting of the
+                        differentiable selection during training, we adopt the Gumbel-           first half of its Transformer layers, insert it between two
+                        Softmax technique [53] to sample an approximate one-hot de-              linear projection layers, and fine-tune it using LoRA [52].
+                        cision from these logits, controlled by a temperature parameter.         Concretely, the input to this module is Y2 , which is first con-
+                                                                                                 catenated with the channel-condition embedding CH   ˆ emb along
+                        Finally, the one-hot decision is converted into a channel-wise
+                        binary mask Ma ∈ {0, 1}CU by thermometer encoding, so that               the channel dimension to incorporate channel information into
+                        Ma takes the form [1, . . . , 1, 0, . . . , 0]. In other words, P N1     the compensation process. The concatenated features are then
+                        decides a cut-off index for each sample, keeps the first few             mapped by a linear projection layer to the hidden dimension of
+                        most important feature maps, and sets all subsequent feature             InternViT, so that they can be interpreted as token embeddings
+                        maps to Add
+                                  zero.                                                          compatible with the vision Transformer (ViT) backbone. The
+                   Multiply
+                           3) Policy Network 2–Feature Map Pruning: Policy network               transformed tokens are subsequently fed into the truncated
+                        2 (P N2 ) is designed to perform feature map pruning, as                 InternViT backbone, where the original backbone weights are
+                        illustrated in Fig. 8. Given Z2 ∈ RL×CU , P N2 operates in               frozen and only a set of low-rank LoRA adapters are trained
+                        a symbol-wise manner while enforcing a shared cut-off index              within selected attention and MLP layers. Finally, another
+                        across all feature maps within the same sample. Concretely,              linear projection layer maps the InternViT output back to the
+                        a global average pooling is applied to Z2 along the channel              original channel dimension CU , yielding the refined feature
+                        dimension to obtain an L-dimensional symbol-wise summary                 maps Y3 .
+                        vector, which is then concatenated with ECemb . The concate-
+                        nated vector is fed into a two-layer MLP to produce a (L+1)-             D. Channel-Aware Loss Function Design
+                        dimensional logit vector indicating how many symbols should                 We train the proposed system in an end-to-end manner using
+                        be preserved. Similar to P N1 , we apply the Gumbel-Softmax              a multi-objective loss that jointly accounts for reconstruction
+                        technique to obtain a one-hot decision from these logits, and            fidelity, channel usage, and feature consistency under varying
+                        then use thermometer encoding to convert this decision into              channel conditions. During training, the channel SNR (in dB)
+                        a length-L binary vector. This yields a symbol-wise mask                 of each sample, denoted by γ, is independently drawn from a
+                        mb ∈ {0, 1}L of the form [1, . . . , 1, 0, . . . , 0], which specifies   uniform distribution
+                        a single cut-off index along the symbol dimension. The final
+                                                                                                    γ ∼ U(γmin , γmax ), γmin = 0 dB, γmax = 20 dB,                       (17)
+                        mask is obtained by broadcasting mb to all feature maps,
+                        resulting in Mb ∈ {0, 1}L×CU .                                           so that the proposed model can learn to adapt to a wide range
+                                                                                                 of channel conditions.
+                              C. InternViT-Based Feature Compensation Module                        1) Reconstruction Loss: Let X and X̂ denote the source and
+                                                                                                 reconstructed images, respectively. We use the mean squared
+                                 Modern MLLMs possess strong visual understanding capa-
+                                                                                                 error (MSE) between X and X̂ as the reconstruction loss:
+                              bilities [50]. Motivated by this, we exploit a powerful pre-
+                              trained MLLM backbone to compensate for the information                                  Lrec = MSE(X, X̂).                                 (18)
+                                                                                                                                          8
+
+
+
+   2) Rate Regularization Loss: As discussed previously, the                           IV. P ERFORMANCE E VALUATION
+joint feature map selection and pruning module produces
+a channel-wise mask Ma ∈ {0, 1}CU and a symbol-wise                      A. Experimental Settings
+mask mb ∈ {0, 1}L . Both masks follow a monotonic, prefix-
+                                                                            We use the CIFAR-10 dataset [54] for the source images,
+preserving pattern of the form [1, . . . , 1, 0, . . . , 0], and P N2
+                                                                         which consists of 50,000 training images and 10,000 testing
+enforces that the same cut-off index along the symbol dimen-
+                                                                         images, all of which are 32 × 32 × 3 RGB images.
+sion is shared across all feature maps within a sample.
+                                                                            We consider both Nt × Nr = 2 × 2 and Nt × Nr = 4 ×
+   The effective binary mask M ∈ {0, 1}L×CU applied to the
+                                                                         4 MIMO Rayleigh fading channels. The channel coefficients
+feature maps is defined element-wise as Mℓ,c = Ma,c mb,ℓ . In
+                                                                         follow hi,j ∼ CN (0, σh2 ) with σh2 = 1/Nt . The AWGN has
+practice, M is obtained by broadcasting Ma along the symbol
+                                                                         variance σn2 , which is set according to the target received SNR
+dimension and mb along the channel dimension, such that
+                                                                         using Eq. (7). During training, for each sample, the SNR γ (in
+Mℓ,c = 1 if and only if Ma,c = 1 and mb,ℓ = 1.
+                                                                         dB) is independently drawn from a uniform distribution, i.e.,
+   Accordingly, the number of active (transmitted) symbols for
+                                                                         γ ∼ U(0, 20). During testing, we fix γ to a given value and
+one image is
+                             L X CU
+                                                                         report the average PSNR and CR over the entire test set. For
+                      Sa =
+                            X
+                                    Mℓ,c .                        (19)   both the proposed method and the benchmarks, we assume
+                              ℓ=1 c=1
+                                                                         perfect estimates of the CSI and the SNR, and we do not
+                                                                         account for the pilot transmission overhead in our experiments.
+The channel usage (compression ratio) of this sample is then                We adopt a two-stage SwinJSCC backbone for both the se-
+                                   Sa                                    mantic encoder and decoder, applying stride-2 downsampling
+                        CR =            .                        (20)    twice in the encoder and the corresponding upsampling in the
+                                2 × 3HW
+                                                                         decoder. The patch size is set to 2×2. The channel dimensions
+  To make the rate penalty depend on the channel conditions,             of the two encoder stages are set to 96 and 128, respectively.
+and thereby encourage the system to use more channel re-                 The first stage employs two channel-aware Swin Transformer
+sources under poor channel conditions while saving resources             blocks with six self-attention heads per block, while the second
+when the channel conditions are good, we normalize γ as                  stage employs four blocks with eight heads per block. After the
+                             γ − γmin                                    final stage, a linear projection layer maps the encoder output
+                 γnorm =                ∈ [0, 1],                (21)    to a channel dimension CU , where we set CU ∈ {24, 36}
+                            γmax − γmin
+                                                                         in our experiments. The semantic decoder largely mirrors
+and set a channel-aware weight                                           this structure in reverse. The two decoder stages use channel
+             λrate (γ) = λch · [β + (1 − β) γnorm ],             (22)    dimensions 128 and 96, respectively. The first decoder stage
+                                                                         employs two channel-aware Swin Transformer blocks with
+where λch > 0 is a base channel-usage hyperparameter, and                eight self-attention heads per block, and the second stage
+β = 0.6. The channel-aware rate regularization term is then              employs four blocks with six heads per block.
+                                                                            Given this architecture, the feature maps produced by the
+                     Lrate = λrate (γ) · CR.                     (23)    semantic encoder have size L × CU , where L = 2H2 · W    22 = 64.
+   3) Feature Consistency Loss: Let Z1 ∈ RL×CU denote                    Using the definition CR = 2×3HW  S
+                                                                                                               , the maximum achievable
+the original feature maps produced by the semantic encoder,              CR for a given CU is CRmax = 2×3HW    L×CU
+                                                                                                                        = CU96 . Therefore,
+and let Y3 ∈ RL×CU denote the refined feature maps                       with CU = 24 and CU = 36, the effective CR can adaptively
+obtained after MIMO Rayleigh fading channel transmission                 vary within the ranges [0, 0.25] and [0, 0.375], respectively,
+and InternViT-based feature compensation. To encourage the               depending on how many feature maps and symbols are se-
+feature compensation module to compensate for discarded                  lected by the two policy networks. The length of the channel-
+features and denoise distorted ones, we introduce a feature              condition embedding is set to 32, and the length of the EC
+consistency term:                                                        embedding is set to 64. Each policy network uses a two-layer
+                                                                         MLP, and the temperature parameter of the Gumbel-Softmax
+                     Lcons = MSE(Y3 , Z1 ).                      (24)    is set to 5.
+                                                                            For the InternViT-based feature compensation module, to
+  4) Overall Objective: The total channel-aware multi-                   adapt the pre-trained vision encoder backbone to our task in a
+objective training loss is given by                                      parameter-efficient manner, we apply LoRA [52] to both the
+      Ltotal = Lrec + λrate (γ) · CR + λcons · Lcons ,           (25)    self-attention and feed-forward sub-layers of each Transformer
+                                                                         block, with rank r = 8, scaling factor α = 16, and dropout
+where λcons > 0 controls the strength of the feature con-                rate 0.05.
+sistency regularization. In summary, a larger λch encourages                For the channel-aware loss function, the rate regularization
+more aggressive compression, resulting in a smaller CR, while            weight λch is chosen from {100, 200}. A larger λch imposes a
+a larger λcons encourages the refined features to be closer              stronger penalty on channel usage, encouraging more aggres-
+to the original ones. Together, these terms guide the model              sive compression and thus a smaller average CR. The feature
+to balance distortion, rate, and feature compensation under              consistency weight λcons is fixed to 1 × 10−3 . We train the
+varying channel conditions.                                              model for 500 epochs with a batch size of 512 using the Adam
+                                                                                                                                    9
+
+
+
+TABLE I: Learned adaptive rate control strategy of the pro-       TABLE II: Learned adaptive rate control strategy of the
+posed method for CU = 36, Nt = Nr = 2, and λch = 100:             proposed method for CU = 36, Nt = Nr = 2, and λch = 200:
+average compression ratio (CR) and PSNR versus SNR.               average compression ratio (CR) and PSNR versus SNR.
+     SNR (dB)           0        5       10       15       20          SNR (dB)           0        5       10       15       20
+    Average CR       0.2615   0.2230   0.2008   0.1943   0.1916       Average CR       0.2008   0.1746   0.1614   0.1544   0.1490
+ Average PSNR (dB)    23.81    24.91    25.41    25.94    26.11    Average PSNR (dB)   23.76    24.68    25.19    25.65    25.66
+
+
+
+                                                                  C. Evaluation of Our Adaptive Rate Control Strategy
+optimizer and a learning rate of 1 × 10−4 . All experiments are
+conducted on a single NVIDIA RTX A6000 GPU.                          In this subsection, we analyze the entropy-and-channel-
+                                                                  aware adaptive rate control strategy learned by the proposed
+                                                                  system. In particular, we investigate how the learned CR and
+                                                                  the reconstruction quality (task performance), measured in
+B. The Benchmarks                                                 terms of PSNR, vary with the channel SNR and with the rate
+                                                                  regularization parameter λch , based on the numerical results
+   1) BPG+LDPC: We adopt the conventional separation-             reported in Tables I and II.
+based source and channel coding scheme as the first bench-           From Table I, which corresponds to λch = 100, we observe
+mark, where BPG is used for image compression, LDPC codes         that the proposed system learns a reasonable rate-distortion
+are employed for channel coding, and quadrature amplitude         behavior with respect to the channel SNR. When channel con-
+modulation (QAM) is used for modulation. We refer to this         ditions are poor (SNR = 0 dB), the average CR is about 0.2615,
+benchmark as “BPG+LDPC”.                                          and it gradually decreases to 0.1916 as the SNR increases to
+   In our simulations, the BPG encoder is implemented using       20 dB. Meanwhile, the average PSNR increases monotonically
+the JCT-VC HEVC codec [55], and the color precision of            from 23.81 dB to 26.11 dB. These results indicate that, under
+each pixel is set to 8 bits. The channel coding stage follows     the proposed channel-aware loss function and with a fixed
+the DVB-S2 LDPC standard with a coding rate of 1/2. For           λch , the feature map selection and pruning modules learn to
+a fair comparison with the proposed system, we carefully          retain more feature maps and more symbols per feature map
+match the effective CR. Specifically, for each (SNR, CR) pair     under harsh channel conditions, and to remove a substantial
+achieved by our method, we select an appropriate quantization     portion of symbols as the channel quality improves, while still
+parameter for the BPG encoder together with a suitable            enhancing task performance.
+QAM modulation order. In this way, the BPG+LDPC scheme               For the case with a stronger rate penalty, λch = 200,
+matches the CR of our system as closely as possible while         Table II reveals a more aggressive yet still smooth adaptive
+keeping the LDPC code rate fixed.                                 rate control behavior. Across all SNR points, the average CR
+   2) SwinJSCC+SA&RA: We adopt SwinJSCC with both                 is consistently lower than that in Table I. For example, at
+SNR and rate adaptation modules [32] as the second bench-         SNRs of 0 and 10 dB, the CRs are reduced from 0.2615 to
+mark, denoted as “SwinJSCC+SA&RA”. This model repre-              0.2008 and from 0.2008 to 0.1614, respectively, implying that
+sents the SOTA adaptive-rate SemCom system. In our exper-         only about 75%-80% of the symbols used under λch = 100
+iments, we extend SwinJSCC+SA&RA to the same Nt × Nr              are transmitted. Nevertheless, the corresponding PSNR values
+MIMO Rayleigh fading setting as the proposed method, and          decrease only slightly. This indicates that, even with a much
+employ the same L-MMSE detector at the receiver to ensure a       stronger penalty on channel usage, the proposed entropy-and-
+fair comparison. The encoder and decoder architectures in this    channel-aware mechanism can aggressively remove redundant
+benchmark are configured identically to those in our proposed     features and symbols while preserving most of the information
+model.                                                            that is important for task performance.
+   Note that our proposed method only needs to transmit a sin-       Overall, these results confirm that, guided by the CSI,
+gle cut-off index to the receiver, whereas SwinJSCC+SA&RA         the SNR, the image content, the 2D entropy of the feature
+relies on transmitting an explicit binary mask over the channel   maps, and the proposed channel-aware loss function, the
+dimension. Although the side-information overhead is ignored      two policy networks can finely and effectively adjust the
+for both methods in our experiments, the cut-off index is         number of transmitted features and symbols. Accordingly,
+inherently more compact, thus making our method practically       more communication resources are automatically devoted to
+more advantageous in terms of the achievable CR.                  poor channel conditions or to looser rate penalties (small
+                                                                  λch ), whereas redundant features and symbols are aggressively
+   SwinJSCC+SA&RA performs joint SNR and rate adapta-
+                                                                  removed when channel conditions are good or when λch is
+tion as follows. During training, for each sample, the SNR γ
+                                                                  large. Therefore, the proposed system demonstrates a strong
+(in dB) is drawn in the same way as in our method, and a target
+                                                                  capability to achieve an excellent rate-distortion tradeoff over
+CR value is sampled from a predefined set of discrete CR
+                                                                  a wide range of channel conditions.
+values that uniformly span the same CR range as our method.
+At test time, both the SNR and target CR are fixed to specified
+values. This benchmark is trained for 500 epochs with a batch     D. Performance Comparison with the Benchmarks
+size of 512 using the Adam optimizer with an initial learning      In this subsection, we compare the rate-distortion perfor-
+rate of 1 × 10−4 .                                                mance of the proposed system with the SwinJSCC+SA&RA
+                                                                                                                                           10
+
+
+
+            28                                                                      28
+                                                    0.194      0.192                                                      0.197      0.192
+            26                          0.201                                       26                        0.202
+                         0.223                                                                 0.209
+                 0.262                              0.198      0.188                                                      0.198      0.188
+            24           0.219
+                                        0.198                                       24 0.216   0.208
+                                                                                                              0.198
+
+            22 0.260                                                                22 0.219
+PSNR (dB)
+
+
+
+
+                                                                        PSNR (dB)
+            20                                                                      20
+            18                                                                      18
+            16                                      Proposed
+                                                                                    16                                    Proposed
+            14                                      SwinJSCC+SA&RA                  14                                    SwinJSCC+SA&RA
+                                                    BPG+LDPC                                                              BPG+LDPC
+            12                                                                      12
+                  0       5             10           15         20                       0      5             10           15         20
+                                 Channel SNR (dB)                                                      Channel SNR (dB)
+                                 (a) λch = 100                                                         (a) λch = 100
+
+            28                                                                      28
+                                                    0.154      0.149                                                      0.156      0.153
+            26           0.175
+                                        0.161                                       26         0.169
+                                                                                                              0.160
+                 0.201                                                                                                               0.153
+            24                          0.156       0.156      0.146                24 0.184                  0.156       0.156
+                         0.177                                                                 0.167
+            22 0.198                                                                22 0.188
+PSNR (dB)
+
+
+
+
+                                                                        PSNR (dB)
+            20                                                                      20
+            18                                                                      18
+            16                                      Proposed
+                                                                                    16                                    Proposed
+            14                                      SwinJSCC+SA&RA                  14                                    SwinJSCC+SA&RA
+                                                    BPG+LDPC                                                              BPG+LDPC
+            12                                                                      12
+                  0       5             10           15         20                       0      5             10           15         20
+                                 Channel SNR (dB)                                                      Channel SNR (dB)
+                                 (b) λch = 200                                                         (b) λch = 200
+
+Fig. 10: Rate-distortion performance of the proposed system            Fig. 11: Rate-distortion performance of the proposed system
+compared with the SwinJSCC+SA&RA benchmark and the                     compared with the SwinJSCC+SA&RA benchmark and the
+BPG+LDPC benchmark for CU = 36 and Nt = Nr = 2.                        BPG+LDPC benchmark for CU = 24 and Nt = Nr = 2.
+Panels (a) and (b) correspond to λch = 100 and λch = 200,              Panels (a) and (b) correspond to λch = 100 and λch = 200,
+respectively. The CRs of each model at each operating point            respectively. The CRs of each model at each operating point
+are labeled next to the corresponding curves, except for               are labeled next to the corresponding curves, except for
+BPG+LDPC, since it shares the same CR as the proposed                  BPG+LDPC, since it shares the same CR as the proposed
+method.                                                                method.
+
+
+and BPG+LDPC benchmarks under different channel SNRs,                  regime from 10 dB to 20 dB, the proposed method consistently
+rate regularization parameters λch , channel dimensions CU ,           outperforms BPG+LDPC by about 2 dB in PSNR at the
+and numbers of transmit and receive antennas (Nt = Nr ), as            same CR. When the rate penalty increases to λch = 200 in
+illustrated in Figs. 10-12. For the BPG+LDPC benchmark, the            Fig. 10(b), all schemes move to lower CRs. The proposed
+effective CR at each SNR operating point is exactly matched            method still maintains a clear rate-distortion advantage over
+to that of the proposed system. For the SwinJSCC+SA&RA                 both SwinJSCC+SA&RA and BPG+LDPC.
+benchmark, we set the target CR to be as close as possible                Next, we consider CU = 24 and Nt = Nr = 2, as
+to the average CR achieved by our proposed system at each              illustrated in Fig. 11. For λch = 100 in Fig. 11(a), the proposed
+SNR operating point.                                                   system again lies above the SwinJSCC+SA&RA curve in the
+   We first consider CU = 36 and Nt = Nr = 2, as shown                 rate-distortion plane. Across all SNRs, the CRs of the two
+in Fig. 10. For λch = 100 in Fig. 10(a), the proposed system           schemes are extremely close, whereas the proposed method
+consistently achieves higher PSNR than SwinJSCC+SA&RA                  achieves a PSNR gain of about 0.4-0.7 dB. For example,
+while using nearly the same CR at each SNR. For instance,              at 0 dB the proposed method uses a slightly smaller CR of
+at SNRs of 5 dB and 10 dB, the proposed method reaches                 0.216, while SwinJSCC+SA&RA uses 0.219. In this case, the
+PSNRs of 24.91 dB and 25.41 dB, respectively, whereas                  proposed method improves the PSNR from 22.93 dB to 23.59
+SwinJSCC+SA&RA attains only 24.18 dB and 24.95 dB.                     dB. Compared with BPG+LDPC at the same CR, the proposed
+Compared with BPG+LDPC, in the medium-to-high SNR                      system provides more than 1.5 dB PSNR gain at SNRs above
+                                                                                                                                                 11
+
+
+
+            28                                                                      30
+            26                                      0.217      0.214
+                         0.235          0.223                                       28
+            24 0.244                                           0.219                                                        0.233         0.225
+                                        0.219       0.219                                                       0.243
+                         0.240                                                      26           0.272
+            22
+PSNR (dB)
+
+
+
+
+                                                                        PSNR (dB)
+                 0.240                                                                                                      0.194         0.192
+                                                                                         0.307                  0.201
+            20                                                                      24           0.223
+            18                                                                           0.262
+                                                                                    22
+            16                                      Proposed
+            14                                      SwinJSCC+SA&RA                  20                                      Proposed (w/ ViT)
+                                                    BPG+LDPC                                                                Proposed (w/o ViT)
+            12
+                                                                                    18
+                  0       5             10           15         20                        0       5             10           15            20
+                                 Channel SNR (dB)                                                        Channel SNR (dB)
+                                 (a) λch = 100                                                           (a) λch = 100
+
+            28                                                                      30
+            26                          0.201
+                                                    0.195      0.188
+                         0.219                                                      28
+            24 0.240                                0.198      0.188                                                        0.188         0.182
+                                        0.198                                                                   0.192
+            22           0.219                                                      26           0.208
+PSNR (dB)
+
+
+
+
+                                                                        PSNR (dB)
+                 0.240                                                                                                      0.154         0.149
+            20                                                                           0.226                  0.161
+                                                                                    24           0.175
+            18                                                                           0.201
+                                                                                    22
+            16                                      Proposed
+            14                                      SwinJSCC+SA&RA                  20                                      Proposed (w/ ViT)
+                                                    BPG+LDPC                                                                Proposed (w/o ViT)
+            12
+                                                                                    18
+                  0       5             10           15         20                        0       5             10           15            20
+                                 Channel SNR (dB)                                                        Channel SNR (dB)
+                                 (b) λch = 200                                                           (b) λch = 200
+
+Fig. 12: Rate-distortion performance of the proposed system            Fig. 13: Ablation study of the proposed method with (w/)
+compared with the SwinJSCC+SA&RA benchmark and the                     and without (w/o) the InternViT-based feature compensation
+BPG+LDPC benchmark for CU = 24 and Nt = Nr = 4.                        module for CU = 36 and Nt = Nr = 2, denoted as “w/ ViT”
+Panels (a) and (b) correspond to λch = 100 and λch = 200,              and “w/o ViT”, respectively. Panels (a) and (b) correspond
+respectively. The CRs of each model at each operating point            to λch = 100 and λch = 200, respectively. The CRs of
+are labeled next to the corresponding curves, except for               each model at each operating point are labeled next to the
+BPG+LDPC, since it shares the same CR as the proposed                  corresponding curves.
+method.
+                                                                       PSNR. When λch = 200 in Fig. 12(b), the superiority of the
+                                                                       proposed system persists. It improves PSNR by roughly 0.5-
+10 dB. When λch = 200 in Fig. 11(b), all methods operate               0.9 dB relative to SwinJSCC+SA&RA at similar CRs. At some
+at lower CRs. The proposed system still offers about 0.5-0.7           SNR values, such as 15 dB, it simultaneously uses a lower
+dB PSNR improvement over SwinJSCC+SA&RA with only                      CR and yields noticeably higher PSNR. At the same CR, the
+marginal CR differences, and it outperforms BPG+LDPC by                proposed method also consistently outperforms BPG+LDPC.
+roughly 2 dB in PSNR at medium-to-high SNRs.
+                                                                         Overall, across all considered configurations and both val-
+   Finally, Fig. 12 reports the results for CU = 24 and a              ues of λch , the proposed system achieves higher PSNR at
+larger MIMO configuration with Nt = Nr = 4. For λch =                  nearly the same or even lower CR compared with Swin-
+100 in Fig. 12(a), the proposed system consistently achieves           JSCC+SA&RA and BPG+LDPC. These results demonstrate a
+higher PSNR than SwinJSCC+SA&RA across all SNRs. At                    consistently superior rate-distortion tradeoff over a wide range
+low SNRs, this gain is achieved with only a small increase             of channel conditions.
+in CR. At medium-to-high SNRs, the proposed method can
+even achieve both higher PSNR and lower CR. For instance,
+at 20 dB SNR it attains 25.47 dB PSNR with a CR of 0.214,              E. Ablation Study
+whereas SwinJSCC+SA&RA reaches only 24.92 dB PSNR                         In this subsection, we investigate the contribution of the
+with a larger CR of 0.219, corresponding to a better rate-             InternViT-based feature compensation module through an ab-
+distortion operating point. Compared with BPG+LDPC at the              lation study. We compare the full model that includes this
+same CR, the proposed system exhibits a clear advantage in             module, denoted as “w/ ViT”, with a variant that excludes it,
+                                                                                                                                             12
+
+
+
+denoted as “w/o ViT”, while keeping all other components and       experiments demonstrated that the proposed system consis-
+training settings unchanged. The rate-distortion performance       tently outperforms conventional separation-based source and
+for CU = 36 and Nt = Nr = 2 is shown in Fig. 13 for                channel coding and SOTA adaptive-rate SemCom benchmarks
+λch = 100 and λch = 200.                                           in terms of rate-distortion performance. Looking forward, we
+   From Fig. 13, we observe that for both λch = 100 and            aim to extend the proposed framework to multi-user scenarios,
+λch = 200, the model w/ ViT operates at significantly lower        where the transmitter performs differentiated adaptive trans-
+CRs than the model w/o ViT while maintaining very similar          mission for multiple receiver groups with heterogeneous task
+PSNR. For λch = 100, the CR decreases from 0.307-0.225             objectives, channel conditions, rate constraints, and potentially
+(w/o ViT) to 0.262-0.192 (w/ ViT), corresponding to roughly        distinct private knowledge bases.
+15%-18% fewer transmitted symbols, while the PSNR is only
+about 0.5-0.7 dB lower across all SNRs. For λch = 200,                                          R EFERENCES
+the CR further drops from 0.226-0.182 (w/o ViT) to 0.201-
+0.149 (w/ ViT), i.e., by about 11%-18%, and the PSNR loss           [1] W. Chen, Y. Chen, Q. Yang, C. Huang, Q. Wang, and Z. Zhang,
+                                                                        “Deep joint source-channel coding for wireless image transmission with
+becomes even smaller. In this case, the model w/ ViT achieves           entropy-aware adaptive rate control,” in Proc. IEEE GLOBECOM, Kuala
+nearly the same PSNR at a substantially lower CR, thereby               Lumpur, Malaysia, Dec. 2023, pp. 2239–2244.
+saving channel resources without noticeably compromising            [2] X. Luo, H. Chen, and Q. Guo, “Semantic communications: Overview,
+                                                                        open issues, and future research directions,” IEEE Wirel. Commun.,
+task performance. For example, at 0 dB SNR, the model w/                vol. 29, no. 1, pp. 210–219, Jan. 2022.
+ViT attains essentially the same PSNR as the model w/o ViT          [3] J. Liu, S. Shao, W. Zhang, and H. V. Poor, “An indirect rate-distortion
+while using a clearly lower CR.                                         characterization for semantic sources: General model and the case of
+                                                                        gaussian observation,” IEEE Trans. Commun., vol. 70, pp. 5946–5959,
+   Overall, the ablation study demonstrates that the InternViT-         Jul. 2022.
+based feature compensation module plays a key role in improv-       [4] K. Chi, Q. Yang, Z. Yang, Y. Duan, and Z. Zhang, “Capacity optimizing
+ing the rate-distortion performance of the proposed system. By          resource allocation in joint source-channel coding systems with qos
+                                                                        constraints,” IEEE Trans. Commun., vol. 73, no. 6, pp. 4198–4212, Nov.
+exploiting global contextual dependencies among the retained            2024.
+features and symbols, this module can effectively compensate        [5] W. Chen, Q. Yang, Y. Jia, J. Pan, S. Shao, J. Dai, M. Tao, and P. Zhang,
+for part of the information loss caused by channel distortion           “Secure digital semantic communications: Fundamentals, challenges,
+                                                                        and opportunities,” arXiv:2512.24602v5 [cs.CR], Jan. 2026.
+as well as feature map selection and pruning. Consequently,         [6] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-aware speech
+the policy networks can learn more aggressive yet reliable              to text transmission with redundancy removal,” in Proc. IEEE ICC
+adaptive rate control strategies, leading to substantially lower        Workshops, Seoul, Korea, May 2022, pp. 717–722.
+                                                                    [7] X. Peng, Z. Qin, D. Huang, X. Tao, J. Lu, G. Liu, and C. Pan, “A robust
+CRs with only marginal or even no PSNR degradation.                     deep learning enabled semantic communication system for text,” in Proc.
+                                                                        IEEE GLOBECOM, Rio de Janeiro, Brazil, Dec. 2022, pp. 2704–2709.
+                                                                    [8] T. Han, Q. Yang, Z. Shi, S. He, and Z. Zhang, “Semantic-preserved
+                      V. C ONCLUSION                                    communication system for highly efficient speech transmission,” IEEE
+                                                                        J. Sel. Areas Commun., vol. 41, no. 1, pp. 245–259, Nov. 2022.
+   In this paper, we proposed a novel SemCom framework with         [9] Z. Weng, Z. Qin, X. Tao, C. Pan, G. Liu, and G. Y. Li, “Deep
+entropy-and-channel-aware adaptive rate control over MIMO               learning enabled semantic communications with speech recognition and
+                                                                        synthesis,” IEEE Trans. Wirel. Commun., vol. 22, no. 9, pp. 6227–6240,
+Rayleigh fading channels. To realize this framework, we                 Feb. 2023.
+embedded a joint representation of the CSI and the SNR into        [10] T. Han, J. Tang, Q. Yang, Y. Duan, Z. Zhang, and Z. Shi, “Generative
+both the semantic encoder and decoder by equipping them with            model based highly efficient semantic communication approach for
+                                                                        image transmission,” in Proc. IEEE ICASSP, Rhodes Island, Greece,
+channel condition adaptive modules, so that the feature maps            Jun. 2023, pp. 1–5.
+are modulated according to varying channel conditions. On          [11] W. Chen, S. Shao, Q. Yang, Z. Zhang, and P. Zhang, “A superposition
+top of this channel-aware architecture, we designed two policy          code-based semantic communication approach with quantifiable and
+                                                                        controllable security,” IEEE Trans. Mob. Comput., vol. 25, no. 2, pp.
+networks to realize fine-grained joint feature map selection            2444–2461, Feb. 2026.
+and pruning. The first policy network adaptively retains task-     [12] S. Tang, Q. Yang, L. Fan, X. Lei, A. Nallanathan, and G. K. Karagianni-
+relevant feature maps, and the second prunes semantically               dis, “Contrastive learning-based semantic communications,” IEEE Trans.
+                                                                        Commun., vol. 72, no. 10, pp. 6328–6343, May 2024.
+redundant symbols within the selected feature maps, exploiting
+                                                                   [13] W. Chen, S. Tang, and Q. Yang, “Enhancing image privacy in semantic
+the fact that even highly informative feature maps still contain        communication over wiretap channels leveraging differential privacy,”
+symbol-level redundancy. Driven jointly by the feature maps,            in Proc. 34th IEEE MLSP, London, UK, Sep. 2024, pp. 1–6.
+their 2D entropy, the CSI, and the SNR, these policy networks      [14] K. Chi, Y. He, Q. Yang, Y. Shu, Z. Wang, J. Luo, and J. Chen,
+                                                                        “Deepguard: Defending deep joint source-channel coding against eaves-
+achieve entropy-and-channel-aware rate adaptation. To com-              dropping at physical-layer,” arXiv:2512.18715v1 [eess.SP], Dec. 2025.
+pensate for information loss due to MIMO Rayleigh fading           [15] X. Luo, R. Gao, H.-H. Chen, S. Chen, Q. Guo, and P. N. Suganthan,
+channels as well as feature map selection and pruning, we fur-          “Multimodal and multiuser semantic communications for channel-level
+                                                                        information fusion,” IEEE Wirel. Commun., vol. 31, no. 2, pp. 117–125,
+ther employed a lightweight vision encoder InternViT-300M               Oct. 2022.
+as an MLLM-aided feature compensation module. We used              [16] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+a truncated version of InternViT and fine-tuned it efficiently          semantic communications,” IEEE J. Sel. Areas Commun., vol. 40, no. 9,
+                                                                        pp. 2584–2597, Jul. 2022.
+via LoRA, thereby reducing training and inference overhead.        [17] S. Wan, Q. Yang, Z. Shi, Z. Yang, and Z. Zhang, “Cooperative task-
+In addition, we designed a channel-aware loss function that             oriented communication for multi-modal data with transmission control,”
+encourages the system to allocate more resources under poor             in Proc. IEEE ICC Workshops, Rome, Italy, May 2023, pp. 1635–1640.
+                                                                   [18] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint source-
+channels while saving resources under favorable channels, and           channel coding of text,” in Proc. IEEE ICASSP, Calgary, AB, Canada,
+at the same time maintains high task performance. Extensive             Apr. 2018, pp. 2326–2330.
+                                                                                                                                                          13
+
+
+
+[19] H. Xie, Z. Qin, G. Y. Li, and B. Juang, “Deep learning enabled semantic     [43] H. Gao, G. Yu, and Y. Cai, “Rate adaptive mechanism for semantic
+     communication systems,” IEEE Trans. Signal Process., vol. 69, pp.                communication systems: A robustness verification approach,” IEEE
+     2663–2675, Apr. 2021.                                                            Netw., vol. 38, no. 4, pp. 216–223, Jul. 2024.
+[20] Z. Zhang, Q. Yang, S. He, M. Sun, and J. Chen, “Wireless transmission       [44] F. Jiang, Y. Peng, L. Dong, K. Wang, K. Yang, C. Pan, and X. You,
+     of images with the assistance of multi-level semantic information,” in           “Large ai model-based semantic communications,” IEEE Wireless Com-
+     Proc. 18th ISWCS, Hangzhou, China, Oct. 2022, pp. 1–6.                           mun., vol. 31, no. 3, pp. 68–75, Jun. 2024.
+[21] C. Liu, C. Guo, Y. Yang, W. Ni, and T. Q. S. Quek, “Ofdm-based              [45] Z. Lyu, G. Zhu, J. Xu, B. Ai, and S. Cui, “Semantic communications
+     digital semantic communication with importance awareness,” IEEE                  for image recovery and classification via deep joint source and channel
+     Trans. Commun., vol. 72, no. 10, pp. 6301–6315, May 2024.                        coding,” IEEE Trans. Wireless Commun., vol. 23, no. 8, pp. 8388–8404,
+[22] S. Gao, X. Qin, L. Chen, Y. Chen, K. Han, and P. Zhang, “Importance of           Aug. 2024.
+     semantic information based on semantic value,” IEEE Trans. Commun.,         [46] P. Yang, G. Zhang, and Y. Cai, “Rate-adaptive generative semantic
+     vol. 72, no. 9, pp. 5443–5457, Apr. 2024.                                        communication using conditional diffusion models,” IEEE Wireless
+[23] H. Liang, C. Dong, W. An, Z. Bao, X. Xu, and R. Meng, “Semantic-                 Commun. Lett., vol. 14, no. 2, pp. 539–543, Feb. 2025.
+     importance-aware communication over MIMO fading channels,” IEEE             [47] S. Yao, S. Wang, J. Dai, and K. Niu, “Learned image transmission
+     Internet Things J., vol. 12, no. 18, pp. 38 540–38 555, Sep. 2025.               over MIMO fading channels,” in Proc. 34th IEEE PIMRC, Toronto,
+[24] D. B. Kurka and D. Gündüz, “Successive refinement of images with               ON, Canada, Sep. 2023, pp. 1–6.
+     deep joint source-channel coding,” in Proc. 20th IEEE SPAWC, Cannes,        [48] X. Han, Y. Wu, Z. Gao, B. Feng, Y. Shi, D. Gündüz, and W. Zhang,
+     France, Jul. 2019, pp. 1–5.                                                      “SCSC: A novel standards-compatible semantic communication frame-
+                                                                                      work for image transmission,” IEEE Trans. Commun., vol. 73, no. 8,
+[25] ——, “Bandwidth-agile image transmission with deep joint source-
+                                                                                      pp. 5682–5698, Jan. 2025.
+     channel coding,” IEEE Trans. Wirel. Commun., vol. 20, no. 12, pp.
+                                                                                 [49] Y. Liu, K. Fan, D. Wu, and W. Zhou, “Filter pruning by quantifying
+     8081–8095, Jun. 2021.
+                                                                                      feature similarity and entropy of feature maps,” Neurocomputing, vol.
+[26] C. Bian, Y. Shao, and D. Gündüz, “Deepjscc-1++: Robust and                     544, p. 126297, Aug. 2023.
+     bandwidth-adaptive wireless image transmission,” in Proc. IEEE              [50] K. Carolan, L. Fennelly, and A. F. Smeaton, “A review of multi-modal
+     GLOBECOM, Kuala Lumpur, Malaysia, Dec. 2023, pp. 3148–3154.                      large language and vision models,” arXiv:2404.01322 [cs.CL], Mar.
+[27] L. Luo, Z. He, J. Wu, H. Guo, and C. Zhu, “Adaptive deep joint source-           2024.
+     channel coding for one-to-many wireless image transmission,” IEEE           [51] W. W. et al., “Internvl3.5: Advancing open-source multimodal models in
+     Trans. Broadcast., vol. 71, no. 3, pp. 914–929, Sep. 2025.                       versatility, reasoning, and efficiency,” arXiv:2508.18265 [cs.CV], Aug.
+[28] Z. Bao, H. Liang, C. Dong, C. Li, X. Xu, and P. Zhang, “MDVSC -                  2025.
+     efficient wireless model division video semantic communication,” IEEE       [52] E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang,
+     Internet Things J., vol. 12, no. 2, pp. 1109–1124, Sep. 2024.                    and W. Chen, “Lora: Low-rank adaptation of large language models,”
+[29] M. Yang and H. Kim, “Deep joint source-channel coding for wireless               in Proc. ICLR, Virtual Event, Apr. 2022, pp. 1–20.
+     image transmission with adaptive rate control,” in Proc. IEEE ICASSP,       [53] E. Jang, S. Gu, and B. Poole, “Categorical reparameterization with
+     Virtual and Singapore, May 2022, pp. 5193–5197.                                  gumbel-softmax,” in Proc. ICLR, Toulon, France, Apr. 2017, pp. 1–6.
+[30] W. Zhang, H. Zhang, H. Ma, H. Shao, N. Wang, and V. C. M. Leung,            [54] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from
+     “Predictive and adaptive deep coding for wireless image transmission in          tiny images,” Apr. 2009.
+     semantic communication,” IEEE Trans. Wirel. Commun., vol. 22, no. 8,        [55] J. Lainema, F. Bossen, W. Han, J. Min, and K. Ugur, “Intra coding of
+     pp. 5486–5501, Jan. 2023.                                                        the HEVC standard,” IEEE Trans. Circuits Syst. Video Technol., vol. 22,
+[31] G. Shi, H. Li, D. Gao, M. Yang, and Y. Dong, “An image adaptive                  no. 12, pp. 1792–1801, Oct. 2012.
+     rate mechanism in semantic communication for image endogenous
+     semantics,” IEEE Trans. Veh. Technol., vol. 73, no. 9, pp. 13 425–13 439,
+     Sep. 2024.
+[32] K. Yang, S. Wang, J. Dai, X. Qin, K. Niu, and P. Zhang, “Swinjscc:
+     Taming swin transformer for deep joint source-channel coding,” IEEE
+     Trans. Cogn. Commun. Netw., vol. 11, no. 1, pp. 90–104, Feb. 2025.
+[33] Y. He, G. Yu, and Y. Cai, “Rate-adaptive coding mechanism for semantic
+     communications with multi-modal data,” IEEE Trans. Commun., vol. 72,
+     no. 3, pp. 1385–1400, Nov. 2023.
+[34] S. Wang, J. Dai, Z. Liang, K. Niu, Z. Si, C. Dong, X. Qin, and
+     P. Zhang, “Wireless deep video semantic transmission,” IEEE J. Sel.
+     Areas Commun., vol. 41, no. 1, pp. 214–229, Nov. 2022.
+[35] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+     transform source-channel coding for semantic communications,” IEEE
+     J. Sel. Areas Commun., vol. 40, no. 8, pp. 2300–2316, Aug. 2022.
+[36] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+     control in semantic communication with incremental knowledge-based
+     HARQ,” IEEE Open J. Commun. Soc., vol. 3, pp. 1076–1089, Jul. 2022.
+[37] D. Huang, F. Gao, X. Tao, Q. Du, and J. Lu, “Toward semantic
+     communications: Deep learning-based image semantic coding,” IEEE
+     J. Sel. Areas Commun., vol. 41, no. 1, pp. 55–71, Jan. 2023.
+[38] H. Xie, Z. Qin, and G. Y. Li, “Semantic communication with memory,”
+     IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2658–2669, Aug. 2023.
+[39] J. Dai, S. Wang, K. Yang, K. Tan, X. Qin, Z. Si, K. Niu, and P. Zhang,
+     “Toward adaptive semantic communications: Efficient data transmission
+     via online learned nonlinear transform source-channel coding,” IEEE J.
+     Sel. Areas Commun., vol. 41, no. 8, pp. 2609–2627, Aug. 2023.
+[40] H. Gao, G. Yu, and Y. Cai, “Adaptive modulation and retransmission
+     scheme for semantic communication systems,” IEEE Trans. Cogn.
+     Commun. Netw., vol. 10, no. 1, pp. 150–163, Sep. 2023.
+[41] Y. Zhu, Y. Huang, X. Qiao, Z. Tan, B. Bai, H. Ma, and S. Dustdar,
+     “A semantic-aware transmission with adaptive control scheme for volu-
+     metric video service,” IEEE Trans. Multimedia, vol. 25, pp. 7160–7172,
+     Oct. 2022.
+[42] W. Gong, H. Tong, S. Wang, Z. Yang, X. He, and C. Yin, “Adaptive
+     bitrate video semantic communication over wireless networks,” in Proc.
+     WCSP, Hangzhou, China, Nov. 2023, pp. 122–127.
+

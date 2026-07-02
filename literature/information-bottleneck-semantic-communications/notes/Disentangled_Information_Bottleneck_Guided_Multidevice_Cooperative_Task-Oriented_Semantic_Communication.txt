@@ -1,0 +1,1910 @@
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+6259
+
+Disentangled Information Bottleneck Guided
+Multidevice Cooperative Task-Oriented
+Semantic Communication
+Meiyu Sun , Graduate Student Member, IEEE, Dapeng Wu , Senior Member, IEEE,
+Puning Zhang , Member, IEEE, and Ruyan Wang
+Abstract—While multi-device cooperative task-oriented semantic communication (TOSC) enhances task performance through
+comprehensive information representation, it inevitably introduces redundancy, thereby increasing communication overhead.
+Existing redundancy elimination methods suffer from limitations
+in interpretability and coarse granularity, hindering the optimal
+utilization of communication resources. To this end, we propose
+a disentangled information bottleneck guided TOSC framework
+(DisenIB-TOSC). The framework first employs the basic IB
+for initial feature compression, then formulates a novel DisenIB specifically designed for multi-device cooperation inference,
+which enhances task performance and achieves interpretable
+feature disentanglement by separating features into common and
+private components, thereby establishing a theoretical foundation
+for redundancy identification. Subsequently, we derive differentiable, computationally tractable forms for both IB objectives
+by combining variational approximation, consistency constraints,
+and density ratio trick. Leveraging the disentangled features, we
+further design a feature importance-aware selective transmission
+strategy, DisenIB-TOSC-ST, which quantifies feature importance
+via mutual information estimation to dynamically discriminate
+and control redundant feature transmission. Experimental results
+on several tasks demonstrate that our method outperforms
+baselines in task performance while reducing communication
+costs, verifying the effectiveness and interpretability of feature
+disentanglement.
+Index Terms—Task-oriented semantic communication, multidevice cooperation, disentanglement, information bottleneck.
+Received 12 August 2025; revised 27 November 2025 and 11 January 2026;
+accepted 4 March 2026. Date of publication 18 March 2026; date of current
+version 26 March 2026. This work was supported by the National Natural
+Science Foundation of China under Grant U24A20211, Grant 62271096, and
+Grant U20A20157, in part by the Natural Science Foundation of Chongqing,
+China under Grant CSTB2023NSCQ-LZX0134 and Grant CSTB2024NSCQLZX0124, in part by the University Innovation Research Group of Chongqing
+under Grant CXQT20017, in part by Youth Innovation Group Support
+Program of ICE Discipline of CQUPT under Grant SCIE-QN-2022-04,
+in part by the Chongqing Postdoctoral Research Program Special Grant
+under Grant 2023CQBSHTB3092, in part by the Science and Technology
+Research Program of Chongqing Municipal Education Commission under
+Grant KJQN202400628, and in part by the Innovative Talent Program for
+Doctoral Students of Chongqing University of Posts and Telecommunications
+under Grant BYJS202417. The associate editor coordinating the review of
+this article and approving it for publication was R. K. Mallik. (Corresponding
+author: Dapeng Wu.)
+The authors are with the School of Communications and Information Engineering, Chongqing University of Posts and Telecommunications, Chongqing
+400065, China, and also with the Advanced Network and Intelligent Connection Technology Key Laboratory of Chongqing Education Commission
+of China, Chongqing Key Laboratory of Ubiquitous Sensing and Networking, Chongqing 400065, China (e-mail: s200101146@stu.cqupt.edu.cn;
+wudp@cqupt.edu.cn; zhangpn@cqupt.edu.cn; wangry@cqupt.edu.cn).
+Digital Object Identifier 10.1109/TCOMM.2026.3675469
+
+I. I NTRODUCTION
+S THE next-generation intelligent digital infrastructure,
+6G networks are rapidly evolving through convergence
+with artificial intelligence (AI), big data, and edge computing, heralding the era of ubiquitous intelligent connectivity
+[1], [2]. Large-scale deployed infrastructures and diverse
+intelligent applications inject new vitality into 6G networks,
+while exacerbating spectrum scarcity, potentially hindering the
+advancement of 6G intelligent communications.
+Combined with the potential of AI on edge devices,
+task-oriented semantic communication (TOSC) has emerged
+as a novel paradigm [3], [4], [5]. Utilizing deep learning
+(DL)-based semantic coding and joint source-channel coding (JSCC), TOSC extracts and transmits only task-relevant
+semantic information rather than raw data [6], [7], which
+ensures task performance while reducing communication
+overhead under resource-constrained scenarios. Consequently,
+TOSC enables the evolution from conventional data-driven
+communication networks to semantic-aware networks, potentially alleviating the scarcity of communication resources
+while meeting the intelligent demands of 6G [8], [9], [10].
+Despite the aforementioned advantages, in uplink edge
+network scenarios where a edge device collaborates with an
+edge server to execute tasks, the island effect and limited
+sensing capability of edge device constrain task inference
+performance. Specifically, the island effect refers to a single
+device operating independently, it cannot fully capture sensing
+information due to factors like occlusion and distance, and also
+struggles to share information with other devices. Meanwhile,
+its limited computing power hinders the accurate extraction of
+semantic features, ultimately limiting inference accuracy [11],
+[12]. Practically, the objects can be sensed collaboratively by
+multiple edge devices, e.g., distributed smart cameras or drone
+clusters capturing multi-view images [13], and autonomous
+vehicles perceiving road conditions via radar-camera collaboration [14]. Studies demonstrate that multi-device cooperative
+sensing enables multi-dimensional characterization of raw
+data, boosting performance in tasks such as multi-view object
+recognition and retrieval, which has been widely adopted
+in smart cities, intelligent transportation, and smart security
+[15], [16], [17]. However, an increased number of devices
+introduces excessive information redundancy, while physical
+environment and device characteristics lead to significant vari-
+
+A
+
+0090-6778 © 2026 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence and
+similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6260
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+ations in sensed data quality, indiscriminately transmitting all
+semantic information thus incurs substantial communication
+overhead. Thus, it is critical to investigate enhancing task
+performance while optimizing communication resource utilization in wireless edge networks. In other words, we need to
+identify which information is effective and which is redundant,
+thereby eliminating redundancy to achieve a trade-off between
+performance and costs.
+A. Related Works and Motivations
+The study in [18] first proposed the application of DL
+to model end-to-end communication links. Subsequently,
+researchers developed DeepJSCC to map extracted semantic
+information to wireless channel-adapted semantic symbols
+[19], and then reconstructed text, images, speech, or video
+sources [20], [21], [22], [23]. With advancing research,
+DeepJSCC-based TOSC was extended to multi-modal, multitask, and multi-user systems [24], [25], [26]. Researchers
+also explored TOSC from multiple perspectives, including
+large model-assisted knowledge enhancement, digital semantic communication integrating quantization and modulation,
+security/privacy, etc., [27], [28], and [29].
+For the TOSC system performance, the core objective
+is to maximize information compression while preserving
+downstream task performance. Coincidently, the information
+bottleneck (IB), an information-theoretic approach, and its
+multiple variants (e.g., deep variational IB (Deep VIB), multiview IB (MIB), and distributed IB (DIB)) offer an elegant
+balance between data compression and information preservation, enhancing feature representation [30], [31], [32], [33].
+Building on this, existing studies [34], [35], [36], [37] have
+incorporated IB into TOSC. Shao et al. [34] first demonstrated IB’s superiority over basic DeepJSCC in rate-distortion
+tradeoffs. Sun et al. [35] proposed an adaptive IB objective
+with dynamic weight adjustment to guide image transmission.
+Li et al. [36] developed a graph-based IB to remove redundancy in graph data. Xie et al. [37] enhanced robustness
+against dynamic channel conditions via a robust IB. These
+works addressed the computational complexity of mutual
+information (MI) terms in high-dimensional feature spaces
+by deriving variational bounds of IB objectives. However,
+they are primarily confined to single-device scenarios, without
+considering identifying cross-device feature correlations or
+global redundancy elimination, which is not applicable to
+multi-device cooperative TOSC systems.
+Recent works [38], [39], [40], [41] have focused on eliminating information redundancy for multi-device cooperative
+inference. Liu et al. [38] designed an attention-based compression network to control redundant feature transmission
+in multi-view data. Similarly, Choi et al. [39] introduced
+a likelihood estimation-based context-aware and weighted
+average cooperative transmission scheme, effectively reducing
+both communication and computational costs. In IB theory
+applications, Aguerri et al. [33] proposed DIB for distributed
+sources, enabling redundancy elimination prior to transmission. Subsequently, Shao et al. [40] introduced IB and DIB
+into multi-device cooperative image inference, using them
+
+to guide local feature extraction at edge devices and distributed feature encoding across devices, respectively. Further,
+Shao et al. [41] investigated multi-device cooperative video
+analysis, leveraging IB theory and a temporal entropy model
+to remove video redundancies in spatial and temporal domains,
+respectively. While these studies achieved cross-device feature
+compression and filtering, they lack the interpretability of
+redundancy information, i.e., which features are redundant?
+Such an understanding is critical for effective elimination.
+Feature disentanglement is a core concept in representation learning that decomposes high-dimensional features into
+independent, interpretable subspaces, each corresponding to a
+latent semantic component in raw data. It is widely adopted
+in unsupervised cross-modal clustering [42], supervised multimodal tasks [43], and multi-view learning [44], as these
+tasks require information complementarity and feature sharing
+among multiple participants. Thus, a key insight is that multidevice cooperation can separate common and private features,
+enabling clearer discrimination of how features contribute
+to task performance gains. Concurrently, recent studies have
+integrated IB theory to guide disentanglement, proposing DisenIB objective that minimizes MI between two features [45],
+[46]. Building on this, DisenIB can be employed to guide
+feature decoupling in multi-device data [47]. However, existing
+work on feature disentanglement for TOSC remains extremely
+limited, and research integrating them with feature selective
+transmission has yet to emerge.
+B. Contributions
+To address the above challenges, this paper proposes a
+DisenIB guided TOSC (DisenIB-TOSC) method that innovatively leverages feature disentanglement to tackle the inherent
+tradeoff between task performance and communication costs
+in multi-device cooperative inference scenarios. The contributions are as follows:
+• We design a multi-device cooperative TOSC framework
+with both IB theory-based optimization objectives. It
+pioneeringly achieves multi-device feature disentanglement, overcoming the limitations of existing redundancy
+elimination methods in interpretability and coarse granularity. Specifically, in the local feature extraction, the
+basic IB guides edge devices to initially compress features while preserving task-relevant information. In the
+global JSCC encoding, a novel DisenIB objective for
+multi-device cooperation is formulated to guarantee cooperative task performance, while decomposing encoded
+features into common (shared across devices) and private
+(device-specific) components, enabling systematic and
+fine-grained redundancy identification and elimination.
+• To address the challenges of MI computation in highdimensional spaces and distributed feature optimization
+in multi-device cooperative inference, we propose efficient and tractable solutions for optimization objectives.
+Specifically, for the basic IB and DisenIB’s task performance term, we derive differentiable bounds via
+variational approximation. For the DisenIB’s disentanglement term, we employ consistency constraints with
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+6261
+
+Fig. 1. The multi-device cooperative TOSC system model.
+
+the density ratio trick by minimizing cross-device discrepancies and training an adversarial discriminator. This
+method significantly reduces the computation of MI
+terms, providing practical solutions for theoretical objectives.
+• Building on feature disentanglement, we propose a
+feature importance-aware selective transmission strategy, DisenIB-TOSC-ST, which first employs mutual
+information neural estimation (MINE) to quantify the
+importance of disentangled features. Guided by the
+insight that “common feature is transmitted once while
+private features are transmitted on demand,” the strategy
+dynamically discriminates and regulates redundant feature transmission, thereby reducing communication costs.
+The remainder of this paper is as follows. Section II
+introduces the system model. Section III presents the proposed
+DisenIB-TOSC and system optimization method. Section IV
+designs the DisenIB-TOSC-ST method. Section V presents the
+experimental results. Section VI is conclusion.
+II. S YSTEM M ODEL
+Fig. 1 considers a multi-device cooperative TOSC system
+comprising multiple edge devices and a base station with an
+edge server, where edge devices are equipped with semantic
+transmitters and the edge server deploys a semantic receiver
+to perform cooperative task inference, the detailed process is
+as follows.
+Semantic Transmitter: It consists of semantic encoder and
+JSCC encoder. Taking multi-view image classification as an
+example, each edge device k (i.e., smart camera) in set
+K = {1, 2, . . . K} collects image data xk ∈ RN of the same
+observed object from different views, where N = C × H × W
+is the image size, all views share the object label y ∈ {0, 1}C ,
+which is a one-hot encoded vector of length C (i.e., number
+of classes). Thus, the data set composed of all views is
+(x1 , x2 , . . . , xK , y). Edge device k first extracts local image
+features z k via semantic encoder FEϕk : RN → RM (with
+ϕk as model parameters), denoted as
+z k = FEϕk (xk ) , ∀k ∈ K
+
+(1)
+
+To facilitate identifying redundant features, each device k is
+deployed with a common JSCC encoder Enccφck : RM → CL/2
+
+and a private JSCC encoder Encpφp : RM → CL/2 , which
+k
+disentangles image features z k into common encoded feature
+p
+c
+v k and private encoded feature v k (i.e., semantic symbols)
+for transmission, where φck and φpk denote the corresponding
+model parameters, respectively. This process is expressed as
+v ck = Enccφck (z k ) , ∀k ∈ K
+
+(2)
+
+v pk = Encpφp (z k ) ,
+k
+
+(3)
+
+∀k ∈ K
+
+Wireless Channel: Before transmission, v ck and v pk undergo
+power normalization to adapt to the limited transmit power
+p 2
+c 2
+P of the semantic transmitter, i.e., (vk,i
+) ≤ P, (vk,i
+) ≤
+P, i = 1, 2, . . . , L/2. The additive white Gaussian noise
+(AWGN) channel is considered and modeled as a non-trainable
+neural network layer. Assuming the channel model is known
+and remains unchanged during training, the transmissions of
+encoded features over Channel : CL/2 → CL/2 are defined
+as
+ṽ ck = v ck + nk , ∀k ∈ K
+ṽ pk = v pk + nk , ∀k ∈ K
+
+(4)
+(5)
+
+where nk denotes channel noise following zero-mean Gaussian distribution, i.e., nk ∼ N (0, σn2 I) with variance σn2 .
+Semantic Receiver: The semantic receiver consists a joint
+JSCC decoder and a task inference module, where the joint
+JSCC decoder Decθ : CKL → RM (with θ as model parameters) concatenates all semantic symbols transmitted from edge
+devices to generate fused decoded feature v̂, denoted as
+v̂ = Decθ (concat [ṽ c1 , ṽ p1 , . . . , ṽ cK , ṽ pK ])
+
+(6)
+
+where concat [·] represents the feature concatenation operator.
+Finally, the classifier Classifierϑ : RM → {0, 1}C determines the image category ŷ with parameter ϑ, denoted as
+ŷ = Classifierϑ (v̂)
+
+(7)
+
+III. D ISEN IB G UIDED M ULTIDEVICE C OOPERATIVE
+TOSC M ETHOD
+From a probabilistic perspective, input image data from
+all devices (x1 , x2 , . . . , xK , y) can be regarded as instantiations of the random variable (X1 , X2 , . . . , XK , Y ), and
+similarly, feature vectors z k , v ck , v pk , ṽ ck , ṽ pk , v̂, ŷ generated
+during forward propagation correspond to random variables
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6262
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+TABLE I
+S EMANTIC C OMMUNICATION S YSTEM S TRUCTURE FOR S EVERAL TASKS
+
+retaining minimal input data information. This aligns with the
+goal of TOSC, i.e., the extracted features should maximize
+the preservation of task-relevant information while enabling
+maximal data compression to reduce communication costs.
+Guiding the feature extraction of semantic encoder via IB
+theory is thus reasonable, with the IB objective [40] for edge
+device k formulated as
+LIB ,k = −I (Y ; Zk ) +β I (Xk ; Zk ), ∀k ∈ K
+| {z }
+| {z }
+Distortion
+
+Fig. 2. The theoretical workflow of multi-device cooperative DisenIB-TOSC.
+
+Zk , Vkc , Vkp , Ṽkc , Ṽkp , V̂ , Ŷ , respectively. In this process, the
+random variables form the following Markov chains:
+Y → Xk → Zk → Vkc → Ṽkc ,
+Y → Xk → Zk → Vkp → Ṽkp ,
+
+∀k ∈ K
+
+(8)
+
+∀k ∈ K
+
+(9)
+
+{Ṽ1c , Ṽ1p , Ṽ2c , Ṽ2p , . . . , ṼKc , ṼKp } → V̂ → Ŷ
+
+(10)
+
+and
+One of the instantiated probabilistic transfer satisfies:
+
+(12)
+
+Rate
+
+where the distortion term I (Y ; Zk ) = H (Y ) − H (Y |Zk )
+denotes the MI between Y and Zk that determines task
+performance, and the rate term I (Xk ; Zk ) denotes the MI
+between Xk and Zk that determines the compression
+degree.
+R
+β is weight factor. Notably, H (Y ) = − p(y) log(y)dy
+denotes the entropy of all category labels in the dataset, which
+is a constant and can be omitted in the optimization problem.
+Thus, LIB ,k can be simplified and expanded as
+LIB ,k := H (Y |Zk ) + βI (Zk ; X)
+Z Z
+=−
+p (y|z k ) p (z k ) log p (y|z k ) dydz k
+Z Z
+p (z k |xk )
++β
+p (z k |xk ) p (xk ) log
+dxk dz k
+p (z k )
+
+= Ep(xk ,y) Ep(zk |xk ) (− log p (y|z k )) +
+βDKL [p (z k |xk ) ||p (z k )]}
+(13)
+
+A. IB Guided Local Feature Extraction
+
+Observing the above equation, we only need to solve the
+conditional probability distributions p (y|z k ) and p (z k |xk ),
+as well as the marginal probability distribution p (z k ). Given
+the Markov chain Y → Xk → Zk , p (z k ) and p (y|z k ) are
+calculated as
+Z
+p (z k ) = p (xk , z k )dxk
+Z
+= p (xk ) p (z k |xk )dxk
+(14)
+R
+p (y, xk , z k )dxk
+p (y, z k )
+=
+p (y|z k ) =
+p (z k )
+p (z k )
+R
+p (y|xk ) p (xk ) p (z k |xk )dxk
+=
+p (z k )
+R
+p (xk , y) p (z k |xk )dxk
+=
+(15)
+p (z k )
+
+As a classic concept in representation learning, IB theory
+aims to obtain features that are sufficient for inference while
+
+As shown in the above equations, both p (y|z k ) and p (z k )
+depend on p (z k |xk ). Here, p (z k |xk ) denotes the feature
+
+p (ŷ|xk ) = pϑ (ŷ|v̂) pθ (v̂|ṽ k ) pchannel (ṽ k |v k )
+pφk (v k |z k ) pϕk (z k |xk ) , ∀k ∈ K
+
+(11)
+
+To optimize the aforementioned model parameters, this
+section develops the proposed DisenIB-TOSC in detail. First, it
+introduces IB guided local feature extraction to train respective
+semantic encoders. Second, it formulates novel DisenIB objective to guide global optimization, including training JSCC
+encoders and the joint decoder, thereby enhancing multi-device
+cooperative task performance and achieving feature disentanglement. Additionally, both the IB and DisenIB objectives are
+derived into computationally tractable forms. Finally, a multistage training algorithm is designed to optimize the system.
+The theoretical workflow is shown in Fig. 2.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+extraction process, making direct computation of the integrals
+in Eqs. (1) and (15) intractable. To this end, we introduce
+variational distributions q (y|z k ) and q (z k ) to approximate
+p (y|z k ) and p (z k ), respectively, yielding a tractable IB
+objective, with the derivation and resulting variational upper
+bound provided in Eqs. (39)-(41) of Appendix A.
+To optimize Eq. (41), we first employ DNNs to parameterize the KL divergence DKL [p (z k |xk ) ||q (z k )] of Eq. (41)
+following [30] and [40]. Specifically, p (z k |xk ) is modeled
+as a multivariate Gaussian distribution N (µk , Σk ), where the
+mean vector µk = (µk,1 , µk,2 , . . . , µk,M ) ∈ RM and diagonal
+2
+2
+2
+covariance matrix Σk = diag(σk,1
+, σk,2
+, . . . , σk,M
+) ∈ RM ×M
+M
+with σ k = (σk,1 , σk,2 , . . . , σk,M ) ∈ R can be parameterized by fully-connected layers µk (xk ; ϕk ) and σ k (xk ; ϕk ),
+respectively. The variational distribution q (z k ) is assumed to
+follow the multivariate standard normal distribution N (0, I).
+Thus, DKL [p (z k |xk ) ||q (z k )] can be simplified as
+!
+M
+2
+X
+µ2k,m + σk,m
+−1
+− log σk,m
+(16)
+DKL =
+2
+m=1
+The derivation of the above equation is shown in Appendix B.
+Accordingly, the latent feature representation z k is obtained
+by adopting reparameterization trick, formulated as
+z k = µk + σ k
+
+εk
+
+(17)
+
+where εk ∼ N (0, I),
+denotes the element-wise product.
+Otherwise, the negative log-likelihood term − log q (y|z k )
+directly governs inference accuracy, it is proportional to the
+cross-entropy loss between prediction ŷ and ground truth y.
+Given a batch B of data samples, an unbiased estimate of the
+gradient can be obtained via Monte Carlo sampling, yielding
+the estimated value of the variational upper bound of the IB
+objective. This enables gradient-based optimization of local
+semantic encoder k via backpropagation.
+
+6263
+
+Definition 2: Private feature View-specific information such
+as view-varying geometric features (e.g., aspect ratio, angle,
+relative object position), and occlusion details in specific
+views. Notably, private features often carry critical information
+that can enhance image understanding.
+Inspired by the DIB [33] and the single-device DisenIB
+objective [45], we reformulate the DisenIB objective for
+multi-device cooperative TOSC, maximizing cooperative task
+performance while achieving feature disentanglement. Our
+formulated objective LDisenIB is defined as
+LDisenIB = −I(Y ; V̂ ) − α
+
+K
+X
+
+I(Y ; Ṽk )
+
+k=1
+
+{z
+
+|
+
+}
+
+T ask
+
++γ
+
+K
+X
+
+I (Vkc ; Vkp ) − λI (V1c ; V2c ; . . . ; VKc )
+
+k=1
+
+{z
+
+|
+
+Disentanglement
+
+}
+(18)
+
+where, LDisenIB comprises two sub-objectives, i.e., the task
+performance constraint LT ask adopting the DIB and the feature disentanglement constraint LDisen . For LT ask , I(Y ; V̂ )
+quantifies MI between fused decoded features and inference
+results, and I(Y ; Ṽk ) measures each device’s contribution
+to task inference. For LDisen , I (V1c ; V2c ; . . . ; VKc ) identifies
+common encoded features across devices, and I (Vkc ; Vkp )
+encourages the separation of common and private features on
+each device. α, γ, λ denote the weight factors. Next, we solve
+and optimize two sub-objectives, respectively.
+Solving
+ for LT ask : Similar
+
+to Eq. (1), both
+ MI terms
+I Y ; V̂ = H (Y ) − H Y |V̂ and I Y ; Ṽk = H (Y ) −
+
+
+H Y |Ṽk contain the constant H (Y ), which can be omitted
+in optimization problem. Thus, LT ask can be simplified as
+K
+
+
+
+
+X
+LT ask := H Y |V̂ + α
+H Y |Ṽk
+
+B. DisenIB Guided Global JSCC
+Multi-view images captured by edge devices provide
+comprehensive information but introduce redundancy that
+inefficiently consumes communication resources. Fortunately,
+related studies on multi-view learning and cross-domain clustering have widely adopted feature decomposition, leading to
+a consensus that “common features are shared across views
+(or domains) while private features are unique to individual
+views (or domains)”. This consensus provides a reasonable
+basis for identifying overlapping (or redundant) features [42],
+[43], [44]. Accordingly, following image feature extraction,
+we can further disentangle these features into common (viewinvariant) and private (view-specific) components to identify
+task-relevant factors. Next, we first define common and private
+feature, then formulate and derive the DisenIB objective for
+global JSCC optimization.
+Definition 1: Common feature Shared information across
+multiple views such as object labels, overlapping geometric
+structures, and consistent visual attributes (e.g., shape, color).
+Importantly, common features are not inherently crucial, for
+instance, background elements may introduce noise.
+
+k=1
+
+Z Z
+=−
+−α
+
+p (y|v̂) p (v̂) log p (y|v̂) dydv̂
+K Z Z
+X
+
+p (y|ṽ k ) p (ṽ k ) log p (y|ṽ k ) dydṽ k
+
+k=1
+
+(19)
+Due to the computational intractability of p (y|v̂) and
+p (y|ṽ k ), we also use variational approximation to solve
+LT ask . Through variational distributions q (y|v̂) and q (y|ṽ k )
+approximating the true distributions, the derivation and resulting variational upper bound are provided in Eqs. (44) and (45)
+of Appendix C, respectively.
+The negative log-likelihood terms − log q (y|v̂) and
+− log q (y|ṽ k ) in Eq. (45) determine the task performance
+of multi-device cooperative inference and single-device independent inference, respectively, which are proportional to the
+cross-entropy loss between predictions and truths. Given a
+batch B of data samples, an unbiased estimation of the
+gradient is obtained via Monte Carlo sampling, yielding the
+estimated value of Ltask .
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6264
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Solving for LDisen : We first identify common encoded
+features across devices by maximizing I(V1c ; V2c ; . . . ; VKc ).
+Notably, this term corresponds to multivariate MI (MMI)
+involving multiple variables v c1 , v c2 , . . . , v cK . Based on the definition of MMI derived from the inclusion-exclusion principle,
+it can be denoted as [48]
+X
+|S|+1
+I (V1c ; V2c ; . . . ; VKc ) =
+(−1)
+H (VSc )
+S⊆K,S6=∅
+
+
+Z Z
+X
+|S|+1
+c
+c
+=
+(−1)
+−
+p (v S ) dv S
+(20)
+S⊆K,S6=∅
+
+where S and |S| denote any non-empty subset of the device
+set K and its size, respectively. H (VSc ) denotes the joint
+entropy of the common encoded features v ck for all device
+k ∈ S, p (v cS ) represents the corresponding joint proba|S|+1
+bility distribution within subset S. The term (−1)
+is
+an alternating sign factor inherent to the inclusion-exclusion
+principle, which determines the positive/negative contribution
+of each subset’s joint entropy to the MMI. We take K = 3
+as an example, K has a total of 7 non-empty subsets, i.e.,
+S ∈ {1}, {2}, {3}, {1, 2}, {1, 3}, {2, 3}, {1,R 2,
+R 3}. cFor Sc =
+c
+c
+c
+)
+=
+H
+(V
+,
+V
+)
+=
+p (v S ) dv S =
+{1,R2},
+we
+have
+H
+(V
+1
+2
+S
+R
+−
+p (v c1 , v c2 ) dv c1 dv c2 .
+As demonstrated, there will be 2K −1 non-empty subset for
+K variables. For practical scenarios with K > 3, direct calculation of MMI becomes computationally intractable due to the
+exponential growth of joint entropy terms and the need to estimate high-dimensional joint distributions. For computational
+feasibility, we reexamine the meaning of I (V1c ; V2c ; . . . ; VKc ),
+it quantifies the interdependence among multiple variables.
+Optimizing the MI term aims to ensure the “consistency”
+of all common encoded features v c1 , v c2 , . . . , v cK , which can
+be measured by the “distance”. Consequently, both the KL
+divergence and the original MI term can be maximized when
+all common encoded features are highly similar. Thus, we
+introduce a consistency constraint LConsis to optimize the
+common JSCC encoder [47], converting the maximization
+of I (V1c ; V2c ; . . . ; VKc ) to the minimization of the distance
+among v c1 , v c2 , . . . , v cK , promoting their feature alignment in
+the shared subspace, LConsis is defined as
+
+Next, we minimize I(Vkc ; Vkp ), ∀k ∈ K to separate private
+encoded feature. I(Vkc ; Vkp ) is expanded as
+Z Z
+p (v ck , v pk )
+dv c dv p
+I (Vkc ; Vkp ) =
+p (v ck , v pk ) log
+p (v ck ) p (v pk ) k k
+
+
+p (v ck , v pk )
+(23)
+= Ep(vc ,vp ) log
+k
+k
+p (v ck ) p (v pk )
+The above equation denotes that I(Vkc ; Vkp ) equals the
+expected value of the logarithm of the density ratio, i.e.,
+the ratio of the joint probability distribution p (v ck , v pk ) to
+the product of marginal distributions p (v ck ) p (v pk ), and this
+is also computationally intractable. Re-evaluating this equation, minimizing I(Vkc ; Vkp ) aims to bring this density ratio
+p (v ck , v pk ) /p (v ck ) p (v pk ) close to 1, in other words, ensuring
+v ck and v pk are approximately mutually independent, thereby
+achieving feature disentanglement.
+Consequently, we adopt the density ratio trick [49] to
+optimize I (Vkc ; Vkp ), which involves a discriminator Discrχk :
+CL/2 → [0, 1] composed of a neural network to estimate the
+density ratio p (v ck , v pk ) /p (v ck ) p (v pk ), χk denotes the model
+parameters of the k-th discriminator. To train the discriminator, we sample positive samples (v ck , v pk ) from p(v ck , v pk )
+c
+p
+and construct negative samples (v 0 k , v 0 k ) to approximate
+p
+c
+p(v k )p(v k ). Specifically, positive samples are obtained by
+first randomly sampling image feature z k and then drawing
+from p(v ck , v pk |z k ) = p(v ck |z k )p(v pk |z k ) based on the Markov
+chain Vkc ↔ Zk ↔ Vkp , preserving the inherent correlation
+between v ck and v pk . Negative samples are constructed by first
+c
+p
+independently sampling v 0 k from p(v ck ) and v 0 k from p(v pk ),
+then randomly shuffling their pairing along the batch axis.
+p
+c
+Since the correlation between negative samples v 0 k and v 0 k
+is disrupted, they approximate the independent distribution
+p(v ck )p(v pk ). Given the generated sample pairs, Discrχk is
+adversarially trained to distinguish them, where the output of
+1 indicates that the sample is from p(v ck , v pk ), while an output
+of 0 indicates that the sample is from p(v ck )p(v pk ). The loss
+function of the discriminator is given by
+LDiscr = Ep(vc ,vp ) {− log (1 − Discrχk (v ck , v pk ))}
+k
+k
+
+c
+p
++ Ep(vc )p(vp ) − log Discrχk v 0 k , v 0 k
+k
+k
+(24)
+
+K
+
+1 X c
+LConsis =
+||v k − v cmean ||22
+K
+
+(21)
+
+k=1
+
+
+c
+
+where, v cmean =
+v k /K aims to gather the central feature
+among v c1 , v c2 , . . . , v cK , ||·||22 is the squared L2 norm. However,
+direct optimization v ck is challenging due to the island effect of
+devices, since these devices are uniformly coordinated by edge
+server with no direct communication among them. Fortunately,
+v ck is wirelessly forwarded to generate ṽ ck , which can be
+uniformly optimized by the edge server. Thus, the optimization
+of Eq. (1) can be approximated as
+P
+
+K
+
+LConsis =
+
+1 X c
+||ṽ k − ṽ cmean ||22
+K
+k=1
+
+where, ṽ cmean =
+
+P
+
+
+ṽ ck /K.
+
+(22)
+
+When achieving Nash equilibrium, the minimized I (Vkc ; Vkp )
+can be estimated by the output of Discrχk , denoted as
+
+
+Discrχk (v ck , v pk )
+I (Vkc ; Vkp ) ≈ Ep(vck ,vpk ) log
+1 − Discrχk (v ck , v pk )
+
+(25)
+
+C. Multi-Stage Model Training Algorithm
+A multi-stage model training algorithm is designed to optimize the system. In the first stage, local semantic encoders of
+edge devices are trained independently using LIB ,k , ∀k ∈ K,
+where multiple classifiers Classifierϑk : RM → {0, 1}C
+are independently deployed on the edge server to perform
+task inference ŷ k . Building on the extracted image features,
+the second stage optimizes cooperative task inference and
+the common JSCC encoders, with LT ask and LConsis in
+LDisenIB serving as the optimization objectives, respectively.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+Algorithm 1 The Multi-Stage Model Training Algorithm
+
+6265
+
+each device, i.e., semantic importance, the edge server calculates I(Vkc ; V̂ ) and I(Vkp ; V̂ ) using the mutual information
+neural estimator (MINE) [50], respectively. Generally, semantic importance evaluation can also be achieved through other
+methods, such as attention mechanisms [38] and likelihood
+estimation [39].
+MINE is based on neural network Tδ that approximates
+the MI lower bound by optimizing parameters δ and then
+maximizes this bound. Although computing MI of feature
+vectors is computationally expensive, our semantic importance evaluation is performed only once during the inference
+phase, making the computational overhead manageable. Taking I(Vkc ; V̂ ) as an example, its lower bound is expressed as
+
+I(Vkc ; V̂ ) ≥ sup Ep(vc ,v̂) Tck,δ (v ck , v̂)
+k
+c
+Tk,δ
+
+n c c o
+− log Ep(vc )p(v̂) eTk,δ (vk ,v̂)
+
+(26)
+
+k
+
+To maximize this lower bound, MINE Tck,δ , ∀k ∈ K is
+trained by unsupervised way, its loss function is defined as
+
+Lck,M IN E = −Ep(vc ,v̂) Tck,δ (v ck , v̂)
+k
+n c c o
++ log Ep(vc )p(v̂) eTk,δ (vk ,v̂)
+(27)
+k
+
+where the expectation terms in the above equation involve
+both the joint probability distribution and the product of
+marginal distributions. These terms can be approximated by
+sampling from p (v ck , v̂) and p (v ck ) p (v̂). As the sample
+batches increases, the expectation terms converge to their truth.
+Similarly, I(Vkp ; V̂ ) is estimated by training MINE Tpk,δ .
+Therefore, the semantic importance ςkc , ςkp , ∀k ∈ K of v ck
+and v pk can be respectively expressed as
+I(Vkc ; V̂ )
+
+
+I(Vkc ; V̂ ) + I(Vkp ; V̂ )
+
+(28)
+
+I(Vkp ; V̂ )
+
+
+K
+c ; V̂ ) + I(V p ; V̂ )
+I(V
+k=1
+k
+k
+
+(29)
+
+ςkc = P
+
+K
+k=1
+
+In the third stage, to separate private encoded feature v pk , the
+trained common JSCC encoders are frozen, and then LT ask
+and LDiscr are used to perform model fine-tuning, thereby
+achieving task optimization and effective feature disentanglement. The specific process is shown in Algorithm 1.
+IV. F EATURE I MPORTANCE -AWARE S ELECTIVE
+T RANSMISSION S TRATEGY
+Building on the feature disentanglement, this section first
+quantifies the importance of common and private encoded
+features, then designs a selective transmission strategy,
+DisenIB-TOSC-ST, to preserve task performance while reducing communication costs.
+
+ςkp = P
+
+p
+c
+, ς1p , ς2p , . . . , ςK
+} is further
+Next, the set ς = {ς1c , ς2c , . . . , ςK
+normalized to restrict them to the range [0,1], thereby avoiding
+extreme values. The normalized ς˜kc , ς˜kp can be expressed as
+
+ςkc − ςmin
+ςmax − ςmin
+ς p − ςmin
+p
+ς˜k = k
+ςmax − ςmin
+ς˜kc =
+
+(30)
+(31)
+
+where, ςmax , ςmin denote the maximum and minimum values
+in set ς, respectively.
+B. Selective Feature Transmission Strategy
+
+A. MI-Based Feature Importance Awareness
+In the optimized multi-device cooperative TOSC system,
+both common encoded features v ck and private encoded feature
+v pk contain task-relevant information to varying degrees. To
+measure the contribution of common and private features from
+
+The edge server dynamically controls device activation and
+feature transmission based on the obtained importance values.
+Since the common encoded features v ck represent the shared
+information across devices, transmitting the feature from a
+single-device is sufficient. Thus, we use the hard binarization
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6266
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+function to process the importance set of common encoded
+c
+features ς˜c = {˜
+ς1c , ς˜2c , . . . , ς˜K
+}, defined as
+(
+c
+ς1c , ς˜2c , . . . , ς˜K
+}
+1 if ς˜kc = max{˜
+ς˜kc =
+(32)
+0 else
+The common encoded features selected for transmission can
+be represented as v ck = ς˜kc · v ck .
+For the importance set of private encoded features ς˜p =
+p
+p
+}, a threshold ςthreshold
+is set to control the
+{˜
+ς1p , ς˜2p , . . . , ς˜K
+transmission of private encoded features, defined as
+(
+p
+ς˜p if ς˜kp ≥ ςthreshold
+p
+ς˜k = k
+(33)
+0 else
+Thus, the private encoded features selected for transmission
+can be represented as v pk = ς˜kp · v pk .
+Algorithm 2 Feature Importance-Aware Selective Transmission Algorithm
+
+The compression ratio η is used to quantify the communication cost saved by DisenIB-TOSC-ST compared to the baseline
+DisenIB-TOSC transmitting all encoded features, defined as
+!
+PK
+PK
+c
+ςkp ))
+1
+k=1 (1 − I (˜
+k=1 (1 − ς˜k )
+η =1−
++
+(34)
+2
+K
+K
+where, the indicator function means that if ς˜kp > 0, then
+I (˜
+ςkp ) = 1, otherwise, I (˜
+ςkp ) = 0. With the above strategy, the
+system can implement a priority-based feature transmission
+mechanism considering both task-specific demand and feature
+importance. For tasks requiring higher performance, a lower
+threshold can be adopted at the expense of communication
+costs to ensure more private encoded features are transmitted.
+Conversely, for tasks preferring lower communication costs,
+
+the threshold can be increased to prioritize the transmission of
+the most critical private encoded features. Therefore, the strategy only activates some devices or transmit partial encoded
+features, which also helps reduce the computational cost on
+devices. The specific process is shown in Algorithm 2.
+V. S IMULATION A NALYSIS
+This section evaluates the proposed method on several tasks,
+including multi-view image classification, object recognition,
+and retrieval. First, we compare its task performance with
+baselines. Second, we verify the effectiveness of the proposed
+method in reducing communication costs. Third, we analyze
+the impacts of the number of devices and JSCC performance,
+respectively. Fourth, we present visualization and case studies.
+Finally, we conduct a complexity analysis.
+A. Simulation Setting
+Datasets: For the multi-view image classification task, we
+used the MNIST [51] and CIFAR-10 [52] datasets. The
+MNIST contains 28 × 28 pixel grayscale handwritten digits
+(10 classes) with 60,000 training and 10,000 test images. The
+CIFAR-10 consists of 32 × 32 pixel color images with 10
+classes. It includes 50,000 training images and 10,000 test
+images. Following the setting in [40], we horizontally split
+images to create two views, simulating cooperative inference
+between two edge devices.
+For the multi-view object recognition task, the ModelNet40
+image dataset is employed for for validation [53]. This dataset
+is a 3D model library containing 40 categories. It includes
+12,311 objects as the training set and 2,468 objects as the
+test set. Each 3D object is represented by 12 views generated
+through 30 rotational increments, effectively simulating 12
+edge devices participating in cooperative inference.
+For the multi-view object retrieval task, we also use the
+ModelNet40 dataset, with the same training/test splits as
+object recognition. The task aims to retrieve all galleries
+in the same category as the query via feature matching,
+using multi-view data’s complementarity to boost retrieval
+accuracy. Specifically, during the inference phase, the pretrained object recognition model obtained from the training set
+is first employed to extract the multi-view semantic features
+of test samples. Subsequently, the fused features for each test
+sample are derived, which can be generated at the feature
+fusion module prior to the output of the final recognition result.
+For query-gallery partitioning, each test sample, represented
+by its fused feature, serves as a query, while the remaining
+test samples constitute the gallery (i.e., candidate matching
+set). Thereafter, top-κ retrieval is performed by calculating the
+feature similarity between queries and gallery samples using
+the Euclidean distance, generating a top-κ ranking list sorted
+in descending order of similarity scores (we set κ = 10). For
+example, among the 2468 test samples, the object with ID
+627 (labeled 0: “airplane”) is selected as the query, and the
+remaining 2467 test samples (each with its respective label)
+serve as the gallery. Following retrieval, a top-10 ranking list is
+generated, where the samples labeled 0 are counted as correct
+retrievals, and the rest as incorrect.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+TABLE II
+T HE I MPLEMENTATION D ETAILS OF S YSTEM O PTIMIZATION
+
+6267
+
+percentage and compression ratio η. Specifically, Acc quantifies the proportion of correctly classified samples, denoted
+as
+X
+1
+I(ŷ = y|v̂) × 100%
+(35)
+Acc =
+|Xtest |
+Xtest
+
+Baselines: All baselines share the same backbone networks
+as our method, as shown in Table I.
+Baseline 1 Centralized inference based on digital
+communication: Edge devices transmit raw images via
+JPEG2000 + LDPC to the edge server, which performs centralized inference using only the semantic encoder and task
+module for multi-view optimization.
+Baseline 2 Single-device DeepJSCC: Uses the basic
+DeepJSCC framework (semantic encoder + JSCC) without
+IB objective to simulate independent edge inference [21].
+Critically, it only uses randomly selected single-view data
+from one device, and is trained end-to-end to benchmark the
+performance of isolated devices with partial data, rather than
+single devices with full data.
+Baseline 3 Multi-device cooperative DeepJSCC: Extends
+the basic DeepJSCC without IB objective for multi-device
+cooperation with multi-view data, optimizing the end-to-end
+cooperative inference.
+Baseline 4 Multi-device cooperative IB-DeepJSCC:
+Enhances Baseline 3 with IB-guided feature extraction and
+two-stage training, it first trains local semantic encoders and
+then optimizes the cooperative performance across all devices
+[40].
+Baseline 5 Compression multi-view convolutional neural
+network: it builds a shared network module across devices
+based on the attention mechanism to obtain the importance of
+multi-view data and then compress redundant data [38].
+Implementation details: For system optimization on several
+tasks, we set initial learning rates to 1 × 10−1 , 5 × 10−2 , 5 ×
+10−5 , 5 × 10−5 , respectively, with image classification tasks
+using a 50% learning rate decay every 10 epochs. Other
+simulation parameters appear in Table II. All experiments
+implement using Python and Pytorch framework on a Linux
+system with an Intel Core i9-11900K processor (3.50 GHz)
+and NVIDIA GeForce RTX 3090 GPU.
+Otherwise, we use accuracy (Acc) to evaluate image classification and object recognition tasks, and mean Average
+Precision (mAP) to evaluate object retrieval task, while
+communication costs are quantified via feature activation
+
+where |Xtest | denotes the number of test samples, I(ŷ = y|v̂)
+is an indicator function that equals 1 if the prediction category
+ŷ of a sample with multi-view fusion feature v̂ matches the
+correct label y, and 0 otherwise.
+mAP quantifies the retrieval accuracy by calculating the average AP across all categories, where AP
+measures precision-recall performance for a single category.
+In the test set with C categories, let R =
+P
+I
+ŷ gallery = y|v̂ gallery denotes the total matched
+Xtest
+gallery samples in the same category y as the query, where
+y ∈ {0, 1}C , v̂ gallery and ŷ gallery are the fused feature
+and predicted category of a gallery sample, respectively. For
+a category-y query undergoing top-κ retrieval, the top-κ
+accuracy is calculated as
+κ
+
+P (κ) =
+
+
+1X
+I ŷ gallery,r = y|v̂ gallery,r
+κ r=1
+
+(36)
+
+where v̂ gallery,r and ŷ gallery,r are the r-th gallery’s fusion
+feature and prediction category, respectively. Thus, the AP for
+this query is the average P (κ) at all positions where matched
+samples are retrieved, given by
+1 X
+AP =
+P (κ) (37)
+κ={κ|I(ŷ gallery,κ =y|v̂ gallery,κ )=1}
+R
+mAP for all test samples (each as a query) is defined as
+1 1 XX
+AP × 100%
+(38)
+mAP =
+|Xtest | C
+Xtest C
+
+B. Performance Comparison
+Table III presents the performance comparison, leading to the following conclusions. (1) All methods exhibit
+SNR-dependent performance improvements. (2) Our method
+outperforms other baselines with the following detailed analysis. 1) Compared to Baseline 2, the several multi-device
+cooperation methods (Baselines 3 ∼ 5 and ours) show significant performance gains. For example, on the MNIST image
+classification, we achieve 4.9% ∼ 16.5% higher accuracy
+than Baseline 2 at 5 ∼ 30 dB. This performance gain stems
+from the core advantages of multi-device cooperation that
+address the inherent limitations of single-device inference, i.e.,
+multi-device cooperation has multi-view data complementarity, whereas Baseline 2 only uses single-view data from one
+device and performs independent inference. Note Baseline 3
+underperforms Baseline 2 at low SNR (<5 dB), as multidevice cooperation amplifies channel noise. 2) Compared to
+Baseline 3, both Baseline 4 and our method show superior performances, e.g., the MNIST classification accuracy
+improves by 0.6% ∼ 3.7% (Baseline 4) and 0.7% ∼ 4.4%
+(ours) at 10 ∼ 30 dB, with more pronounced gains at
+0 ∼ 5 dB. This is attributed to the IB objective’s ability
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6268
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+TABLE III
+T HE P ERFORMANCE C OMPARISON OF A LL M ETHODS ON S EVERAL TASKS
+
+TABLE IV
+T HE AVERAGE I NFERENCE T IME VARYING W ITH THE N UMBER OF
+D EVICES (U NIT: MS /S AMPLE )
+
+to preserve task-relevant features, particularly enhancing lowSNR robustness. 3) Importantly, our method surpasses the
+IB-based Baseline 4 and attention-based Baseline 5 (especially
+at 0 dB). This improvement is attributed to the effective
+utilization of common/private multi-view features via DisenIB,
+which enhances feature discriminability and model robustness.
+4) Baseline 1 shows strong MNIST classification accuracy
+at low SNR but worse performance on other tasks, revealing
+LDPC’s limitations in noise suppression.
+
+Fig. 3. Trade off between task performance and communication cost.
+
+C. Communication Cost
+Fig. 3 illustrates the task performance-communication
+cost trade-off of DisenIB-TOSC-ST across tasks at 30 dB.
+p
+Increasing the private feature importance threshold ςthreshold
+progressively improves the compression ratio η, while task
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+6269
+
+Fig. 5. The impact of the number of devices on task performance.
+
+Fig. 4. Display of feature activation percentage.
+
+performance exhibits task-specific trends. For MNIST and
+CIFAR-10 image classification tasks, task performance is
+barely affected by threshold changes. The compression ratio
+p
+stabilizes at 0.25 initially, then inflects at ςthreshold
+= 0.8
+p
+(MNIST) and ςthreshold = 0.7 (CIFAR-10), rising to 0.5
+p
+at ςthreshold
+= 1.0. The reason is that both tasks involve
+two devices participating in inference, with a horizontally
+segmented dual-view simulation setup. Regardless of the
+threshold, the 0.25 ∼ 0.5 compression ratio ensures adequate
+feature transmission for stable performance. Pre-inflection, the
+stable η = 0.25 means only one device’s common encoded
+feature is restricted, while other features are transmitted,
+indicating the importance of private encoded features in both
+tasks exceed the inflection threshold. This also reflects that
+most task-critical features are disentangled as private encoded
+features. Thus, a high threshold (e.g., 1.0) saves communication costs without significant performance loss.
+For ModelNet40 object recognition and retrieval tasks,
+when the threshold ranges from [0.1, 1.0], the compression
+ratio reaches 0.5 ∼ 0.92, while task performance gradually
+
+Fig. 6. The impact of channel coding length on task performance.
+
+declines. The reason is that both tasks involve 12 cooperative devices. With only one device transmitting common
+encoded features (restricting others), a relatively high compression ratio is achieved initially. Further restricting private
+feature transmission via thresholds boosts the compression
+ratio but causes insufficient feature fusion, degrading task performance. Otherwise, task performance can remain 40% even
+p
+at ςthreshold
+= 1.0, which shows that high-importance private
+encoded features dominate inference, other low-importance
+private encoded features and common encoded features still
+aid performance improvement, validating the significance of
+multi-device cooperative inference. Thus, threshold selection
+for both tasks depends on specific requirements, e.g., adopting
+a lower threshold for high task performance or a higher
+threshold for low communication costs.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6270
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+Fig. 7. t-SNE visualization of disentanglement feature on MNIST image classification task.
+
+Fig. 8. t-SNE visualization of disentanglement feature on ModelNet40 object recognition task.
+
+longer than those of the two baselines but remains within
+an acceptable range. With the advancement of edge devices’
+computing power, the practical deployment of the proposed
+method is highly feasible.
+E. JSCC Performance Evaluation
+
+Fig. 4 further refines the feature activation percentages
+across devices for all tasks at 30 dB building on the results
+in Fig. 3. Specifically, for the DisenIB-TOSC method without
+selective feature transmission, the activation percentages of
+both common and private features always remain at 100%.
+In contrast, DisenIB-TOSC-ST dynamically activates common
+and private encoded features at varying percentages on each
+device, demonstrating its adaptive compression capability.
+
+Fig. 6 illustrates that task performance improves as channel
+coding length increases and then gradually converges to the
+ideal bound, which provides critical insights into the communication reliability of the JSCC codec. This is because longer
+channel coding lengths increase the redundancy of transmitted symbols, enhancing the more comprehensive information.
+codec’s error correction capability and ultimately improving
+task performance. Furthermore, the impact of channel coding
+length on task performance is significantly less pronounced
+for MNIST image classification than for CIFAR-10. This
+is attributed to MNIST’s simpler semantic features, which
+exhibit greater tolerance to channel distortion, enabling even
+shorter channel coding lengths to maintain relatively strong
+performance.
+
+D. The Effect of the Number of Devices
+
+F. Visualization and Case Study
+
+Fig. 5 demonstrates that task performance improves for
+object recognition and retrieval tasks as the number of devices
+increases. This confirms that integrating additional devices
+supplies more comprehensive information. Table IV further
+shows that average inference time increases linearly, which
+effectively reflects the computational complexity of models.
+Notably, the running time of the retrieval task comprises the
+time required for feature extraction and retrieval matching,
+where feature extraction time is comparable to that of the
+recognition task, while the retrieval matching time can be further reduced via efficient retrieval algorithms. Consequently,
+all methods improve task reliability by integrating more
+devices, at the cost of increased model training complexity.
+Furthermore, the proposed method outperforms Baselines 3
+and 4 in task performance, while its runtime is slightly
+
+Fig. 7 and Fig. 8 visualize task inference and feature
+disentanglement using 2D t-SNE for MNIST image classification and ModelNet40 object recognition, respectively,
+where the t-SNE method maps high-dimensional features
+to 2D space while preserving local structure and revealing
+feature clustering via t-distribution-based similarity modeling.
+As shown in subfigures (a)-(d), both the encoded common
+and private features exhibit symmetric distribution patterns.
+Notably, common encoded features show minimal impact
+on task inference, whereas private encoded features form
+distinct clusters, demonstrating their strong contribution. This
+indicates that the disentanglement process effectively isolates
+task-relevant information in private features while relegating
+non-essential information (e.g., background noise) to common
+features. For MNIST image classification, this arises because
+
+Fig. 9. Comparison of saliency maps between disentangled features and
+original images on the CIFAR-10 image classification.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+6271
+
+Fig. 10. A case study on the ModelNet40 object retrieval task.
+
+horizontal image splitting leaves no obvious common features,
+thereby forcing semantic information into private features
+under the constraints of consistency and task loss. For the
+ModelNet40 object recognition, excessive object views may
+limit common features to marginal content, making them ineffective for recognition. Crucially, subfigure (e) shows optimal
+clustering, indicating that while common features alone lack
+discriminative capacity, their fusion with private features still
+enriches feature representation.
+To further observe identified common/private features with
+their corresponding image regions, we compare original
+images with its saliency maps. Saliency map is also a
+visualization tool highlighting image regions most critical
+to task inference. We use the widely adopted, interpretable
+Grad-CAM to obtain saliency maps via gradient importance
+[54]. The result of CIFAR-10 image classification is shown
+in Fig. 6, which aligns with the feature disentanglement
+from Fig. 7 and Fig. 8. Due to the horizontal splitting of
+image, there is no obvious common feature between device
+1 and 2, and most features are identified as private features.
+Consequently, common features yield indistinct saliency
+maps, while private feature produces obvious saliency
+maps, highlighting the object contours and confirming their
+discriminative role in task inference.
+Fig. 10 presents a case study on the ModelNet40 object
+retrieval task. Given a query image, the corresponding
+top-10 ranking list is generated by sorting gallery samples
+in descending order of similarity scores. In the experiment,
+the similarity score is defined as the negative of the Euclidean
+distance. For clarity, only one view of each retrieved object
+is displayed, with green and red markers denoting correct
+
+TABLE V
+T HE C OMPUTATIONAL C OMPLEXITY OF THE P ROPOSED M ETHOD
+
+and incorrect retrievals, respectively. For example, given the
+1120th query image (label 0: “airplane”), when all galleries
+are transmitted at SNR = 30 dB, all top-10 results are label
+0 (i.e., correct retrievals). In contrast, at SNR = 0 dB, only
+the 1st to 3rd results are correct, and the remaining results are
+incorrect. The reason is that channel noise degrades feature
+representations, leading to spurious high similarity scores with
+the query and consequent false retrievals. These results show
+high retrieval accuracy under favorable channel conditions,
+while excessive noise impairs feature representations and
+reduces retrieval accuracy at low SNR.
+G. Complexity Analysis
+Table V presents the computational complexity of the proposed DisenIB-TOSC by average inference time and parameter
+count. Combining with Table IV, the proposed method exhibits
+slightly higher computational complexity than other baselines,
+this is attributed to sacrificing computational overhead in
+exchange for performance gains. In our proposed method,
+the runtimes of both image classification tasks reach the
+microsecond level, while those of object recognition and
+retrieval attain the millisecond level, ensuring low latency.
+The parameter count is also reasonable because we present
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6272
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+total counts across all devices, which scales proportionally
+with the number of devices. Notably, the parameter counts of
+object recognition and retrieval stem mainly from the semantic
+encoders for feature extraction. In practical deployment, it can
+be further reduced by replacing with lightweight models or
+adopting selective transmission to restrict superfluous devices,
+achieving excellent flexibility and scalability.
+VI. C ONCLUSION
+In this work, we proposed DisenIB-TOSC for multi-device
+cooperative inference, which can enhance task performance
+while reducing communication costs with better interpretability and more fine-grained processing capacity. Specifically, we
+formulated IB and DisenIB objectives to guide local semantic
+encoding and global JSCC optimization, achieving simultaneous feature compression and disentanglement. We then derived
+differentiable, tractable forms for both objectives. To reduce
+the communication costs, we further proposed DisenIB-TOSCST, which estimated the importance of common and private
+encoded features to control feature transmission. Experimental
+results on several multi-view tasks demonstrated that DisenIBTOSC outperforms baselines in task performance. Meanwhile,
+
+DisenIB-TOSC-ST achieves a favorable tradeoff between task
+performance and communication costs. Additionally, visualization and case study confirmed that our method achieves
+feature disentanglement in multi-device cooperative scenarios,
+facilitating interpretable analysis of feature contributions to
+inference performance and information characteristics.
+Nevertheless, integrating additional devices for cooperative
+inference still poses specific challenges. Excessive information
+redundancy not only consumes unnecessary communication
+resources but also increases synchronization signaling overhead and exacerbates the risk of channel conflicts during
+multi-device access. An important open research direction
+focuses on how to select cooperative devices based on service
+requirements and network conditions to enhance communication reliability, e.g., developing efficient priority transmission
+or device access control mechanisms.
+A PPENDIX
+A. Derivation of the Variational Upper Bound for LIB ,k
+By introducing the variational distributions q (y|z k ) and
+q (z k ), Eq. (1) can be rewritten as Eq. (39), shown at the
+bottom of the page. Since DKL [p(y|z k ) k q (y|z k )] ≥ 0, the
+
+LIB,k := H (Y |Zk ) + βI (Zk ; X)
+Z Z
+Z Z
+p (z k |xk )
+dxk dz k
+=−
+p (y|z k ) p (z k ) log p (y|z k ) dydz k +β
+p (z k |xk ) p (xk ) log
+p (z k )
+
+
+
+
+Z Z
+Z Z
+p (y|z k )
+p (z k |xk ) q (z k )
+=−
+p (y|z k ) p (z k ) log
+q (y|z k ) dydz k +β
+p (z k |xk ) p (xk ) log
+dxk dz k
+q (y|z k )
+q (z ) p (z k )
+ k
+Z Z
+Z Z
+p (y|z k )
+dydz k +
+p (y|z k ) p (z k ) log q (y|z k ) dydz k +
+=−
+p (y|z k ) p (z k ) log
+q (y|z k )
+Z Z
+
+Z Z
+p (z k |xk )
+q (z k )
+β
+p (z k |xk ) p (xk ) log
+dxk dz k +
+p (z k |xk ) p (xk ) log
+dxk dz k
+q (z k )
+p (z k )
+Z Z
+Z
+=−
+p (y|z k ) p (z k ) log q (y|z k ) dydz k + β p (xk )DKL [p (z k |xk ) ||q (z k )]dxk
+Z Z
+Z Z
+p (z k )
+p (y|z k )
+dydz k −β
+p (z k |xk ) p (xk ) log
+dxk dz k
+(39)
+−
+p (y|z k ) p (z k ) log
+q (y|z k )
+q (z k )
+{z
+}
+{z
+}
+| R
+|
+p(z k )DKL [p(y|z k )||q(y|z k )]dz k ≥0
+
+DKL [p(z k )||q(z k )]≥0
+
+Z Z
+
+Z
+p (y|z k ) p (z k ) log q (y|z k ) dydz k + β p (xk )DKL [p (z k |xk ) ||q (z k )]dxk
+Z Z R
+Z
+p (xk , y) p (z k |xk )dxk
+p (z k ) log q (y|z k ) dydz k + β p (xk )DKL [p (z k |xk ) ||q (z k )]dxk
+=−
+p (z k )
+Z Z Z
+Z
+=−
+p (xk , y) p (z k |xk ) log q (y|z k ) dxk dydz k + β p (xk )DKL [p (z k |xk ) ||q (z k )]dxk
+
+= Ep(xk ,y) Ep(zk |xk ) (− log q (y|z k )) + Ep(xk ) {βDKL [p (z k |xk ) ||q (z k )]}
+
+LIB,k ≤ −
+
+
+LIB,k ≤ Ep(xk ,y) Ep(zk |xk ) (− log q (y|z k )) + βDKL [p (z k |xk ) ||q (z k )]
+1
+DKL [N (µ1 , Σ1 ) ||N (µ2 , Σ2 )] =
+2
+
+
+tr
+
+Σ−1
+2 Σ1
+
+
+
+T
+
++ (µ2 − µ1 )
+
+det (Σ1 )
+Σ−1
+−M
+2 (µ2 − µ1 ) − log
+det (Σ2 )
+
+(40)
+
+(41)
+
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+(42)
+
+SUN et al.: DISENTANGLED INFORMATION BOTTLENECK GUIDED MULTIDEVICE COOPERATIVE TOSC
+
+6273
+
+K
+
+
+
+
+X
+LT ask := H Y |V̂ + α
+H Y |Ṽk
+k=1
+
+Z Z
+=−
+
+p (y|v̂) p (v̂) log p (y|v̂) dydv̂ − α
+
+K Z Z
+X
+
+p (y|ṽ k ) p (ṽ k ) log p (y|ṽ k ) dydṽ k
+
+k=1
+
+
+
+
+K Z Z
+X
+p (y|ṽ k )
+p (y|v̂)
+q (y|v̂) dydv̂ − α
+p (y|ṽ k ) p (ṽ k ) log
+q (y|ṽ k ) dydṽ k
+q (y|v̂)
+q (y|ṽ k )
+k=1
+Z Z
+K Z Z
+X
+=−
+p (y|v̂) p (v̂) log q (y|v̂) dydv̂ − α
+p (y|ṽ k ) p (ṽ k ) log q (y|ṽ k ) dydṽ k
+
+
+Z Z
+
+=−
+
+p (y|v̂) p (v̂) log
+
+k=1
+K Z Z
+X
+
+Z Z
+−
+|
+
+p (y|v̂)
+p (y|v̂) p (v̂) log
+dydv̂ −α
+q (y|v̂)
+k=1 |
+{z
+}
+R
+
+p (y|ṽ k )
+p (y|ṽ k ) p (ṽ k ) log
+dydṽ k
+q (y|ṽ k )
+{z
+}
+R
+p(ṽ k )DKL [p(y|ṽ k )||q(y|ṽ k )]dṽ k ≥0
+
+p(v̂)DKL [p(y|v̂)||q(y|v̂)]dv̂≥0
+
+Z Z
+LT ask ≤ −
+
+(44)
+
+p (y|v̂) p (v̂) log q (y|v̂) dydv̂ − α
+
+K Z Z
+X
+
+p (y|ṽ k ) p (ṽ k ) log q (y|ṽ k ) dydṽ k
+
+k=1
+
+(
+= Ep(z1 ,z2 ,...,zK ,y)
+
+− log q (y|v̂) + α
+
+K
+X
+
+)
+− log q (y|ṽ k )
+
+(45)
+
+k=1
+
+R
+integral term p (z k )DKL [p(y|z k ) k q (y|z k )]dzk ≥ 0 with
+p (z k ) ≥ 0, and DKL [p (z k ) k q (z k )] ≥ 0, the variational
+upper bound of LIB,k is given by Eq. (40), shown at the
+bottom of the previous page.
+In Eq. (40), the transformation of the first term is derived
+from Eq. (15). For the second term of Eq. (40), since it
+is independent of constant y during the optimization, there
+is equivalence between the expectation of the marginal
+probability distribution Ep(xk ) and the expectation of the joint
+probability distribution Ep(xk ,y) . Thus, Eq. (40) can be simplified as Eq. (41), shown at the bottom of the previous page.
+
+PM
+log det (Σk ) = 2 m=1 log σk,m . By substituting each term
+into the above equation, Eq. (1) in the main text is derived.
+C. Derivation of the Variational Upper Bound for LT ask
+By introducing the variational distributions q (y|v̂) and
+q (y|ṽ k ), Ltask can be rewritten as Eq. (44), shown at
+the top of the page. Since DKL [p (y|v̂) k q (y|v̂)] ≥
+0 and DKL
+R [p (y|ṽ k ) k q (y|ṽ k )] ≥ 0, the integral
+terms
+p (v̂)DKL [p (y|v̂) k q (y|v̂)]dv̂ ≥ 0 and
+R
+p (ṽ k )DKL [p (y|v̂) k q (y|v̂)]dṽ k ≥ 0 with p (v̂) ≥ 0 and
+p (ṽ k ) ≥ 0, the variational upper bound of Ltask is given by
+Eq. (45), shown at the top of the page.
+
+B. Derivation of the KL Divergence DKL [p (z k |xk ) ||q (z k )]
+Given the multivariate Gaussian distribution N (µ1 , Σ1 ) and
+N (µ2 , Σ2 ), where µ1 , µ2 ∈ RM denote the corresponding
+mean vector, and Σ1 , Σ2 ∈ RM ×M denote the corresponding
+diagonal covariance matrix, respectively. Thus, the KL divergence between two distributions can be denoted as Eq. (42),
+shown at the bottom of the previous page. In the equation,
+T
+−1
+tr (·) denotes the trace of the matrix, (·) and (·) are the
+matrix transpose and inverse matrix, respectively. det (·) is the
+determinant of the matrix.
+Following the above equation, since p (z k |xk ) ∼
+N (µk , Σk ) and q (z k ) ∼ N (0, I) in our assumption,
+DKL [p (z k |xk ) ||q (z k )] can be simplified as
+DKL [p (z k |xk ) ||q (z k )] =
+
+1
+tr (Σk ) + µk T µk − log det (Σk ) − M
+(43)
+2
+PM
+PM
+2
+T
+where, tr (Σk ) =
+µ2 , the
+m=1 σk,m , µk µk =
+QMm=1 2 k,m
+determinant of diagonal matrix det (Σk ) = m=1 σk,m , thus,
+
+R EFERENCES
+[1]
+[2]
+
+[3]
+[4]
+[5]
+[6]
+
+[7]
+
+M. A. Ferrag et al., “Edge learning for 6G-enabled Internet of Things: A
+comprehensive survey of vulnerabilities, datasets, and defenses,” IEEE
+Commun. Surveys Tuts., vol. 25, no. 4, pp. 2654–2713, 2023.
+Q. Duan, J. Huang, S. Hu, R. Deng, Z. Lu, and S. Yu, “Combining
+federated learning and edge computing toward ubiquitous intelligence in
+6G network: Challenges, recent advances, and future directions,” IEEE
+Commun. Surveys Tuts., vol. 25, no. 4, pp. 2892–2950, 2023.
+H. Xie, Z. Qin, G. Y. Li, and B.-H. Juang, “Deep learning enabled
+semantic communication systems,” IEEE Trans. Signal Process.,
+vol. 69, pp. 2663–2675, 2021.
+Z. Lu et al., “Semantics-empowered communications: A tutorial-cumsurvey,” IEEE Commun. Surveys Tuts., vol. 26, no. 1, pp. 41–79, 1st
+Quart., 2024.
+W. Yang et al., “Semantic communications for future internet: Fundamentals, applications, and challenges,” IEEE Commun. Surveys Tuts.,
+vol. 25, no. 1, pp. 213–250, 1st Quart., 2023.
+Z. Lyu, G. Zhu, J. Xu, B. Ai, and S. Cui, “Semantic communications
+for image recovery and classification via deep joint source and channel
+coding,” IEEE Trans. Wireless Commun., vol. 23, no. 8, pp. 8388–8404,
+Aug. 2024.
+J. Park, Y. Oh, S. Kim, and Y.-S. Jeon, “Joint source-channel coding
+for channel-adaptive digital semantic communications,” IEEE Trans.
+Cognit. Commun. Netw., vol. 11, no. 1, pp. 75–89, Feb. 2025.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+6274
+
+IEEE TRANSACTIONS ON COMMUNICATIONS, VOL. 74, 2026
+
+[8]
+
+[31] S. Hu, Z. Lou, X. Yan, and Y. Ye, “A survey on information bottleneck,”
+IEEE Trans. Pattern Anal. Mach. Intell., vol. 46, no. 8, pp. 5325–5344,
+Aug. 2024.
+[32] M. Federici, A. Dutta, and P. Forré, “Learning robust representations
+via multi-view information bottleneck,” in Proc. Int. Conf. Learn.
+Represent., 2020, pp. 1–26.
+[33] I. E. Aguerri and A. Zaidi, “Distributed variational representation
+learning,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 43, no. 1,
+pp. 120–138, Jan. 2021.
+[34] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+[35] L. Sun, Y. Yang, M. Chen, C. Guo, W. Saad, and H. V. Poor, “Adaptive
+information bottleneck guided joint source and channel coding for
+image transmission,” IEEE J. Sel. Areas Commun., vol. 41, no. 8,
+pp. 2628–2644, Aug. 2023.
+[36] S. Li, Y. Wang, S. Guo, and C. Feng, “Task-oriented communication
+for graph data: A graph information bottleneck approach,” IEEE Trans.
+Cognit. Commun. Netw., vol. 11, no. 3, pp. 1723–1737, Jun. 2025, doi:
+10.1109/TCCN.2024.3465651.
+[37] S. Xie, S. Ma, M. Ding, Y. Shi, M. Tang, and Y. Wu, “Robust information
+bottleneck for task-oriented communication with digital modulation,”
+IEEE J. Sel. Areas Commun., vol. 41, no. 8, pp. 2577–2591, Aug. 2023.
+[38] Z. Liu, C. Guo, and M. Zhu, “Semantic redundancy-aware multi-view
+edge inference based on rate-distortion in IoT systems,” in Proc. IEEE
+Wireless Commun. Netw. Conf. (WCNC), Apr. 2024, pp. 1–6.
+[39] J. Choi, Z. Hakimi, P. W. Shin, J. Sampson, and V. Narayanan,
+“Context-aware convolutional neural network over distributed system
+in collaborative computing,” in Proc. 56th Annu. Design Autom. Conf.,
+Jun. 2019, pp. 1–6.
+[40] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for multidevice cooperative edge inference,” IEEE Trans. Wireless Commun.,
+vol. 22, no. 1, pp. 73–87, Jan. 2023.
+[41] J. Shao, X. Zhang, and J. Zhang, “Task-oriented communication for
+edge video analytics,” IEEE Trans. Wireless Commun., vol. 23, no. 5,
+pp. 4141–4154, May 2024.
+[42] X. Yan, Y. Mao, Y. Ye, and H. Yu, “Cross-modal clustering with deep
+correlated information bottleneck method,” IEEE Trans. Neural Netw.
+Learn. Syst., vol. 35, no. 10, pp. 13508–13522, Oct. 2024.
+[43] P. Zhang, M. Fu, R. Zhao, H. Zhang, and C. Luo, “PURE: Personalitycoupled multi-task learning framework for aspect-based multimodal
+sentiment analysis,” IEEE Trans. Knowl. Data Eng., vol. 37, no. 1,
+pp. 462–477, Jan. 2025.
+[44] M. Yin et al., “MVAIBNet: Multiview disentangled representation learning with information bottleneck,” IEEE Trans. Ind. Informat., vol. 20,
+no. 10, pp. 11511–11520, Oct. 2024.
+[45] Z. Pan, L. Niu, J. Zhang, and L. Zhang, “Disentangled information
+bottleneck,” in Proc. AAAI Conf. Artif. Intell., 2021, vol. 35, no. 10,
+pp. 9285–9293.
+[46] L. Sun, Y. Yang, M. Chen, and C. Guo, “Disentangled information
+bottleneck guided privacy-protective joint source and channel coding for image transmission,” IEEE Trans. Commun., vol. 72, no. 11,
+pp. 6992–7005, Nov. 2024.
+[47] W. Wang, D. Cai, Z. Liu, Z. Ding, and P. Fan, “Wireless image semantic
+cooperative transmission in distributed edge networks: An information
+disentanglement method,” in Proc. IEEE 25th Int. Workshop Signal
+Process. Adv. Wireless Commun. (SPAWC), Sep. 2024, pp. 461–465.
+[48] K. R. Ball, C. Grant, W. R. Mundy, and T. J. Shafer, “A multivariate
+extension of mutual information for growing neural networks,” Neural
+Netw., vol. 95, pp. 29–43, Nov. 2017.
+[49] L. Nguyen, M. J. Wainwright, and M. I. Jordan, “Estimating divergence functionals and the likelihood ratio by penalized convex risk
+minimization,” in Proc. Adv. Neural Inf. Process. Syst., vol. 20, 2007,
+pp. 1089–1096.
+[50] M. I. Belghazi et al., “MINE: Mutual information neural estimation,”
+2018, arXiv:1801.04062.
+[51] Y. Lecun, L. Bottou, Y. Bengio, and P. Haffner, “Gradient-based
+learning applied to document recognition,” Proc. IEEE, vol. 86, no. 11,
+pp. 2278–2324, Nov. 1998.
+[52] P. Chrabaszcz, I. Loshchilov, and F. Hutter, “A downsampled variant of ImageNet as an alternative to the CIFAR datasets,” 2017,
+arXiv:1707.08819.
+[53] Z. Wu et al., “3D ShapeNets: A deep representation for volumetric
+shapes,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR),
+Jun. 2015, pp. 1912–1920.
+[54] R. R. Selvaraju, M. Cogswell, A. Das, R. Vedantam, D. Parikh, and
+D. Batra, “Grad-CAM: Visual explanations from deep networks via
+gradient-based localization,” in Proc. IEEE Int. Conf. Comput. Vis.
+(ICCV), Oct. 2017, pp. 618–626.
+
+D. Gündüz et al., “Beyond transmitting bits: Context, semantics, and
+task-oriented communications,” IEEE J. Sel. Areas Commun., vol. 41,
+no. 1, pp. 5–41, Jan. 2023.
+[9] C. Zeng et al., “Task-oriented semantic communication over rate splitting
+enabled wireless control systems for URLLC services,” IEEE Trans.
+Commun., vol. 72, no. 2, pp. 722–739, Feb. 2024.
+[10] J. Kang et al., “Personalized saliency in task-oriented semantic communications: Image transmission and performance analysis,” IEEE J. Sel.
+Areas Commun., vol. 41, no. 1, pp. 186–201, Jan. 2023.
+[11] H. Wei, W. Ni, W. Xu, F. Wang, D. Niyato, and P. Zhang, “Federated
+semantic learning driven by information bottleneck for task-oriented
+communications,” IEEE Commun. Lett., vol. 27, no. 10, pp. 2652–2656,
+Oct. 2023.
+[12] P. Yi, Y. Cao, X. Kang, and Y.-C. Liang, “Integrated distributed semantic
+communication and over-the-air computation for cooperative spectrum
+sensing,” IEEE Trans. Commun., vol. 73, no. 4, pp. 2416–2430, Apr.
+2025.
+[13] J. Xu, H. Yao, R. Zhang, T. Mai, S. Huang, and S. Guo, “Federated learning powered semantic communication for UAV swarm cooperation,”
+IEEE Wireless Commun., vol. 31, no. 4, pp. 140–146, Aug. 2024.
+[14] Y. Liu et al., “Semantic communication empowered collaborative perception in constrained networks,” IEEE Wireless Commun. Lett., vol. 14,
+no. 3, pp. 701–705, Mar. 2025.
+[15] W. F. Lo, N. Mital, H. Wu, and D. Gündüz, “Collaborative semantic
+communication for edge inference,” IEEE Wireless Commun. Lett.,
+vol. 12, no. 7, pp. 1125–1129, Jul. 2023.
+[16] A. H. Razlighi, M. H. V. Tillmann, E. Beck, C. Bockelmann, and
+A. Dekorsy, “Cooperative and collaborative multi-task semantic communication for distributed sources,” in Proc. IEEE Int. Conf. Commun.,
+Jun. 2025, pp. 3966–3971.
+[17] C. Cai, X. Yuan, and Y.-J. Angela Zhang, “Multi-device task-oriented
+communication via maximal coding rate reduction,” IEEE Trans. Wireless Commun., vol. 23, no. 12, pp. 18096–18110, Dec. 2024.
+[18] T. O’Shea and J. Hoydis, “An introduction to deep learning for the
+physical layer,” IEEE Trans. Cognit. Commun. Netw., vol. 3, no. 4,
+pp. 563–575, Dec. 2017.
+[19] S. Sun, Z. Qin, H. Xie, and X. Tao, “Task-oriented scene graph-based
+semantic communications with adaptive channel coding,” IEEE Trans.
+Wireless Commun., vol. 23, no. 11, pp. 17070–17083, Nov. 2024.
+[20] N. Farsad, M. Rao, and A. Goldsmith, “Deep learning for joint sourcechannel coding of text,” in Proc. IEEE Int. Conf. Acoust., Speech Signal
+Process. (ICASSP), Calgary, AB, Canada, Apr. 2018, pp. 2326–2330.
+[21] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cognit.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+[22] Z. Weng and Z. Qin, “Semantic communication systems for
+speech transmission,” IEEE J. Sel. Areas Commun., vol. 39, no. 8,
+pp. 2434–2444, Aug. 2021.
+[23] S. Wang et al., “Wireless deep video semantic transmission,” IEEE
+J. Sel. Areas Commun., vol. 41, no. 1, pp. 214–229, Jan. 2023.
+[24] P. Zhang, Y. Wang, J. Wang, and Z. Zhang, “Multi-modal encrypted
+retrieval method with semantic feature fusion towards Internet of Medical Things,” IEEE J. Biomed. Health Informat., pp. 1–15, 2025, doi:
+10.1109/JBHI.2025.3638367.
+[25] X. Yu, T. Lv, W. Li, W. Ni, D. Niyato, and E. Hossain, “Multitask semantic communication with graph attention-based feature
+correlation extraction,” IEEE Trans. Mobile Comput., vol. 24, no. 5,
+pp. 4371–4388, May 2025.
+[26] S. Wei, C. Feng, C. Guo, B. Zhang, and J. Chen, “Task-oriented multiuser semantic communication based on deep over-the-air computation,”
+IEEE Trans. Veh. Technol., vol. 74, no. 9, pp. 14343–14357, Sep. 2025.
+[27] W. Chen et al., “Semantic communication based on large language
+model for underwater image transmission,” IEEE Trans. Mobile
+Comput., vol. 25, no. 2, pp. 2060–2075, Feb. 2026, doi: 10.1109/
+TMC.2025.3607717.
+[28] Z. Bao et al., “SDAC—Semantic digital analog converter for
+semantic communications,” IEEE Trans. Commun., vol. 73, no. 11,
+pp. 11061–11077, Nov. 2025, doi: 10.1109/TCOMM.2025.3566976.
+[29] Z. Cao, H. Zhang, L. Liang, J. Gan, S. Jin, and G. Ye Li, “Physical-layer
+secure transmission for semantic communication systems,” IEEE Trans.
+Commun., vol. 73, no. 12, pp. 14397–14412, Dec. 2025, doi: 10.1109/
+TCOMM.2025.3610220.
+[30] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” in Proc. Int. Conf. Learn. Represent. (ICLR),
+2016, pp. 1–19.
+
+Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 29,2026 at 02:50:56 UTC from IEEE Xplore. Restrictions apply.
+
+

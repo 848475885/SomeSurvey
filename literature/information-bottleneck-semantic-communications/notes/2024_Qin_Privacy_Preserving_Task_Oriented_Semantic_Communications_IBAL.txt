@@ -1,0 +1,2689 @@
+1
+
+Privacy-Preserving Task-Oriented Semantic
+Communications Against Model Inversion Attacks
+
+arXiv:2312.03252v1 [cs.IT] 6 Dec 2023
+
+Yanhu Wang, Shuaishuai Guo, Senior Member, IEEE, Yiqin Deng, Member, IEEE,
+Haixia Zhang, Senior Member, IEEE, and Yuguang Fang, Fellow, IEEE
+
+Abstract—Semantic communication has been identified as a
+core technology for the sixth generation (6G) of wireless networks. Recently, task-oriented semantic communications have
+been proposed for low-latency inference with limited bandwidth.
+Although transmitting only task-related information does protect
+a certain level of user privacy, adversaries could apply model
+inversion techniques to reconstruct the raw data or extract useful
+information, thereby infringing on users’ privacy. To mitigate
+privacy infringement, this paper proposes an information bottleneck and adversarial learning (IBAL) approach to protect users’
+privacy against model inversion attacks. Specifically, we extract
+task-relevant features from the input based on the information
+bottleneck (IB) theory. To overcome the difficulty in calculating
+the mutual information in high-dimensional space, we derive a
+variational upper bound to estimate the true mutual information.
+To prevent data reconstruction from task-related features by
+adversaries, we leverage adversarial learning to train encoder
+to fool adversaries by maximizing reconstruction distortion.
+Furthermore, considering the impact of channel variations on
+privacy-utility trade-off and the difficulty in manually tuning
+the weights of each loss, we propose an adaptive weight adjustment method. Numerical results demonstrate that the proposed
+approaches can effectively protect privacy without significantly
+affecting task performance and achieve better privacy-utility
+trade-offs than baseline methods.
+Index
+Terms—Semantic
+communications,
+preservation, information bottleneck, adversarial
+
+privacylearning.
+
+I. I NTRODUCTION
+
+R
+
+ECENTLY, deep learning (DL) has achieved tremendous
+breakthroughs, demonstrating exciting performance gain
+in computer vision, natural language processing, speech recognition, and so on. Inspired by all these successes, more and
+more researchers attempt to apply DL to communications.
+So far, there exist a large number of papers investigating
+DL-based joint source-channel coding (JSCC) [1], channel
+estimation [2], interference alignment [3], signal detection
+[4], wireless resource allocation [5], etc. Numerical results
+demonstrate that DL technology can effectively improve the
+performance of communication systems [6]. However, many
+emerging intelligent applications envisioned to be supported in
+5G/6G systems, such as augmented/virtual reality (AR/VR),
+autonomous driving, and environmental monitoring, present
+Yanhu Wang, Shuaishuai Guo, Yiqin Deng, and Haixia Zhang
+are with School of Control Science and Engineering, Shandong
+University, Jinan, 250061, China (e-mail: yh-wang@mail.sdu.edu.cn,
+shuaishuai guo@sdu.edu.cn, yiqin.deng@email.sdu.edu.cn, haixia.zhang@s
+du.edu.cn).
+Yuguang Fang is with Department of Computer Science, City University
+of Hong Kong, Hong Kong, China (e-mail: my.fang@cityu.edu.hk).
+
+serious design challenges to these DL-based communication
+systems that aim to transmit data reliably. Taking autonomous
+driving as an example, during driving, the in-vehicle sensing
+system collects large amounts of data, mainly images, highdefinition videos, and point clouds [7]. If all data is directly
+transmitted to an edge server on the roadside for inference,
+it may cause excessive communication delays when effective
+decision-making strategies are used to save lives of passengers
+and other citizens.
+To address the above problem, task-oriented semantic communication has been proposed and recognized as a new
+communication paradigm for 6G mobile communications [8]–
+[10]. This new paradigm has received intensive attention lately,
+leading to the implementations of wireless image retrieval
+at the edge [11], [12], one-device edge inference [13], [14],
+and multi-device cooperative edge inference [7]. It enables
+low-latency inference by extracting and transmitting taskrelevant information at the transmitter. By transmitting the
+task-related features instead of the original data, task-oriented
+semantic communications can prevent privacy leakage to some
+extent. However, adversaries could still apply model inversion
+techniques [15]–[17] to recover the raw data or extract useful
+information, thereby infringing on users’ privacy. To our best
+knowledge, there hardly exists any work addressing privacy
+issues in task-oriented semantic communications.
+Privacy-preservation has been a research focus in mobile
+devices and wireless networks [18]. Many methods on privacypreservation have been proposed in the current literature, such
+as k-anonymity [19], l-diversity [20], and t-closeness [21].
+However, most of them do not scale well to handle highdimensional data. Besides, they cannot be easily adapted to
+semantic communication systems. There are several reasons
+for this. Firstly, most semantic communication systems are
+based on autoencoder architectures, and training is carried
+out in an end-to-end manner. Directly transplanting existing
+privacy methods into semantic communication systems may
+result in the inability to train the semantic communication
+system. Secondly, it may significantly affect the performance
+of semantic communication systems, such as differential privacy methods (DP) [22], [23], which directly inject noise into
+transmission features. Motivated by the aforementioned issues,
+in this paper, we investigate privacy-preserving techniques
+for task-oriented semantic communications to prevent privacy
+breaches.
+In this paper, we propose IBAL - a scheme for privacypreserving task-oriented semantic communications. Since the
+IB theory [24] maximizes the mutual information between
+
+2
+
+the intermediate representation and the data labels while
+reducing the amount of information between the intermediate representation and the input, we leverage IB theory to
+extract task-related features. Inspired by the work [16], we
+introduce adversarial learning [25] into task-oriented semantic
+communications to protect privacy. That is, we simulate the
+game between the DNNs of adversaries and the DNNs of the
+transmitter, and enable the output features of the transmitter
+to fool potential adversaries by maximizing the reconstruction
+distortion. The reason why we choose to maximize distortion
+is that the transmitter may not know the specific intentions of
+adversaries in advance. It is difficult to develop a unified and
+effective privacy protection criterion considering all the diverse
+intentions of adversaries. Maximizing distortion in the recovering raw data can protect all kinds of private information to
+some extent. Compared with prior works [11]–[14], we focus
+on the privacy issue in task-oriented semantic communications.
+Compared with the DP approach, our approach does not cause
+a significant negative impact on task performance. Moreover,
+considering the impact of channel variations on task inference performance and privacy, we propose a communication
+scheme based on IBAL.
+Our main contributions in this paper can be summarized as
+follows.
+We propose a privacy-preserving task-oriented semantic
+communication system based on the IB theory and adversarial learning (IBAL). The proposed system could
+extract and transmit task-related features for low-latency
+edge inference while enhancing privacy, that is, not
+transmitting features that can be used to reconstruct the
+original data by adversaries through the model inversion
+technique.
+• To avoid intractable direct estimation of the mutual
+information in high-dimensional space, we convert the
+minimization of IB loss into the minimization of an upper
+bound of IB loss by variational approximation method.
+• Based on IBAL, we propose a communication scheme
+suitable for dynamic channel conditions. In particular, we
+treat privacy-preserving task-oriented semantic communications as a multi-objective optimization problem, and
+then solve it with the multiple gradient descent algorithm
+(MGDA), which avoids manually tuning the weights of
+each loss.
+• We evaluate the effectiveness of the developed privacypreserving task-oriented semantic communication
+schemes on image classification tasks. Extensive
+numerical results demonstrate that, compared with
+baseline methods, the proposed schemes can effectively
+protect privacy without significantly affecting task
+performance.
+•
+
+The remainder of this paper is organized as follows. Section
+II introduces the existing task-oriented semantic communication system model and model inversion attacks, as well as the
+performance metrics adopted in the simulation. Problem formulation is given in Section III, and IBAL and its extensions
+are proposed for the problem. Section IV offers the numerical
+results. Section V concludes this paper.
+
+Notation: In this paper, Y represents a random variable
+and y is the realization of the corresponding random variable.
+H(Y ) stands for the entropy of Y . I(Y ; Z) represents the
+mutual information between Y and Z. E(Y ) represents the
+expectation of Y . KL(·||·) stands for the Kullback-Leibler
+divergence, measuring the difference between two probability
+distributions. || · ||2 represents the l2 norm of a vector. Finally,
+y ∼ N (µ, σ 2 ) denotes that y follows a Gaussian distribution
+with mean µ and covariance σ 2 .
+II. S YSTEM M ODEL
+In this section, we first describe existing task-oriented
+semantic communication systems, and then introduce model
+inversion technique that can reconstruct the transmitted features as the raw data. Finally, we discuss the metrics used to
+evaluate the performance of our proposed privacy-preserving
+task-oriented semantic communication system.
+A. Task-Oriented Semantic Communication Systems
+As shown in Fig. 1, existing task-oriented semantic communication systems generally consist of a transmitter network,
+physical channel, and a receiver network, in which the transmitter network is composed of a feature extractor and a joint
+source-channel (JSC) encoder while the receiver network only
+includes task inference module.
+We assume that the system input is s ∈ Rn , which is from
+the image space and contains task-related information and
+task-irrelevant information. To enable low-latency inference,
+task-related information is extracted by the feature extractor
+from s. Subsequently, the extracted information is mapped to
+symbols z ∈ Ck by the JSC encoder for efficient and reliable
+transmission. Note that at the transmitter, the feature extractor
+can be designed jointly with the JSC encoder, denoted as Tθ (·),
+where θ is the trainable parameter set. The whole encoding
+process can be expressed as
+z = Tθ (s),
+
+(1)
+
+The transmitted signal can be attenuated over the channel, and
+thus the received signal at the receiver can be expressed as
+ẑ = hz + ǫ,
+
+(2)
+
+k
+
+where ẑ ∈ C , h represents the coefficient of the Rayleigh
+fading channel, and ǫ ∼ CN (0, σ 2 Ik×k ). Finally, the received
+signal ẑ is used by task inference module for edge inference
+with the following inference result:
+ŷ = Rφ (ẑ),
+
+(3)
+
+where ŷ ∈ Rl , and Rφ (·) denotes the task inference network
+with parameter set φ.
+The whole task-oriented semantic communications can be
+trained by the IB loss function [13], which is given by
+LIB = −I(Ẑ; Y ) + βI(Ẑ; S),
+
+(4)
+
+where S, Z, Ẑ and Y are random variables while s, z,
+ẑ, and y are their instances, respectively. I(Ẑ; S) is the
+mutual information, measuring the amount of information
+
+3
+
+Receiver
+
+Transmitter
+
+Physical
+
+Channel
+
+Feature Extractor
+
+JSC Encoder
+
+Task Inference
+
+Fig. 1. Task-oriented semantic communication system. The green region corresponds to the transmitting device, and the red region corresponds to the receiving
+device. The transmitting device extracts and encodes task-related information z from the original data s (e.g., an image), and the receiving device directly
+leverages ẑ to obtain the inference result ŷ.
+
+Transmitter
+
+Adversary
+
+Physical
+Channel
+
+Feature Extractor
+
+JSC Encoder
+
+Decoder
+
+Fig. 2. Model inversion attacks. The green region corresponds to the transmitting device, and the purple region corresponds to the adversary device. The
+transmitting device transmits the encoded feature z. Then, an adversary device attempts to produce an approximate reconstruction s̃ of the original data based
+on the illegally obtained z̃, thereby infringing the privacy of the user.
+
+between variables Ẑ and S. I(Ẑ; Y ) measures the amount
+of information between Y and Ẑ.
+B. Model Inversion Attacks
+Model inversion attacks, proposed by Fredrikson [15], are
+attacks in which the adversaries reconstruct the received
+features as the raw input using DNNs, and then obtain users’
+privacy. Below, we provide a detailed description of model
+inversion attacks.
+As shown in Fig. 2, the left is the transmitter network of
+the task-oriented semantic communication system, which is
+actually deployed on the user’s device. The right is the DNN
+Dγ , designed by the adversary and deployed on the adversary’s
+device. The encoded feature z of the transmitter is illegally
+obtained by the adversary, and the obtained feature z̃ ∈ Ck
+can be expressed as
+z̃ = ha z + ǫa ,
+
+(5)
+
+where ha represents the adversary channel coefficients, and
+ǫa ∼ CN (0, σa2 Ik×k ). Then, the adversary attempts to produce
+an approximate reconstruction s̃ of the user data based on z̃,
+i.e.
+s̃ = Dγ (z̃).
+(6)
+To obtain a better reconstruction, the adversary first trains
+Dγ . We assume that the adversary performs model inversion
+through black-box attack [26], [27]. In the process, the adversary can continuously access the network model on the target
+
+device, but the adversary cannot obtain the model parameters
+and training data on the target device. In detail, the adversary
+first inputs the image data s ∈ SA into the transmitter network,
+and then the encoded feature ẑ can be obtained. Here, we
+use SA to distinguish the adversary’s own dataset from the
+user’s private data S. After obtaining a large number of data
+pairs {(s ∈ SA , z̃)}, the adversary trains its own decoder Dγ
+based on these data pairs. Dγ is committed to minimize the
+reconstruction distortion, thus, the loss function is the mean
+squared error (MSE):
+M
+
+1 X
+2
+LMSE =
+ksi − s̃i k ,
+M i=1
+
+(7)
+
+where si is the i-th sample in M image samples, and s̃i is its
+reconstruction.
+
+C. Performance Metrics
+In this paper, we mainly focus on privacy issues in taskoriented semantic communications and aim to make the
+privacy-utility trade-off. We assume that the image classification task is performed at the receiver, therefore, the classification accuracy is used to measure the task performance
+(corresponding to the “utility”). Classification accuracy can
+be expressed as
+Classification accuracy =
+
+Nt
+,
+No
+
+(8)
+
+4
+
+where Nt is the number of correctly classified images, No is
+the number of classified images.
+Through model inversion techniques, adversaries can recover the raw data or extract useful information, thereby
+infringing on users’ privacy. We maximize the distortion of
+reconstructed images to reduce the invasion of users’ privacy
+by adversaries. That is, the higher the distortion of the reconstructed image, the more difficult it is for adversaries to obtain
+private information from it. Therefore, we use the quality
+of images reconstructed by adversaries to measure the level
+of privacy protection. Specifically, we use the peak signalto-noise ratio (PSNR), which is one of the commonly used
+metrics for measuring image quality. It can be expressed as
+2
+
+MaxValue
+(dB),
+(9)
+MSE
+where MSE is the mean squared error, MaxValue is the
+maximum value that a pixel can take, for example, 8-bit image
+is 28 − 1 = 255. The lower PSNR, the better privacy.
+PSNR is a metric of image quality based on the errors between corresponding pixels, and does not take into account the
+visual characteristics of human eyes. The structural similarity
+(SSIM) [28] measures the similarity between images based on
+their luminance, contrast, and structure, which better reflects
+the perceptual characteristics of human vision. SSIM is given
+by
+PSNR = 10 log10
+
+SSIM(s, ŝ) = luminance(s, s̃)α1 + contrast(s, s̃)α2
++ structure(s, s̃)α3
+α1 
+α2
+
+2σs σs̃ + c2
+2µs µs̃ + c1
++
+=
+µ2s + µs̃2 + c1
+σs2 + σs̃2 + c2
+
+α3
+cov(s, s̃) + c3
++
+,
+σs σs̃ + c3
+(10)
+where µs and µs̃ are the mean values of s and s̃, σs and σs̃ are
+the standard deviations of s and s̃, respectively. cov(s, s̃) is
+the covariance between s and s̃. α1 , α2 , and α3 respectively
+represent the proportion of the luminance, the contrast, and
+the structure in the SSIM, and their values are typically set to
+1. c1 , c2 , and c3 are typically set to 0.0001 to avoid division
+by zero.
+
+III. P RIVACY-P RESERVING TASK -O RIENTED S EMANTIC
+C OMMUNICATIONS
+This paper focuses on privacy issues in task-oriented semantic communications. More specifically, it aims to achieve lowlatency edge inference while preventing transmitted features
+from being reconstructed for raw data by adversaries through
+model inversion attacks. To this end, combining (4) and (7),
+we formulate the optimization problem as
+min
+θ,φ
+
+λLIB − (1 − λ)LMSE ,
+
+(11)
+
+where the range of λ is [0, 1]. The smaller λ, the stronger the
+privacy-preservation.
+
+A. Problem Statement
+Intuitively, it is promising to use (11) as the objective
+function for privacy-preserving task-oriented semantic communications. The first term of (11) is the loss function of the
+task inference performance, and the second one could captures
+the reconstruction capability of the transmitted signals by the
+adversary. However, in practice, there are still many issues to
+be resolved as discussed below.
+• Problem 1: How to compute LIB ?
+The mutual information term in (11) (i.e., LIB ) can be
+expressed as follows:
+LIB = −I(Ẑ; Y ) + βI(Ẑ; S)
+Z
+p(y, ẑ)
+dydẑ
+= − p(y, ẑ) log
+p(y)p(ẑ)
+Z
+p(s, ẑ)
+dsdẑ
++ β p(s, ẑ) log
+(12)
+p(s)p(ẑ)
+Z
+= − p(y|ẑ)p(ẑ) log p(y|ẑ) dydẑ − H(Y )
+Z
+pθ (ẑ|s)
++ β pθ (ẑ|s)p(s) log
+dsdẑ,
+p(ẑ)
+where the entropy H(Y ) depends on input data and can
+be ignored when performing optimization in (11). As
+can be seen from the system shown in Fig. 1 and the
+description in Section II.A, pθ (ẑ|s) can be expressed as
+pθ (ẑ|s) = pθ (z|s)pchannel (ẑ|z), where pθ (z|s) is the
+encoding distribution and pchannel (ẑ|z) represents the
+channel model. With p(ẑ) and p(y|ẑ) following Markov
+chain Y ↔ S ↔ Ẑ, they can be written as
+Z
+p(ẑ) = p(s)pθ (ẑ|s) ds,
+(13)
+and
+
+p(y|ẑ) =
+=
+=
+
+Z
+
+Z
+
+Z
+
+p(s, y|ẑ) ds
+p(y|s)p(s|ẑ) ds
+ds
+
+(14)
+
+p(y|s)pθ (ẑ|s)p(s)
+.
+p(ẑ)
+
+In (13) and (14), the calculations of integrals are involved,
+which is highly complicated in general, especially in
+high-dimensional spaces, which also makes LIB hard to
+estimate and optimize. Thus, to make (11) practical in
+task-oriented semantic communication systems to solve
+the privacy problem, it is necessary to develop effective
+method to estimate LIB .
+• Problem 2: How to train the whole system?
+The existing task-oriented semantic communication system shown in Fig. 1 cannot be trained with (11) because the framework consists of feature extractor, JSC
+encoder and task inference module, while (11) involves
+image reconstruction. Therefore, it is desirable to design a new task-oriented semantic communication system
+framework, in which the transmitter network is co-trained
+with the task inference module while coping with the
+decoder. Moreover, the extracted and transmitted features
+
+5
+
+by the transmitter network should be designed to be
+hard to decode by any decoder of adversaries other
+than the intended decoder. So in theory, all possible decoders should be used in the new communication system
+framework for the transmitter network to learn. However,
+this is not obviously realistic. Thus, to better protect
+privacy, an effective method should be developed for the
+transmitter to learn to cope with all possible decoders
+of adversaries, so that the newly designed task-oriented
+semantic communication system is not too complicated.
+• Problem 3: How to adaptively adjust λ according to the
+dynamic channel conditions?
+The impact of channel variations on privacy need to be
+elaborated in more detail. The adversary reconstructs the
+original images from the received features through model
+inversion to reveal the privacy of a user. The worse
+the image reconstruction quality, the better the privacy
+protection. When channel conditions from the transmitter
+to the adversary become worse, the transmitted features
+are more severely corrupted and more difficult to recover
+from the raw input, and hence the privacy is enhanced.
+Of course, the task inference performance will be affected
+as well. In practice, in face of worse (or better) channel
+conditions, by considering both the requirements of task
+inference performance and the enhancement of privacy
+with channel noise, the user may increase (or decrease)
+λ in (11). However, due to the trade-off between privacy and task inference performance, which we call the
+privacy-utility trade-off, it is hard to manually tune λ to
+achieve satisfactory results. Therefore, when considering
+the privacy-utility trade-off and the effect of channel
+variations, it is essential to design a method that can better
+achieve the privacy-utility trade-off.
+B. Variational Information Bottleneck
+To solve Problem 1, we leverage the variational method
+to build a tractable upper bound of information bottleneck
+loss. Specifically, due to the fact that p(ẑ) and p(y|ẑ) in LIB
+is hard to compute, we seek a mutual information estimator
+to compute LIB . Recently, some works [29]–[31] propose to
+combine the variational approximation with deep learning to
+facilitate the estimation of mutual information. Following these
+works, we leverage variational approximation to address our
+problem at hand, i.e,
+p(ẑ) = q(ẑ) and p(y|ẑ) = qφ (y|ẑ),
+
+(15)
+
+where φ is the parameter set of task inference network at the
+receiver.
+By introducing variational approximations (15), we could
+derive a tractable variational upper bound for LIB (see Appendix A), which is given as [13]:
+LV IB = Ep(s,y) {Epθ (ẑ|s) [− log qφ (y|ẑ)]
++ βKL(pθ (ẑ|s)||q(ẑ))}.
+
+(16)
+
+To obtain an unbiased estimate for LV IB , we utilize the
+reparameterization trick [32] and Monte Carlo approximation.
+
+1 P
+In particular, following [29], we use M−1
+j6=m pθ (ẑ|xj ) to
+approximate q(ẑ), and then get
+(
+M
+N
+1 X
+1 X
+LV IB ≈
+−
+log qφ (ym |ẑm,n )
+M m=1
+N n=1
+)
+(17)
+pθ (ẑm |sm )
+,
++ β log 1 P
+j6=m pθ (ẑm |sj )
+M−1
+
+where M represents the number of sample pairs
+{(sm , ym )}M
+m=1 , and N indicates the number of times
+to sample the channel for each pair (sm , ym ). pθ (·) and qφ (·)
+are the encoding network at the transmitter and task inference
+network at the receiver, respectively.
+Finally, formulation (11) can then be rewritten as
+min
+θ,φ
+
+λLV IB − (1 − λ)LMSE .
+
+(18)
+
+C. The Proposed IBAL
+To solve Problem 2, we propose an information bottleneck
+and adversarial learning (IBAL) approach.
+1) Model Description: The designed IBAL is as shown
+in Fig. 3. Similar to the transmitter network in the taskoriented semantic communication system shown in Fig. 1,
+the transmitter network in IBAL also consists of a feature
+extractor and a JSC encoder to map the extracted feature values
+to channel input symbols for subsequent transmissions. The
+difference is that the feature extractor in IBAL needs to extract
+task-related features from raw data to ensure edge inference
+performance, while ensuring that the extracted features can
+fool the adversary.
+The channel is modeled as a non-trainable layer, since the
+gradients need to be back-propagated. Since we focus on
+privacy-preserving task-oriented semantic communications, in
+this paper, we only consider additive white Gaussian noise
+(AWGN) channels and Rayleigh fading channels for simplicity. Besides, considering output power of the transmitter, an
+average power constraint is imposed on the transmitted signal
+vectors, which is expressed as
+k
+
+1X 2
+z ≤ 1,
+k i=1 i
+
+(19)
+
+where k represents the dimension of z.
+In practice, the adversary is not fixed, and it is difficult and
+impractical to obtain the adversary’s network architecture. We
+construct a decoder to simulate the adversary and introduce
+the designed communication system. The fundamental purpose
+is to enable the transmitter network to learn to extract and
+transmit features, which are difficult for the true adversary’s
+DNNs to decode through model inversion.
+2) Model Training: To defend against model inversion
+attacks from any adversary, we utilize adversarial learning
+in training a semantic communication system as listed in
+Algorithm 1. Specifically, the algorithm describes a game
+between an adversary trying to recover the original data
+from the received signal while a user aiming to achieve
+privacy-preserving task-oriented semantic communications. As
+illustrated in Algorithm 1, the training process of the IBAL
+
+6
+
+Transmitter
+
+Receiver
+
+Physical
+
+Channel
+
+Feature Extractor
+
+Task Inference
+
+JSC Encoder
+
+Decoder
+
+Fig. 3. The framework of proposed IBAL. The green region corresponds to the transmitting device, and the blue region corresponds to the receiving device.
+Training procedure: We update the decoder using dataset S2 while fixing the transmitter network and task inference module. Then, we update the transmitter
+network and task inference module using dataset S1 while fixing the decoder. Communication procedure: The transmitting device transmits the encoded
+feature z that fools the adversary, i.e., prevent reconstructing the input by the adversary, while achieving edge inference through the task inference module.
+
+consists of two stages, which are performed alternately. After
+initializing the weights W and biases b, input the training data
+s1 ∈ S1 and s2 ∈ S2 . Note that, the algorithm inputs different
+training data because it simulates a game between an adversary
+and a user, and it is impossible for an adversary to have a user’s
+dataset. The first stage is to simulate an adversary. We train
+the decoder by minimizing the MSE loss LMSE . In this stage,
+the parameters of the transmitter network will not be updated
+since the transmitter network is deployed on the device of the
+user. The second stage is to train the proposed communication
+system with (18) as the training objective function. Different
+from the first stage, in the second stage, except the decoder,
+the parameters of other neural networks are updated. The two
+phases are performed alternately until the termination criteria
+is met.
+
+D. The Proposed IBAL-D
+To solve Problem 3, we extend the proposed IBAL under
+dynamic channel conditions, namely IBAL-D.
+1) Method Description: As described in Problem 3, channel conditions can affect privacy. To capture the impact, we
+modify the original objective function in (18). We use the noise
+level σ 2 to represent the channel condition. Considering that
+the image reconstruction quality is inversely proportional to
+noise, we introduce σ 2 into (18) in the form of a decreasing
+function. In this paper, for demonstration purpose, we adopt a
+heuristic discreasing function 1/(1 + σ 2 ) and reformulate the
+objective function as
+min
+θ,φ
+
+Algorithm 1 IBAL Training Algorithm
+Initialization: Initialize weights W and biases b.
+1: Input: Input data s1 ∈ S1 and s2 ∈ S2 .
+2: while termination criteria is not met do
+3:
+Simulate an adversary:
+4:
+Tθ (s2 ) → z2 .
+5:
+Transmit z2 over the channel.
+6:
+Dκ (ẑ2 ) → ŝ2 .
+7:
+Calculate the loss LMSE by (7).
+8:
+Only update parameters of the decoder, κ.
+9:
+Learn the privacy-preserving task-oriented semantic
+communication system:
+10:
+Tθ (s1 ) → z1 .
+11:
+Transmit z1 over the channel.
+12:
+Rφ (ẑ1 ) → ŷ1 and Dκ (ẑ1 ) → ŝ1 .
+13:
+Calculate the whole loss by (18).
+14:
+Update parameters of the transmitter network
+and task inference module, θ and φ.
+15: end while
+16: Output: IBAL network Tθ (·), Rφ (·), Dκ (·).
+
+λLV IB − (1 − λ)
+
+1
+LMSE .
+1 + σ2
+
+(20)
+
+Next, we need to address how to adaptively adjust the
+value of λ according to the channel condition. We treat the
+considered privacy-preserving task-oriented semantic communications as a special multi-objective optimization problem.
+For multi-objective optimization, its fundamental purpose is
+to achieve Pareto efficiency. Under Pareto efficiency, neither
+task inference performance nor privacy can be optimized
+without harming the other. To solve the problem, we utilize
+the multiple gradient descent algorithm (MGDA) proposed in
+[33]. Specifically, the MGDA performs Pareto optimization
+based on the Karush-Kuhn-Tucker (KKT) conditions, which
+are given as follows:
+
+
+(
+1
+= 0,
+λ ▽θ LV IB − (1 − λ) ▽θ 1+σ
+2 LMSE
+(21)
+0 ≤ λ ≤ 1.
+The KKT conditions are necessary conditions, and the solution
+satisfying (21) is called a Pareto stationary point. To utilize
+the MGDA, we formulate the optimization problem:
+ 2
+
+1
+min λ ▽θ LV IB − (1 − λ) ▽θ
+.
+LMSE
+λ∈[0,1]
+1 + σ2
+2
+(22)
+
+7
+
+At this time, achieving Pareto efficiency becomes solving (22)
+for λ, thereby adaptively adjusting λ.
+According to [33] and [34], the solution of (22) is either
+0 and the result point satisfies (21), or the solution provides
+the gradient descent direction of the improved edge inference
+task. From [35], it is known that (22) is a convex quadratic
+optimization problem with linear constraints. We use the
+Frank-Wolfe algorithm developed in [35] to obtain the optimal
+λ∗ (see Appendix B for details).
+2) Training Procedure: The training process of the communication network suitable for different channel conditions
+is illustrated in Algorithm 2. Similar to Algorithm 1, the whole
+process is still performed alternately between a simulating
+an adversary and a learning user for privacy-preserving taskoriented semantic communications. The difference mainly lies
+in the phase for learning privacy-preserving task-oriented
+semantic communications.
+Algorithm 2 IBAL-D Training Algorithm
+Initialization: Initialize weights W and biases b.
+1: Input: Input data s1 ∈ S1 and s2 ∈ S2 .
+2: while termination criteria is not met do
+3:
+Simulate an adversary:
+4:
+Tθ (s2 ) → z2 .
+5:
+Transmit z1 over the channel.
+6:
+Dκ (ẑ2 ) → ŝ2 .
+7:
+Calculate the loss LMSE by (7).
+8:
+Only update parameter set of the decoder, κ.
+9:
+Learn the privacy-preserving task-oriented semantic
+communication system:
+10:
+Tθ (s1 ) → z1 .
+11:
+Transmit z1 over the channel.
+12:
+Rφ (ẑ1 ) → ŷ1 and Dκ (ẑ1 ) → ŝ2 .
+13:
+Calculate LV IB and update φ. Calculate LMSE but
+not update κ.
+14:
+Solve (22) to obtain λ∗ .
+15:
+Tθ (s1 ) → z1 .
+16:
+Transmit z1 over the channel.
+17:
+Rφ (ẑ1 ) → ŷ1 and Dκ (ẑ1 ) → ŝ1 .
+18:
+Calculate the whole loss by (18) and update θ: θ =
+1
+θ − η[λ∗ ▽θ LV IB − (1 − λ∗ ) ▽θ ( 1+σ
+2 LMSE )].
+19: end while
+20: Output: IBAL-D network Tθ (·), Rφ (·), Dκ (·).
+
+Assumption 1. F (w) has an L-Lipschitz gradient in the sense
+that there exists L > 0, such that for any w and w′ satisfying:
+L ′
+2
+kw − wk2 (23)
+2
+Assumption 2. The gradient is bounded in the sense that
+gt = ∇Ft w(t) has an upper bound, i.e.
+
+
+∇F w(t) 2 ≤ G, ∀t,
+(24)
+kgt k2 ≤ G, ∀t.
+F (w′ ) − F (w) ≤ h∇F (w), w′ − wi +
+
+Assumption 3. The noisy gradient
+ is unbiased and the noise is
+independent, i.e., gt = ∇F w(t) + nt , nt satisfies E [nt ] = 0,
+and nt1 is independent of nt2 when t1 6= t2 .
+
+Assumption 4. g1 = ∇F1 w(t) has a lower bound, i.e.,
+kg1 k2 ≥ c, ∀t
+
+(25)
+
+Remark 1. Assumptions 1-3 are the commonly used assumptions in analyzing convergence [36], [37]. For Assumption 4,
+it refers to the scenario that the algorithm not converging at
+the initial value, which is easily satisfied.
+Our algorithm converges because of the following proposition.
+Proposition 1. Supposing that the assumptions 1-4 hold, with
+β1,t ≤ β1 ∈ [0, 1) and β1,t is non-increasing, ηt = √1t , for
+any number of iterations T , we have
+
+ 2
+
+1
+= √ (G1 + G2 log T ) ,
+mint=1,2,...,T E ∇F w(t)
+T
+(26)
+where G1 and G2 are two constants that are independent of T .
+It can be observed
+ the convergence rate of our proposed
+ that
+√T .
+algorithm is O log
+T
+
+Proof: See Appendix C.
+The computational complexity of the proposed IBAL mainly
+comes from convolution operations, because they involve multiplications and additions. The computational cost of a convolution layer can be expressed as F ×F ×Cin ×Cout ×W1 ×W2 ,
+where F × F is the size of the filter, Cout is the number
+of filters, Cin represents the number of input channels, and
+W1 ×W2 is the size of the feature map. Assuming that the network has K convolution layers,
+
+ K the computational complexity
+P (i) 2 (i) (i) (i) (i)
+of the proposed IBAL is O
+(F ) Cin Cout W1 W2 .
+i=1
+
+IV. E XPERIMENTS AND D ISCUSSIONS
+E. Convergence and Computational Complexity Analysis
+This subsection first analyzes the convergence of our algorithm. The Adam optimizer is adopted for the proposed
+IBAL approach due to its outstanding convergence speed and
+performance. Thus, the convergence analysis is related to
+the Adam optimizer. For simplicity, the objective function
+is denoted as F (w), where w = {θ, φ}. Before analyzing
+convergence, we present several assumptions commonly made
+in the literature.
+
+In this section, we compare the proposed privacy-preserving
+task-oriented semantic communications schemes with other
+DL-based communication schemes under static and dynamic
+AWGN and Rayleigh fading channels. Image classification
+task is chosen as an example to demonstrate the key idea of
+the proposed approaches, which is to develop an end-to-end
+learning framework to extract privacy-preserving task-oriented
+channel-robust low-dimensional latent representations of data
+for transmission. It is noteworthy that the proposed approaches
+are not specified for the image classification task.
+
+8
+
+TABLE I
+T HE ARCHITECTURE SETTINGS OF EACH MODULE FOR MNIST
+
+TABLE III
+T HE NETWORK ARCHITECTURE BUILT BY THE ADVERSARY IN THE MODEL
+
+CLASSIFICATION TASK
+
+INVERSION ATTACK
+
+Output
+
+Layer name
+
+Layer name
+
+dimensions
+Transmitter
+Receiver
+(Classifier)
+Receiver
+
+Dense+Tanh
+
+64
+
+Dense+ReLU
+
+1024
+
+Output
+dimensions
+
+MNIST
+
+Dense+Tanh
+
+784
+
+Dense+Tanh+Reshape
+
+8×4×4
+
+Dense+ReLU
+
+256
+
+Convolutional layer+ReLU
+
+512×4×4
+
+Dense+Softmax
+
+10
+
+Convolutional layer+ReLU+Upsampling
+
+256×8×8
+
+Dense+Tanh
+
+784
+
+CIFAR-10
+
+(Decoder)
+
+Residual Block
+
+256×8×8
+
+Convolutional layer+ReLU+Upsampling
+
+128×16×16
+
+Residual Block
+
+128×16×16
+
+TABLE II
+T HE ARCHITECTURE SETTINGS OF EACH MODULE FOR CIFAR-10
+
+Convolutional layer+ReLU+Upsampling
+
+64×32×32
+
+Residual Block
+
+64×32×32
+
+CLASSIFICATION TASK
+
+Convolutional layer+Sigmoid
+
+3×32×32
+
+Layer name
+
+Output
+dimensions
+
+(Convolutional layer+ReLU)×2
+
+128×16×16
+
+Residual Block
+
+128×16×16
+
+(Convolutional layer+ReLU)×3
+
+8×4×4
+
+Transmitter
+
+Receiver
+(Classifier)
+
+Reshape+Dense+Tanh
+
+128
+
+Dense+ReLU+Reshape
+
+8×4×4
+
+Convolutional layer+ReLU
+
+512×4×4
+
+Residual Block
+
+512×4×4
+
+Pooling
+
+512
+
+Dense+Softmax
+
+10
+
+Dense+Tanh+Reshape
+
+8×4×4
+
+Convolutional layer+ReLU
+
+512×4×4
+
+Receiver
+
+(Deconvolutional layer+ReLU)×2
+
+128×16×16
+
+(Decoder)
+
+Residual Block
+
+128×16×16
+
+Deconvolutional layer+ReLU
+
+64×32×32
+
+Convolutional layer+Sigmoid
+
+3×32×32
+
+A. Experiment Setup
+1) Datasets: To demonstrate the performance of the proposed schemes, the benchmark datasets MNIST and CIFAR-10
+are adopted. The MNIST dataset contains 70,000 grayscale
+images of handwritten digits with a resolution of 28 × 28,
+of which 60,000 are training images and 10,000 are testing
+images. The CIFAR-10 is a color image dataset with 10
+classes. There are 6000 images in each class, including 5000
+training images and 1000 testing images. The resolution of
+each image is 32 × 32. Note that for training images in the
+MNIST dataset, we further split them into two parts, S2 with
+2/3 for updating Tθ and Rφ , S1 with 1/3 for updating Dκ . The
+same goes for the CIFAR-10 dataset.
+2) Neural Network Architecture: In the experiments, we
+design different neural network structures for the MNIST
+and CIFAR-10 datasets as there is still no universal encoder/decoder network for different datasets. The detailed
+architecture settings can be found in Table I and Table II.
+During the training process, we adopt the Adam optimizer
+with β1 = 0.9, β2 = 0.99, and learning rate lr = 0.001.
+To verify the privacy-preserving capabilities of several baselines and the proposed scheme, we simulate the adversary
+using model inversion attack to reconstruct input images using
+
+the features transmitted through all communication schemes.
+Table III shows the network architecture built by the adversary
+in the model inversion attack. Besides, all baselines adopt the
+same classification network as the proposed schemes for fair
+comparison.
+3) Comparison algorithms: This paper selects the following DL-based communication schemes as baselines.
+NECST-G: NECST [38] is a DL-based JSCC scheme,
+where the encoder outputs are processed with discrete
+Bernoulli distributions and then pass through the binary
+erasure channel (BEC) and the binary symmetric channel
+(BSC). In the experiments, we process the outputs with
+Gaussian distributions and directly transmit the encoder
+output through the AWGN channel and the Rayleigh
+channel. To distinguish the original NECST, the adopted
+NECST is denoted as NECST-G. We use the crossentropy as the loss function of NECST-G.
+• NECST-G-DP: DP [22] offers a strong mathematical
+foundation for privacy preservation. By adding Laplace
+noise within the DP framework, the privacy level can be
+precisely controlled. In the experiments, we will combine NECST-G with DP. Specifically, we inject Laplace
+noise into the transmitted features. In the experiments,
+we will combine NECST-G with DP. Specifically, we
+inject Laplace noise into the transmitted features. In the
+following experiments, we set the location and scale
+parameters of Laplace distribution to 0 and the reciprocal
+of the privacy budget, respectively. The privacy budget is
+set to 0.05, 0.1 and 0.9, respectively. A smaller privacy
+budget means more noise injected into the transmitted
+features, which also implies stronger privacy protection.
+• ESCS [39]: ESCS is an encrypted semantic communication system for privacy preserving, which utilizes
+symmetric encryption algorithms. Both the encryptor
+and decryptor are composed of neural networks, and
+according to the setup in [39], we use a key with one
+token in the experiment. The loss function of ESCS is
+set to the cross-entropy.
+
+•
+
+9
+
+IBAL
+
+NECST-G-DP~0.9
+
+NECST-G-DP~0.05
+
+IBAL
+
+NECST-G-DP~0.9
+
+NECST-G-DP~0.05
+
+NECST-G
+
+NECST-G-DP~0.1
+
+ESCS
+
+NECST-G
+
+NECST-G-DP~0.1
+
+ESCS
+
+1
+
+0.65
+
+1
+0.65
+0.95
+
+0.9
+
+0.85
+
+0.55
+
+0.5
+0.8
+0.45
+
+0.75
+
+7
+
+11
+
+15
+
+19
+
+23
+
+0.9
+0.55
+0.85
+
+0.5
+0.8
+0.45
+
+0.75
+
+0.4
+
+0.7
+
+0.6
+
+SSIM
+
+Classification accuracy
+
+0.6
+
+SSIM
+
+Classification accuracy
+
+0.95
+
+7
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+SNR(dB)
+
+(a) AWGN
+
+0.4
+
+0.7
+7
+
+11
+
+15
+
+19
+
+23
+
+7
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+SNR(dB)
+
+(b) Rayleigh Fading
+
+Fig. 4. Classification accuracy and SSIM comparison of IBAL with baseline schemes on the MNIST dataset over (a) AWGN and (b) Rayleigh fading channels.
+
+Fig. 5. MNIST: from left to right, original, IBAL, NECST-G, NECST-G-DP∼0.9, NECST-G-DP∼0.1, NECST-G-DP∼0.05 and ESCS.
+
+B. Experiment Under Static Channel Conditions
+Firstly, we investigate the performance of the proposed
+IBAL under static channel conditions. The performance of the
+proposed IBAL is compared with ESCS, NECST-G, NECSTG-DP∼ 0.9, NECST-G-DP∼0.1, and NECST-G-DP∼0.05.
+The proposed IBAL and comparison schemes are trained under
+SNR=15dB and tested under 7dB, 11dB, 15dB, 19dB and
+23dB, respectively. In the proposed IBAL, λ is set to 0.5.
+In the experiment, we simulate the adversary using features
+transmitted through all communication schemes to reconstruct
+input images, and calculate the SSIM and PSNR between the
+reconstructed and original images to characterize the privacy
+protection capability of communication schemes. We also
+use the classification accuracy to characterize edge inference
+performance.
+Fig. 4 shows the classification accuracy versus SNR and
+SSIM versus SNR for various schemes under AWGN and
+Rayleigh fading channels on the MNIST dataset. As can be
+seen from Fig. 4(a), compared with NECST-G, the classification accuracy of IBAL is slightly decreased, but the privacy
+protection ability is significantly enhanced. When NECSTG uses DP to enhance privacy, edge inference performance
+is more seriously affected. For example, NECST-G-DP∼0.05
+provides the similar privacy protection to IBAL, but the
+classification accuracy is 0.15 ∼ 0.2 lower than IBAL.
+
+The classification accuracy of ESCS is higher than that of
+IBAL, but its privacy protection capability is significantly
+weaker than IBAL, and its performance is roughly similar
+to NECST-G-DP∼0.9. Fig. 4(b) shows the same tendency.
+Fig. 5 intuitively shows the MNSIT images obtained after
+reconstructing the transmitted signals of each communication
+scheme using model inversion attacks. These imply the necessity of our study on privacy-preserving task-oriented semantic
+communications. It can be found that NECST-G-DP∼0.05 is
+comparable to the proposed IBAL in privacy preservation,
+where the former injects Laplace noise into NECST with a
+privacy budget pf 0.05. In DP, the smaller the privacy budget,
+the more noise is being injected. Due to the injection of more
+Laplacian noise, the privacy protection capability of NECSTG-DP∼0.05 is enhanced, but its classification accuracy is
+greatly reduced. On the contrary, the proposed IBAL obtains
+the smallest SSIM with acceptable task performance loss.
+In addition, we assume that the wireless channel models
+have the same SNR value 15dB in the training and testing
+phases. Then, we record the inference accuracy as well as
+the level of privacy protection for different communication
+latency. In the experiments, the bandwidth is set to 12.5kHz
+with a symbol rate of 9, 600 Baud, corresponding to a limited
+bandwidth. Fig. 6 shows the classification accuracy and SSIM
+values of IBAL, ESCS, NECST-G, and NECST-G-DP∼0.1 on
+
+10
+
+IBAL
+
+NECST-G
+
+ESCS
+
+1
+
+NECST-G-DP~0.1
+
+0.75
+0.7
+0.65
+0.6
+
+0.96
+
+SSIM
+
+Classification accuracy
+
+0.98
+
+0.94
+
+0.55
+0.5
+0.45
+
+0.92
+0.4
+0.35
+
+0.9
+
+0.3
+3
+
+6
+
+9
+
+12
+
+15
+
+3
+
+6
+
+Latency(ms)
+
+9
+
+12
+
+15
+
+Latency(ms)
+
+Fig. 6. Classification accuracy and SSIM of communication schemes in the
+MNIST classification task under different latency with SNR=15dB.
+IBAL
+
+NECST-G-DP~0.9
+
+NECST-G
+
+NECST-G-DP~0.1
+
+NECST-G-DP~0.05
+
+9
+0.9
+8.5
+
+0.8
+
+8
+
+PSNR
+
+Classification accuracy
+
+0.85
+
+0.75
+
+7.5
+0.7
+7
+0.65
+
+0.6
+
+6.5
+7
+
+11
+
+15
+
+SNR(dB)
+
+19
+
+23
+
+7
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+Fig. 7. Classification accuracy and PSNR comparison of IBAL with baseline
+schemes on the CIFAR-10 dataset over AWGN channels.
+
+the MNIST dataset. It is observed that, under the same latency,
+compared with other algorithms, our proposed IBAL can not
+only provide the best privacy protection, but also ensure good
+task inference performance. This shows that our proposed
+method can extract task-related features efficiently, and these
+features are difficult to decode by the adversary’s decoder.
+Next, we also investigate the classification accuracy and
+PSNR obtained by the proposed IBAL and NECST-G, and
+NECST-G-DP on the CIFAR-10 dataset, as illustrated in Fig.
+7. It can be seen that the proposed IBAL not only achieves
+the best classification accuracy but also obtains the smallest
+PSNR. In Fig. 8, the CIFAR-10 images obtained after reconstructing the transmitted signals of these schemes using model
+inversion attacks are shown. These results further validate that
+the proposed IBAL improves the privacy-preserving ability
+without significantly affecting the task inference performance,
+which achieves better privacy-utility trade-off compared to
+baselines.
+C. Experiment Under Dynamic Channel Conditions
+The main purpose of this experiment is to evaluate the
+performance of the proposed IBAL-D under dynamic channel
+conditions. We use NECST-G, NECST-G-DP∼0.1, and IBAL
+
+as comparison algorithms for IBAL-D. In the proposed IBAL,
+λ is set to 0.5. All comparison algorithms are evaluated under
+SNR=15dB. For IBAL-D, we let the SNR vary between 7dB
+and 23dB during training.
+Fig. 9 shows the classification accuracy and SSIM obtained
+by the proposed IBAL-D and the comparison algorithms on
+the MNIST dataset. It can be observed that compared with
+the baselines and IBAL, IBAL-D could ensure a smaller
+reduction in classification accuracy while achieving privacy
+protection. The proposed IBAL-D can adjust the level of
+privacy protection according to the channel state, and better
+guarantee the edge task inference under low SNR. Specifically,
+when the channel state is poor, IBAL-D will increase λ,
+and hence the extracted features can better maintain the
+inference performance. The poor channel state can make up
+for the decrease in the privacy protection ability caused by
+the increase of λ. When the channel state is good, IBAL-D
+will decrease λ, making it more difficult for the transmitted
+features to be restored as the original data, hence enhancing
+privacy protection.
+In Section III, we treat the privacy-preserving task-oriented
+semantic communications problem as a multi-objective optimization problem, and then solve it with the MGDA algorithm.
+To verify the effectiveness of the proposed method, we choose
+IBAL-D without using the method, namely IBAL-D-NO,
+as the comparison algorithm. To ensure fairness, the SNR
+during training was also set to vary from 7dB to 23dB for
+IBAL-D-NO. Fig. 10 shows the classification accuracy and
+SSIM obtained by the proposed IBAL-D and IBAL-D-NO
+under AWGN and Rayleigh fading channels on the MNIST
+dataset. It can be seen that with the help of the proposed
+method, IBAL-D obtained better privacy-utility trade-off while
+avoiding manually adjusting the weights.
+
+D. Performance over Rapidly Changing Channel Conditions
+To show the performance of the proposed IBAL approach
+over rapidly changing channel conditions, we further conduct
+more experiments. Specifically, when the channel is rapidly
+changing, the estimated channel information ĥ may be outdated. We model the fast variation of the channel as a Gaussian
+random variable, and the real channel can be expressed as
+h = ĥ + hǫ ,
+
+(27)
+
+where hǫ is Gaussian distributed with zero mean and covariance σe2 . Simulation results are demonstrated in Fig. 11. It
+is shown that the comparison algorithm can achieve better
+privacy protection performance due to the channel mismatch,
+resulting in a lower SSIM. However, its classification accuracy
+also significantly decreases due to the channel mismatch. On
+the contrary, our proposed algorithm possesses better robustness and significantly outperforms the comparison algorithms
+in terms of classification accuracy under fast-varying channels.
+Moreover, our method can realize the improvement of privacy
+protection performance with the increase of SNR due to the
+introduction of the adaptive weight adjustment strategy.
+
+11
+
+Fig. 8. CIFAR-10: from left to right, original, IBAL, NECST-G, NECST-G-DP∼0.9, NECST-G-DP∼0.1 and NECST-G-DP∼0.05.
+
+IBAL-D Classification
+IBAL-D-NO Classification
+
+IBAL-D
+
+0.7
+
+1
+0.98
+
+0.65
+
+0.6
+
+0.92
+
+0.5
+
+0.45
+
+0.84
+0.4
+11
+
+15
+
+19
+
+23
+
+0.4
+0.35
+
+0.9
+11
+
+15
+
+0.3
+23
+
+19
+
+SNR(dB)
+
+0.88
+
+7
+
+0.95
+
+7
+
+0.9
+
+0.86
+
+0.45
+
+0.55
+
+Classification accuracy
+
+0.94
+
+SSIM
+
+Classification accuracy
+
+0.96
+
+0.5
+
+SSIM
+
+NECST-DP~0.1
+
+7
+
+SNR(dB)
+
+11
+
+15
+
+19
+
+1
+
+0.5
+0.45
+
+0.95
+
+0.4
+0.35
+
+0.9
+
+23
+
+7
+
+11
+
+15
+
+SNR(dB)
+
+Fig. 9. Classification accuracy and SSIM comparison of IBAL-D with other
+schemes on the MNIST dataset over AWGN channel.
+
+SSIM
+
+NECST
+
+Classification accuracy
+
+IBAL
+
+IBAL-D SSIM
+IBAL-D-NO SSIM
+
+1
+
+0.3
+23
+
+19
+
+SNR(dB)
+
+Fig. 10. Classification accuracy and SSIM comparison of IBAL-D with IBALD-NO on the MNIST dataset over AWGN channel (top) and Rayleigh fading
+channel (bottom).
+
+E. Test with Imperfect Source Data
+
+1
+
+0.95
+
+0.62
+
+0.9
+
+0.5
+
+SSIM
+
+Classification accuracy
+
+The quality of the data also affects the performance of
+the training. To show the robustness of the proposed IBAL
+approach with an imperfect source data, we conduct experiments on sparse source data with different sparsity ratios.
+Specifically, we randomly zero out some elements in the
+data set to achieve sparsification. In Fig. 12 we perform
+sparse processing on the CIFAR-10 dataset with sparse ratios
+of 10% and 30%, respectively. It can be observed that as
+the sparsity increases, both our proposed algorithm and the
+comparative algorithm experience a decrease in classification accuracy and SSIM performance. This is because data
+sparsity leads to a reduction in useful information, which in
+turn affects the training performance. However, despite this
+decline, our algorithm outperforms the comparative algorithm
+in terms of both classification accuracy and privacy protection.
+Specifically, the classification accuracy of the comparative
+algorithm significantly decreases due to the impact of data
+sparsity, whereas our proposed algorithm utilizes information
+bottleneck to better extract meaningful semantic information.
+As a result, it demonstrates robust performance even in sparse
+data scenarios.
+
+0.65
+
+0.45
+
+0.6
+
+0.4
+
+0.5
+7
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+7
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+Fig. 11. Performance over rapidly changing channel conditions.
+
+F. Test with Large-scale Dataset
+In order to enhance the generality of our proposed method
+across multiple datasets, we introduce a data adaptation
+
+12
+
+IBAL, Sparse ratio = 10%
+
+NECST-G, Sparse ratio= 10%
+NECST-G, Sparse ratio= 30%
+
+0.9
+
+12
+
+0.88
+
+11.5
+
+0.86
+
+11
+
+0.84
+
+10.5
+10
+9.5
+
+0.78
+
+9
+
+0.76
+
+8.5
+
+0.74
+
+8
+
+0.72
+0.7
+7
+
+11
+
+15
+
+19
+
+Fig. 14. The framework of combining IBAL with encryption.
+
+0.955
+
+0.7
+
+7.5
+
+0.95
+
+0.65
+
+7
+
+0.945
+
+7
+
+23
+
+11
+
+15
+
+19
+
+23
+
+SNR(dB)
+
+SNR(dB)
+
+Fig. 12. Test results with imperfect source data of different sparsity ratios.
+
+1
+
+IBAL Classification
+NECST-G Classification
+NECST-G-DP~0.05 Classification
+
+0.5
+0.45
+0.925
+0.4
+0.35
+
+0.91
+7
+
+9.5
+0.7
+
+9
+8.5
+
+0.6
+
+0.55
+
+0.93
+
+0.915
+
+10
+
+0.8
+
+0.935
+
+0.92
+
+11
+
+15
+
+19
+
+0.3
+23
+
+SNR(dB)
+
+PSNR
+
+Classification accuracy
+
+0.9
+
+11.5
+IBAL PSNR
+NECST-G PSNR
+11
+NECST-G-DP~0.05 PSNR
+10.5
+
+0.6
+IBAL Classification
+IBAL-E Classification
+IBAL SSIM
+IBAL-E SSIM
+
+0.94
+
+SSIM
+
+0.8
+
+Classification accuracy
+
+0.82
+
+PSNR
+
+Classification accuracy
+
+IBAL, Sparse ratio = 30%
+
+Fig. 15. Classification accuracy and SSIM of combining IBAL with encryption on the MNIST dataset.
+
+8
+0.5
+
+7.5
+7
+
+0.4
+6.5
+0.3
+7
+
+11
+
+15
+
+19
+
+6
+23
+
+SNR(dB)
+
+Fig. 13. Classification accuracy and SSIM of IBAL and NECST-G and
+NECST-G∼0.05 on the ImageNet2012 dataset.
+
+network that maps large-scale complex datasets into lowerdimensional and easier-to-process datasets. To evaluate the
+performance of the proposed IBAL approach with largescale dataset, we conduct more experiments on ImageNet2012
+dataset. ImageNet2012 contains 1000 image classes, the training dataset has about 1300 images per class, and the validation
+set has 50 images per class. For the experiments in this
+subsection, we select 10 of these classes. Following the basic
+settings in Section IV.B, we compare the proposed IBAL with
+NECST-G and NECST-G-DP∼ 0.05. Fig. 13. shows that our
+proposed method has the best classification accuracy and good
+privacy protection.
+G. Experiments of Combining IBAL with Encryption
+The proposed IBAL approach and existing privacypreserving techniques are not mutually exclusive. In Fig. 14,
+we give the framework of combining IBAL with a nonblackbox approach. Specifically, an encryptor is incorporated
+to perform encryption using the key after the output of the JSC
+encoder, and a decryptor is introduced before the task inference network using the shared key, and the key is only shared
+
+between the transmitter and receiver, but cannot be accessed
+by the decoder. Then in Fig. 15, we present the performance of
+the proposed algorithm in combination with the non-blackbox
+approach, which is depicted by the ‘IBAL-E’ curve in Fig. 15.
+It is shown that integrating non-black-box algorithms with the
+proposed approach can substantially enhance the performance
+of privacy protection. Specifically, based on the SSIM metric,
+the performance shows a significant improvement of 21%.
+At the same time, IBAL-E still maintains high classification
+accuracy.
+V. C ONCLUSION
+In this paper, we have proposed a privacy-preserving taskoriented semantic communication system, named IBAL, which
+could effectively protect users’ privacy while enabling lowlatency edge inference. In IBAL, task-related information is
+extracted from the input at the transmitter based on the IB
+theory. To overcome the computational difficulty in calculating
+some mutual information metrics needed for the IB loss, we
+have derived a tractable variational upper bound for the IB
+loss by leveraging the variational approximation. Moreover, we
+have adopted adversarial learning to make it more difficult to
+uncover the original data from the intercepted transmitted features through model inversion. Extensive experimental results
+have demonstrated that the IBAL achieves a significantly better
+privacy-utility trade-off. Further, we have extended the IBAL
+to make it more suitable under dynamic channel conditions. In
+particular, to avoid manually tuning the loss weights, we have
+treated the privacy-preserving task-oriented semantic communication problem as a multi-objective optimization problem
+
+13
+
+and solved it with the MGDA. Extensive simulation results
+show that our proposed algorithm is effective on dynamic
+channels, fast-varying channels, imperfect datasets, and largescale datasets.
+A PPENDIX A
+D ERIVATION OF VARIATIONAL U PPER B OUND FOR LIB
+
+Since p(y|ẑ) is intractable, we use qφ (y|ẑ) to approximate
+p(y|ẑ), so that (32) can rewritten as
+I(Ẑ; Y ) ≥ Ep(s,y) Epθ (ẑ|s) [log qφ (y|ẑ)].
+
+Combining (30) and (33), we obtain the tractable variational
+upper bound of LIB as follows:
+LV IB = Ep(s,y) {Epθ (ẑ|s) [− log qφ (y|ẑ)]
+
+In this appendix, we derive the variational upper bound of
+LIB , i.e., LV IB . The process is divided into the derivation of
+the variational upper bound of I(Ẑ; S) and the derivation of
+the variational lower bound of I(Ẑ; Y ), as shown below.
+The definition of I(Ẑ; S) can be written as
+Z
+pθ (ẑ|s)
+I(Ẑ; S) = p(s)pθ (ẑ|s) log
+dsdẑ,
+(28)
+p(ẑ)
+where p(ẑ) is intractable, as described in Section III. We
+introduce the variational approximation q(ẑ) into (28), so that
+(28) can be rewritten as
+Z
+pθ (ẑ|s)q(ẑ)
+dsdẑ
+I(Ẑ; S) = p(s)pθ (ẑ|s) log
+p(ẑ)q(ẑ)
+Z
+pθ (ẑ|s)
+= p(s)pθ (ẑ|s) log
+dsdẑ
+q(ẑ)
+Z
+q(ẑ)
+(29)
+dẑ
++ p(ẑ) log
+p(ẑ)
+Z
+pθ (ẑ|s)
+= p(s)pθ (ẑ|s) log
+dsdẑ
+q(ẑ)
+− KL(p(ẑ)||q(ẑ)),
+where KL divergence is non-negative. Drop the term and we
+obtain the variational upper bound of I(Ẑ; S), i.e.,
+Z
+pθ (ẑ|s)
+dsdẑ
+I(Ẑ; S) ≤ p(s)pθ (ẑ|s) log
+q(ẑ)
+Z
+pθ (ẑ|s)
+(30)
+= p(s, y)pθ (ẑ|s) log
+dsdydẑ
+q(ẑ)
+= Ep(s,y) KL(pθ (ẑ|s)||q(ẑ)).
+I(Ẑ; Y ) can be written as
+Z
+p(y|ẑ)
+dydẑ
+I(Ẑ; Y ) = p(ẑ)p(y|ẑ) log
+p(y)
+Z
+= p(ẑ)p(y|ẑ) log p(y|ẑ) dydẑ
+Z
+− p(y) log p(y) dy
+Z
+= p(ẑ)p(y|ẑ) log p(y|ẑ) dydẑ + H(Y ),
+
++ βKL(pθ (ẑ|s)||q(ẑ))}.
+
+(34)
+
+A PPENDIX B
+T HE S OLUTION OF (22)
+
+For simplicity, we use Θ and Θ to represent ▽θ LV IB and
+1
+− ▽θ ( 1+σ
+2 LMSE ) in (22), respectively, and then (22) is
+rewritten as
+min k λΘ + (1 − λ)Θ k22 .
+
+λ∈[0,1]
+
+(35)
+
+From [34], the optimization problem defined by (35) is
+equivalent to finding the minimum norm point in the convex
+hull of two points. In computational geometry, it is equivalent
+to finding the closest point in the convex hull to a given
+query point. Following the work [34], we use the Frank-Wolfe
+algorithm developed in [35] to solve our optimization problem
+at hand, i.e., (35). The specific procedures for Frank-Wolfe are
+illustrated in Algorithm 4.
+Algorithm 3 minλ∈[0,1] k λΘ + (1 − λ)Θ k22
+1: if Θ⊤ Θ ≥ Θ⊤ Θ then
+2:
+λ = 1.
+⊤
+
+3: else if Θ⊤ Θ ≥ Θ
+4:
+λ = 0.
+5: else
+
+Θ then
+
+⊤
+
+Θ
+λ = (Θ−Θ)
+.
+kΘ−Θk22
+7: end if
+
+6:
+
+(31)
+
+where H(Y ), representing the entropy of Y , is a constant.
+Drop H(Y ) and we get a lower bound of I(Ẑ; Y ) as follows:
+Z
+I(Ẑ; Y ) ≥ p(ẑ)p(y|ẑ) log p(y|ẑ) dydẑ
+Z
+= p(s, y, ẑ) log p(y|ẑ) dsdydẑ
+(32)
+Z
+= p(s, y)pθ (ẑ|s) log p(y|ẑ) dsdydẑ
+= Ep(s,y) Epθ (ẑ|s) [log p(y|ẑ)].
+
+(33)
+
+Algorithm 4 Procedures for Frank-Wolfe Algorithm
+1: Initialize Λ = (λ, 1 − λ) = (0.5, 0.5).
+2: Precompute
+#
+" M,
+Θ⊤ Θ, Θ⊤ Θ
+M=
+⊤
+⊤
+Θ Θ, Θ Θ
+3: repeat
+P
+4:
+t̂ = arg minr t Λt Mrt .
+5:
+Using Algorithm 3:
+λ̂ = arg minλ ((1 − λ)Λ + λet̂ )⊤ M((1 − λ)Λ + λet̂ ).
+6:
+Λ = (1 − λ̂)Λ + λ̂et̂ .
+7: until λ̂ ∼ 0 or number of iterations limit.
+8: return Λ.
+
+14
+
+A PPENDIX C
+
+(c) is due to
+
+P ROOF OF PROPOSITION 1
+Proof: To facilitate the understanding of the proof, we
+first provide the iteration formula of variables for Adam, i.e.
+ (t)
+m = β1 m(t−1) + (1 − β1 )gt ,
+
+
+ m̂(t) = m(t) /(1 − β t ),
+
+
+1
+v(t) = β2 v(t−1) + (1 − β2 )gt2 ,
+(36)
+
+
+(t−1)
+(t)
+t
+(t)
+
+v̂
+,
+v
+/
+(1
+−
+β
+)
+,
+v̂
+=
+max
+
+2
+
+√
+ (t+1)
+w
+= w(t) − ηt m̂(t) / v̂(t) ,
+
+where gt = ∇Ft w(t) .
+According to the analysis in [37], we can get
+" T
+#
+
+E
+
+
+ p
+X D
+(t)
+(t)
+(t−1)
+E
+ηt ∇F w
+, ∇F w
+/ v̂
+≤ E C1
+|
+
++ C2
+
+T
+X
+
+p
+2
+ηt gt / v̂(t)
+
+t=1
+
+{z
+
+#
+ηt−1
+ηt
+√
+−√
+E
+v̂(t)
+v̂(t−1) 1
+t=2
+
+
+
+T
+d X
+X
+η
+(a)
+η
+ q t−1 − q t 
+= E
+(t−1)
+(t)
+i=1 t=2
+v̂i
+v̂i
+
+
+
+d
+X
+(b)
+ qη1 − qηT 
+= E
+(1)
+(T )
+i=1
+v̂i
+v̂i
+
+
+d
+X
+η1 
+q
+≤ E
+(1)
+i=1
+v̂i
+" T
+X
+
+T
+X
+
+ηt−1
+ηt
+√
+−√
+(t)
+v̂
+v̂(t−1) 1
+{z
+}
+
+t=2
+
+|
+
++ C3
+
+2
+
+#
+
+η
+η
+√ t − √ t−1
++ C4 ,
+(t)
+v̂
+v̂(t−1)
+{z
+}
+
+t=2
+
+|
+
+(37)
+
+Term B
+
+T
+−1
+X
+
+≤ d/c,
+
+(t)
+
+satisfies: mini=1,2,...,d
+
+(1)
+v̂i
+
+≥c>
+
+(1)
+
+condition is not satisfied, i.e., ∃ v̂i = 0, then w cannot
+be updated in (36), and the algorithm will cause an error.
+Substituting the condition in Term A, we can obtain
+#
+" T
+p
+X
+2
+(t)
+E
+ηt gt / v̂
+t=1
+
+(a)
+
+≤ E
+
+t=1
+
+2
+
+kηt gt /ck
+
+" T
+X
+
+#
+
+#
+2
+1
+√ gt /c
+=E
+t
+t=1
+#
+" T 
+2
+X
+1
+2
+√
+kgt k
+=E
+c t
+t=1
+(b)
+
+2
+
+≤ G /c
+
+(c)
+
+2
+
+where (a) is due to
+seen from (39).
+
+η
+√ηt − √ t−1
+v̂(t)
+v̂(t−1)
+
+1
+
+≤ 1/c which can be
+
+Combining with (37), (38), (39), and (40), we obtain
+"
+
+T
+X
+
+T
+√
+X
+2
+ηt
+ηt−1
+√
+ηt gt / v̂(t) + C2
+−√
+(t)
+v̂
+v̂(t−1)
+t=1
+t=2
+#
+T
+−1
+2
+X
+ηt
+ηt−1
+√
++ C3
++ C4
+−√
+v̂(t)
+v̂(t−1)
+t=2
+
+E C1
+
+1
+
+(41)
+
+≤ C1 G2 /c2 (1 + log T ) + C2 d/c + C3 d/c2 + C4 .
+
+Scaling the left side of (37), we get
+#
+" T
+ p
+E
+
+
+
+X D
+E
+ηt ∇F w(t) , ∇F w(t) / v̂(t−1)
+t=1
+
+#
+ 2
+
+1
+(t)
+√ ∇F w
+≥ E
+G t
+t=1
+√
+
+
+ 2
+T
+≥
+.
+mint=1,2,...,T E ∇F w(t)
+G
+
+(a)
+
+(38)
+
+T
+X
+1
+t=1
+
+(40)
+
+≤ d/c ,
+
+0. Proof by contradiction is easy
+q to demonstrate. If the
+
+" T
+X
+
+1
+
+#
+
+2
+
+where C1 , C2 , C3 are constants independent of the vector
+dimension d and the number of iterations T , C4 is a constant
+independent of T . Next, we will handle items: Term A,
+Term B, and Term C, separately.
+
+q
+For Term A, v̂
+
+(t−1)
+
+For Term C, it can be transformed into
+#
+"T −1
+2
+X
+ηt−1
+ηt
+√
+−√
+E
+v̂(t)
+v̂(t−1)
+t=2
+" T −1
+(a)
+1X
+η
+η
+√ t − √ t−1
+≤ E
+(t)
+c t=2
+v̂
+v̂(t−1)
+
+Term C
+
+(1)
+
+(39)
+
+and ηt ≤ ηt−1 , and (b) is
+where (a) is because v̂i ≥ v̂i
+PT
+by expanding t=2 and merging.
+
+}
+
+Term A
+
+1
+t=1 t ≤ 1 + log T .
+
+For Term B, we have
+
+t=1
+
+"
+
+PT
+
+t
+
+≤ G2 /c2 (1 + log T ),
+
+
+(t−1)
+(t−1) v (t)
+(t)
+, (b)
+, 1−β t ≥ v̂i
+where (a) is due to v̂i = max v̂i
+2
+
+(t)
+≤ G, and
+is due to Assumption 4, i.e., kgt k = ∇Ft w
+
+" T
+X
+
+(42)
+
+As v̂(t) is the exponential moving average of gt2 , and kgt k ≤
+G, we obtain v̂(t) ≤ G2 . And (a) is precisely due to this fact.
+From (37), (41), and (42), we derive
+√
+
+ 2
+
+T
+mint=1,2,...,T E ∇F w(t)
+G
+≤ C1 G2 /c2 (1 + log T ) + C2 d/c + C3 d/c2 + C4 .
+
+(43)
+
+15
+
+Rearranging (43), we get
+
+ 2
+
+mint=1,2,...,T E ∇F w(t)
+
+
+G
+≤ √ C1 G2 /c2 (1 + log T ) + C2 d/c + C3 d/c2 + C4
+T
+1
+= √ (G1 + G2 log T ) ,
+T
+(44)
+
+where G1 and G2 are constants independent of T . Then, the
+proof is completed.
+R EFERENCES
+[1] D. B. Kurka and D. Gündüz, “Deepjscc-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, Apr. 2020.
+[2] C. Luo, J. Ji, Q. Wang, X. Chen, and P. Li, “Channel state information
+prediction for 5g wireless communications: A deep learning approach,”
+IEEE Trans. Netw. Sci. Eng., vol. 7, no. 1, pp. 227–236, Jun. 2018.
+[3] Y. He, C. Liang, F. R. Yu, N. Zhao, and H. Yin, “Optimization of cacheenabled opportunistic interference alignment wireless networks: A big
+data deep reinforcement learning approach,” in Proc. IEEE Int. Conf.
+Commun. (ICC), Paris, France, May 2017, pp. 1–6.
+[4] H. He, C.-K. Wen, S. Jin, and G. Y. Li, “Model-driven deep learning for
+mimo detection,” IEEE Trans. Signal Process., vol. 68, pp. 1702–1715,
+Feb. 2020.
+[5] Y. Shen, Y. Shi, J. Zhang, and K. B. Letaief, “Graph neural networks for
+scalable radio resource management: Architecture design and theoretical
+analysis,” IEEE J. Sel. Areas Commu., vol. 39, no. 1, pp. 101–115, Nov.
+2021.
+[6] Z. Weng and Z. Qin, “Semantic communication systems for speech
+transmission,” IEEE J. Sel. Areas in Commun., vol. 39, no. 8, pp. 2434–
+2444, Aug. 2021.
+[7] J. Shao, Y. Mao, and J. Zhang, “Task-oriented communication for
+multi-device cooperative edge inference,” IEEE Trans. Wirel. Commun.,
+vol. 22, no. 1, pp. 73–87, July 2023.
+[8] E. C. Strinati and B. Sergio, “6G networks: Beyond Shannon towards
+semantic and goal-oriented communications,” Comput. Netw., vol. 190,
+p. 107930, May. 2021.
+[9] S. Guo, Y. Wang, and P. Zhang, “Signal shaping for semantic communication systems with a few message candidates,” in Proc. IEEE 96th Veh.
+Technol. Conf. (VTC2022-Fall), London, United Kingdom, Sept. 2022,
+pp. 1–5.
+[10] Z. Qin, X. Tao, J. Lu, W. Tong, and G. Y. Li, “Semantic communications:
+Principles and challenges,” arXiv preprint arXiv: arXiv.2201.01389,
+2022.
+[11] M. Jankowski, D. Gündüz, and K. Mikolajczyk, “Deep joint sourcechannel coding for wireless image retrieval,” in Proc. IEEE Int. Conf.
+Acoust., Speech Signal Process. (ICASSP), Barcelona, Spain, May 2020,
+pp. 5070–5074.
+[12] ——, “Wireless image retrieval at the edge,” IEEE J. Sel. Areas
+Commun., vol. 39, no. 1, pp. 89–100, Jan. 2021.
+[13] J. Shao, Y. Mao, and J. Zhang, “Learning task-oriented communication
+for edge inference: An information bottleneck approach,” IEEE J. Sel.
+Areas Commun., vol. 40, no. 1, pp. 197–211, Jan. 2022.
+[14] J. Shao and J. Zhang, “Bottlenet++: An end-to-end approach for feature
+compression in device-edge co-inference systems,” in Proc. IEEE Int.
+Conf. Commun. (ICC), Dublin, Ireland, Jun 2020, pp. 1–6.
+[15] M. Fredrikson, S. Jha, and T. Ristenpart, “Model inversion attacks that
+exploit confidence information and basic countermeasures,” in Proc.
+ACM SIGSAC Conf. Computer Commun. Secur. (CCS), New York, USA,
+Oct 2015, pp. 1322–1333.
+[16] T. Xiao, Y.-H. Tsai, K. Sohn, M. Chandraker, and M.-H. Yang, “Adversarial learning of privacy-preserving and task-oriented representations,”
+in Proc. AAAI Conf. Artif. Intell. (AAAI), New York, USA, Feb 2020,
+pp. 12 434–12 441.
+[17] A. Li, Y. Duan, H. Yang, Y. Chen, and J. Yang, “TIPRDC: Taskindependent privacy-respecting data crowdsourcing framework for deep
+learning with anonymized intermediate representations,” in Proc. ACM
+SIGKDD Int. Conf. Knowl. Discov. Data Min. (KDD), Virtual, Online,
+USA, Aug 2020, pp. 824–832.
+
+[18] K. Gai, K.-K. R. Choo, M. Qiu, and L. Zhu, “Privacy-preserving contentoriented wireless communication in internet-of-things,” IEEE Internet
+Things, vol. 5, no. 4, pp. 3059–3067, Apr. 2018.
+[19] L. Sweeney, “k-anonymity: A model for protecting privacy,” Int. J.
+Uncertain. Fuzz., vol. 10, no. 5, pp. 557–570, Oct. 2002.
+[20] A. Machanavajjhala, D. Kifer, J. Gehrke, and M. Venkitasubramaniam,
+“l-diversity: Privacy beyond k-anonymity,” ACM T. Knowl. Discov. D.,
+vol. 1, no. 1, pp. 3–es, Mar. 2007.
+[21] N. Li, T. Li, and S. Venkatasubramanian, “t-closeness: Privacy beyond
+k-anonymity and l-diversity,” in Proc. Int. Conf. Data Eng. (ICDE),
+Istanbul, Turkey, Apr 2007, pp. 106–115.
+[22] C. Dwork, “Differential privacy,” in Proc. Int. Conf. Auto. Lang. Program. (ICALP), Berlin, Germany, Jul. 2006, pp. 1–12.
+[23] C. Dwork, F. McSherry, K. Nissim, and A. Smith, “Calibrating noise
+to sensitivity in private data analysis,” in Proc. Theory of Cryptography
+Conf. (TCC), New York, USA, Jun 2006, pp. 265–284.
+[24] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” in Proc. Annu. Allerton Conf. Commun. Control Comput.,
+Monticello, IL, USA, Oct. 1999, pp. 368–377.
+[25] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,
+S. Ozair, A. Courville, and Y. Bengio, “Generative adversarial nets,” in
+Proc. Int. Conf. Neural Inf. Process. Syst. (NIPS), Montreal, Quebec,
+Canada, Dec 2014, pp. 2672–2680.
+[26] X. Yuan, P. He, Q. Zhu, and X. Li, “Adversarial examples: Attacks
+and defenses for deep learning,” IEEE Trans. Neural Netw. Learn. Syst.,
+vol. 30, no. 9, pp. 2805–2824, Sep. 2019.
+[27] H. Mohaghegh Dolatabadi, S. Erfani, and C. Leckie, “Advflow: Inconspicuous black-box adversarial attacks using normalizing flows,” in Proc.
+Int. Conf. Neural Inf. Process. Syst. (NIPS), Vancouver, Canada, Dec.
+2020, pp. 15 871–15 884.
+[28] Z. Wang, A. Bovik, H. Sheikh, and E. Simoncelli, “Image quality
+assessment: from error visibility to structural similarity,” IEEE T. Image
+Process., vol. 13, no. 4, pp. 600–612, Apr. 2004.
+[29] B. Poole, S. Ozair, A. Van Den Oord, A. Alemi, and G. Tucker, “On
+variational bounds of mutual information,” in Proc. Int. Conf. Mach.
+Learn. (ICML), Long Beach, USA, May 2019, pp. 5171–5180.
+[30] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational
+information bottleneck,” arXiv preprint arXiv:1612.00410, 2016.
+[31] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “Club: A
+contrastive log-ratio upper bound of mutual information,” in Proc. Int.
+Conf. Mach. Learn. (ICML), Vienna, Austria, Jul 2020, pp. 1779–1788.
+[32] D. P. Kingma and M. Welling, “Auto-encoding variational bayes,” arXiv
+preprint arXiv:1312.6114, 2013.
+[33] J. Désidéri, “Multiple-gradient descent algorithm (MGDA) for multiobjective optimization,” C. R. Math., vol. 350, no. 5, pp. 313–318, Mar.
+2012.
+[34] O. Sener and V. Koltun, “Multi-task learning as multi-objective optimization,” in Proc. Int. Conf. Neural Inf. Process. Syst. (NIPS), Montreal,
+Canada, Dec 2018, pp. 525–536.
+[35] M. Jaggi, “Revisiting frank-wolfe: Projection-free sparse convex optimization,” in Proc. Int. Conf. Mach. Learn. (ICML), Atlanta, GA, USA,
+Jun 2013, pp. 427–435.
+[36] S. J. Reddi, S. Kale, and S. Kumar, “On the convergence of adam
+and beyond,” in Proc. Int. Conf. Learn. Represent. (ICLR), Vancouver,
+Canada, Apr. 2018, pp. 1–23.
+[37] X. Chen, S. Liu, R. Sun, and M. Hong, “On the convergence of a class of
+adam-type algorithms for non-convex optimization,” in Proc. Int. Conf.
+Learn. Represent. (ICLR), New Orleans, USA, May 2019, pp. 1–30.
+[38] K. Choi, K. Tatwawadi, T. Weissman, and S. Ermon, “NECST: Neural
+joint source-channel coding.” in Proc. Int. Conf. Mach. Learn. (ICML),
+Long Beach, USA, May 2019, pp. 1182–1192.
+[39] X. Luo, Z. Chen, M. Tao, and F. Yang, “Encrypted semantic communication using adversarial training for privacy preserving,” IEEE Commun.
+Lett., vol. 27, no. 6, pp. 1486–1490, June 2023.
+
+

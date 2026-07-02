@@ -1,0 +1,1059 @@
+                                                                                                                                                                                       1
+
+
+
+
+                                              Adaptive Bit Rate Control in Semantic
+                                          Communication with Incremental Knowledge-based
+                                                              HARQ
+                                                                Qingyang Zhou, Rongpeng Li, Zhifeng Zhao, Yong Xiao, and Honggang Zhang
+
+
+
+                                             Abstract—Semantic communication has witnessed a great                      communication systems generally adopt advanced joint source
+                                          progress with the development of natural language processing                  channel coding (JSCC) and have manifested the advantages
+arXiv:2203.06634v3 [eess.SY] 5 Jul 2022
+
+
+
+
+                                          (NLP) and deep learning (DL). Although existing semantic                      to transmit different types of contents (e.g. image [7]–[12],
+                                          communication technologies can effectively reduce errors in
+                                          semantic interpretation, most of these solutions adopt a fixed                speech [13], video [14], [15]) in a semantic manner.
+                                          bit length structure, along with a rigid transmission scheme,                    In the aspect of semantic transmission, [16] proposed to use
+                                          which is inefficient and lacks scalability when faced with different          Bidirectional Long Short-Term Memory (Bi-LSTM) [17] to
+                                          meanings and signal-to-noise ratio (SNR) conditions. In this                  model the transmission of sentence in an erasure channel. The
+                                          paper, we explore the impact of adaptive bit lengths on semantic              semantic transceiver in [18], which is based on transformer
+                                          coding (SC) under various channel conditions. First, we propose
+                                          progressive semantic hybrid automatic repeat request (HARQ)                   [19], exploited the potential of semantic communication for
+                                          schemes that utilize incremental knowledge (IK) to simultane-                 sentence transmission by combining deep learning (DL)-based
+                                          ously reduce the communication cost and semantic error. On top                JSCC and the NLP technique. By taking account of quantiza-
+                                          of this, we design a novel semantic encoding solution with multi-             tion and network compression, [20] further explored the pos-
+                                          bit length selection. In this fashion, the transmitter employs a              sibility of semantic communication for the Internet of Things.
+                                          policy network to decide the appropriate coding rate, so as to
+                                          secure the correct information delivery at the cost of minimal                In [21], semantic communication is extended to multi-user
+                                          bits. Moreover, a specific denoiser is further introduced to reduce           environment. [22] proposed to use reinforcement learning (RL)
+                                          the semantic errors encountered in the transmission process                   to optimize the semantic transmission. A universal semantic
+                                          according to the semantic characteristics of context. Extensive               communication system is developed in [23] by optimizing
+                                          simulation results have been conducted to verify the effectiveness            the semantic similarity in an RL manner. [24] introduced
+                                          of the proposed solution.
+                                                                                                                        a novel confidence-based JSCC scheme for semantic trans-
+                                             Index Terms—Semantic communication, semantic coding, joint                 mission. By leveraging the conventional Reed-Solomon (RS)
+                                          source channel coding, deep learning, neural network, trans-                  channel coding and semantic coding for semantic network,
+                                          former, end-to-end communication, HARQ.
+                                                                                                                        [25] exemplified a new direction of semantic communication.
+                                                                                                                        Nevertheless, there still remains some challenges for semantic
+                                                                   I. I NTRODUCTION                                     transmission system. In particular, all these methods do not
+                                                                                                                        deeply involve the problem of adaptive semantic bit rate
+                                          W       ITH the ever-growing development of artificial in-
+                                                  telligence, natural language processing (NLP) and
+                                          other supporting technologies, semantic communication [1]–
+                                                                                                                        control. Furthermore, how to use the minimum communication
+                                                                                                                        cost to accurately convey semantic information is worthy of
+                                                                                                                        further research.
+                                          [4] raises a surging interest beyond classical reliable com-
+                                                                                                                           In traditional communication, the bit rate represents the
+                                          munication [5]. As for classical communication, according
+                                                                                                                        proportion of source coding in total coding length. However,
+                                          to Shannon’s separation theorem [6], most modern commu-
+                                                                                                                        because semantic communication uses a semantic vector in
+                                          nication systems adopt separate source and channel coding
+                                                                                                                        a JSCC method for information transmission, the adaptive
+                                          for wireless communication. However, Shannon’s hypothesis
+                                                                                                                        bit rate control in semantic communication more refers to
+                                          suffers in practical situations like finite-length codeword, non-
+                                                                                                                        changing the bit length used to represent the semantic vector.
+                                          ergodic source or channel distributions. Therefore, semantic
+                                                                                                                        Existing semantic communication solutions (e.g. [18], [25]
+                                             This work is accepted by IEEE Open Journal of the Communications           ) have proved that DL-based coding schemes yield better
+                                          Society (OJCOMS).                                                             performance with more bits used for representing semantic
+                                             Q. Zhou and R. Li are with the College of Information Science and          vectors. When the channel conditions are extremely harsh or
+                                          Electronic Engineering, Zhejiang University, Hangzhou 310027, China (e-
+                                          mail: {22060638, lirongpeng}@zju.edu.cn).                                     the amount of semantic information is large, it is worth using
+                                             Z. Zhao and H. Zhang are with Zhejiang Lab, Hangzhou, China as well        more bits for the success of transmission. However, because
+                                          as the College of Information Science and Electronic Engineering, Zhejiang    the performance is upper-bounded, when the channel condi-
+                                          University, Hangzhou 310027, China (e-mail: zhaozf@zhejianglab.com, hong-
+                                          gangzhang@zju.edu.cn).                                                        tions are relatively good or the amount of semantic information
+                                             Y. Xiao is with the School of Electronic Information and Communications    is limited, even using comparatively fewer bits, a satisfactory
+                                          at the Huazhong University of Science and Technology, Wuhan, China 430074     result can still be obtained. But the existing adaptive bit rate
+                                          (e-mail: yongxiao@hust.edu.cn). Y. Xiao is also with Pazhou Lab, Guangzhou,
+                                          China.                                                                        control schemes [26]–[30] in transmission-level communica-
+                                                                                                                        tions ignore the impact of semantic differences in various
+                                                                                                                                                              2
+
+
+
+
+      L       L ×K       L ×K      L ×K        L ×K   L ×M      L ×B                L ×B         L ×M        L ×K   L ×K        L ×K      L ×K    L
+
+
+
+
+ S                                                                          b   b                                                                         S
+
+
+
+
+     Input   Embedding    Transformer Encoder         MLP    Quantization           Input   Dequantization   MLP     Transformer Decoder         Output
+                                SCen (·；αen)                   Q (·；θen)                      Q -1(·；θde)                  SCde (·；αde)
+
+Fig. 1. The basic model for the semantic communication system used in this paper.
+
+
+
+sentences over changing communication channel conditions.                       modules, the representation form of semantic information
+Hence, there is room for improvement with adaptive bit rate                     transmitted in the channel is effectively changed to further
+control to overcome the limits of the traditional fixed bit                     boost the denoising capability of semantic communications.
+length solutions. Building on these overpoints, we preset a                     The major contributions of this work are summarized as
+new semantic communication system that can flexibly deal                        follows:
+with the semantic differences and varying conditions.                              1) For the decoder side, we propose a novel JSCC scheme
+   In order to achieve the adaptive bit rate control with minimal               with semantic IK-HARQ for sentence transmission. Based
+cost in a lossy environment, a natural solution with enhanced                   on the recent JSCC scheme [16], we use the transformer
+utilization of the retransmissions arises since the sentences                   as semantic encoder and re-design the decoder to better
+failing to pass the error detection standard (e.g. cyclic re-                   leverage the information in the previously failed transmissions.
+dundancy check (CRC)) may still contain useful semantic                         In particular, two different decoder schemes (i.e., a multi-
+information. Adding these incremental knowledge (IK) may                        decoder-based scheme and a single-decoder-based one) are
+contribute to improving the performance of semantic trans-                      proposed. By further utilizing the incrementally transmitted
+mission. In [25], authors firstly propose to utilize IK through                 knowledge, significant communication cost can be reduced on
+multiple independent coders, which inevitably becomes too                       the basis of accurate semantic information transmission.
+cumbersome for practical use. To overcome it, we put forward                       2) For the encoder side, in order to reduce the communica-
+a novel semantic HARQ (hybrid automatic repeat request) for                     tion cost required to accurately convey semantic information,
+semantic transmission, namely incremental knowledge-based                       an end-to-end encoder mechanism with adaptive semantic bit
+HARQ (IK-HARQ). Based on the existing JSCC scheme [24],                         rate control is proposed. With a specific policy network, bit
+we retain the encoder but adjust the decoder to meet the                        rate control is adaptively decided according to the semantic
+retransmission requirements. Two different decoder schemes                      complexity of the content and the transmitted channel condi-
+(i.e., a multi-decoder-based scheme and a single-decoder-based                  tions, which is shown to be more flexible than conventional
+one) are proposed by effectively utilizing IK in cases where                    rate control methods.
+HARQ is activated.                                                                 3) To further improve the reliability of semantic trans-
+   Besides considering the number of transmitted bits, the                      mission without using more bits, we adapt the basic deep
+representation form of a semantic vector is also closely related                neural network (DNN) structure of semantic coding (SC) and
+to its anti-noise ability. SNR-adaptive coder [26], [31], [32]                  introduce a novel self-adaptive denoising module. Different
+which makes full use of the SNR information to strengthen the                   from the SNR-adaptive denoising module which uses the
+denoising capability has been proposed by various scholars.                     SNR information of the channel for reducing the influence of
+However, its practical use in a rapidly changing environment                    channel noise and accurately conveys semantic information, by
+is rather limited, as it needs a relatively accurate measurement                incorporating self-attention mechanism into the self-adaptive
+of the SNR as a prerequisite. Therefore, we design a novel self-                denoising module, the self-adaptive denoising module only
+attention based denoising scheme called self-adaptive denois-                   requires the context of semantic information instead of the
+ing, which uses the semantic information of the transmission                    accurate SNR information to realize self-denosing.
+vector rather than the SNR information.                                            4) Through combining the above methods, we can realize
+   In this paper, we investigate an end-to-end design of prac-                  adaptive semantic bit rate control with IK-HARQ at semantic
+tical JSCC scheme for adaptive semantic rate control with                       transmission level. The encoder with adaptive bit rate control
+IK-HARQ. Different from previous schemes, we put forward                        enables transmission more robustly, while the decoder with
+a simplified system architecture with one encoder only for                      IK-HARQ allows us to use the retransmitted sentences more
+retransmission rather than multiple encoders. Moreover, the                     effectively. The denosing module enhances the performance
+end-to-end design is equipped with a self-adaptive semantic bit                 of the entire system in a complementary manner.
+rate control mechanism to improve the transmission efficiency                      The remainder of this paper is organized as follows. Section
+and reduce the communication cost within different transmis-                    II introduces the system model for semantic transmission.
+sion environments. Besides, by introducing some denoising                       The proposed end-to-end solution is explained and discussed
+                                                                                                                                                             3
+
+
+
+                                    L×B                                                                         L×B
+                                                                          ��                                                        Padding             ��
+                     Channel                                 Decoder 1                             Channel
+
+                                                     NAK？                                                                        NAK？
+ S                                                                             S
+      Encoder                                                                      Encoder
+
+
+                                    L×B      L×（B+B）                                                            L×B       L×（B+B）
+                                                                          ��                                                     Padding                ��
+                     Channel                                 Decoder 2                             Channel                                    Decoder
+
+
+                                                     NAK？                                                                        NAK？
+                                    L×B          L×（B × n）                                                      L×B         L×（B × n）
+                                                                          ��                                                                            ��
+                     Channel                                 Decoder n                             Channel
+
+
+
+
+Fig. 2. An illustration of the proposed semantic IK-HARQ with multi- Fig. 3. An illustration of the proposed semantic IK-HARQ with single
+decoders.                                                            decoder.
+
+
+in Section III. In Section IV, we demonstrate the numerical                    firstly uses a semantic network (e.g. transformer) to extract
+results of the proposed schemes. Finally, Section V concludes                  semantic features of input vectors Fen (·) and passes it through
+this paper.                                                                    multilayer perceptron (MLP) fen (·) to better cope with the
+                                                                               noise of channels. For convenience, we denote the semantic
+                       II. S YSTEM M ODEL                                      coding process as SCen (·; αen ), which can be written as
+   In this section, we will introduce the basic DL-based end-to-                             sen = SCen (s; αen ) = fen (Fen (Fembed (s)))               (4)
+end transmission methods based on transformer for semantic
+transmission.                                                                  where αen represents all the trainable parameters in the en-
+   In traditional communication methods, to transmit a sen-                    coder, sen ∈ RL×M , and M is the output dimension of MLP.
+tence s, the transmitter will convert it into bits by source                   Completing the coding, the vector sen will be converted to
+coding and channel coding, which respectively plays the role                   RL×B according to one-bit quantization module, where B is
+of compressing data and reducing noise interference. The                       the number of bits for each word. The quantization module is
+process can be represented as                                                  also consisted of MLP. We denote the quantization process as
+                                                                               Q(·), and its output can be written as
+                               b = Cα (Sβ (s))                           (1)
+                                                                                                             b = Q(sen ; θen )                           (5)
+where Cα (·) and Sβ (·) represent the channel encoder through
+α algorithm and source encoder through β algorithm, respec-                    Similar to the coding process, the decoding process can also
+tively. After passing through the channel, b̂ represents the                   be divided into two steps (i.e., dequantization and semantic
+received bits at the receiver. The received sentence is decoded                decoding), which can be denoted as Q−1 (·) and SCde (·).
+as                                                                             SCde (·) is also consisted of an MLP fde (·) and a semantic
+                        ŝ = S−1   −1                                          network Fde (·). The decoding process can be denoted as
+                              β (Cα (b̂))                    (2)
+                                                                                                         SCde (·) = Fde (fde (·))                        (6)
+where S−1                 −1
+          β (·) and Cα (·) represent the source and channel
+decoding with the corresponding α algorithm and β algorithm.                   Therefore the entire transmission process can be written as
+   In semantic communication, the traditional encoder
+                                                                                                 ŝ = SCde (Q−1 (h(Q(SCen (s)))))                        (7)
+Cα (Sβ (·)) and decoder S−1        −1
+                              β (Cα (·)) will be replaced by a DL-
+based encoder and decoder such as transformer or LSTM. In                      where h(·) is the channel layer.
+this paper, we adopt transformer to act as the semantic encoder                  The entire training process of the semantic communication
+and decoder referred to DeepSC [18] and the quantization                       system can be divided into three steps.
+process is referred to [25]. The basic framework of semantic                     1) Training the semantic coder (encoder & decoder) without
+communications is shown in Fig. 1, which is used as the                        quantization and dequantization layers. This training process
+baseline mentioned in the follow-up experiment. Specifically,                  can be denoted as
+the first step of semantic communications is to get the word
+                                                                                   (αen , αde ) = arg min LCE (s, SCde (SCen (s; αen ); αde ))           (8)
+embedding. In that regard, we define the inputting sentences s
+= [w1 ,w2 ,. . . ,wL ], where wl (l∈ {1, · · · , L}) represents the l-th       where LCE (·) is the cross-entropy (CE) loss function.
+word in the sentences. The embedding process can be written                       2) Using the semantic encoder trained in the previous step
+as                                                                             to train the quantization module. This training process can be
+                X = Fembed (s; γ) = fembed (s; γ) + PE               (3)       expressed as
+where X ∈ RL×K , L is the length of the sentence, and                              (θen , θde ) = arg min LMSE (sen , Q−1 (Q(sen ; θen ); θde ))         (9)
+K is the symbol used for each word. fembed (·; ·) represents
+                                                                               where sen = SCen (s; αen ) is obtained by the semantic encoder,
+the embedding layer, γ is the parameter in embedding layer,
+                                                                               and the loss function LMSE (·) is the mean-squared error (MSE).
+and the additive matrix PE is a constant matrix for position
+                                                                                 3) Finally, finetune all trainable parameters,
+encoding [19]. After completing the embedding, the vector
+X will be fed into the semantic encoder. The coding process                                   (θen , θde , αen , αde ) = arg min LCE (s, ŝ)            (10)
+                                                                                                                                           4
+
+
+
+Algorithm 1 The training method of the semantic IK-HARQ             Algorithm 2 Train the semantic communication system with
+Initialization: The parameters of the decoder according to the      adaptive semantic bit rate control
+preset number of retransmissions.                                   Step 1: Train a multi-rate encoder.
+Input: The transmitted sentence s.                                  Initialization: The parameters of the decoder according to the
+Output: The decoder SCde (·; αde ), Q−1 (·; θde ).                  preset bit length.
+1): Transmitter: b = Q(SCen (s; αen ); θen ).                       Input: The transmitted sentence s.
+2): Randomly choose transmission times i, and transmit b i          Output: SCen (·; αen ), Q(·; θen ), SCde (·; αde ), Q−1 (·; θde ).
+times over the channel.                                             1): Follow the training scheme in Section II to get an encoder
+3): Receiver:                                                       with the preset highest bit length.
+   (1): Zero padding according to transmission times.               2): Transmitter: b = Q(SCen (s; αen ); θen ).
+   (2): sˆi = SCde (Q−1 ([b̂1 , · · · , b̂i ]; θde ); αde ).        3): Randomly choose bit length used for this transmission.
+4): Compute loss function LCE .                                     4): After passing through channel, zero padding b̂ according
+5): Train θde , αde by gradient descent.                            to chosen bit length.
+                                                                    5): Receiver: ŝ = SCde (Q−1 (b̂; θde ); αde ).
+                                                                    6): Train θde , αde , θen , αen by loss function LCE (s, ŝ).
+  III. S EMANTIC S OLUTION WITH A DAPTIVE B IT R ATE                Step 2: Train policy network.
+               C ONTROL AND IK-HARQ                                 Initialization: The parameters of the policy network.
+                                                                    Input: The vector sen .
+   In this section, we propose a semantic communication
+                                                                    Output:The policy network θpolicy .
+system with several novel semantic modules. In the beginning,
+                                                                    1): Relabel the training data set according to coder gotten in
+we introduce the semantic IK-HARQ, which uses only one
+                                                                    Step 1.
+encoder but employs a smarter decoder to better leverage the
+                                                                    2): Obtain the corresponding bit length label ˆl by feeding sen
+retransmitted messages by IK-HARQ. Then, we design the
+                                                                    to the policy network.
+encoder with adaptive semantic bit rate control to improve
+                                                                    3): Train θpolicy by loss function LCE (l, ˆl).
+the coding efficiency. Besides, through adding the denoiser
+to the coder, the representation form of the semantic vector
+is changed to reduce the influence of channel noise and
+                                                                    After receiving b̂i from the i-th transmission, the decoder
+accurately convey semantic information. Finally, by integrating
+                                                                    concatenates it with previously transmitted bits and decodes
+the above modules, we can get a more efficient ensemble
+                                                                    from this concatenated information, yielding
+solution with adaptive bit rate control and IK-HARQ at the
+semantic level.                                                                ŝi = SCde (Q−1
+                                                                                            i ([b̂1 , · · · , b̂i ]; θde,i ); αde,i )   (12)
+                                                                    where ŝi represents the received sentence after the i-th trans-
+A. Semantic IK-HARQ                                                 mission; Q−1i  (i > 1) adds a new integration module, which
+   Although semantic JSCC [18] has proven effective under           is consisted of MLP to the original dequantization module;
+low SNR or with the limited number of bits for each sentence,       meanwhile SCde has the same architecture as in Fig. 1.
+it still can not guarantee that the receiver can fully understand   Notably, for this multi-decoder scheme, when i = 1, we retain
+the meaning of the sender in every transmission. Therefore,         the same encoder and decoder as usual. Hence, there is no
+to avoid possible semantic misunderstanding encountered in          need for retraining SCen , SCde,1 and Q−11 . As for the newly
+semantic transmission in a lossy environment, it is inevitable to   introduced SCde,i , Q−1
+                                                                                          i   (i >  1), we train them recursively.
+combine semantic communications and HARQ. In pioneering             In other words, for training of the i-th decoder, we fix the
+works, Jiang et al. [25] initiate to combine HARQ and seman-        parameters in the previous i-1 decoder and train it as
+tic communication. Jiang’s study has confirmed the potential                        (αde,i , θde,i ) = arg min LCE (s, sˆi )            (13)
+of combining HARQ with semantic communication. However,
+the presented scheme involves multiple coders which may             Finally, after the above training, we can get the semantic
+be cumbersome for the semantic communication system to              IK-HARQ with one encoder and multiple-decoders. These
+practical use. To further overcome these drawbacks, inspired        extra trained decoders will be activated when the initially re-
+by [33], which proposes to combine successive refinement            stored sentence can not pass the corresponding error detection
+with JSCC for image transmission, we devise a new HARQ              standard (i.e., CRC or other semantic error detection codes).
+scheme by leveraging incremental knowledge (IK) that enables        After receiving a negative acknowledgement signal (NAK),
+an efficient and more precise transmission whilst streamlining      the transmitter will resend the encoded semantic information
+the practical design with one unified decoder.                      again, so that the i-th decoder could utilize the nonlinear
+   1) Multi-Decoders:                                               mapping to aggregate IK that is transferred in the previous
+   The illustration of the proposed scheme is shown in Fig. 2.      i-1 times. Therefore, the performance of transmission will be
+In this scheme, N different decoders are separately responsible     progressively improved with the accumulation of IK.
+for varied transmissions and collaborate with one shared               2) Unified Single Decoder:
+encoder, namely                                                        Different from the previous scheme with multi-decoders,
+                                                                    we can alternatively use only a single decoder for IK-HARQ,
+                   b = Q(SCen (s; αen ); θen )              (11)    as described in Fig. 3. Same as before, the quantized bit
+                                                                                                                                                   5
+
+
+
+                                SNR
+                                                   0
+                                                           Choose
+                                                                                                           Padding
+                              Policy Net           1
+                                                   0
+                                                                    L×B1   0                        L×B1              0
+
+                                                                                                            Padding
+            S                                                                                                                            �
+                Encoder                                                              Channel                                   Decoder
+
+                                           L×B                      L×B2   1                        L×B2              1
+
+
+
+
+                                                                                                                      0
+                                                                    L×B3   0                        L×B3
+
+
+Fig. 4. An illustration of SC with adaptive semantic bit rate control.
+
+
+                                                       SNR
+                                                                                   seen in Fig. 4. For simplicity of representation, we assume
+                                                                               0   there are three bit lengths to choose.
+ S
+     Encoder                    MLP                                 MLP        1      Actually, relying on the robustness of the semantic system,
+                  L×M                            (L+1)×1                       0   even if we only transmit part of bits correctly, the receiver
+                                                                                   can also decode the correct semantics information and the
+Fig. 5. The neural network structure of policy network.                            length of the used bitstream will only affect the accuracy of
+                                                                                   transmission. This phenomenon can be commonly observed
+                                                                                   in the literature (i.e. [18], [25]), however, existing works
+vector b is used for transmission. Since only one decoder
+                                                                                   are mainly designed at a fix bit-length, which hampers the
+is used for retransmission, the decoder has to be trained for
+                                                                                   flexibility. According to this phenomenon, we can design
+different code sizes to retrieve information from the codeword
+                                                                                   a multi-rate encoder through transmitting segmentation of
+part by part, and if the transmission times do not reach the
+                                                                                   bits to meet the requirements of different channels and save
+preset maximum transmission times, those extra dimensions
+                                                                                   transmission resources. In this transmission process, through
+are automatically padded with zero vectors. Other parts of the
+                                                                                   the semantic encoder SCen (·; αen ) and quantification model
+scheme are identical to the multi-decoder solution. However,
+                                                                                   Q(·; θen ), the transmitted sentence s will be converted to the
+the training process could be significantly different. As shown
+                                                                                   bitstream b with length L × B, where L is the length of the
+in Algorithm 1, during the training, we will randomly select
+                                                                                   sentence and B represents the bit length which can be further
+the transmission times required for this transmission. If the
+                                                                                   subdivided into B1 , B2 , · · · , Bn (B1 < B2 < · · · < Bn
+chosen transmission times do not reach the preset maximum
+                                                                                   < B). In this scheme, the selected bit length is contingent
+number of retransmissions, the retransmitted bits with zero
+                                                                                   on the channel quality and the semantic complexity of the
+padding will be fed into the decoder. In this way, the system
+                                                                                   messages. More specifically, larger bit length is selected for
+could learn to extract effective semantic information from the
+                                                                                   poorer channels and more complex semantic messages. After
+retransmitted semantic knowledge.
+                                                                                   choosing a different bit length for transmission, the decoder
+                                                                                   will automatically pad the input bit vectors b̂ to a fixed
+B. Adaptive Semantic Bit Rate Control                                              dimension L×B. Then the subsequent decoding is the same as
+   Aside from the above mentioned IK-HARQ scheme which                             that in the previous scheme in Section II. The detailed training
+mainly concentrates on the decoder-side accuracy and effi-                         process is shown in Algorithm II. First of all, the encoder with
+ciency design, in this part we introduce another technique                         the preset highest bit length is trained as the same process in
+that further allows an adaptive source-level bit-rate control.                     Section II. Afterwards, by randomly selecting bit length from
+Through comprehensively considering semantics and SNR, we                          those preset ones, the encoder could learn to transmit semantic
+hope the encoder can transmit with appropriate bit length                          information at different bit lengths.
+at the beginning to reduce transmission error and save bit                            In addition to the multi-rate encoder, the policy network is
+resources as much as possible. Specifically, we divide the                         also indispensable in order to realize adaptive bit rate control.
+process of designing a semantic communication system with                          The unique DNN structure of the policy network is presented
+adaptive semantic bit rate control into two steps. The first                       in Fig. 5. Different from the previous bit control schemes
+step is to design an encoder that is capable of using different                    which usually ignore semantics, considering the particularity
+bit lengths to transmit sentence. Through which, the system                        of semantic communication, the policy network will com-
+supports transmission at different bit lengths. The second step                    prehensively take account of the semantic complexity of the
+is to design a specific policy network to choose the suitable bit                  sentence and the transmission channel SNR, so as to make
+length for the multi-rate encoder. In this vein, we can flexibly                   rate decision, which can be written as
+adjust the bit length based on different conditions of each
+transmission. The complete framework of this scheme can be                                       ˆl = f2 (Concatenate(f1 (sen ), SNR))         (14)
+                                                                                                                                                                                                                     6
+
+
+
+
+                                                   SNR-adaptive
+
+
+
+
+                                                                   Quantization
+               Embedding
+
+
+
+
+                                                     denoiser
+
+
+
+
+                                                                                    Channel
+                                   Encoder
+           S
+
+
+
+
+                                                                                                                                                                                                semantic vector
+                                                                                                                       Semantic vector
+
+
+
+
+                                                                                                                                         Self-Attention
+
+
+
+
+                                                                                                                                                                Feedforward
+
+
+
+
+                                                                                                                                                                                                   Denoised
+                                                                   Dequantization
+                                                  SNR-adaptive
+                                 Self-adaptive
+
+
+
+
+                                                    denoiser
+                                   denoiser
+
+
+
+
+                                                                                     Channel
+               Decoder
+
+
+
+           �
+
+
+
+
+                                                                                                                                                                     Add & Norm
+Fig. 6. A general illustration of the proposed SC with denoising modules.
+
+                                                          SNR                                                                                                                            σ(•)
+                                                                      MLP                                                                                                             σ(•)
+                                                                                                                                                                                       σ(•)
+
+                           MLP
+                                                                                                                      Skip-connection
+                                                 (L+1)×1                               MLP                                                                  Softmax
+                                                                                                                                                           Softmax
+                                                                                                                                                          Softmax
+
+                                                                  L×1                          L×1                                                            ATT(•)
+                                                                                                                                                            ATT(•)                    WV
+                                                                                                                                                           Matmul
+
+
+                                                                                                                                                          WQ       WK
+   Input
+                                                                                                                                                                � �� = fde(Q-1 (�))
+                L×M                                                                                  L×M
+
+
+Fig. 7. The DNN structure of SNR-adaptive denoising module.                                                 Fig. 8. The DNN structure of self-adaptive denoising module.
+
+
+where ˆl is the selected bit length label, f1 and f2 are                                                       The complete framework of the proposed semantic com-
+the corresponding leranable non-linear mappings used in the                                                 munication system is shown in Fig. 6. In particular, we
+policy network. The semantic vector sen can be obtained by                                                  leverage the SNR-adaptive denoising module as well as the
+(4), while SNR measures the quality of a transmission channel.                                              self-adaptive denoising module to better enhance the semantic
+   Next, we discuss how to train the policy network in practice,                                            robustness.
+for which the detailed process is also shown in Algorithm                                                      Here, the SNR-adaptive denoising module is mainly referred
+II. With the help of the aforementioned multi-rate encoder,                                                 to [26], [32] and the MLP-based structure of the SNR-
+it becomes possible to testify the performance of different                                                 adaptive denoising module is shown in Fig. 7. The input
+sentences under different SNR situations at the selected bit                                                semantic vector sen ∈ RL×M , which can be obtained by (4),
+length, and constitute these results into a new training dataset.                                           is first pooled to an L-length vector and then concatenated
+Afterwards, based on this dataset, it is viable to get the min-                                             with the SNR value. Afterwards, the concatenated vector is
+imum bit length on the premise of ensuring correct semantic                                                 passed through two different nonlinear mappings to generate
+transmission, thereby transforming the aforementioned dataset                                               the factors for channel-wise scaling and addition. Therefore,
+into a more comprehensive one with the optimal bit length                                                   after exploiting these factors, the SNR-adaptive model can
+under the corresponding channel SNR. Now, it becomes ready                                                  realize its denoising function. Typically, two SNR-adaptive
+to train the policy network with the sentence and channel SNR                                               denoising modules, which share the same DNN structure but
+as the input of the policy network. The corresponding optimal                                               contain different parameters, can be utilized in the encoder
+bit length can be obtained by optimizing the loss function                                                  and decoder. The first module plays the role of precoding to
+                                                                                                            strengthen the denoise ability of the semantic vector; while
+                           θpolicy = arg min LCE (l, ˆl)                                             (15)   the second module eliminates the noise in the semantic vector
+where θpolicy is the parameters of the policy network, l denotes                                            based on the channel SNR.
+the optimal length label that we have tested with the coder                                                    The DNN structure of the self-adaptive denoising module
+before; ˆl is the length label that is deduced by the policy                                                is shown in Fig. 8. This module is composed of a multihead
+network.                                                                                                    self-attention layer and adopts the structure of ResNet [34].
+                                                                                                            This module is independent of the SNR-adaptive module and
+                                                                                                            can be used alone without the SNR information apriori. The
+C. Self-adaptive Denoising Module                                                                           input of the module is the semantic vector ŝde , which can be
+   Although the two methods above can significantly improve                                                 obtained from the bits b̂, by passing through the dequantization
+the coding efficiency of communications, these methods in-                                                  module and the MLP, yielding
+evitably use more bits in exchange for performance improve-                                                                              ŝde = fde (Q−1 (b̂))                                                    (16)
+ment. Therefore, in order to fully exploit the potential of
+semantic communications, we consider a novel method to                                                      In other words, after dequantization, a semantic vector is
+further boost the performance of the system without using                                                   restored from a simple binary vector, thus laying the unique
+more bit resources.                                                                                         foundation to use self-attention mechanism. Despite suffering
+                                                                                                                                                        7
+
+
+
+                                      SNR
+
+                                                        Incremental Transmission
+                                    Policy Net
+
+                                                                                                                                         ��
+                                         Choose                 Chosen Rate
+
+                 S                                                                                              Adaptive
+                     Encoder                                       +                    Channel
+                                                                                                                Padding
+                                                                                                                            Decoder      ��
+                                                        NAK？
+                                      L× B                     Incremental bits
+
+                                                                  +                                                                      ��
+                                                        NAK？
+                                                               Highest Rate
+                                  NAK？
+                                                 L× B
+
+                                                                              Channel                                                   ��
+                                  NAK？
+
+                                             L× B
+
+                                                                              Channel                                                   �n
+
+
+Fig. 9. An illustration of the whole integrated end-to-end JSCC with semantic bit rate control.
+
+
+
+from the channel noise interference, ŝde can not be dequanti-                          maximum transmission times. Similar to the encoder, since
+tated as same as sen , there still remains some useful semantic                         the DNN structure of the decoder depends on the maximal
+information between the contexts. Therefore, with the help of                           transmission times, its modification also requires a retraining.
+attention mechanism to assign different weights to distinguish                          The two decoder schemes (i.e., multi-decoders and single
+the importance of the input, we can obtain                                              decoder) in Section III-A are appealing candidates. Here, the
+                                                                                        right part of Fig. 9 presents the outcome if we adopt the unified
+                Attention(ŝde ) = Softmax(QK T )V                            (17)
+                                                                                        single decoder as in Fig. 3. For the denoiser mentioned in
+where Q = WQ · ŝde , K = WK · ŝde , V = WV · ŝde ,                                   Section III-C, we can optionally choose and integrate it into
+are the results of affine transformations determined by the                             the semantic system.
+weights WQ , WK , WV respectively, and the superscript T                                    To transmit a sentence s, firstly, the policy network will
+denotes the matrix transpose operation. Consequently, the cor-                          choose the most suitable bit length Bi according to the
+responding importance weights can be obtained by computing                              sentence and channel SNR. After passing through the channel,
+Softmax(QK T ), and V is the value needed to be scaled.                                 the receiver will pad the received bits b̂, and restore them to
+Benefiting from the self-attention mechanism, we can get the                            sentence ŝ. However, due to channel uncertainty, the policy
+corresponding importance weights about ŝde , so that it becomes                        network can not fully guarantee the accuracy of transmission.
+possible to resolve cases suffering semantic interference and                           Therefore when meet semantic errors, we need to use an NAK
+wisely scale the information to avoid it. The representation                            to inform the transmitter. Here, besides adopting IK-HARQ,
+form of a semantic vector will be changed to highlight                                  incremental transmission (IT) is also introduced as shown in
+semantics and reduce the semantic error after scaling. In this                          Fig. 9, while being similar to traditional methods, we will
+way, the self-adaptive denoising module can help the semantic                           gradually transmit the remaining bits (e.g. L × (Bi+1 − Bi ),
+vector denoise itself without using the SNR information.                                · · · , L × (Bn − Bn−1 ), L × (B − Bn )) to increase the
+                                                                                        bit length for improving the transmission performance. If the
+D. The Integrated End-to-End Solution                                                   last remaining bits L × (B − Bn ) have been transmitted
+                                                                                        but the transmitter still receives a retransmitting signal, the
+   Finally, we integrate the three schemes proposed above and
+                                                                                        transmitter will retransmit the entire bit vector. In this case,
+establish an ensemble JSCC scheme with adaptive semantic bit
+                                                                                        the decoder concatenates it with the previously transmitted
+rate control and IK-HARQ. As illustrated in Fig. 9, this JSCC
+                                                                                        bits to get useful semantic information. This process will be
+scheme makes considerable modifcations from the transmitter
+                                                                                        repeated until the successful transmission or reach the preset
+to the receiver compared with the basic one described in Fig.
+                                                                                        maximum transmission times. What’s more, if we can not give
+1. First of all, for obtaining the entire semantic communication
+                                                                                        the SNR of the transmitted channel or the difference between
+system, we need to test the transmission performance under
+                                                                                        the estimated SNR and the actual SNR is too large, IT can
+different bit lengths in advance and choose several suitable
+                                                                                        also help to save bit resources while ensuring transmission
+bit lengths B1 , B2 · · · Bn , B (B1 < B2 < · · · < Bn < B)
+                                                                                        performance without using policy net.
+to handle different transmission situations. Once the bit length
+                                                                                            The training methods of each module have been detailed
+has been decided, we need to retrain the entire semantic system
+                                                                                        above. Here we mainly summarize the entire training pro-
+if we want to change the chosen bit lengths. Specifically, we
+                                                                                        cesses:
+can get the semantic encoder with adaptive bit rate control as
+in Section III-B. Then we turn our attention to the receiver.                           (1) Set up the whole system according to the maximum bit
+For the decoder, it is also important for us to decide the preset                           length and transmission times.
+                                                                                                                                       8
+
+
+
+                                                           TABLE I
+                                       THE SETTING OF SEMANTIC COMMUNICATION SYSTEM
+
+                                                                                                     Output          Activation
+                 Transmission System               Modules                    Layer
+                                                                                                  dimensions          function
+                                                    Input                        s                      30                /
+                                                                           Embedding                (30,128)              /
+                                                    SCen                 3× Transformer             (30,128)              /
+                                                                               MLP                   (30,16)           ReLU
+                                                                               MLP                   (30,30)           ReLU
+                                                      Q
+                          SC                                            1-bit quantization           (30,30)              /
+                                                    Q−1                        MLP                   (30,16)           ReLU
+                                                                               MLP                  (30,128)           ReLU
+                                                    SCde                 3× Transformer             (30,128)           ReLU
+                                                                               MLP                (30,32478)         SoftMax
+                                                   Output                        ŝ                     30                /
+                       Channel                     AWGN                          /                       /                /
+                                                    Input                        s                      30                /
+                                                                               SCen                  (30,16)              /
+                                                   Encoder
+                                                                                 Q                   (30,30)           ReLU
+                     IK-HARQ
+                                                                               Input              (30,30 × i)             /
+                   (Multi-Decoders)
+                                                  Decoder i                    Q−1                   (30,16)           ReLU
+                                                                               SCde               (30,32478)         SoftMax
+                                                    Output                       ŝ                     30                /
+                                                    Input                        s                      30                /
+                                                                               SCen                  (30,16)              /
+                                                   Encoder
+                                                                                 Q                   (30,30)           ReLU
+                      IK-HARQ
+                                                                             Padding              (30,30 × i)             /
+                   (Single Decoder)                 Decoder
+                                                                               Q−1                   (30,16)           ReLU
+                                              (i-th transmission)
+                                                                               SCde               (30,32478)         SoftMax
+                                                    Output                       ŝ                     30                /
+                                                    Input                        s                      30                /
+                                                                               SCen                  (30,16)              /
+                                                   Encoder
+                                                                                 Q                   (30,60)           ReLU
+                      Multi-Rate
+                                                                             Padding                 (30,60)              /
+                       Encoder
+                                                   Decoder                     Q−1                   (30,16)           ReLU
+                                                                               SCde               (30,32478)         SoftMax
+                                                    Output                       ŝ                     30                /
+                                                    Input                     Vector                 (30,16)              /
+                                                                               MLP                    (30,1)           ReLU
+                    Policy Network
+                                                    MLP                   Concatenating               (31,1)              /
+                                                                               MLP                       3             ReLU
+                                                    Input                     Vector                 (30,16)              /
+                                                                               MLP                    (30,1)           ReLU
+                    SNR-adaptive
+                                                                          Concatenating               (31,1)              /
+                      Denoiser                     Denoiser
+                                                                               MLP                    (30,1)           ReLU
+                                                                               MLP                    (30,1)           ReLU
+                                                    Input                     Vector                (30,128)              /
+                     Self-adaptive
+                                                                            Multihead
+                       Denoiser                    Denoiser                                        (30,128)               /
+                                                                          self-attention
+               1 For convenience, SC is directly used in the layer column to represent the same layers as shown in the SC module
+                                    en                                                                                   en
+                 of the SC. This applys to SCde and Q as well.
+               2 Decoder i represents the i-th Decoder in IK-HARQ (Multi-Decoders), and Decoder (i-th transmission) means the preset
+                maximum retransmission number is i.
+
+
+(2) Train the whole neural network for IK-HARQ by ran-                      IV. S IMULATION S ETTINGS AND N UMERICAL R ESULTS
+    domly choosing transmission times, as in Section III-A.                  In this section, we will present the numerical simulation
+(3) Train the whole neural network with multiple lengths by               results of our introduced frameworks and discuss the pros and
+    randomly masking, as in Section III-B.                                cons of these semantic communicaton mechanisms. We will
+(4) After integrating the corresponding denoising module,                 also compare their bit consumption with traditional ones. The
+    retrain the entire semantic communication system, as in               implementation cost and computational complicity are also
+    Section III-C.                                                        provided for completeness.
+(5) Use the obtained semantic communication system to
+    update the dataset for the training of the policy network.
+                                                                          A. Simulation Settings
+                                                                             The adopted linguistic dataset is the standard proceedings
+  Notably, the aforementioned modules are mutually indepen-               of the European Parliament [35], which consists of around 2.0
+dent and can be used optionally. Therefore, we can achieve an             million sentences and 53 million words. The vocabulary size
+end-to-end semantic solution with adaptive semantic bit rate              in this experiment is 32478. The dataset is pre-processed into
+control and IK-HARQ.                                                      lengths of sentences with 4 to 30 words.
+                                                                                                                                                                                                   9
+
+
+
+                 1 .0                                                                                                   1 .0
+                             S C
+                             S C ( S in g le )
+                              IK -H A R Q
+                              IK - H A R Q ( S in g le )
+                 0 .8         H u ffm a n + R S                                                                         0 .8
+                               H u ffm a n + L D P C
+                                H u ffm a n + R S + H A R Q
+                                 H u ffm a n + L D P C + H A R Q
+                 0 .6             L Z W + R S                                                                           0 .6
+                                   L Z W + L D P C                                                                                                    N = 1 , M u lti D e c o d e r
+       B L E U
+
+
+
+
+                                                                                                              B L E U
+                                    L Z W + R S + H A R Q
+                                     L Z W + L D P C + H A R Q
+                                                                                                                                                       N = 2 , M u lti D e c o d e r
+                 0 .4                                                                                                   0 .4                            N = 3 , M u lti D e c o d e r
+                                                                                                                                                         N = 4 , M u lti D e c o d e r
+                                                                                                                                                          N = 1 , S in g le D e c o d e r
+                 0 .2                                                                                                   0 .2                               N = 2 , S in g le D e c o d e r
+                                                                                                                                                            N = 3 , S in g le D e c o d e r
+                                                                                                                                                             N = 4 , S in g le D e c o d e r
+                 0 .0                                                                                                   0 .0
+                        -4           -2                   0             2          4       6        8                          -4   -2   0        2               4             6              8
+                                                                   S N R (d B )                                                              S N R (d B )
+
+Fig. 10. BLEU score versus SNR for IK-HARQ with multiple or single Fig. 11. BLEU score versus SNR for IK-HARQ with different transmission
+decoder.                                                           times.
+
+
+                                        TABLE II                                                         conventional methods. In this figure, for traditional coding
+                             AVERAGE BITS FOR EACH SENTENCE                                              schemes, we first observe that LDPC outperforms RS in both
+           Coding Scheme                                             B        Bit rate   Bits/sentence   LZW and Huffman source coding. When SNR is greater
+                SC                                                   30          /            513        than or equal to 6 dB, LDPC coding can achieve almost
+              Huffman                                                 /          /            421        100% word accuracy, but RS coding performs much worse
+           Huffman + RS                                               /         5/7           589
+          Huffman + LDPC                                              /         5/7           589        than LDPC. Moreover, SC based approaches achieve better
+       Huffman + RS + HARQ                                            /        5/12          1010        results at the same SNR but require less transmission bits
+      Huffman + LDPC + HARQ                                           /        5/12          1010        (approximately 513 bits) compared with the traditional ones
+               LZW                                                    /          /            467        (589 bits for Huffman or 653 bits for LZW). Typically under
+             LZW + RS                                                 /         5/7           653
+           LZW + LDPC                                                 /         5/7           653        low SNR levels, semantic communication can give full play
+         LZW + RS + HARQ                                              /        5/12          1121        to its advantages. After retransmission, the performance of
+       LZW + LDPC + HARQ                                              /        5/12          1121        BLEU is significantly improved by increasing the code rate of
+                                                                                                         channel coding. However, different from the traditional ones
+                                                                                                         using additional error correction bits, through retransmitting
+   We present the detailed settings of the proposed semantic
+                                                                                                         the semantic encoding bits, IK-HARQ with multi-decoders
+communication system in Table I. The wireless channel used in
+                                                                                                         integrates the effective parts of two sequential transmissions
+this experiment is additive white Gaussian noise (AWGN). The
+                                                                                                         and can also achieve a good result. Also it can be observed
+training SNR for all semantic communication systems men-
+                                                                                                         from Fig. 10 that even with retransmission, the traditional
+tioned above is in the range of -2dB to 6dB, which means that
+                                                                                                         coding methods can not work properly when SNR is equal
+during the training, each transmission will randomly choose a
+                                                                                                         or worse than 0 dB, while the semantic-based SC is still
+channel SNR between -2dB – 6dB. We use the JSCC scheme
+                                                                                                         effective with the help of HARQ. Therefore, it can safely
+mentioned above in Section II as the baseline. Conventional
+                                                                                                         come to a conclusion that the general meaning of sentences
+source coding and channel coding schemes such as Huffman
+                                                                                                         has been successfully interpreted in the receiver. What’s more,
+coding [36] and Lempel-Ziv-Welch (LZW) [37] for source
+                                                                                                         IK-HARQ with single decoder show its superiority in both
+coding, and Low Density Parity Check Code (LDPC) [38]
+                                                                                                         the first transmission (SC (single)) and retransmission (IK-
+or RS coding [39] for channel coding are also employed in
+                                                                                                         HARQ (single)), especially when SNR is lower such that
+this experiment. In particular, the average length of coded bits
+                                                                                                         the traditional coding method can not work at a roughly
+are compared with the SC in Table II, the code rates of each
+                                                                                                         similar bit length. However, due to using only a single decoder
+transmission are 5/7 and 5/12, so that we can compare the
+                                                                                                         for HARQ, there still exist some differences. The BLEU
+performance of various coding schemes under approximately
+                                                                                                         performance with a single decoder is inferior to the one with
+the same bit rate. Besides, for all experiments, we implement
+                                                                                                         multi-decoders. However, it saves some space resources and
+CRC where an NAK signal will be sent to the transmitter when
+                                                                                                         training time at the cost of sightly lower accuracy, which we
+the estimated sentences at the receiver are detected to be in-
+                                                                                                         think is acceptable. Although the SC performs better when
+correct. Furthermore, the widely adopted evaluation metric in
+                                                                                                         SNR is less than 6 dB, SC can not guarantee 100 % accuracy
+NLP, namely bilingual evaluation understudy (BLEU) metrics
+                                                                                                         compared with the traditional coding methods when SNR
+[40] is used to measure the performance.
+                                                                                                         increases to 8 dB. In other words, the semantic coding may
+                                                                                                         still commit mistakes under tiny transmission errors or even
+B. Numerical Results                                                                                     no transmission errors, which needs to be investigated further.
+ Fig. 10 shows the BLEU performance of semantic IK-
+HARQ with multiple or single decoder competing with the                                                    On top of the basic numerical results, we conduct more
+                                                                                                                                                                        10
+
+
+
+          1 .0                                                                        0 d B                         4 d B                                  8 d B
+                                                                                       0 %    1 2 .7 %               2 .1 %                                5 %
+          0 .8                                                                                                                                                     2 8 .8 %
+                                                                                                         3 9 .2 %
+
+          0 .6
+                                                                                                                                  5 8 .8 %
+                                                      B = 3 0
+B L E U
+
+
+
+
+                                                                                                                                                6 6 .2 %
+                                                       B = 4 5             8 7 .3 %
+          0 .4                                                                                            B = 3 0       B = 4 5              B = 6 0
+                                                        B = 6 0
+                                                         P o lic y         Fig. 13. The distribution of the chosen bit length by the policy network.
+          0 .2
+
+
+
+          0 .0
+                                                                           lower length (i.e., B = 30) for transmission resource saving
+                 -4   -2   0        2         4   6                  8     on the premise of certain accuracy. The performance of the
+                               S N R (d B )                                semantic communication system with adaptive semantic bit
+                                                                           rate control can also be seen in Fig. 12, where the curve
+Fig. 12. BLEU score versus SNR for SC with and without adaptive bit rate   (Policy) represents the corresponding BLEU performance. As
+control.
+                                                                           shown in Fig. 12, the two curves (i.e., curve (B = 60) and
+                                                                           curve (Policy)) almost coincide with each other, which means
+ablation experiments in Fig. 11, which extends the semantic                that we can actually reduce the transmitted bit consumption
+system to more transmission times, where N represents the                  without a significant performance drop. With the help of the
+number of transmission times, and the maximum transmission                 policy network, the accuracy of transmission can reach that
+time in this experiment is N = 4. The results prove that with              of using a higher fixed bit length (in this experiment is B =
+the increase of transmission times N , the overall quality of              60); however compared with the fixed bit length, the number
+transmission for both IK-HARQ schemes can be effectively                   of bits actually used can be greatly saved.
+improved. Although the performance of IK-HARQ with a                          The general performance of bit length adaptation with the
+single decoder is a bit lower than the counterpart with multi-             policy network is shown in Fig. 14. In order to ensure a
+decoders at the same N , which is acceptable considering that              successful transmission, the policy network seeks to use more
+it only uses single decoder with far less complexity. Besides,             bits for each word when SNR is terrible. With the increase of
+with the increase of N , the performance of IK-HARQ with a                 SNR, the average number of bits used for each word generally
+single decoder (maximum N = 4) decreases slightly compared                 shows a downward trend for both two curves. Furthermore,
+with IK-HARQ with a single decoder (maximum N = 2)                         we can notice that the curve (Denoising module) shows a
+when N = 1, 2, explained by the fact that it needs to deal                 better performance than the curve (No denoising module),
+with two additional situations (N = 3, 4).                                 since the entire system can acquire a desirable result with
+   Fig. 12 presents the performance about our proposed com-                lower bit length at the same SNR after adding denoising
+munication system with adaptive semantic bit rate control.                 modules. This also proves that the policy network is able to
+It can be observed that the number of bits used for each                   flexibly adjust itself according to the actual performance of the
+sentence can significantly influence the BLEU score under                  semantic system. Therefore, by comprehensively considering
+different SNR. Obviously, the more bits are used, the higher               the semantic features and SNR, the policy network can help
+accuracy of transmission can be expected. Here, we adopt three             achieve minimum communication cost to accurately convey
+different bit settings (i.e., 30, 45 and 60). The performance              semantic information.
+of BLEU are consistent with our intuition. More concretely,                   Fig. 15 shows the performance about semantic communi-
+the highest bit length (i.e., B = 60) achieves the best                    cation system with SNR-adaptive and self-adaptive denoising
+performance, which is much better than the lowest bit length               modules. As we can observe from the figure, compared
+(i.e., B = 30). Meanwhile, the performance gap between                     with the basic SC based scheme, the SC with SNR-adaptive
+different bit lengths decreases with the increase of SNR. There            and self-adaptive denoising modules achieve superior BLEU
+is almost no performance difference when SNR is 6dB for                    performance, respectively. By considering the transmission
+B = 45 and B = 60. Therefore we can take advantage of                      channel SNR, SNR-adaptive denoising module can further
+flexible bit length on the basis of ensured accuracy, instead              improve the performance of the semantic system. When SNR =
+of fixed bit length. These experiments point out that with                 -4 dB, the BLEU performance can even be improved to almost
+the help of a policy network, we can gain the capability                   0.6. As SNR increases, the gap between basic SC and SC with
+to choose appropriate bit length according to the semantic                 SNR-adaptive module will gradually be narrowed. Different
+characteristics of sentence and the channel SNR. The result                from the SNR-adaptive module, which needs to know the
+of length selection can be observed from the pie chart in                  channel SNR, there is no precondition for the self-adaptive
+Fig. 13. To ensure the accuracy of transmission, we find the               denoising module. By exploiting the semantic information
+policy network tends to use higher bit length (i.e., B = 45,               between the contexts through self-attention layer, the self-
+60) when channel condition is harsh (i.e., SNR = 0 dB). With               adaptive denoising module facilitates the intelligent scaling
+the improvement of SNR, the length selection tends to choose               of semantic vectors and eventually leads to an adaptive self-
+                                                                                                                                                                                                                                11
+
+
+
+                                                  6 0                                                                                                    1 .0
+                                                                                                  N o d e n o is in g m o d u le
+                                                                                                   D e n o is in g m o d u le
+                                                  5 5                                                                                                    0 .8
+       A v e r a g e b its fo r e a c h w o r d
+
+
+
+                                                  5 0
+                                                                                                                                                         0 .6
+
+
+
+
+                                                                                                                                               B L E U
+                                                  4 5
+
+                                                                                                                                                         0 .4
+                                                  4 0
+                                                                                                                                                                                                   S C
+                                                  3 5
+                                                                                                                                                         0 .2                                      S N R - a d a p tiv e
+                                                                                                                                                                                                    S e lf- a d a p tiv e
+                                                  3 0                                                                                                    0 .0
+                                                                                                                                                                                                     S N R + S e lf
+                                                         -4    -2       0                  2             4           6             8                            -4    -2     0           2          4           6           8
+                                                                                   S N R (d B )                                                                                     S N R (d B )
+
+Fig. 14. Average bits for each word after using the policy network.                                                                    Fig. 15. BLEU score versus SNR for different denoising modules.
+
+
+                                                  1 .0                                                                                                                        TABLE III
+                                                                                                                                                                     C OMPLEXITY FOR EACH MODULE
+
+                                                  0 .8                                                                                       Transmission system                 Complexity        Maximum Path Length
+                                                                                                                                                      SC                         O(L2 · D)               O(L)
+                                                                                                                                                  IK-HARQ                        O(L2 · D)              O(N · L)
+                                                  0 .6                                                                                        Multi-Rate Coder                   O(L2 · D)               O(L)
+                                                                                                                                               Policy Network                    O(L · D)                O(1)
+                 B L E U
+
+
+
+
+                                                                                                                                            SNR-adaptive Denoiser                O(L · D)                O(1)
+                                                  0 .4                      S C                                                             Self-adaptive Denoiser               O(L2 · D)               O(1)
+                                                                            P o lic y
+                                                  0 .2                       P o lic y + IT
+                                                                              P o lic y + IT + IK                                      performance when the entire system combines adaptive bit rate
+                                                                               P o lic y + IT + IK + D e n o is in g                   control, IT with IK-HARQ. With the addition of denoising
+                                                  0 .0
+                                                          -4   -2   0                  2             4           6            8
+                                                                                                                                       modules, the curve (Policy+IT+IK+Denoising) displays the
+                                                                                  S N R (d B )                                         performance of the final integrated JSCC scheme. Because the
+                                                                                                                                       policy network tends to choose a higher bit length when the
+Fig. 16. BLEU score versus SNR of the final integrated JSCC scheme.                                                                    channel condition is relatively poor as shown in Fig. 14, the
+                                                                                                                                       curve (Policy) and the curve (Policy+IT) are almost coincident
+                                                                                                                                       under low SNR, since there are no extra remaining bits. With
+denoising. Although the gain is not as evident as SNR-adaptive                                                                         the increase of SNR, the policy network tends to choose the
+denoising module, self-adaptive denoising requires no extra                                                                            lower bit length (i.e., B=30 or 45) which gives an opportunity
+information, which is more practical in reality. Meanwhile,                                                                            for IT to further improve the BLEU performance. Due to the
+when SNR = -4 dB, the BLEU performance can be improved                                                                                 characteristics of DNN, unlike traditional coding, we can not
+to 0.35, which is also a satisfactory gain over the basic SC.                                                                          increase bit length in an unlimited manner once the structure
+Similar to SNR-adaptive denoising module, the gap between                                                                              of semantic network has been determined. However, due to
+basic SC and SC with self-adaptive module will also gradually                                                                          the randomness of the wireless channel, transmission can not
+become smaller along with the improvement of SNR. Finally,                                                                             be guaranteed fully correct when even all the coding bits
+by combining these two denoising modules, the BLEU perfor-                                                                             (i.e, B=60 in this experiment) are transmitted at one time.
+mance can be further improved, which shows the compatibility                                                                           Therefore, when there are no extra bits left, IK-HARQ could
+of these two denoising approaches.                                                                                                     be leveraged to combat certain transmission errors. The curve
+   The BLEU performance of our final integrated JSCC                                                                                   (Policy+IT+IK) shows the intervention of extra incremental
+scheme is provided in Fig. 16. Here, we still adopt the same                                                                           knowledge can significantly improve transmission accuracy
+bit lengths (i.e., 30, 45 and 60). The baseline (i.e., curve                                                                           when the bit length reaches the maximum threshold. Besides,
+(Basic SC)) is the same as above under bit length B=30                                                                                 the curve (Policy+IT+IK+Denoising) proves the effectiveness
+without other modules. The curve (Policy) represents the                                                                               of our integrated scheme about denoising modules.
+variant using adaptive semantic rate control. Likewise, curve
+(Policy+IT) means the encoder will retransmit incremental bits
+if a transmission error is still encountered after the policy                                                                          C. Implementation Cost and Computational Complexity
+network selects the corresponding bit length (e.g. when the                                                                              One major concern of the proposed approaches comes form
+policy network chooses B=45 in this transmission, the encoder                                                                          the computational and implementation cost. Here, we analyse
+can transmit the remaining bits B=15 to enhance transmission                                                                           the complexity and maximum path length for each module
+performance). While the curve (Policy+IT+IK) shows BLEU                                                                                as shown in Table III, where L is the sentence length, D is
+                                                                                                                                                           12
+
+
+
+the embedding dimension , and N represents the transmission                    [11] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+times. Compared with the basic SC, IK-HARQ shows the                                image transmission using deep source channel coding with attention
+                                                                                    modules,” IEEE Trans. on Circuits and Systems for Video Technology,
+same complexity O(L2 · D). Although there is one more step                          2021.
+of information aggregation for IK-HARQ, the complexity of                      [12] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission
+aggregation is O(L · D), which is negligible compared with                          with deep joint source-channel coding,” IEEE Transactions on Wireless
+                                                                                    Communications, vol. 20, no. 12, pp. 8081–8095, 2021.
+the complexity O(L2 · D), so the overall complexity is the                     [13] Z. Weng and Z. Qin, “Semantic communication systems for speech
+same as SC. The maximum path length for IK-HARQ is                                  transmission,” IEEE Journal on Selected Areas in Communications,
+affected by transmission times N since the whole information                        vol. 39, no. 8, pp. 2434–2444, 2021.
+                                                                               [14] F. Zhai, Y. Eisenberg, and A. K. Katsaggelos, “Joint source-channel
+needs to be decoded N times. The complexity and maximum                             coding for video communications,” Handbook of Image and Video
+path length for policy network and SNR-adaptive denoiser                            Processing, pp. 1065–1082, 2005.
+are O(L · D) and O(1) respectively, considering the fact                       [15] T.-Y. Tung and D. Gündüz, “Deepwive: Deep-learning-aided wireless
+                                                                                    video transmission,” arXiv preprint arXiv:2111.13034, 2021.
+that they are composed of MLP. It is worth noting that the                     [16] N. Farsad et al., “Deep learning for joint source-channel coding of text,”
+complexity of self-adaptive denoiser is O(L2 · D) because it is                     in 2018 IEEE International Conference on Acoustics, Speech and Signal
+composed of self-attention layer. But different from SC whose                       Processing (ICASSP). IEEE, 2018, pp. 2326–2330.
+maximum path length is O(L), the maximum path length                           [17] Z. Huang, W. Xu, and K. Yu, “Bidirectional LSTM-CRF models for
+                                                                                    sequence tagging,” arXiv preprint arXiv:1508.01991, 2015.
+for self-adaptive denoiser is O(1), considering the parallel                   [18] H. Xie et al., “Deep learning enabled semantic communication systems,”
+operation for the self-attention mechanism. So the use of a                         IEEE Trans. on Signal Processing, vol. 69, pp. 2663–2675, 2021.
+self-adaptive denoising module is equivalent to calculating a                  [19] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
+                                                                                    Ł. Kaiser, and I. Polosukhin, “Attention is all you need,” Advances in
+sentence with more words compared than the original, which                          neural information processing systems, vol. 30, 2017.
+is comparable with existing schemes and acceptable.                            [20] H. Xie and Z. Qin, “A lite distributed semantic communication system
+                                                                                    for internet of things,” IEEE Journal on Selected Areas in Communica-
+                                                                                    tions, vol. 39, no. 1, pp. 142–153, 2020.
+                           V. C ONCLUSION                                      [21] H. Xie, Z. Qin, X. Tao, and K. B. Letaief, “Task-oriented multi-user
+                                                                                    semantic communications,” arXiv preprint arXiv:2112.10255, 2021.
+   In this paper, we have explored the problem of adaptive                     [22] K. Lu, Q. Zhou, R. Li, Z. Zhao, X. Chen, J. Wu, and H. Zhang,
+bit rate control in semantic communication, and proposed an                         “Rethinking modern communication from semantic coding to semantic
+end-to-end JSCC solution with IK-HARQ. In particular, for                           communication,” IEEE Wireless Communications, May 2022.
+                                                                               [23] K. Lu, R. Li, X. Chen, Z. Zhao, and H. Zhang, “Reinforcement
+the encoder, we have put forward an adaptive semantic bit                           learning-powered semantic communication via semantic similarity,”
+rate control encoder to jointly consider the impact of channel                      arXiv preprint arXiv:2108.12121, 2021.
+quality and semantic complexity of messages; while for the                     [24] Q. Zhou, R. Li, Z. Zhao, C. Peng, and H. Zhang, “Semantic commu-
+                                                                                    nication with adaptive universal transformer,” IEEE Wireless Communi-
+decoder, a semantic IK-HARQ is leveraged to enable the                              cations Letters, December 2021.
+integrated decoding of the latest transmission and previous                    [25] P. Jiang, C.-K. Wen, S. Jin, and G. Y. Li, “Deep source-channel
+failure experiences. Besides, a self-adaptive denoising module                      coding for sentence semantic transmission with HARQ,” arXiv preprint
+has been incorporated without requiring the SNR information                         arXiv:2106.03009, 2021.
+                                                                               [26] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wire-
+as a prerequisite.                                                                  less image transmission with adaptive rate control,” arXiv preprint
+                                                                                    arXiv:2110.04456, 2021.
+                                                                               [27] M. Figurnov, M. D. Collins, Y. Zhu, L. Zhang, J. Huang, D. Vetrov,
+                             R EFERENCES                                            and R. Salakhutdinov, “Spatially adaptive computation time for residual
+ [1] E. C. Strinati and S. Barbarossa, “6G networks: Beyond shannon towards         networks,” in Proceedings of the IEEE Conference on Computer Vision
+     semantic and goal-oriented communications,” Computer Networks, vol.            and Pattern Recognition, 2017, pp. 1039–1048.
+     190, p. 107930, 2021.                                                     [28] X. Wang, F. Yu, Z.-Y. Dou, T. Darrell, and J. E. Gonzalez, “Skipnet:
+ [2] B. Güler, A. Yener, and A. Swami, “The semantic communication                 Learning dynamic routing in convolutional networks,” in Proceedings
+     game,” IEEE Trans. on Cognitive Communications and Networking,                 of the European Conference on Computer Vision (ECCV), 2018, pp.
+     vol. 4, no. 4, pp. 787–802, 2018.                                              409–424.
+ [3] G. Shi, D. Gao, X. Song, J. Chai, M. Yang, X. Xie, L. Li, and X. Li, “A   [29] X. Gao, Y. Zhao, Ł. Dudziak, R. Mullins, and C.-z. Xu, “Dynamic
+     new communication paradigm: from bit accuracy to semantic fidelity,”           channel pruning: Feature boosting and suppression,” arXiv preprint
+     arXiv preprint arXiv:2101.12649, 2021.                                         arXiv:1810.05331, 2018.
+ [4] G. Shi, Y. Xiao, Y. Li, and X. Xie, “From semantic communication to       [30] A. Veit and S. Belongie, “Convolutional networks with adaptive infer-
+     semantic-aware networking: Model, architecture, and open problems,”            ence graphs,” in Proceedings of the European Conference on Computer
+     IEEE Communications Magazine, vol. 59, no. 8, pp. 44–50, 2021.                 Vision (ECCV), 2018, pp. 3–18.
+ [5] C. E. Shannon and W. Weaver, “The mathematical theory of com-             [31] M. Ding, J. Li, M. Ma, and X. Fan, “SNR-adaptive deep joint source-
+     munication,” Urbana: University of Illinois Press, vol. 96, 1949.              channel coding for wireless image transmission,” in ICASSP 2021-
+ [6] C. E. Shannon, “A mathematical theory of communication,” The Bell              2021 IEEE International Conference on Acoustics, Speech and Signal
+     system technical journal, vol. 27, no. 3, pp. 379–423, 1948.                   Processing (ICASSP). IEEE, 2021, pp. 1555–1559.
+ [7] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-       [32] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+     channel coding for wireless image transmission,” IEEE Trans. on                image transmission using deep source channel coding with attention
+     Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–579,           modules,” IEEE Transactions on Circuits and Systems for Video Tech-
+     2019.                                                                          nology, 2021.
+ [8] D. B. Kurka and D. Gündüz, “Deepjscc-f: Deep joint source-channel       [33] D. B. Kurka and D. Gündüz, “Successive refinement of images with deep
+     coding of images with feedback,” IEEE Journal on Selected Areas in             joint source-channel coding,” in 2019 IEEE 20th International Workshop
+     Information Theory, vol. 1, no. 1, pp. 178–193, 2020.                          on Signal Processing Advances in Wireless Communications (SPAWC).
+ [9] M. Yang, C. Bian, and H.-S. Kim, “Deep joint source channel coding             IEEE, 2019, pp. 1–5.
+     for wireless image transmission with OFDM,” in ICC 2021-IEEE              [34] K. He, X. Zhang, S. Ren, and J. Sun, “Identity mappings in deep residual
+     International Conference on Communications. IEEE, 2021, pp. 1–6.               networks,” in European Conference on Computer Vision. Springer,
+[10] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural           2016, pp. 630–645.
+     joint source-channel coding,” in International Conference on Machine      [35] P. Koehn et al., “Europarl: A parallel corpus for statistical machine
+     Learning. PMLR, 2019, pp. 1182–1192.                                           translation,” in MT Summit, vol. 5. Citeseer, 2005, pp. 79–86.
+                                                                                 13
+
+
+
+[36] D. A. Huffman, “A method for the construction of minimum-redundancy
+     codes,” Proceedings of the IRE, vol. 40, no. 9, pp. 1098–1101, 1952.
+[37] T. A. Welch, “A technique for high-performance data compression,”
+     Computer, vol. 17, no. 06, pp. 8–19, 1984.
+[38] R. Gallager, “Low-density parity-check codes,” IRE Trans. on Informa-
+     tion Theory, vol. 8, no. 1, pp. 21–28, 1962.
+[39] I. S. Reed and G. Solomon, “Polynomial codes over certain finite fields,”
+     Journal of the Society for Industrial and Applied Mathematics, vol. 8,
+     no. 2, pp. 300–304, 1960.
+[40] K. Papineni et al., “BLEU: a method for automatic evaluation of
+     machine translation,” in Proceedings of the 40th Annual Meeting for
+     Computational Linguistics, 2002, pp. 311–318.
+

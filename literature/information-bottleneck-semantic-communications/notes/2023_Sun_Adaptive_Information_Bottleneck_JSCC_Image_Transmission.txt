@@ -1,0 +1,2440 @@
+1
+
+Adaptive Information Bottleneck Guided Joint
+Source and Channel Coding for Image Transmission
+
+arXiv:2203.06492v2 [cs.IT] 29 May 2023
+
+Lunan Sun, Yang Yang, Member, IEEE, Mingzhe Chen, Member, IEEE, Caili Guo, Senior Member, IEEE,
+Walid Saad, Fellow, IEEE and H. Vincent Poor, Life Fellow, IEEE
+
+Abstract—Joint source and channel coding (JSCC) for image
+transmission has attracted increasing attention due to its robustness and high efficiency. However, the existing deep JSCC
+research mainly focuses on minimizing the distortion between the
+transmitted and received information under a fixed number of
+available channels. Therefore, the transmitted rate may be far
+more than its required minimum value. In this paper, an adaptive
+information bottleneck (IB) guided joint source and channel
+coding (AIB-JSCC) method is proposed for image transmission.
+The goal of AIB-JSCC is to reduce the transmission rate while
+improving the image reconstruction quality. In particular, a new
+IB objective for image transmission is proposed so as to minimize
+the distortion and the transmission rate. A mathematically
+tractable lower bound on the proposed objective is derived, and
+then, adopted as the loss function of AIB-JSCC. To trade off
+compression and reconstruction quality, an adaptive algorithm
+is proposed to adjust the hyperparameter of the proposed
+loss function dynamically according to the distortion during
+the training. Experimental results show that AIB-JSCC can
+significantly reduce the required amount of transmitted data
+and improve the reconstruction quality and downstream task
+accuracy.
+Index Terms—Information bottleneck, joint source and channel
+coding, image transmission.
+
+I. I NTRODUCTION
+Shannon’s information theory has laid the foundations of
+modern communication systems. In particular, according to
+Shannon’s information theory, separate source and channel
+coding (SSCC) is optimal for a memoryless source and
+channel when the latency, complexity, and code length are
+Manuscript received September 1, 2022; revised March 31, 2023. This
+work was supported in part by Fundamental Research Funds for the Central
+Universities under Grant 2021XD-A01-1; in part by the Key Program of
+National Natural Science Foundation of China under Grant 92067202; in
+part by Beijing Natural Science Foundation under Grant L222043; and in
+part by the U.S National Science Foundation under Grant CNS-2128448.
+(Corresponding author: Caili Guo.)
+L. Sun and Y. Yang are with the Beijing Key Laboratory of Network System
+Architecture and Convergence, School of Information and Communication
+Engineering, Beijing University of Posts and Telecommunications, Beijing
+100876, China (e-mail: sunlunan@bupt.edu.cn; young0607@bupt.edu.cn).
+M. Chen is with the Department of Electrical and Computer Engineering
+and Institute for Data Science and Computing, University of Miami, Coral
+Gables, FL, 33146 USA (e-mail: mingzhe.chen@miami.edu).
+C. Guo is with the Beijing Laboratory of Advanced Information Net
+works, School of Information and Communication Engineering, Beijing
+University of Posts and Telecommunications, Beijing 100876, China (e-mail:
+guocaili@bupt.edu.cn).
+W. Saad is with the Wireless@VT Group, Bradley Department of Electrical
+and Computer Engineering, Virginia Tech, Arlington, VA, USA (email:
+walids@vt.edu).
+H. V. Poor is with the Department of Electrical and Computer Engineering,
+Princeton University, Princeton, NJ 08544 USA (e-mail: poor@princeton.edu)
+
+not constrained [1]. However, SSCC has several practical
+limitations. First, the theory is based on the assumption of
+potentially infinite code lengths, which are impossible in
+practice, and SSCC is suboptimal for finite code lengths.
+Also, to achieve theoretically optimal performance, maximum
+likelihood detection methods must be used, which can be, in
+general, NP-hard [2], thus introducing very high computational
+complexity and leading to unacceptable latency. Furthermore,
+the envisioned sixth generation (6G) of wireless networks are
+expected to connect trillion-level devices and require 10 to
+1000 times higher rates [3]. In addition, it is thought that 6G
+will support a wide range of services and applications [4], such
+as ugmented reality, medical imaging and autonomous vehicles [5], [6], which have strict latency requirement [7]–[10].
+Therefore, SSCC may not be able to meet the requirements of
+6G.
+To address the above-mentioned challenges, joint source and
+channel coding (JSCC) has attracted increasing attention as a
+means to achieve reliable data transmission. Existing studies
+of JSCC can be classified into two types: traditional research
+based on mathematical models [11]–[14] and deep learning
+(DL)-based research [15]–[19]. Traditional JSCC research
+mainly relies on traditional source coding and channel coding
+theory while focusing on performance analysis under ideal
+channel or source assumptions [11], [12]. Coding schemes,
+such as bit allocation algorithm [13], robust nonlinear block
+coding [14] have also been studied. However, these handcrafted coding schemes may require additional tuning. Motivated by the impressive performance of DL in many domains
+such as computer vision [20], image compression [21], and
+natural language processing [22], DL-based JSCC has been
+extensively studied [15]–[19], which can potentially support
+future semantic communications [23], [24]. Specifically, since
+images have larger dimensions than speech and text data, there
+is more information redundancy in images, and transmitting
+image data requires higher rate than transmitting speech and
+text data. Therefore, it is more challenging to design a DLbased JSCC system for image transmission.
+A. Related Works and Challenges
+The existing works on DL-based JSCC for image transmission model the communication system as a deep neural
+network (DNN)-based autoencoder [15]–[19]. The main goal
+is jointly training the encoder and decoder to preserve information and improve the reconstruction quality. Minimizing
+the mean-squared error (MSE) between the input images
+
+2
+
+and output reconstructions [15]–[17] is commonly used to
+achieve this goal. In particular, the authors in [15] proposed
+an autoencoder-based JSCC architecture called deep JSCC
+that minimizes the MSE between the original images and
+the recovered images. Deep JSCC outperforms SSCC that
+combines JPEG or JPEG2000 with capacity-achieving channel
+codes. In [16], the authors incorporated the channel output
+feedback into the transmission system and further improved
+the reconstruction quality of Deep JSCC. To address the variations of signal-to-noise ratios (SNRs) during transmission,
+the work in [17] designed a novel JSCC scheme, which uses
+a channel-wise soft attention network to adapt automatically
+to various channel conditions. These existing works [15]–[17]
+that use MSE as the distortion function to recover each pixel
+equally in image transmission may lose the information of
+important pixels thus reducing image reconstruction quality. In
+contrast, mutual information measures the distortion in terms
+of the distribution of images, which can emphasize key pixels
+and has stronger generalization ability. In [18], a discrete
+variational autoencoder model is designed to maximize the
+mutual information between the source and noisy codewords.
+The authors in [19] developed a JSCC model to maximize the
+mutual information between the codewords and input image.
+Overall, the existing works on DL-based JSCC for image
+transmission aim at minimizing the distortion between the
+transmitted and received images by utilizing various distortion
+metrics such as MSE and mutual information as loss functions
+under a fixed number of achievable channels. While the
+works in [15]–[19] are interesting, the theoretical minimum
+description length (or transmission rate) of the codewords to
+express source is neglected in the loss function. Therefore,
+the transmission rate may be much larger than the minimum
+required rate. A new form of loss function for JSCC, that
+simultaneously minimizes the transmission rate and the distortion deserves investigation.
+Recently, the authors in [25] proposed an informationtheoretic principle, termed information bottleneck (IB) to
+compress information and improve data fitting performance
+simultaneously by using mutual information between the codewords and the labels of the inputs as distortion. IB principle
+has been extensively applied in many domains including improving the performance of generalization and robustness [26],
+suppressing irrelevant features [27], and dealing with domain
+shift [28]. Since IB inherits the properties of RD theory,
+it can characterize the maximal compression ratio and the
+optimal features in theory [29], [30]. Therefore, we propose
+a novel IB-guided JSCC that can reduce the transmission rate
+for a given reconstruction quality. Here, we need to note
+that it is challenging to apply the IB principle in JSCC for
+image transmission since standard IB is particularly designed
+for supervised tasks, while a JSCC-based image transmission
+system can be viewed as an unsupervised data reconstruction
+task. Meanwhile, in an image transmission JSCC system, the
+distribution of the input images is usually unknown, and the
+dimension of the extracted codewords is large. Thus, the
+mutual information used in IB is intractable. Therefore, to
+apply the IB principle to JSCC for image transmission, two
+main challenges must be addressed:
+
+How to design a proper form of IB for an image transmission JSCC system, which is unsupervised.
+• How to calculate the mutual information used in IB and
+obtain a tractable and differentiable IB objective.
+•
+
+B. Contributions
+The main contribution of this paper is an adaptive IB-guided
+JSCC (AIB-JSCC) scheme for image transmission to address
+the above issues. The major contributions of the paper can be
+summarized as follows:
+• We design a new form of IB objective that aims at
+simultaneously maximizing the mutual information between the received noisy codewords and the input images,
+and minimizing the mutual information between the
+transmitted codewords and the input images. Thus, the
+new IB objective enables the image transmission JSCC
+system to reduce the transmission rate while guaranteeing
+the reconstruction quality. To the best of the authors’
+knowledge, this is the first work that applies the IB
+principle to image transmission JSCC and provides a
+theoretically maximal compression ratio guidance for
+neural networks.
+• As the mutual information in the proposed IB objective
+is intractable for DNNs with high-dimensional features,
+we develop a new mathematically tractable and differentiable lower bound on the proposed IB objective via
+a variational lower bound and contrastive log-ratio upper
+bound (CLUB) on mutual information. The derived lower
+bound is used as the loss function of AIB-JSCC.
+• We propose an adaptive algorithm, which can adjust the
+hyperparameter of the proposed IB objective to balance
+the reconstruction distortion and the required transmission rate. In particular, we first develop an algorithm to
+adjust the hyperparameter value dynamically by exploiting reconstruction error. Then, we derive an upper bound
+on the hyperparameter, which can prevent excessive information discarding in the transmitted codewords.
+We compare AIB-JSCC with traditional SSCC and stateof-the-art JSCC methods and quantify the performance gain
+via extensive experiments. Simulation results show that AIBJSCC significantly reduces the required storage space and the
+amount of transmitted image data.
+The rest of this paper is organized as follows. In Section
+II, the system model is described. The proposed IB objective
+is presented in Section III. The adaptive IB algorithm is
+introduced in Section IV. In Section V, we provide extensive
+experimental results to verify the effectiveness of AIB-JSCC.
+Finally, the conclusions are drawn in Section VI.
+II. S YSTEM M ODEL
+In this section, we first describe the studied JSCC system
+model for image transmission. Then, we discuss the motivation
+for our work as well as the IB principle.
+A. System Model
+As shown in Fig. 1, we consider a point-to-point image
+transmission system [15]–[19]. An input image with size H
+
+3
+
+TABLE I
+L IST OF NOTATION.
+Notation
+
+Definition
+
+Notation
+
+Definition
+
+N
+
+The size of the images
+
+M
+
+The length of codewords
+
+B
+
+The sample number in a batch
+
+P
+
+The number of parallel channels
+
+MSE [w]
+
+The MSE between the inputs and the reconstructions at the w-th epoch
+
+ηε (·)
+
+Th transition function of BSC with error probability ε
+
+φ
+
+The parameters of the encoder neural network
+
+θ
+
+The parameters of the decoder neural network
+
+ε
+
+The error probability of the channel
+
+εk
+
+The error probability of the k-th subchannel
+
+x
+
+The input images
+
+x(i)
+
+The i-th input image
+
+x̂
+(i)
+xj
+
+y
+ym
+
+(i)
+
+The recovered images
+
+x̂
+
+The i-th recovered image
+
+The j-th pixel in the i-th input image
+
+(i)
+x̂j
+
+The j-th pixel in the i-th recovered image
+
+The codewords to be transmitted
+
+y (i)
+
+The codewords extracted from x(i)
+
+The m-th element in y
+
+(i)
+ym
+
+The m-th element in y (i)
+
+(i)
+
+The noisy codewords extracted from x(i)
+
+(i)
+
+ŷ
+
+The noisy codewords received by decoder
+
+ŷ
+
+ŷm
+
+The m-th element in ŷ
+
+ŷm
+
+The m-th element in ŷ (i)
+
+y chk
+
+The subcodewords to be transmitted across the
+k-th subchannel
+
+ŷ chk
+
+The noisy subcodewords received across the kth subchannel
+
+fφ (·)
+
+The output of the encoder neural network
+
+Eφ (·)
+
+The encoding process from x to y
+
+gθ (·)
+
+The output of the decoder neural network
+
+Dθ (·)
+
+The decoding process from ŷ to x̂
+
+The hyperparameter of the proposed IB objective
+
+βadp
+
+The value of β calculated by the adaptive IB
+algorithm
+
+The upper bound on β
+
+βmin
+
+The minimum value of β
+
+β
+βmax
+
+(Height) × W (Width) × C (Channel) is represented as a
+vector x ∈ RN , where R represents the set of real numbers
+and N = H ×W ×C. The encoder encodes the image x into a
+M
+binary codeword y ∈ {0, 1} , where M represents the length
+of the codeword y to be transmitted. The encoding function
+M
+Eφ : RN → {0, 1} is parameterized by an encoder neural
+network with parameters φ, and the encoding process can be
+expressed as
+y = Eφ (x) ,
+
+(1)
+Fig. 1. An illustration of the JSCC system.
+
+where y is the JSCC codeword generated by encoding the
+source information and adding redundancy for error protection
+jointly. y is then transmitted across a noisy channel. To
+simplify the analysis, we do not consider concrete modulation, detection and decision schemes, and only consider the
+transmission of the codeword through a channel with a certain
+error probability, i.e., memoryless binary symmetric channel
+(BSC)1 . Here, we consider a BSC with error probability
+M
+M
+0 ≤ ε ≤ 0.5, denoted by ηε : {0, 1} → {0, 1} . The
+M
+channel output noisy codeword ŷ ∈ {0, 1} received by the
+decoder is expressed as
+ŷ = ηε (y) = y ⊕ z,
+
+(2)
+
+where z ∼ Bern (ε) represents the Bernoulli distributed
+noise of the considered channel, and ⊕ represents modulo1 The BSC is a well-established and widely-used model in communication
+
+theory and information theory [1], [31], [32] since it is a simple and tractable
+model for theoretical analysis.
+
+2 addition [33]–[35]. The channel capacity of the BSC with
+error probability ε is
+CBSC (ε) = 1 − h (ε) ,
+
+(3)
+
+where h (ε) = −ε log ε − (1 − ε) log (1 − ε) is the binary
+∆
+entropy function, and log (x) = log2 (x).
+The decoder decodes the noisy codeword ŷ into reconstructed image x̂ ∈ RN . The decoding function is parameterized by the decoder neural network parameters θ, and the
+M
+decoding process is expressed as Dθ : {0, 1} → RN . The
+reconstructed image x̂ is
+x̂ = Dθ (ŷ) = Dθ (ηε (Eφ (x))) .
+
+(4)
+
+The goal of the considered system is to determine the
+encoder and decoder parameters that minimize the average
+reconstruction error between x and x̂ while keeping the
+
+4
+
+Fig. 2. An illustration of our proposed AIB-JSCC. Top: JSCC system with the proposed IB objective. Bottom: adaptive IB algorithm. First, we train the
+JSCC system which consists of an autoencoder, by optimizing the proposed IB objective. Then, we adjust β according to the proposed algorithm. Finally, we
+alternately change β and train the network.
+
+minimum description length (or transmission rate) of y to
+express x short.
+B. Motivation
+Existing deep JSCC solutions for image transmission [15]–
+[19] aim to minimize the distortion given a fixed number
+of available channels. However, they ignore the minimum
+description length (or transmission rate) of y to express x,
+i.e., I (x; y) in the loss function. This motivates us to design a
+new loss function that can optimize both the distortion d (x, x̂)
+and the transmission rate I (x; y) simultaneously. We resort
+to the IB principle. To extract the contained information of a
+target random variable t (e.g. label) in input x, the authors in
+[25] used the mutual information between y and t, I (y; t)
+as distortion measurement and proposed IB principle. The
+objective of IB is
+max [I (y; t) − βI (x; y)] .
+p(y|x)
+
+(5)
+
+The first term I (y; t) in (5) encourages y to predict t, and
+the second term I (x; y) in (5) encourages y to compress the
+information related to x. According to (5), the system can
+obtain the optimal y that is maximally compressed with a
+certain distortion [30]. (5) is typically used as the loss function
+of supervised artificial intelligence tasks [26], [27], where x
+is the input image, y is the codeword, and t is the label of x.
+Even though the IB principle provides a new form of
+mutual information distortion, and can be used to guide
+the generation of the optimal features, the IB form in (5)
+is designed for supervised learning, and a label variable t
+is needed. Therefore, (5) cannot be applied to JSCC for
+image transmission directly, since image transmission is an
+
+unsupervised task. Moreover, the value of hyperparameter β
+in (5) needs to be carefully designed to balance prediction
+and compression. To solve these problems, we propose a new
+form of the IB objective that can minimize both the distortion
+and transmission rate for image transmission JSCC. We derive
+a tractable and differentiable lower bound on the proposed
+objective and use the bound as the loss function of AIB-JSCC
+for image transmission. An adaptive algorithm is also designed
+to dynamically adjust the hyperparameter β, so as to balance
+the compression and reconstruction quality.
+III. P ROPOSED IB O BJECTIVE FOR JSCC S YSTEM
+This section first introduces the proposed IB objective for
+image transmission JSCC system. To obtain a tractable and
+differentiable form of the proposed IB objective, we then
+derive the lower bound of the proposed IB objective according
+to the variational lower bound and the upper bound of the
+mutual information.
+
+A. Proposed IB Objective
+The considered JSCC system is shown in Fig. 2, and it
+mainly consists of an encoder Eφ (·) block, a decoder block
+Dθ (·), a channel block, and an adaptive IB algorithm block.
+In the considered system, IB principle is adopted to guide
+JSCC to achieve theoretically minimal transmission rate with
+a certain tasks distortion. However, the standard form of the
+IB principle shown as (5) is not applicable to the considered
+system, since image transmission is an unsupervised task
+without label. To overcome this problem, we propose a new
+
+5
+
+on I (x; ŷ), which is obtained by [36]
+
+
+p (x|ŷ)
+I (x; ŷ) = H (x) + Ep(x,ŷ) log
+| {z }
+q (x|ŷ)
+|
+{z
+}
+constant
+DKL (p(x|ŷ)||q(x|ŷ))≥0
+
+(7)
+
++ Ex∼p(x) Eŷ∼p(ŷ|x) log [q (x|ŷ)] .
+|
+{z
+}
+IVL (x;ŷ)
+
+Fig. 3. An illustration of the parallel-channel case with 4 subchannels. The
+codeword y is first equally divided into 4 subcodewords, y ch1 , y ch2 , y ch3
+and y ch4 . These subcodewords are transmitted through their corresponding
+subchannel. At the receiver, the noisy subcodewords ŷ ch1 , ŷ ch2 , ŷ ch3 and
+ŷ ch4 are concatenated in order to obtain the noisy codeword ŷ.
+
+form of the IB objective for image transmission JSCC as
+follows:
+max [I (x; ŷ) − βI (x; y)] .
+φ,θ
+
+(6)
+
+In the proposed IB objective, we use I (x; ŷ) to capture the
+reconstruction distortion between x and x̂. By maximizing
+I (x; ŷ), we can ensure that ŷ can capture the most useful
+information from x. Hence, we can maximize I (x; x̂), which
+is intractable due to unknown conditional probability p (x|x̂),
+via maximizing I (x; ŷ) since x̂ is reconstructed from ŷ. However, since I (x; ŷ) ≤ I (x; y), solely maximizing I (x; ŷ)
+may result in severe information redundancy in y, which
+implies that the system requires much higher transmission
+rate to transmit y. Thus, we use the second term, which
+is the transmission rate over the channel, to compress the
+information in y. We minimize I (x; y) so that the minimum
+description length (or transmission rate) of y to express x
+can be reduced. Although the sizes of x and y are fixed, the
+probability distribution of y can be optimized to minimize
+the minimum description length (or transmission rate) of
+y that is used to represent x. We treat the proposed loss
+function as a joint optimization problem that integrates both
+reconstruction distortion minimization and transmission rate
+minimization. Utilizing (6) as the loss function, the JSCC
+system can accurately transmit images while minimizing the
+required transmission rate.
+However, (6) still cannot be applied to the JSCC systems,
+since the mutual information terms I (x; ŷ) and I (x; y) in (6)
+are mathematically intractable due to the unknown p (x, y),
+p (x, ŷ), p (x), p (y) and p (ŷ). To circumvent this challenge,
+we next derive the variational lower bound on I (x; ŷ) and
+estimate the upper bound on I (x; y).
+B. Variational Lower Bound on I (x; ŷ)
+Instead of maximizing the true value of I (x; ŷ), we maximize its lower bound. We utilize the variational lower bound
+
+In (7), q (x|ŷ) is the variational approximation of the true
+posterior p (x|ŷ). The first term, H (x) is the entropy of the
+input images, which is a constant and cannot be optimized by
+neural networks. The second term is the Kullback-Leibler (KL)
+divergence between p (x|ŷ) and q (x|ŷ), which is positive.
+Since H (x) ≥ 0 and DKL (p (x|ŷ)||q (x|ŷ)) ≥ 0, the
+variational lower bound on I (x; ŷ) is IVL (x; ŷ), as defined
+in (7). The approximation error will be smaller if q (x|ŷ) is
+closer to p (x|ŷ),
+Since the conditional probability of ŷ given x depends
+on φ and ε, we represent it as p (ŷ|x; φ, ε). Denote the
+conditional probability of x̂ given ŷ as pθ (x̂|ŷ), which is
+parameterized by the decoder neural network. We use pθ (x̂|ŷ)
+as the variational approximation of the true posterior p (x|ŷ).
+Since the BSC is discrete, p (ŷ|x; φ, ε) is non-differentiable
+for φ. Therefore, we sample K noisy codewords ŷ for each
+input image x and use variational inference for Monte Carlo
+objectives (VIMCO) [37] to estimate IVL (x; ŷ) with lowvariance gradients. The estimation IˆVL (x, ŷ; φ, θ, ε) can be
+expressed as [18], [19]
+IˆVL (x, ŷ; φ, θ, ε) =
+#
+K
+
+1 X 
+pθ x̂|ŷ (i) ,
+Ep(x) Ep(ŷ(1):(K) |x;φ,ε) log
+K i=1
+"
+
+(8)
+
+where ŷ (i) represents the i-th sample among K samples.
+To calculate (8), we need to know p (ŷ|x; φ, ε) and
+pθ (x̂|ŷ) first. According to (1), (2), and (4), a Markov chain,
+x → y → ŷ → x̂ exists in the JSCC system. Thus, the joint
+probability p (x, x̂, y, ŷ) can be modelled as
+p (x, x̂, y, ŷ) = p (x) pφ (y|x) pε (ŷ|y) pθ (x̂|ŷ) ,
+
+(9)
+
+where pφ (y|x) is the conditional probability of y given x,
+which is parameterized by the encoder neural network, and
+pε (ŷ|y) is the channel transition probability for BSC. Here,
+we consider the following two types of BSC:
+• Single-channel: When the system utilizes single-carrier
+modulation such as binary phase shift keying (BPSK),
+the error probability of different bands is the same. This
+scenario is referred to as a single-channel scenario.
+• Parallel-channel: When the system utilizes multicarrier
+modulation, e.g., orthogonal frequency division multiplexing (OFDM) to resist channel fading, the total available bandwidth is divided into non-overlapping bands,
+and the transmitted data stream will be divided into
+substreams and sent via parallel bands. In this case, each
+of the parallel bands has a different error probability. This
+scenario is referred to as a parallel-channel scenario. For
+instance, a parallel-channel scenario with 4 subchannels
+is shown in Fig. 3.
+
+6
+
+We assume that the system has P parallel subchannels with
++
+equal bandwidth M
+P , where P ∈ N and M is the length of y.
+Note that P = 1 represents the single-channel case. Denote the
+error probabilities of different bands as ε = {ε1 , ε2 , . . . , εP },
+the channel transition probability is
+pε (ŷ|y) =
+
+M
+
+P k
+Y
+
+P
+Y
+
+y ⊕ŷm ⊕1
+
+εk ym ⊕ŷm (1 − εk ) m
+
+,
+
+k=1 m= M (k−1)+1
+P
+
+(10)
+where ŷm represents the m-th element of ŷ. Note that the
+proposed AIB-JSCC is also applicable to JSCC systems with
+arbitrary discrete memoryless channels (DMCs).
+Let fφ (x) denote the output of the encoder neural network
+when the input is x. Since y is a binary codeword, we use the
+Bernoulli distribution to parameterize pφ (y|x). To reduce the
+redundancy between any two elements of y, we assume that
+the elements in y are independent of each other, and fφ (x)
+is treated as the parameters of this Bernoulli distribution, i.e.,
+y = Eφ (x) ∼ Bern (fφ (x)). Then, pφ (y|x) is
+pφ (y|x) =
+=
+
+M
+Y
+m=1
+M
+Y
+
+pφ (ym |x)
+
+C. Upper Bound on I (x; y)
+Next, we derive the applicable form of I (x; y) in the considered system. Since I (x; y) is mathematically intractable,
+we minimize its upper bound instead. However, since we do
+not constrain the distribution of y, the popular variational
+upper bound (VUB) [26], KL (p (y|x) |r (y)), cannot be used,
+where r (y) is an approximation of p (y). Therefore, we
+exploit another upper bound on mutual information called
+CLUB as [38]
+ICLUB (x, y; φ) = Ep(x,y) [log pφ (y|x)]
+− Ep(x) Ep(y) [log pφ (y|x)] .
+
+Let B denote the number of independent sample pairs
+ (i) (i)  B
+x ,y
+, where x(i) represents the i-th image,
+i=1
+(i)
+and y represents the corresponding i-th codeword. Then
+ICLUB (x, y; φ) can be estimated by the Monte Carlo method
+as:
+B
+
+
+1 X
+ˆ
+log pφ y (j) |x(i)
+ICLUB (x, y; φ) =
+B i=1
+B B
+
+
+1 XX
+log pφ y (j) |x(i) .
+− 2
+B i=1 j=1
+
+(11)
+(fφ (x))
+
+ym
+
+(1 − fφ (x))
+
+1−ym
+
+,
+
+m=1
+
+where ym represents the m-th element of y. The channel state
+information (CSI) is assumed to be perfectly estimated. Hence,
+both the encoder and the decoder know the accurate ε. We can
+compute p (ŷ|x; φ, ε) by marginalizing over y as
+X
+p (ŷ|x; φ, ε) =
+pφ (y|x) pε (ŷ|y).
+(12)
+y∈{0,1}M
+
+Then, p (ŷ|x; φ, ε) is formulated as:
+
+(15)
+
+(16)
+
+Since pφ (y|x) is the probability of a Bernoulli distribution, IˆCLUB (x, y; φ) is tractable and differentiable. Thus,
+instead of minimizing the true value of I (x; ŷ), we minimize
+IˆCLUB (x, y; φ).
+Overall, by replacing I (x; ŷ) and I (x; y) in (6) with
+IˆVL (x, ŷ; φ, θ, ε) in (8) and IˆCLUB (x, y; φ) in (16), respectively, we can obtain a tractable and differential form of IB
+objective for the JSCC system as:
+h
+i
+max IˆVL (x, ŷ; φ, θ, ε) − β IˆCLUB (x, y; φ) .
+(17)
+φ,θ
+
+Even though (17) can be used for training, the value of β
+, needs to be carefully optimized, which controls the trade-off
+between the compression level and the reconstruction quality.
+k=1 m= M (k−1)+1
+P
+(13) Therefore, in Section IV, we further propose an adaptive IB
+where ξk (x) = fφ (x) − 2fφ (x) εk + εk . From (13), we algorithm to determine the appropriate value of β.
+can observe that p (ŷ|x; φ, ε) follows multivariate independent
+Bernoulli distribution with parameters ξk (x).
+IV. A DAPTIVE IB A LGORITHM
+Since x can be normalized to a real-value vector where each
+This section first proposes an adaptive IB algorithm to
+element value is within 0 and 1, we use a Gaussian distribution
+to model pθ (x̂|ŷ) such that pθ (x̂|ŷ) is differential with respect select appropriate value of β according to the distortion of
+to θ. Let gθ (ŷ) represent the output of the decoder neural reconstruction during the training process. We then describe
+network when the input of the decoder is ŷ. We assume that the whole training process of AIB-JSCC which combines the
+the average of pθ (x̂|ŷ) is gθ (ŷ) [18], [19], i.e., x̂ = Dθ (ŷ) ∼ proposed IB objective and the adaptive IB algorithm.
+N (gθ (ŷ) , I), where N represents the Gaussian distribution.
+Then, we have
+A. Adaptive IB Algorithm
+
+
+N
+Y
+Since the values of I (x; ŷ) and I (x; y) change during the
+x̂i − gθ (ŷ)i
+1
+√ exp
+pθ (x̂|ŷ) =
+,
+(14) training process, it is necessary to alter β accordingly so as
+2
+2π
+i=1
+to balance I (x; ŷ) and I (x; y). To adaptively determine the
+where x̂i is the i-th pixel of x̂, and gθ (ŷ)i is the corresponding value of β in each epoch, we propose a proportional-integralpixel in gθ (ŷ). Then IˆVL (x, ŷ; φ, θ, ε) can be calculated by differential (PID) control based algorithm, which determines
+the current value of β by analyzing the past errors and
+introducing (13) and (14) into (8).
+
+p (ŷ|x; φ, ε) =
+
+P
+Y
+
+M
+
+P k
+Y
+
+ŷ
+
+(ξk (x)) m (1 − ξk (x))
+
+1−ŷm
+
+7
+
+predicting future errors. The discrete form of PID controller
+can be expressed as [39]
+w−1
+X
+
+β [w] = Kp e [w] − Ki
+
+and
+Iˆx,ŷ =
+
+e [k] − Kd (e [w] − e [w − 1]) ,
+
+(18)
+where β [w] is the output of the controller at time w. Kp ,
+Ki , Kd and error e [w] are the proportional gain, the integral
+gain, the differential gain and the difference between the
+actual value and the desired value at time w, respectively. In
+addition, Kp e [w] is the proportional (P) term, which responds
+to the change of error quickly and provides a global control
+w−1
+P
+proportional to the error; Ki
+is the integral (I) term, which
+k=0
+
+continues to increase as long as the error is greater than 0 and
+is used to eliminate steady-state errors; Kd (e [w] − e [w − 1])
+is the differential (D) term, which can reduce the overshoot
+and improve the system’s stability and transient response [39].
+The PID controller continuously calculates error e [w] and
+the weighted sum of these three terms, and then applies a
+correction on the system to reduce the error e [w]. We employ
+(18) to adjust β at the end of each epoch.
+However, before applying (18) to the AIB-JSCC system,
+an upper bound of β must to derived. This is because if β
+is excessively large, I (x; y) will dominate the loss function,
+and y will aggressively discard information of x, leading to
+the loss of useful information. Considering an extreme case
+when β approaches positive infinity, I (x; y) will approach 0,
+and in this case, the global optimal encoder distribution may
+be pφ (y|x) = p (y). That means y becomes independent
+of x. In this case, y and ŷ contain no information about x,
+i.e. I (x; ŷ) = I (x; y) = 0, and reconstructing x from ŷ
+becomes infeasible. Therefore, it is necessary to limit β below
+an upper bound before applying PID controller, as shown in
+the following lemma.
+Lemma 1. The condition that pφ (y|x) = p (y) is not a local
+optimum for the IB objective is [40]
+(19)
+
+M
+
+B
+
+(22)
+
+1 X X   (i) (i) 
+−
+.
+H p ŷm |x
+B m=1 i=1
+Proof. At the end of each epoch, I (x; ŷ) and I (x; y) are
+fixed since neural networks of the encoder and decoder are
+ŷ)
+fixed. Therefore, according to Lemma 1, βmax = I(x;
+I(x;y) . We
+then estimate I (x; ŷ) and I (x; y) according to the definition
+of the mutual information, i.e., I (x; ŷ) = H (ŷ) − H (ŷ|x),
+and I (x; y) = H (y) − H (y|x). We estimate H (y) and
+H (y|x) separately. To obtain H (y), we calculate the probability of the m-th element of y, p (ym ), by,
+p (ym ) =
+
+B
+1 X  (i) (i) 
+p ym |x
+,
+B i=1
+
+(23)
+
+(i)
+
+where ym represents the m-th element of the codeword of the
+i-th input image x(i) . Since the elements in y are assumed to
+be independent, the entropy of y is equal to the sum of the
+entropies of all elements. Besides, we assume p (x) = B1 , and
+we have
+H (y) =
+
+=
+
+M
+X
+m=1
+M
+X
+
+H (ym ) ≈ Ĥ (y)
+H
+
+m=1
+
+!
+B
+1 X  (i) (i) 
+p ym |x
+.
+B i=1
+
+(24)
+
+Substituting (11) into (24), H (y) can be calculated. To
+calculate H (y|x), we use the assumption p (x) = B1 again,
+and we have
+H (y|x) ≈ Ĥ (y|x)
+M
+
+=
+
+B
+
+1 X X   (i) (i) 
+H p ym |x
+.
+B m=1 i=1
+
+(25)
+
+I (x; y) ≈ Iˆx,y = Ĥ (y) − Ĥ (y|x) .
+
+(26)
+
+Similar to (24), (25). and (26), we can estimate I (x; ŷ) as
+
+According to Lemma 1, we derive the estimated upper
+bound on β of the proposed AIB-JSCC in the following
+theorem.
+n
+oB
+Theorem 1. For B pairs
+x(i) , y (i) , ŷ (i) , x̂(i)
+, the
+i=1
+estimated upper bound on β is
+βmax =
+
+Iˆx,ŷ
+,
+Iˆx,y
+
+(20)
+
+where
+M
+X
+
+H
+
+Therefore, by exploiting I (x; y) = H (y)−H (y|x), we have
+
+I (x; ŷ)
+.
+x→y→ŷ I (x; y)
+sup
+
+Proof. See Appendix.
+
+Iˆx,y =
+
+!
+B
+1 X  (i) (i) 
+p ŷm |x
+B i=1
+
+m=1
+
+k=0
+
+β < βmax =
+
+M
+X
+
+B
+
+H
+
+m=1
+M
+
+1 X  (i) (i) 
+p ym |x
+B i=1
+B
+
+!
+
+1 X X   (i) (i) 
+−
+H p ym |x
+,
+B m=1 i=1
+
+(21)
+
+I (x; ŷ) ≈ Iˆx,ŷ = Ĥ (ŷ) − Ĥ (ŷ|x) .
+
+(27)
+
+Given (26) and (27) we can obtain the upper bound as (20).
+This completes the proof.
+From Theorem 1, we can observe that both p (y|x) and
+p (ŷ|x) affect βmax , which can be calculated via (11) and
+(13) in our designed system.
+To ensure the relevance between the source x and the
+codeword y, we further add the approximated upper bound
+on β, βmax [w] on the basis of PID algorithm to constrain the
+range of β. Note that the optimal value of β to minimize MSE
+may not be 0 since we jointly optimize the transmission rate
+and the distortion of JSCC. In the ideal case, the transmission
+distortion can be reduced close to 0 under a certain compression ratio. Therefore, we treat the MSE between the original
+image in the validation set and the corresponding reconstructed
+
+8
+
+Algorithm 1 Adaptive IB Algorithm
+Input: Encoder pφ (y|x); Decoder pθ (x̂|ŷ); MSE at (w−1)th epoch and w-th epoch: MSE[w] and MSE[w−1], Coefficients Kp , Ki and Kd ; Minimal value of hyperparameter
+β : βmin .
+Output: The hyperparameter used in w-th epoch: β [w].
+Initialization: I [0] = 0; MSE [0] = 0.
+1: P [w] ← Kp MSE [w];
+2: I [w] ← I [w − 1] + Ki MSE [w];
+3: D [w] ← Kd (MSE [w] −MSE [w − 1]);
+4: Calculate βmax [w] according to (20);
+5: βadp [w] ← βmax [w] + P [w] − I [w] − D [w];
+6: β [w] ← clamp (βadp [w] , βmin , βmax [w]);
+
+image at the w-th epoch as e [w]. Then, by applying the PID
+algorithm, β will change in the direction of reducing MSE.
+The proposed formula of adaptive β at the w-th epoch is
+βadp [w] =βmax [w] + Kp MSE [w] − Ki
+
+w−1
+X
+
+MSE [k]
+
+k=0
+
+(28)
+
+− Kd (MSE [w] − MSE [w − 1]) ,
+Iˆ [w]
+where βmax [w] = Iˆx,ŷ [w] , Iˆx,y [w] and Iˆx,ŷ [w] are Iˆx,y and
+x,y
+
+Iˆx,ŷ at the w-th epoch, respectively, MSE [w] is the average
+MSE at the w-th epoch and it is expressed as
+N
+V
+2
+1 1 X X  (i)
+(i)
+xj [w] − x̂j [w] ,
+MSE [w] =
+V N i=1 j=1
+
+(29)
+
+with V being the number of the images in the validation set,
+(i)
+xj [k] being the j-th pixel in the i-th transmitted image x(i)
+(i)
+recovered at the k-th epoch, and x̂j [k] being the corresponding pixel in the corresponding reconstructed image x̂(i) at the
+w-th epoch.
+After training, I (x; ŷ) and I (x; y) slightly fluctuates in a
+small range, and the balance between them is nearly fixed.
+β should converge to a certain minimal value. In general, the
+minimal value of β is larger than 0 since β = 0 means ignoring
+the compression term I (x; y). Therefore, we constrain β
+larger than a minimum value, βmin (> 0). Then, β at w-th
+epoch can be expressed as:
+β [w] = clamp (βadp [w] , βmin , βmax [w]) ,
+
+Algorithm 2 AIB-JSCC
+Input: Dataset(X ) to be compressed; Channel error probability ε; Hyperparameter β.
+Output: Learned encoder pφ (y|x) and decoder pθ (x̂|ŷ).
+1: Initialize the parameters of encoder pφ (y|x), the parameters of decoder pθ (x̂|ŷ); i = 1.
+2: while not converge do
+3:
+Sample B samples from Dataset: x ∼ p (x);
+4:
+Sample a codeword y ∼ pφ (y|x) for each x;
+5:
+Sample K noisy codewords ŷ ∼ p (ŷ|x; φ, ε) for each
+x;
+6:
+Calculate IˆVL (x, ŷ; φ, θ, ε) according to (8);
+7:
+Calculate IˆCLUB (x, y; φ) according to (16);
+8:
+Update φ and θ according to (17);
+9:
+if an epoch of training finishes then
+10:
+Calculate MSE [i] according to (29);
+11:
+Update β [i] according to Algorithm 1;
+12:
+end if
+13:
+i ← i + 1;
+14: end while
+
+(30)
+
+where clamp (x, min, max) represents clamping x between
+min and max (min ≤ max).
+From (6), the importance of I (x; y) in the loss function decreases as β increases. At the beginning, y contains abundant
+redundancy due to imperfect map from the source information
+to the transmitted codewords. Therefore, in the initial stages,
+we must set a relatively large β to squeeze more redundant
+information in y. As the training processes, the value of β
+should decrease since the corresponding redundancy information in y gradually decreases. The value of β will finally
+converge to a constant when the proposed AIB-JSCC achieves
+the optimal trade-off between the reconstruction quality and
+the compression ratio. Therefore, we adjust the coefficients
+
+Kp , Ki and Kd to let β gradually decrease from its upper
+bound as the training processes. The adaptive IB algorithm is
+summarized in Algorithm 1.
+B. Training Process of AIB-JSCC
+The architecture of the AIB-JSCC system is shown in Fig. 2.
+The encoder first extracts the information of the input image as
+a feature map according to a feature extractor which consists of
+convolutional neural networks (CNN) or fully connected (FC)
+layer. Then, to control the length of y, an FC layer is used
+to turn the feature map into a M -dimensional vector fφ (x).
+The codeword y is sampled according to y ∼ Bern (fφ (x)).
+At the receiver, the noisy codeword ŷ is first passed into an
+FC layer and then reshaped into a feature map. The feature
+map is upsampled to the same dimension as x to obtain
+gθ (ŷ). The recovered image x̂ is generated according to
+x̂ ∼ N (gθ (ŷ) , I). At the output layer of the decoder, an
+activation function is used to transform the pixel values in x̂
+to [0, 1]. We then multiply x̂ by 255 and round the resulting
+values to ensure that the pixel values are discrete and fall
+between [0, 255]. (17) is used as the loss function to train the
+encoder and the decoder for image transmission jointly. We
+use the mini-batch gradient descent method [41] to optimize
+the parameters. To guarantee that each image in the batch
+has an equal probability of being selected for updating the
+parameters, we have p (x) = B1 . Then, the distribution of
+y can be obtained shown in (11), and the distribution of ŷ
+can be obtained shown in (13). We sample one codeword y
+ (i) (i)  B
+for each x, and have B pairs
+x ,y
+. Then, the
+i=1
+transmission rate, IˆCLUB (x, y; φ) is calculated based on (16).
+To calculate IˆVL (x, ŷ; φ, θ, ε), we further sample K noisy
+codewords ŷ for each x, and the total number of ŷ is B × K.
+According to (8), the distortion term IˆVL (x, ŷ; φ, θ, ε) can
+be calculated. Finally, φ and θ are updated according to (17).
+At the end of each epoch, Algorithm 1 is applied to update
+
+9
+
+TABLE II
+S YSTEM PARAMETERS .
+Parameters
+
+Value
+
+Datasets
+
+MNIST
+
+Codewords
+
+SVHN Omniglot
+
+400,450,
+
+100
+
+length M
+
+CIFAR10
+500,550,600
+
+500
+
+200
+
+Channel error
+
+Single-channel: 0.1, 0.2, 0.3, 0.4
+
+probability ε
+
+Parallel-channel: shown as (32)
+
+Subchannel
+
+Fig. 4.
+
+number P
+0.01
+
+β ( βmin )
+Kp
+
+0.001
+0.001
+
+−0.001
+
+Ki
+
+−0.0001
+−0.001
+
+Kd
+Batchisize B
+
+300
+
+Training Epoch
+
+500
+
+Learning Rate
+
+0.001
+
+Regularization
+coefficient
+
+0.0001
+
+TABLE III
+PSNR OF NECST VS . IABF VS . IB-JSCC VS . AIB-JSCC.
+PSNR under different
+Datasets
+
+MNIST
+
+Omniglot
+
+CIFAR10
+
+Visual comparison between IABF and IB-JSCC.
+
+2, 4, 5
+
+Methods
+
+error probabilities
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+NECST
+
+17.348
+
+15.411
+
+13.581
+
+12.104
+
+IABF
+
+17.721
+
+15.513
+
+13.735
+
+12.264
+
+IB-JSCC
+
+17.801
+
+15.724
+
+13.741
+
+12.408
+
+AIB-JSCC
+
+17.837
+
+15.725
+
+13.751
+
+12.411
+
+NECST
+
+15.017
+
+13.955
+
+12.959
+
+12.1409
+
+IABF
+
+15.117
+
+13.928
+
+13.039
+
+12.166
+
+IB-JSCC
+
+15.158
+
+14.015
+
+13.04
+
+12.203
+
+AIB-JSCC
+
+15.161
+
+14.03
+
+13.052
+
+12.213
+
+NECST
+
+16.864
+
+16.158
+
+15.35
+
+14.163
+
+IABF
+
+17.442
+
+16.391
+
+15.673
+
+14.219
+
+IB-JSCC
+
+17.455
+
+16.68
+
+15.792
+
+14.247
+
+AIB-JSCC
+
+17.513
+
+16.748
+
+15.809
+
+14.282
+
+β. The coefficients Kp , Ki , and Kd are adjusted to obtain
+proper β. The updated β is then used in the loss function of
+the next epoch. The model with the lowest average MSE on
+valid dataset during training is stored. After training, the AIBJSCC system can reduce the transmitted data by minimizing
+IˆCLUB (x, y; φ) while improving the reconstruction quality by
+maximizing IˆVL (x, ŷ; φ, θ, ε). The whole training procedure
+of the proposed AIB-JSCC is summarized in Algorithm 2.
+V. E XPERIMENTAL R ESULTS
+In this section, we provide extensive experiments to validate
+our designed system. The experiments are carried on the
+following datasets: MNIST [42], Omniglot [43], CIFAR10
+[44] and street view housing numbers tsiscon (SVHN) [45] to
+account for different image sizes and colors. For comparison
+purposes, we choose IABF and NECST in [19] and [18]
+
+and classical SSCC schemes as baselines. Specifically, for
+SSCC schemes, we employ three industry-standard source
+encoders: JPEG [46], JPEG2000 [47] and WebP [48], and BPG
+[49], combined with an ideal capacity-achieving channel code
+(marked as “JPEG + Capacity”, “JPEG2000 + Capacity” and
+“WebP + Capacity”, and “BPG + Capacity”, respectively). We
+do not compare with LDPC coding as we are often unable
+to obtain valid image files after LDPC decoding. To make
+a fair comparison, the settings and structure of the encoder
+and decoder neural networks used in AIB-JSCC are the same
+as those used in IABF. The system parameters are shown
+in Table II. In line with the baseline and references [18],
+[19], we choose similar parameters of the neural network and
+the optimizer. For Monte Carlo estimation of IVL (x; ŷ), we
+utilize 5 samples [18] [19]. The Monte Carlo estimates of
+IˆCLUB (x, y; φ), H (y), H (y|x) and H (ŷ) use 300 samples
+per
+batch. We choose the best Kp and Kd from the set
+ −2
+10 , 10−3 , 10−4 , 10−5 that provide the best performance.
+We use widely-used image quality metrics, MSE and peak
+signal-to-noise ratio (PSNR), to measure the performance of
+AIB-JSCC and IABF [19]. In the single-channel scenario, we
+compare the reconstruction and compression ability of AIBJSCC with baselines, and the robustness and complexity of
+AIB-JSCC are also discussed. In the parallel-channel scenario,
+we present the results of the reconstruction error, the distribution of neuron weights and the visual reconstructions to
+illustrate that AIB-JSCC can adaptively allocate elements to
+parallel channels according to their channel state information.
+The above experiments are implemented for the BSC. We
+also compare the reconstruction error of AIB-JSCC and IABF
+when the channel is the high-order DMC to demonstrate the
+effectiveness of AIB-JSCC.
+A. Single-channel Scenario
+1) Reconstruction capabilitiy: Table III shows the PSNR
+of different schemes on various datasets under different error
+probabilities, where IB-JSCC stands for the degenerate AIBJSCC with fixed β. The definition of PSNR is
+!
+2
+(2n − 1)
+,
+(31)
+PSNR = 10log10
+mse (x, x̂)
+where n is the number of bits that each image pixel uses,
+mse (x, x̂) is MSE between x and x̂. In particular, we fix the
+length of y and calculate the average MSE and PSNR over
+the test sets. From Table III, we can observe that AIB-JSCC
+is always superior to IB-JSCC and IABF in terms of MSE
+
+10
+
+TABLE IV
+C LASSIFICATION ACCURACY OF IMAGES RECOVERED BY IABF AND
+AIB-JSCC
+Acc under different
+Classifiers
+
+MLP
+SVM
+DT
+RF
+
+Fig. 5.
+
+Methods
+
+error probabilities
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+IABF
+
+0.932
+
+0.817
+
+0.637
+
+0.331
+
+AIB-JSCC
+
+0.937
+
+0.881
+
+0.692
+
+0.386
+
+IABF
+
+0.932
+
+0.821
+
+0.619
+
+0.312
+
+AIB-JSCC
+
+0.942
+
+0.884
+
+0.694
+
+0.358
+
+IABF
+
+0.51
+
+0.391
+
+0.297
+
+0.177
+
+AIB-JSCC
+
+0.564
+
+0.469
+
+0.347
+
+0.2
+
+IABF
+
+0.673
+
+0.522
+
+0.288
+
+0.176
+
+AIB-JSCC
+
+0.708
+
+0.549
+
+0.308
+
+0.181
+
+Fig. 6.
+
+MSE of IABF and AIB-JSCC with different M .
+
+Fig. 7.
+
+The additional number of bits need by SSCC.
+
+The value of hyperparameter β [w] with respect to training epoch.
+
+and PSNR, which validates the effectiveness of the proposed
+IB objective and the adaptive IB algorithm. From Table III,
+we can also observe that AIB-JSCC and IB-JSCC can reduce
+MSE and increase PSNR more on the RGB dataset CIFAR10
+than on the greyscale datasets MNIST and Omniglot. This
+is because AIB-JSCC can extract information more precisely
+with the guidance of the proposed IB objective, thus recovering
+complex images better.
+Figure 4 shows the visual reconstructions of AIB-JSCC and
+IABF on the SVHN dataset where ε= 0.1 and M = 500.
+From Fig. 4, we can observe that images recovered by AIBJSCC are closer to original ones than those recovered by
+IABF, and the numbers in images recovered by AIB-JSCC
+can be distinguished more easily than IABF. For example, the
+first image recovered by AIB-JSCC can be clearly recognized
+as 5 while the one recovered by IABF may be incorrectly
+recognized as 9 or 4. This implies that AIB-JSCC can preserve
+more semantic information than IABF. This is due to the
+fact that compared with IABF, AIB-JSCC can preserve useful
+information as well as discard useless information which may
+lead to semantic mistakes. In consequence, AIB-JSCC has
+better visual reconstruction quality.
+
+Table IV shows the classification accuracy (Acc) of the
+images reconstructed by IABF and AIB-JSCC with respect
+to different error probabilities. In particular, 4 different classifiers, multilayer perceptron (MLP), support vector machines
+(SVM), decision trees (DT) and random forests (RF) are
+trained with the raw MNIST train set, and tested with
+the images reconstructed by IABF and AIB-JSCC from the
+MNIST test set where ε= 0.1. From Table IV, we can observe
+that the classification accuracy of the images recovered by
+AIB-JSCC is always higher than IABF over different error
+probabilities. This implies that AIB-JSCC can preserve more
+semantic information useful for downstream task. This is
+because the proposed IB objective preserves information as
+well as discards information. Hence, AIB-JSCC can extract
+information more precisely.
+Figure 5 shows the trend of AIB-JSCC’s hyperparameter
+β [w] with respect to training epoch on CIFAR10 dataset under
+different error probabilities. From Fig. 5, we can observe
+that β [w] gradually decreases to a minimal value βmin when
+training processes. This is due to the fact that when the training
+
+11
+
+TABLE VI
+T HE INFERENCE TIME OF AIB-JSCC AND SSCC.
+Methods
+Inference
+time (ms)
+
+AIB-JSCC
+
+BPG
+
+WebP
+
+JPEG2000
+
+JPEG
+
+0.8
+
+109
+
+1.632
+
+1.387
+
+0.911
+
+TABLE VII
+MSE OF AIB-JSCC UNDER DIFFERENT PARALLEL - CHANNEL SCENARIOS
+Scenario
+
+Datasets
+Average of ε
+
+MNIST
+
+Omniglot
+
+CIFAR10
+
+2 − ch
+
+0.051
+
+9.616
+
+23.538
+
+45.069
+
+4 − ch
+
+0.138
+
+12.398
+
+27.599
+
+52.834
+
+5 − ch
+
+0.213
+
+14.075
+
+28.927
+
+54.021
+
+0.1
+
+12.902
+
+23.89
+
+54.464
+
+0.2
+
+20.784
+
+31.092
+
+64.969
+
+single-channel
+Fig. 8. The PSNR of AIB-JSCC with various train and test error probabilities.
+TABLE V
+T HE NUMBER OF NETWORK PARAMETERS AND THE INFERENCE TIME OF
+IABF AND AIB-JSCC.
+Datasets
+MNIST
+Omniglot
+CIFAR10
+
+Methods
+IABF
+
+parameters
+number (×105 )
+11.86
+
+Inference
+time (ms)
+0.4
+
+AIB-JSCC
+
+11.345
+
+0.4
+
+IABF
+
+13.36
+
+0.743
+
+AIB-JSCC
+
+12.345
+
+0.372
+
+IABF
+
+5.679
+
+1
+
+AIB-JSCC
+
+3.164
+
+0.8
+
+processes, I (x; ŷ) increases and I (x; y) decreases, and to
+keep balance between I (x; ŷ) and I (x; y), the proposed
+adaptive IB algorithm decreases β [w] to reduce the proportion
+of I (x; ŷ) in the loss function. From Fig. 5, we can also
+observe that the value of β [w] reduces as the error probability
+increases. This is because when the channel error probability
+increases, we need to add more redundancy to the transmitted
+codeword y. In AIB-JSCC, this is achieved by increasing
+the distortion term I (x; ŷ). Since there is a Markov chain
+relationship x → y → ŷ → x̂, I (x; ŷ) ≤ I (x; y) ≤ H (y),
+and so maximizing I (x; ŷ) can essentially increase I (x; y)
+and H (y), thus increasing the redundancy in y. This implies
+that the proposed adaptive IB algorithm is able to adjust β [w]
+according to I (x; ŷ), I (x; y) and the error probability.
+2) Compression Capability: In this section, we denote
+the length of y, M , used by AIB-JSCC as the number of
+bits in order to compare the compression capability with
+other baselines. Note that M bits is an upper bound on the
+transmission rate I (x; y). Figure 6 shows the reconstruction
+MSE of IABF and AIB-JSCC with different M on CIFAR10
+under different error probabilities. In particular, to guarantee
+fairness, we use the results of IABF present in [19] in order
+to prevent the performance reduction caused by improper
+hyperparameter selection. From Fig. 6, we can observe that
+to obtain similar MSE, AIB-JSCC requires 15, 100, 70, 20
+fewer bits than IABF when ε = 0.1, 0.2, 0.3, 0.4. This implies
+
+that AIB-JSCC can reduce more than 20% transmission rate
+compared with IABF. The 20% gain stems from the fact that
+AIB-JSCC simultaneously minimizes the distortion and the
+transmission rate thus reducing the transmission rate to achieve
+a similar reconstruction error.
+Figure 7 shows the additional number of bits that SSCC
+schemes need to achieve similar MSE on SVHN, compared
+with AIB-JSCC. From Fig. 7, we can observe that SSCC
+schemes need more bits than AIB-JSCC at all datasets and
+error probabilities. We can also observe that although BPG +
+Capacity needs fewer bits than the other three SSCC schemes,
+BPG + Capacity still needs more bits than AIB-JSCC for all
+datasets and error probabilities. When the error probability ε
+increases, the additional required number of bits will increase.
+When ε = 0.4, AIB-JSCC only needs around 4% JPEG
+needs. The 4% gains stem from the fact that SSCC schemes
+are designed to be optimized for squared error with handselected constraints [21], [50], [51] while AIB-JSCC jointly
+trains the encoder and decoder by maximizing I (x; ŷ) and
+minimizing I (x, y) thus preserving information precisely with
+lower transmission rate.
+3) Complexity and robustness: The most computationally costly operations in the network are the convolutions/deconvolutions and the FC layers, as they involve multiplications and additions. The computational cost of a single
+convolutional layer is H × W × K × K × Ci × Co , where
+K is the filter size, Co is the number of output channels,
+Ci is the number of input channels and H × W is the size
+of the feature map. The computational cost of an FC layer
+is (2I − 1) O, where I is the input vector dimension and O
+is the output vector dimension. Only the width and height of
+the feature map and the vector dimension depend on the image
+dimensions, and all other factors are constant and independent
+of the image size. Thus, the computational complexity of the
+proposed scheme is O (IH × IW ), where IH and IW are the
+width and height of the input image.
+Table V shows the number of encoder and decoder network
+parameters and the inference time of IABF and AIB-JSCC.
+From Table V, we can observe that AIB-JSCC has fewer
+
+12
+
+(a) ε = 0.1.
+
+(b) ε = 0.2.
+
+(c) ε = 0.3.
+
+(d) ε = 0.4.
+
+Fig. 9. MSE of IABF and AIB-JSCC on MNIST dataset. The error is calculated on validation set during training.
+
+parameters and needs less inference time. Specifically, AIBJSCC can reduce 45% parameters on CIFAR10 and 50%
+inference time on Omniglot. These gains stem from the simple
+network structure of AIB-JSCC, which makes the computational complexity of AIB-JSCC lower than that of IABF.
+Table VI shows the inference time of AIB-JSCC, JPEG,
+JPEG2000, WebP and BPG on SVHN. From Table VI, we can
+observe that AIB-JSCC achieves lower inference time compared to all considered source coding schemes. Furthermore,
+it is worth noting that SSCC necessitates iterative channel
+decoding to attain optimal error correction capability [52]–
+[54]. As a result, the time required by SSCC is significantly
+higher than that of source coding. Consequently, in comparison
+to practical SSCC, AIB-JSCC is expected to yield superior
+time savings, which are not entirely reflected in Table VI.
+Figure 8 shows the PSNR of AIB-JSCC on CIFAR10 when
+there is an estimation error on the channel error probability.
+From Fig. 8, we can observe that when εtest drops below
+εtrain , the performance does not saturate immediately. When
+
+εtest increases beyond εtrain , AIB-JSCC exhibits a graceful
+degradation of the reconstruction quality. This is because AIBJSCC uses the channel conditions in the loss function and
+enables the learned codewords to resist channel interference.
+Hence, the codewords extracted by AIB-JSCC is robust to
+different error probabilities.
+Figure 9 shows the changes of validation reconstruction
+MSE with respect to training time steps for IABF and AIBJSCC. From Fig. 9, we can observe that the trends of IABF
+and AIB-JSCC are similar when error probability ε is 0.1 and
+0.2. As the error probability gets larger, AIB-JSCC converges
+more stably than IABF. For example, in Fig. 9(d), when ε
+is 0.4, there is severe overfitting in IABF while AIB-JSCC
+still converges stably. This is because AIB-JSCC avoids overfitting according to minimizing I (x; y) by neural network.
+Therefore, AIB-JSCC is more robust than IABF.
+Figure 10 shows the 2-dimensional projections of the noisy
+codewords extracted from MNIST with different test error
+probabilities, and each color represents a number, i.e. a type
+
+13
+
+(a) εtest = 0.1.
+
+(b) εtest = 0.2.
+
+(c) εtest = 0.3.
+
+(d) εtest = 0.4.
+
+Fig. 10. t-SNE visualization of codewords extracted by AIB-JSCC for test set of MNIST dataset. The network is trained with error probability ε = 0.1 and
+tested with different test error probabilities εtest . Each color represents a different class.
+
+in MNIST dataset. In particular, we inject noise with different error probabilities into the learned codewords extracted
+from MNIST and utilize t-Distributed Stochastic Neighbor
+Embedding (t-SNE) [55] to project the noisy codewords into
+a 2-dimensional space. From Fig. 10, we can observe that
+noisy codewords with the same color are close to each other
+and well separated with other colors, and the distributions of
+codewords are similar under different εtest . This is because
+AIB-JSCC uses the channel conditions in the loss function
+and enables the learned codewords to resist the channel
+interference. Therefore, the codewords extracted by AIB-JSCC
+can preserve semantic information and is robust to different
+error probabilities.
+
+B. Parallel-channel Scenario
+This subsection evaluates the performance of AIB-JSCC in
+the parallel-channel scenario. The following three cases with
+different numbers of subchannels and error probabilities are
+
+considered:
+
+
+ε=
+
+
+{0.001, 0.1}
+{0.001, 0.1, 0.2, 0.25}
+{0.001, 0.1, 0.2, 0.25, 0.3}
+
+2 − ch
+4 − ch ,
+5 − ch
+
+(32)
+
+where P − ch represents parallel-channel scenario with P
+subchannels. Here, the total bandwidth is equally divided into
+P subchannels.
+Table. VII illustrates the reconstruction MSE over test sets.
+From Table VII, we can observe that AIB-JSCC can achieve
+better performance in parallel-channel scenarios than that in
+single-channel scenarios even with smaller error probability. For instance, in the 4 − ch scenario, the average error
+probability of four subchannels is 0.138, and the reconstruction error on MNIST and CIFAR are 12.398 and 52.834.
+In contrast, as shown in Table. VII, in the single-channel
+with smaller error probability, e.g. ε= 0.1, the reconstruction
+error on MNIST and CIFAR are 12.902 and 54.464. This is
+because in the parallel-channel scenarios, AIB-JSCC utilizes
+the channel state information in the loss function and is
+able to transmit important elements over the subchannel with
+
+14
+
+(a) 2 − ch.
+
+(b) 4 − ch.
+
+(c) 5 − ch.
+
+Fig. 11. Distributions of ai,m of different elements in ŷ at the decoder under different parallel-channel scenarios.
+
+(a) 2 − ch.
+
+(b) 4 − ch.
+
+(c) 5 − ch.
+
+Fig. 12. ηm of different elements in ŷ at the decoder under different parallel-channel scenarios.
+
+small error probability. Therefore, AIB-JSCC can dynamically
+allocate elements according to the error probabilities of the
+subchannels thus improving the reconstruction quality.
+Figure 11 shows the distributions of |ai,m |, where ai,m
+represents the weight of the i-th neuron of the first FC layer
+of the decoder at the m-th element. From Fig. 11, we can
+observe that in the subchannel with small error probability,
+|ai,m | randomly appears in the range of 0 to 0.9. In contrast, in
+the subchannel with large error probability, |ai,m | concentrates
+around 0. For example, in Fig. 11(a), in the subchannels with
+small error probability (m ≤ 50), |ai,m | mostly appears in
+the range of 0 to 0.2, and occasionally appears in the range
+of 0.2 to 0.5. In contrast, in the subchannels with large error
+probability (m > 50), |ai,m | mostly appears in the range of 0
+to 0.05 and occasionally appears in the range of 0.05 to 0.1.
+This implies that the output of the decoder is mainly calculated
+according to the elements transmitted through subchannel with
+small error probability, and the elements transmitted through
+subchannel with large error probability have little effect on the
+output of the decoder. This is because AIB-JSCC utilizes the
+channel condition in the loss function and learns to transmit
+elements important for reconstruction through the subchannel
+with small error probability to reduce the loss function.
+Figure 12 shows the average of |ai,m |, ηm , which is
+calculated by
+L
+1X
+ηm =
+|ai,m |,
+(33)
+L i=1
+where L represents the number of neurons in the first FC
+layer of the decoder. From Fig. 12, we can observe that the
+
+elements transmitted through the same subchannel have similar
+ηm , and the elements transmitted through the subchannel
+with small error probability have large ηm . For example, in
+Fig. 12(a), in the subchannels with small error probability
+(m ≤ 50), ηm is in the range of 0.1 to 0.2. In contrast, in
+the subchannels with large error probability (m > 50), ηm
+is in the range of 0 to 0.05, which is much smaller than
+0.1. As analyzed before, this is because AIB-JSCC utilizes
+the channel condition during training and is able to allocate
+elements important for reconstruction to subchannel with small
+error probability.
+Figure 13 shows the visual reconstructions of AIB-JSCC
+recovered from noise codewords received from different subchannels. In particular, when using the noisy codeword received from the i-th subchannel, i.e., ŷ chi , to reconstruct the
+images, we fix the other elements in ŷ to 0 and feed the
+new ŷ into the trained decoder to obtain the reconstructions.
+From Fig. 13, we can observe that for both 2 − ch and
+5 − ch scenarios, the complete noisy codeword ŷ has the best
+visual performance, and the images recovered from ŷ chi that
+is received from the subchannel with smaller error probability,
+preserve more semantic information. For instance, the images
+in the second row in Fig. 13(b) can be identified easily, while
+the images in the third row are difficult to recognize. This is
+because AIB-JSCC utilizes the channel condition in the loss
+function, and transmitting the elements with more semantic
+information through the subchannel with smaller error probability is helpful for semantic information preservation and
+loss reduction. Therefore, AIB-JSCC is able to transmit the
+elements with more semantic information for reconstruction
+
+15
+
+TABLE VIII
+MSE OF RECOVERED IMAGES WHEN THE CHANNEL IS DMC
+(a) Original images.
+
+MSE under different
+Order
+
+3
+5
+(b) 2 − ch scenario.
+
+(c) 5 − ch scenario.
+Fig. 13. Original image and image recovered in 2 − ch and 5 − ch scenarios.
+For the 2 − ch and 5 − ch scenarios, the first row is reconstructed from the
+complete noisy codeword ŷ. The second and the third rows in 2−ch scenario
+is reconstructed from ŷ ch1 and ŷ ch2 . The second to the sixth rows in 5 − ch
+scenario is reconstructed from ŷ ch1 − ŷ ch5 .
+
+through the subchannel with small error probability.
+C. High-order Scenario
+Table VIII shows the MSE of AIB-JSCC and IABF under
+DMCs with various orders and error probabilities. During
+training, the orders of the codeword y and the noisy codeword
+ŷ are set to be identical. The channel transition probability is
+
+1−ε j =l
+pjl =
+,
+(34)
+ε
+j ̸= l
+Q−1
+where Q is the order of y. From Table VIII, we can observe
+that for identical error probability, when the order of y
+increases, the MSE of AIB-JSCC increases. For instance,
+when the error probability is 0.1, the MSE of AIB-JSCC
+is 57.378, 58.149 and 60.712 when the order of y is 3, 5,
+7, respectively. This implies that even though using highorder can improve transmission efficiency, it also diminishes
+performance. Moreover, AIB-JSCC has a lower MSE than
+IABF under all considered of DMCs and error probabilities.
+This is because the proposed IB objective preserves semantic
+information and discards redundant information.
+VI. C ONCLUSION
+In this work, we have proposed an AIB-JSCC scheme for
+image transmission, which can adaptively minimize the transmission rate and distortion at the same time to achieve better
+reconstruction quality, larger compression ratio, and lower
+
+7
+
+Methods
+
+error probabilities
+0.1
+
+0.2
+
+0.3
+
+0.4
+
+IABF
+
+58.478
+
+65.227
+
+72.543
+
+81.664
+
+AIB-JSCC
+
+57.378
+
+65.054
+
+72.231
+
+79.797
+
+IABF
+
+59.028
+
+66.815
+
+74.381
+
+81.92
+
+AIB-JSCC
+
+58.149
+
+65.363
+
+73.015
+
+80.859
+
+IABF
+
+61.901
+
+70.097
+
+76.169
+
+85.379
+
+AIB-JSCC
+
+60.712
+
+68.463
+
+75.777
+
+85.175
+
+computational complexity than the state-of-the-art approaches.
+Specifically, we first derived a mathematically tractable form
+of IB objective for the JSCC system. Then, to appropriately
+balance the reconstruction distortion and the transmission
+rate, we further proposed an algorithm that can adaptively
+adjust hyperparameter β of the loss function according to
+the reconstruction error. Experimental results have shown that
+with fixed length of codewords, AIB-JSCC always achieved
+smaller reconstruction error than IB-JSCC and IABF over
+various error probabilities and datasets, which demonstrates
+the effectiveness of the proposed IB objective and adaptive
+IB algorithm. In addition, the images recovered by AIB-JSCC
+had better visual performance and obtained higher accuracy
+on downstream classification task than IABF. For a given
+reconstruction error, AIB-JSCC always permitted larger compression ratio than SSCC and IABF. In particular, AIB-JSCC
+only needed around 4% and 80% as many elements compared
+with SSCC and IABF. Moreover, AIB-JSCC also had lower
+computational complexity and was more robust than IABF. In
+the parallel-channel scenarios, AIB-JSCC was able to transmit
+elements important for reconstruction in the subchannel with
+small error probability. The overall results showed that the
+proposed schemes can significantly reduce the transmission
+rate, and improve the reconstruction quality and downstream
+task accuracy with lower computational complexity.
+A PPENDIX
+PROOF OF LEMMA 1
+Let IBβ (x, y, ŷ) = I (x; ŷ) − βI (x; y). We need to
+guarantee that IBβ (x, y, ŷ) is not maximal when x and y are
+independent, i.e., p (y|x) = p (y) or p (x|y) = p (x) is not
+optimal for maximizing IBβ (x, y, ŷ). Since there is a Markov
+chain relationship x → y → ŷ, we have I (x; y) ≥ I (x; ŷ).
+When x and y are independent, I (x; y) = I (x; ŷ) = 0
+and IBβ (x, y, ŷ) |p(y|x)=p(y) = 0 for any β. Therefore, if
+IBβ1 (x, y, ŷ) is not maximal when p (y|x) = p (y), there
+must exist (x, y, ŷ) given by p1 (y|x) such that
+IBβ1 (x, y, ŷ) |p(y|x)=p1 (y|x) > IBβ (x, y, ŷ) |p(y|x)=p(y) = 0.
+(35)
+If IBβ1 (x, y, ŷ) is not optimal when p (y|x) = p (y), we can
+rewrite (35) as
+I (x; ŷ) − β1 I (x; y) > 0, ∃x, y, ŷ.
+
+(36)
+
+16
+
+According to (36), we have
+β1 < β0 =
+
+I (x; ŷ)
+.
+x→y→ŷ I (x; y)
+sup
+
+This completes the proof.
+
+(37)
+□
+
+R EFERENCES
+[1] C. E. Shannon, “A mathematical theory of communication,” Bell Syst.
+Techn. J., vol. 27, no. 3, pp. 379–423, Jul. 1948.
+[2] E. Berlekamp, R. McEliece, and H. Van Tilborg, “On the inherent
+intractability of certain coding problems (corresp.),” IEEE Trans. Inf.
+Theory, vol. 24, no. 3, pp. 384–386, May 1978.
+[3] W. Saad, M. Bennis, and M. Chen, “A vision of 6G wireless systems:
+Applications, trends, technologies, and open research problems,” IEEE
+Netw., vol. 34, no. 3, pp. 134–142, Oct. 2019.
+[4] Y. Yang, C. Guo, F. Liu, C. Liu, L. Sun, Q. Sun, and J. Chen, “Semantic
+communications with artificial intelligence tasks: Reducing bandwidth
+requirements and improving artificial intelligence task performance,”
+IEEE Ind. Electron. Mag., to appear, 2022.
+[5] M. Chafii, L. Bariah, S. Muhaidat, and M. Debbah, “Ten scientific challenges for 6G: Rethinking the foundations of communications theory,”
+Available: https://arxiv.org/abs/physics/2207.01843, 2022.
+[6] A. A. A. Boulogeorgos, J. M. Jornet, and A. Alexiou, “Directional terahertz communication systems for 6G: Fact check,” IEEE Veh. Technol.
+Mag., vol. 16, no. 4, pp. 68–77, Dec. 2021.
+[7] M. Sana and E. C. Strinati, “Learning semantics: An opportunity for
+effective 6G communications,” in Proc. IEEE Annual Consum. Commun.
+& Netw. Conf., Las Vegas, USA, Feb. 2022, pp. 631–636.
+[8] V. Ziegler, H. Viswanathan, H. Flinck, M. Hoffmann, V. Räisänen, and
+K. Hätönen, “6G architecture to connect the worlds,” IEEE Access,
+vol. 8, no. 19981414, pp. 173 508–173 520, Sept. 2020.
+[9] Z. Wan, Z. Gao, M. Di Renzo, and L. Hanzo, “The road to industry 4.0
+and beyond: A communications-, information-, and operation technology
+collaboration perspective,” Available: https://arxiv.org/abs/physics/2205.
+04741, 2022.
+[10] M. Chen, D. Gündüz, K. Huang, W. Saad, M. Bennis, A. V. Feljan, and
+H. V. Poor, “Distributed learning in wireless networks: Recent progress
+and future challenges,” IEEE J. Sel. Areas Commun., vol. 39, no. 12,
+pp. 3579–3605, Oct. 2021.
+[11] R. G. Gallager, Information Theory and Reliable Communication.
+Springer, 1968, vol. 2.
+[12] M. Gastpar, B. Rimoldi, and M. Vetterli, “To code, or not to code: Lossy
+source-channel communication revisited,” IEEE Trans. Inf. Theory,
+vol. 49, no. 5, pp. 1147–1158, May 2003.
+[13] G. Cheung and A. Zakhor, “Bit allocation for joint source/channel
+coding of scalable video,” IEEE Trans. Image Process., vol. 9, no. 3,
+pp. 340–356, Mar. 2000.
+[14] S. Heinen and P. Vary, “Transactions papers source-optimized channel coding for digital transmission channels,” IEEE Trans. Commun.,
+vol. 53, no. 4, pp. 592–600, Apr. 2005.
+[15] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint sourcechannel coding for wireless image transmission,” IEEE Trans. Cogn.
+Commun. Netw., vol. 5, no. 3, pp. 567–579, Sept. 2019.
+[16] D. B. Kurka and D. Gündüz, “DeepJSCC-f: Deep joint source-channel
+coding of images with feedback,” IEEE J. Sel. Areas Inf. Theory, vol. 1,
+no. 1, pp. 178–193, May 2020.
+[17] J. Xu, B. Ai, W. Chen, A. Yang, P. Sun, and M. Rodrigues, “Wireless
+image transmission using deep source channel coding with attention
+modules,” IEEE Trans. Circuits Syst. Video Technol., vol. 32, no. 4, pp.
+2315–2328, Apr. 2021.
+[18] K. Choi, K. Tatwawadi, A. Grover, T. Weissman, and S. Ermon, “Neural
+joint source-channel coding,” in Proc. Int. Conf. Mach. and Learn., Long
+Beach, USA, Jun. 2019, pp. 1182–1192.
+[19] Y. Song, M. Xu, L. Yu, H. Zhou, S. Shao, and Y. Yu, “Infomax neural
+joint source-channel coding via adversarial bit flip,” in Proc. AAAI Conf.
+Artificial Intell., New York, USA, Feb. 2020, pp. 5834–5841.
+[20] C. Szegedy, W. Liu, Y. Jia, P. Sermanet, S. Reed, D. Anguelov, D. Erhan,
+V. Vanhoucke, and A. Rabinovich, “Going deeper with convolutions,”
+in Proc. IEEE Conf. Comput. Vis. Pattern Recog., Boston, USA, Jun.
+2015, pp. 1–9.
+[21] D. Minnen, J. Ballé, and G. D. Toderici, “Joint autoregressive and
+hierarchical priors for learned image compression,” in Neural Inform.
+Process. Syst., vol. 31, Montreal, Canada, Dec. 2018.
+
+[22] J. Devlin, M. Chang, K. Lee, and K. Toutanova, “Bert: Pre-training of
+deep bidirectional transformers for language understanding,” Available:
+https://arxiv.org/abs/physics/1810.04805, 2018.
+[23] P. Jiang, C. Wen, S. Jin, and G. Y. Li, “Deep source-channel coding for
+sentence semantic transmission with HARQ,” IEEE Trans. Commun.,
+vol. 70, no. 8, pp. 5225–5240, Aug. 2022.
+[24] Y. Wang, M. Chen, T. Luo, W. Saad, D. Niyato, H. V. Poor, and S. Cui,
+“Performance optimization for semantic communications: An attentionbased reinforcement learning approach,” IEEE J. Sel. Areas Commun.,
+vol. 40, no. 9, pp. 2598–2613, Jul. 2022.
+[25] N. Tishby, F. C. Pereira, and W. Bialek, “The information bottleneck
+method,” Available: https://arxiv.org/abs/physics/0004057, 2000.
+[26] A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep variational information bottleneck,” Available: https://arxiv.org/abs/1612.
+00410, 2016.
+[27] Y. B. Mahabadi, R. Karimi and J. Henderson, “Variational information
+bottleneck for effective low-resource fine-tuning,” Available: https://
+arxiv.org/abs/2106.05469, 2021.
+[28] Y. Du, J. Xu, H. Xiong, Q. Qiu, X. Zhen, C. G. Snoek, and L. Shao,
+“Learning to learn with variational information bottleneck for domain
+generalization,” in Proc. Eur. Conf. Comput. Vis., Glasgow, UK, Aug.
+2020, pp. 200–216.
+[29] N. Tishby and N. Zaslavsky, “Deep learning and the information
+bottleneck principle,” in Proc. IEEE Inf. Theory Worksh., Jerusalem,
+Israel, Apr. 2015, pp. 36–58.
+[30] J. Lee, J. Choi, J. Mok, and S. Yoon, “Reducing information bottleneck for weakly supervised semantic segmentation,” in Neural Inform.
+Process. Syst., vol. 34, Virtual, Dec. 2021.
+[31] R. Gallager, “Low-density parity-check codes,” IRE Trans. Inf. Theory,
+vol. 8, no. 1, pp. 21–28, Jan. 1962.
+[32] T. M. Cover, Elements of Information Theory. John Wiley & Sons,
+1999.
+[33] G. Romano and D. Ciuonzo, “Minimum-variance importance-sampling
+bernoulli estimator for fast simulation of linear block codes over binary
+symmetric channels,” IEEE Trans. Commun., vol. 13, no. 1, pp. 486–
+496, Dec. 2013.
+[34] K. Podgórski, G. Simons, and Y. Ma, “On estimation for a binarysymmetric channel,” IEEE Trans. Inf. Theory, vol. 44, no. 3, pp. 1260–
+1272, May 1998.
+[35] W. Huleihel and O. Ordentlich, “How to quantize n outputs of a binary
+symmetric channel to n-1 bits?” in Proc. Int. Symposium Inf. Theory,
+Aachen, Germany, Jun. 2017, pp. 91–95.
+[36] D. B. F. Agakov, “The IM algorithm: a variational approach to information maximization,” in Neural Inform. Process. Syst., Montreal, Canada,
+Dec. 2004, p. 201.
+[37] A. Mnih and D. Rezende, “Variational inference for monte carlo
+objectives,” in Proc. Int. Conf. Mach. and Learn., New York, USA,
+Jun. 2016, pp. 2188–2196.
+[38] P. Cheng, W. Hao, S. Dai, J. Liu, Z. Gan, and L. Carin, “CLUB: A
+contrastive log-ratio upper bound of mutual information,” in Proc. Int.
+Conf. Mach. and Learn., Vienna, Austria, Jul. 2020, pp. 1779–1788.
+[39] Y. Li, P. Zhao, D. Wang, X. Xian, Y. Liu, and V. S. Sheng, “Learning
+disentangled user representation based on controllable VAE for recommendation,” in Proc. Int. Conf. Database Syst. Advanced Applicat.,
+Taipei, Taiwan, Apr. 2021, pp. 179–194.
+[40] T. Wu, I. Fischer, I. L. Chuang, and M. Tegmark, “Learnability for the
+information bottleneck,” in Proc. Uncertainty in Artificial Intell. Conf.,
+Toronto, Canada, Jul. 2020, pp. 1050–1060.
+[41] L. Bottou, “Large-scale machine learning with stochastic gradient descent,” in Proc. Int. Conf. Comput. Statistics, Paris, France, Aug. 2010,
+pp. 177–186.
+[42] E. Sariyildiz, H. Yu, and K. Ohnishi, “Gradient-based learning applied
+to document recognition,” Proceedings of the IEEE, vol. 86, no. 11, pp.
+2278–2324, Nov. 1998.
+[43] B. M. Lake, R. Salakhutdinov, and J. B. Tenenbaum, “Human-level
+concept learning through probabilistic program induction,” Science, vol.
+350, no. 6266, pp. 1332–1338, Dec. 2015.
+[44] A. Krizhevsky and G. Hinton, “Learning multiple layers of features from
+tiny images,” University of Toronto Tech. Rep, vol. 1, Jan. 2009.
+[45] Y. Netzer, T. Wang, A. Coates, A. Bissacco, B. Wu, and A. Y. Ng,
+“Reading digits in natural images with unsupervised feature learning,”
+in Neural Inform. Process. Syst. Worksh., Granada, Spain, Dec. 2011,
+pp. 3730–3738.
+[46] G. K. Wallace, “The JPEG still picture compression standard,” IEEE
+Trans. Consum. Electron., vol. 38, no. 1, pp. xviii–xxxiv, Feb. 1992.
+[47] M. Rabbani, Book Review: JPEG2000: Image Compression Fundamentals, Standards and Practice. SPIE, 2002.
+
+17
+
+[48] Google, “WebP compression study,” Available: https://developers.
+google.com/speed/webp/docs/webp study, 2015.
+[49] F. Bellard, “BPG image format,” Available: https://bellard.org/bpg/,
+2018.
+[50] Z. Cheng, H. Sun, M. Takeuchi, and J. Katto, “Learned image compression with discretized gaussian mixture likelihoods and attention
+modules,” in Proc. IEEE Conf. Comput. Vis. Pattern Recog., Seattle,
+USA, Jun. 2020, pp. 7936–7945.
+[51] F. Mentzer, G. D. Toderici, M. Tschannen, and E. Agustsson, “Highfidelity generative image compression,” in Neural Inform. Process. Syst.,
+Virtual, Dec. 2020, pp. 11 913–11 924.
+[52] M. Lentmaier, A. Sridharan, D. J. Costello, and K. S. Zigangirov,
+“Iterative decoding threshold analysis for LDPC convolutional codes,”
+IEEE Trans. Inf. Theory, vol. 56, no. 10, pp. 5274–5289, Sept. 2010.
+[53] J. Hagenauer, E. Offer, and L. Papke, “Iterative decoding of binary block
+and convolutional codes,” IEEE Trans. Inf. Theory, vol. 42, no. 2, pp.
+429–445, Mar. 1996.
+[54] H. Vikalo, B. Hassibi, and T. Kailath, “Iterative decoding for MIMO
+channels via modified sphere decoding,” IEEE Trans. Commun., vol. 3,
+no. 6, pp. 2299–2311, Spte. 2004.
+[55] L. Van der Maaten and G. Hinton, “Visualizing data using t-SNE.” J.
+Mach. Learn. Research, vol. 9, no. 11, Nov. 2008.
+
+Lunan Sun received the B.S. degree from Beijing
+Jiaotong University, Beijing, China, in 2018. She is
+currently pursuing the Ph.D. degree with the Beijing
+Key Laboratory of Network System Architecture
+and Convergence, Beijing University of Posts and
+Telecommunications, Beijing, China. Her current
+research interests include semantic communications,
+image transmission and deep learning.
+
+Yang Yang (Member, IEEE) is currently an Associate Professor with the School of Information
+and Communication Engineering, Beijing University
+of Posts and Telecommunications (BUPT), Beijing,
+China. He received the B.S. degree in information
+engineering from School of Communication, Xidian
+University, Xian, China, in June 2013, and the Ph.D
+degree in Information and Communication Engineering from School of Information and Communication Engineering, Beijing University of Posts and
+Telecommunications (BUPT), Beijing, China. His
+research interests include semantic communications, visible light communication and localization. He served as a workshop co-chair/TPC member for a
+series of IEEE conferences including Globecom, ICC and WCNC. He was a
+recipient of the IEEE Wireless Communications and Networking Conference
+(WCNC) 2021 Best Paper Award.
+
+Mingzhe Chen (Member, IEEE) is currently an
+Assistant Professor with the Department of Electrical and Computer Engineering and Institute of Data
+Science and Computing at University of Miami. His
+research interests include federated learning, reinforcement learning, virtual reality, unmanned aerial
+vehicles, and Internet of Things. He has received
+from the IEEE Communication Society four journal
+paper awards including the IEEE Marconi Prize
+Paper Award in Wireless Communications in 2023,
+the Young Author Best Paper Award in 2021 and
+2023, and the Fred W. Ellersick Prize Award in 2022, and three conference
+best paper awards at IEEE ICC in 2020, IEEE GLOBECOM in 2020, and
+IEEE WCNC in 2021. He currently serves as an Associate Editor of IEEE
+Transactions on Mobile Computing, IEEE Wireless Communications Letters,
+IEEE Transactions on Green Communications and Networking, and IEEE
+Transactions on Machine Learning in Communications and Networking.
+
+Caili Guo (Senior Member, IEEE) received the
+Ph.D. degree in Communication and Information
+Systems from Beijing University of Posts and
+Telecommunication (BUPT) in 2008. She is currently a Professor in the School of Information and
+Communication Engineering at BUPT. Her general
+research interests include machine learning and statistical signal processing for wireless communications, with current emphasis on semantic communications, deep learning, and intelligence-enabled edge
+computing for vehicle communications.
+In the related areas, she has published over 200 papers and holds over 30
+granted patents. She won Diamond Best Paper Award of IEEE ICME 2018
+and Best Paper Award of IEEE WCNC 2021.
+
+Walid Saad (Fellow, IEEE) received his Ph.D degree from the University of Oslo, Norway in 2010.
+He is currently a Professor at the Department of
+Electrical and Computer Engineering at Virginia
+Tech, where he leads the Network sciEnce, Wireless,
+and Security (NEWS) laboratory. He is also the
+Next-G Wireless Faculty Lead at Virginia Tech’s
+Innovation Campus. His research interests include
+wireless networks (5G/6G/beyond), machine learning, game theory, security, UAVs, semantic communications, cyber-physical systems, and network
+science. Dr. Saad is a Fellow of the IEEE. He is also the recipient of the
+NSF CAREER award in 2013, the AFOSR summer faculty fellowship in
+2014, and the Young Investigator Award from the Office of Naval Research
+(ONR) in 2015. He was the (co-)author of eleven conference best paper
+awards at IEEE WiOpt in 2009, ICIMP in 2010, IEEE WCNC in 2012, IEEE
+PIMRC in 2015, IEEE SmartGridComm in 2015, EuCNC in 2017, IEEE
+GLOBECOM (2018 and 2020), IFIP NTMS in 2019, IEEE ICC (2020 and
+2022). He is the recipient of the 2015 and 2022 Fred W. Ellersick Prize from
+the IEEE Communications Society, and of the IEEE Communications Society
+Marconi Prize Award in 2023. He was also a co-author of the papers that
+received the IEEE Communications Society Young Author Best Paper award
+in 2019, 2021, and 2023. Other recognitions include the 2017 IEEE ComSoc
+Best Young Professional in Academia award, the 2018 IEEE ComSoc Radio
+Communications Committee Early Achievement Award, and the 2019 IEEE
+ComSoc Communication Theory Technical Committee Early Achievement
+Award. From 2015-2017, Dr. Saad was named the Stephen O. Lane Junior
+Faculty Fellow at Virginia Tech and, in 2017, he was named College of
+Engineering Faculty Fellow. He received the Dean’s award for Research
+Excellence from Virginia Tech in 2019. He was also an IEEE Distinguished
+Lecturer in 2019-2020. He has been annually listed in the Clarivate Web of
+Science Highly Cited Researcher List since 2019. He currently serves as an
+Area Editor for the IEEE Transactions on Network Science and Engineering
+and the IEEE Transactions on Communications. He is the Editor-in-Chief
+for the IEEE Transactions on Machine Learning in Communications and
+Networking.
+
+H. Vincent Poor (Life Fellow, IEEE) received the
+Ph.D. degree in EECS from Princeton University in
+1977. From 1977 until 1990, he was on the faculty
+of the University of Illinois at Urbana-Champaign.
+Since 1990 he has been on the faculty at Princeton,
+where he is currently the Michael Henry Strater
+University Professor. During 2006 to 2016, he served
+as the dean of Princeton’s School of Engineering and
+Applied Science. He has also held visiting appointments at several other universities, including most
+recently at Berkeley and Cambridge. His research
+interests are in the areas of information theory, machine learning and network
+science, and their applications in wireless networks, energy systems and
+related fields. Among his publications in these areas is the recent book
+Machine Learning and Wireless Communications. (Cambridge University
+Press, 2022). Dr. Poor is a member of the National Academy of Engineering
+and the National Academy of Sciences and is a foreign member of the Chinese
+Academy of Sciences, the Royal Society, and other national and international
+academies. He received the IEEE Alexander Graham Bell Medal in 2017.
+
+

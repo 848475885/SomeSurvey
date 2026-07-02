@@ -1,0 +1,505 @@
+                                                                                                                                                                                         1
+
+
+
+
+                                           Rate-Adaptive Generative Semantic Communication
+                                                  Using Conditional Diffusion Models
+                                                     Pujing Yang, Graduate Student Member, IEEE, Guangyi Zhang, Graduate Student Member, IEEE,
+                                                                               and Yunlong Cai, Senior Member, IEEE
+
+
+
+                                              Abstract—Recent advances in deep learning-based joint                       through the use of autoencoders (AEs) and their variants vari-
+arXiv:2409.02597v3 [eess.SP] 23 Dec 2024
+
+
+
+
+                                           source-channel coding (DJSCC) have shown promise for end-                      ational AEs. DJSCC maps input images into low-dimensional
+                                           to-end semantic image transmission. However, most existing                     vectors for transmission. A pioneering work in this area is
+                                           schemes primarily focus on optimizing pixel-wise metrics, which
+                                           often fail to align with human perception, leading to lower                    DeepJSCC [3], which is built on an AE-based framework that
+                                           perceptual quality. In this letter, we propose a novel generative              allows for joint optimization and mitigates the cliff-edge effect
+                                           DJSCC approach using conditional diffusion models to enhance                   commonly observed in traditional separation-based schemes.
+                                           the perceptual quality of transmitted images. Specifically, by                 Moreover, the authors in [4] introduced a Transformer-based
+                                           utilizing entropy models, we effectively manage transmission                   framework that enhances image fidelity by incorporating chan-
+                                           bandwidth based on the estimated entropy of transmitted sym-
+                                           bols. These symbols are then used at the receiver as conditional               nel feedback to adaptively reconstruct images under varying
+                                           information to guide a conditional diffusion decoder in image                  wireless conditions. Inspired by entropy model-based source
+                                           reconstruction. Our model is built upon the emerging advanced                  coding [5], the authors in [6] proposed a rate-adaptive JSCC
+                                           mamba-like linear attention (MLLA) skeleton, which excels                      system, where the number of transmitted symbols is deter-
+                                           in image processing tasks while also offering fast inference                   mined by the entropy estimated by the entropy models. This
+                                           speed. Besides, we introduce a multi-stage training strategy to
+                                           ensure the stability and improve the overall performance of                    work was further evolved in [7] into a digital version, enabling
+                                           the model. Simulation results demonstrate that our proposed                    practical application in modern digital systems.
+                                           method significantly outperforms existing approaches in terms
+                                           of perceptual quality.                                                            Despite the superior performance of current DJSCC trans-
+                                                                                                                          mission systems, they are typically optimized for mean-square
+                                             Index Terms—Semantic communications, conditional diffusion                   error (MSE)-based distortion metrics such as peak signal-
+                                           models, joint source-channel coding, image transmission.                       to-noise ratio (PSNR), which assesses pixel-level similarity
+                                                                                                                          between reconstructed and source images. However, it is
+                                                                     I. I NTRODUCTION                                     increasingly recognized that high pixel-level similarity does
+                                                                                                                          not necessarily indicate high perceptual quality, which re-
+                                              The rapid development of sixth-generation (6G) commu-                       flects how humans perceive the image’s realism and visual
+                                           nication systems has driven the rise of various smart ap-                      appeal [8]. Generative models, including generative adver-
+                                           plications, such as Virtual Reality (VR) and the Internet of                   sarial networks (GANs) and denoising diffusion probabilistic
+                                           Everything (IoE) [1]–[4]. These services demand enhanced                       models (DDPM) [9], excel at generating images with high
+                                           communication efficiency to manage the massive inflow of                       perceptual quality from a predefined prior distribution, demon-
+                                           data traffic. In this context, semantic communications have                    strating their groundbreaking potential in generative semantic
+                                           emerged as a new paradigm, attracting significant attention.                   communications [10]–[16]. To improve the perceptual qual-
+                                           Unlike traditional transmission systems that rely on separate                  ity of transmitted images, the authors in [10] incorporated
+                                           source and channel coding, semantic communications focus                       perceptual loss into a GAN-based DJSCC system. In [11],
+                                           on accurately transmitting the underlying semantic informa-                    the authors leveraged DDPM to mitigate channel noise in
+                                           tion of digital data. This approach integrates source and                      wireless communications. Furthermore, in [14], DJSCC was
+                                           channel coding for joint optimization, a technique known as                    employed for initial reconstruction, which was then refined by
+                                           joint source-channel coding (JSCC).                                            DDPM to further improve image quality. Another approach in
+                                              Recently, the integration of deep learning into wireless                    [15] divided the reconstructed image into two components:
+                                           communication system designs has gained traction, driven by                    range-space and null-space. The range-space that captures
+                                           the exceptional information processing capabilities of various                 the primary structure is transmitted via DJSCC, while the
+                                           deep learning models. In this context, deep learning-based                     null-space, refining details, is generated at the receiver using
+                                           JSCC (DJSCC) has stimulated significant interest, particularly                 diffusion models. Although these methods achieved perfor-
+                                                                                                                          mance improvements, the decoding process at the receiver
+                                             This work was supported in part by the Major Key Project of Peng Cheng       is time-consuming, as denoising requires hundreds of steps.
+                                           Laboratory under Grant PCL2023AS1-2, in part by the National Natural
+                                           Science Foundation of China under Grant U22A2004, and in part by Zhejiang      Additionally, the training is performed module by module
+                                           Provincial Key Laboratory of Information Processing, Communication and         without joint optimization, potentially leading to performance
+                                           Networking (IPCAN), Hangzhou 310027, China. (Corresponding author:             loss. Besides, they typically support fixed-rate transmission,
+                                           Yunlong Cai)
+                                             P. Yang and G. Zhang are with the College of Information Science and         lacking the ability to determine optimal bandwidth for each
+                                           Electronic Engineering, Zhejiang University, Hangzhou 310027, China (e-        image.
+                                           mail: yangpujing@zju.edu.cn; zhangguangyi@zju.edu.cn).
+                                             Y. Cai is with the College of Information Science and Electronic Engineer-     In this letter, we introduce a novel framework called
+                                           ing, Zhejiang University, Hangzhou 310027, China, and also with the Peng       conditional diffusion models-based generative DJSCC (CDM-
+                                           Cheng Laboratory, Shenzhen 518071, China (e-mail: ylcai@zju.edu.cn).
+                                             Our project can be found at https://github.com/zhang-guangyi/cdm-jscc.       JSCC) for wireless image transmission. Unlike previous meth-
+                                                                                                                          ods that rely on DDPM noise prediction (referred to as ǫ-
+                                                                                                                                                  2
+
+
+
+                              forward process                                 element with a standard uniform density U(− 12 , 12 ) to enable
+                                                                              a better match of the prior to the distribution of z̃ [5].
+                                                                                  In this way, we are able to control the channel bandwidth
+                               Wireless Channel                               ratio (CBR) for each image based on the estimated entropy of
+                                                                              z̃. Images with rich details, characterized by higher entropy,
+                                        sidelink                              may require more symbols for transmission. Specifically, z
+                                               Conditioning
+                                                                              comprises multiple embedding vectors zi of length C. The
+                                                                              JSCC encoder fe adjusts      the length of each vector to ki =
+                             reverse process
+                                                                              Q −β log pz̃i |ỹ (z̃i |ỹ) , where Q denotes the quantization op-
+                                                                              eration, β controls the relation between the prior pẑi |ỹ (ẑi |ỹ),
+Fig. 1. The overview of the proposed CDM-JSCC. The blue line represents       and the expected length of the corresponding symbol vector
+the transmission process, and the black line denotes the diffusion process.
+For simplification, we ignore quantization in the figure.                     si . In particular, when the entropy of z̃i is high, a higher CBR
+                                                                              is adopted, resulting in a larger ki . This process is expressed as
+                                                                              s = fe (z, pz̃|ỹ (z̃|ỹ) ; θf ) ∈ Ck , where s denotes the channel
+prediction) [15], our method utilizes X -prediction [17] to                   input symbols, k is the number of transmitted symbols, and
+directly predict the source image. X -prediction offers compa-                θf denotes the trainable parameters. Additionally, to meet
+rable performance to ǫ-prediction but with significantly fewer                the energy constraints of real-world communication systems,
+steps, as its objective function resembles an autoencoder loss,               we ensure that s satisfies an average power constraint before
+enabling data reconstruction in a single iteration. Moreover,                 transmission.
+we optimize transmission bandwidth by utilizing entropy                           Then, s is transmitted through a noisy wireless channel,
+models to estimate the entropy of transmitted symbols. At the                 which is denoted by η. As the additive white Gaussian noise
+receiver, the transmitted symbols are utilized as conditional                 (AWGN) channel is adopted in our work, this process follows
+information to guide the conditional diffusion decoder to                     ŝ , η(s) = s + n, where n ∼ CN (0, σ 2 Ik×k ) is a complex
+reconstruct images. Recently, the mamba-like linear attention                 Gaussian vector with variance σ 2 . At the receiver, ŝ is first
+(MLLA) technique has demonstrated superior performance in                     decoded to obtain the reconstructed latent ẑ = fd (ŝ; φf ),
+image processing tasks, benefiting from parallel computation                  where fd represents the JSCC decoder, and φf denotes its
+and fast inference [18]. Building on this, we design our JSCC                 trainable parameters. The receiver utilizes ẑ as an additional
+encoder and decoder with MLLA as the core architecture.                       “content” latent to guide the conditional diffusion decoder
+Furthermore, we propose a multi-stage training strategy to                    gd to reconstruct image x̂0 = gd (x̂N , ẑ; φg ), where x̂N is
+achieve joint optimization, resulting in substantial enhance-                 the randomly sampled Gaussian source and φg represents the
+ments in perceptual quality.                                                  trainable parameters, as shown in Fig. 1. The details of the
+                                                                              conditional diffusion decoder will be provided in the following
+                                                                              section.
+           II. P ROPOSED CDM-JSCC F RAMEWORK
+  In this section, we propose the framework of the proposed
+CDM-JSCC to realize rate-adaptive image transmission. To                      B. Conditional Diffusion Decoder
+provide a comprehensive understanding, we begin by giving                       We build our decoder on conditional diffusion models for
+an overview of CDM-JSCC and then proceed to detail the                        their significant success in generative tasks.
+conditional diffusion models-based decoder.                                     The core idea of diffusion models is to transform an image
+                                                                              x0 into a Gaussian distribution by progressively adding noise
+A. Rate-Adaptive JSCC                                                         to it, referred to as the forward process q, resulting in a
+                                                                              sequence of increasingly noisy versions x1 , x2 , ..., xN . Then,
+   As illustrated in Fig. 1, the source image, represented by                 the reverse process pθ generates high-quality samples by
+a pixel intensity vector x0 ∈ Rn , is first processed by a                    reversing this process. The two Markov processes at step n
+nonlinear transform coding encoder ge , producing a low-                      can be respectively described as follows:
+dimensional latent representation z = ge (x; θg ), where θg                                                     p
+encompasses the trainable parameters. Inspired by [5], we                               q(xn |xn−1 ) = N (xn ; 1 − βn xn−1 , βn I),         (2)
+estimate the distribution of z̃, i.e., the quantized version of
+z, by utilizing hyperprior entropy models. Specifically, we                         pθ (xn−1 |xn ) = N (xn−1 ; µθ (xn , n), Σθ (xn , n)),       (3)
+introduce an additional latent feature y = he (z; θh ), serving
+as side information to capture the dependencies among the                     where the variance βn is held constant as hyperparameters, the
+elements in z̃, where he represents the parametric analysis                   reverse process mean µθ (xn , n) is parameterized by a neural
+transform, and θh denotes its trainable parameters. Each z̃i                  network, and the variance Σθ (xn , n) is always set to βn I.
+in z̃ is variationally modeled as a Gaussian distribution with                  The diffusion models are typically trained to predict the
+the standard deviation σi and mean µi predicted based on the                  accumulated noise ǫ that perturbs x0 to xn , a process known
+quantized ỹ as:                                                              as ǫ-prediction, with the loss function being:
+                         Y                     1 1
+                                                    
+        pz̃|ỹ (z̃|ỹ) =   N (µ̃i , σ̃i2 ) ∗ U(− , ) (z̃i ) , (1)                           L(θ, x0 ) = Ex0 ,n,ǫ ||ǫ − ǫθ (xn , n)||2 ,(4)
+                         i
+                                                2 2                                                                              √
+                                                                              where
+                                                                              √      n ∼ Uniform(1,Q..., N ), ǫ ∼ N (0, I), xn = ᾱn x0 +
+                                                                                                       n
+where (µ̃, σ̃) = hs (z̃; φh ), hs is the parametric synthesis                   1 − ᾱn ǫ, and ᾱn = i=1 (1 − βi ).
+transform, φh denotes its trainable parameters, and ∗ repre-                    In our conditional diffusion decoder, ẑ is taken as the
+sents the convolutional operation. Moreover, we convolve each                 condition for the reverse process. Consequently, the forward
+                                                                                                                                                                                                                                                                                                      3
+
+
+
+                                                                                                                                 Diffusion Denoising Unit
+                        ResBlock
+
+
+
+
+                                                                                                              2
+
+
+
+
+                                                                                                                                                        2
+
+
+
+
+                                                                                                                                                                                           2
+
+
+
+
+                                                                                                                                                                                                                             2
+                                                                                                   ResBlock
+
+
+
+
+                                                                                                                                             ResBlock
+
+
+
+
+                                                                                                                                                                               ResBlock
+
+
+
+
+                                                                                                                                                                                                                 ResBlock
+                        Attention                                                                             ė                                         ė                                  ė                                 ė
+
+
+
+
+                                                                                                              Tconv
+
+
+
+
+                                                                                                                                                        Tconv
+
+
+
+
+                                                                                                                                                                                           Tconv
+
+
+
+
+                                                                                                                                                                                                                             Tconv
+                        ResBlock
+
+
+
+                                                        Down-                                       Down-                             Down-                                    Down-                             Down-
+                        MidBlock
+                                                       sampling                                    samping                           samping                                  samping                           samping
+
+                                                                                                                                                                                                                                                                     MLP
+
+                                                                                Up-                                     Up-                                        Up-                                  Up-                            Up-
+                                                                              samping                                 samping                                    samping                              samping                        samping
+                          MLP
+
+
+                                        ResBlock
+
+                                                                   2                                                                                                                                                                      Conditional
+                                                                                                                                                                                                    JSCC
+                                                                   ĕ
+                                                                                                                 JSCC
+                                                                                                                                                                                                                                           Diffusion
+                                                                   Conv
+                                                                                                                                                                Wireless Channel
+                                                                                                                Encoder                                                                            Decoder
+                                                                                                                                                                                                                                           Decoder
+
+                     Down Sample
+                          ResBlock
+
+                          Attention                                                                                                                                                       JSCC Encoder                      JSCC Decoder
+                                                                      Hyperprior
+                                  ĕ
+
+
+
+
+                          Tconv     2                                                                                                                                 mask
+                                                                                                                                                                MLP                                                                       MLP
+                                                                                                                                                                      mask
+                                                   Convį2 + ReLu
+
+
+
+
+                                                                                   Tconvĭ + ReLu
+
+
+
+
+                                                                                                                                                                MLP
+
+
+
+
+                                                                                                                                MLLA Block
+
+
+
+
+                                                                                                                                                                                                                                                        MLLA Block
+                      Up Sample                                                                                                                                                                                                           MLP
+
+                          ResBlock
+                                                                                                                                                                      mask
+                          Attention
+                                                                                                                                                                MLP                                                                       MLP
+                                                                                                                                                                      mask
+                                                                                                                                                                MLP                                                                       MLP
+                                  ė
+
+
+
+
+                          Tconv     2
+
+
+
+
+Fig. 2. The architecture of the proposed system.
+
+
+
+process remains unchanged as (2), and the reverse process is                                                                                                             The transmitter comprises an entropy encoder and a rate-
+replaced by:                                                                                                                                                          adaptive JSCC encoder. The entropy encoder incorporates a
+                                                                                                                                                                      hyperprior model to capture spatial dependencies in the latent
+       pθ (xn−1 |xn , ẑ) = N (xn−1 ; µθ (xn , ẑ, n), βn I).                                                                                           (5)           representation [5]. Meanwhile, the JSCC encoder, built on the
+   Analogous to (4), we modify the training objective as                                                                                                              MLLA skeleton, compresses the fixed-length latent represen-
+follows:                                                                                                                                                              tation z into a variable-length output s using the estimated
+                                                 n                                                                                                                    entropy p(z̃|ỹ). Elements are selected sequentially in a one-
+             L(θ, x0 ) = En,ǫ ||x0 − Xθ (xn , ẑ, )||2 .      (6)                                                                                                     dimensional checkerboard pattern to efficiently capture global
+                                                 N
+                                                                                                                                                                      features.
+First, we employ X -prediction [17] to predict the source image
+                                                                                                                                                                         The receiver comprises a rate-adaptive JSCC decoder and a
+instead of using ǫ-prediction. X -prediction requires only a few
+                                                                                                                                                                      conditional diffusion decoder. The JSCC decoder reverses the
+denoising steps yet achieves performance comparable to ǫ-
+                                                                                                                                                                      encoder’s operations, and its output serves as input to the con-
+prediction, which involves hundreds of denoising steps. This is
+                                                                                                                                                                      ditional diffusion decoder, which is built on a U-Net model.
+because the optimization objective resembles an autoencoder
+                                                                                                                                                                      Features of different scales, encoded by hierarchical encoders,
+loss, allowing the model to reconstruct the source image in
+                                                                                                                                                                      are combined with time information to guide the denoising
+a single iteration. Moreover, we replace the step n with a
+                     n                                                                                                                                                process. The conditional diffusion decoder iteratively refines
+normalized step N      , enabling the use of a smaller N during
+                                                                                                                                                                      the output until x̂0 is produced.
+testing compared to training, thereby accelerating the decoding
+process.
+   During inference, images are generated using ancestral                                                                                                             B. Loss Function
+sampling with Langevin dynamics as follows:                                                                                                                             For an entropy model-based rate-adaptive JSCC system [6],
+             √                 n     √                   n                                                                                                            the loss function is typically defined as:
+  xn−1 = ᾱn Xθ (xn , ẑ, ) − 1 − ᾱn ǫθ (xn , n, ),
+                               N √                       N
+                     n      xn − ᾱn Xθ (xn , ẑ, Nn
+                                                     )        (7)                                                                                                            LRD =D + λR = Ex0 ||x0 − x̂0 ||2 + Ex0 ||x0 − x̄0 ||2
+         ǫθ (xn , ẑ, ) =           √                  .                                                                                                                                   |      {z        } |        {z        }
+                     N                1 − ᾱn                                                                                                                                                                                        JSCC distortion                       compression distortion
+                                                                                                                                                                                                                                                                                                    (8)
+                                                                                                                                                                                               +λ Ex0 [− log p(z̃|ỹ) − log p(ỹ)],
+  III. T RAINING S TRATEGY AND M ODEL A RCHITECTURE                                                                                                                                               |             {z               }
+                                                                                                                                                                                                                                         rate
+   In this section, we first present the architecture of CDM-
+                                                                                                                                                                                                                                     2
+JSCC. Then, we analyze the proposed loss function. Finally,                                                                                                           where Ex0 ||x0 − x̄0 || is the compression distortion be-
+we propose a multi-stage training algorithm to ensure the                                                                                                             tween the source image x0 and the compressed image x̄0 ,
+stability and improve the overall performance.                                                                                                                        Ex0 [− log p(z̃|ỹ) − log p(ỹ)] represents the compression rate
+                                                                                                                                                                      estimated by entropy models, and Ex0 ||x0 − x̂0 ||2 denotes the
+A. Model Architecture                                                                                                                                                 typical JSCC loss term.
+                                                                                                                                                                         To improve the perceptual quality of reconstructed images,
+   As shown in Fig. 2, the proposed model consists of a                                                                                                               we introduce an additional perceptual loss, expressed as
+transmitter, a wireless channel, and a receiver. We adopt the                                                                                                         follows:
+AWGN channel in our work, which is incorporated as a non-
+trainable layer in the architecture.                                                                                                                                                                LP = Ex0 [dp (x0 , x̂0 )] + Ex0 [dp (x0 , x̄0 )],                                               (9)
+                                                                                                                                                 4
+
+
+
+where dp (·, ·) represents the perceptual loss term. Here we
+adopt widely-used learned perceptual image patch similarity
+(LPIPS) loss based on VGGNet [19]. Therefore, the objective
+for our model can be expressed as:
+     L =(1 − η)(Ex0 ||x0 − x̂0 ||2 + Ex0 ||x0 − x̄0 ||2 )
+                |      {z        } |        {z        }
+                      JSCC distortion      compression distortion
+       +η(Ex0 [dp (x0 , x̂0 )] + Ex0 [dp (x0 , x̄0 )] )
+          |      {z          }   |       {z         }               (10)
+            JSCC perceptual loss   compression perceptual loss
+       +λ Ex0 [− log p(z̃|ỹ) − log p(ỹ)],
+          |             {z               }
+                            rate
+                                                                                 (a) The performance on Kodak dataset with average CBR = 1/48.
+where η ∈ [0, 1] balances the trade-off between MSE distor-
+tion and the perceptual loss term, while λ adjusts the trade-off
+between the image quality and transmission rate.
+
+C. Training Strategy
+   To ensure training stability and enhance overall perfor-
+mance, we propose a multi-stage training strategy. Initially,
+we train each module individually to reduce complexity and
+facilitate convergence. Once all modules have been trained
+separately, we fine-tune the entire model. The complete multi-
+stage training process is detailed in Algorithm 1.
+
+  Algorithm 1: Training the proposed CDM-JSCC
+                                                                                 (b) The performance on Kodak dataset with average CBR = 1/24.
+1  Input: Training dataset X, trade-off parameters (λ, η),
+                          β, and learning rate lr .
+    rate-control parameter
+                            ∗   ∗   ∗    ∗   ∗    ∗
+ 2 Output: Parameters θg , φg , θh , φh , θf , φf .
+
+ 3 First Stage: Train Compression Modules.
+ 4 Randomly initialize all parameters and freeze the
+    parameters of fe and fd .
+ 5 for each epoch do
+ 6     Sample x from X.
+ 7     Calculate the loss function:
+ 8     L = (1 − η)Ex0 ||x0 − x̄0 ||2 + ηEx0 [dp (x0 , x̄0 )] +
+        λEx0 [− log p(z̃|ỹ) − log p(ỹ)].
+ 9     Update the parameters (θg , φg , θh , φh ).
+10 end
+11 ————————————————————                                                        (c) The performance on MS-COCO dataset with average CBR = 1/48.
+12 Second Stage: Train Transmission Modules.
+                                                                           Fig. 3. The performance of the proposed schemes versus SNR.
+13 Load and freeze the parameters trained in the first
+    stage and randomly initialize fe and fd .
+14 for each epoch do
+15     Sample x from X.                                                    A. Simulation Settings
+16     Calculate the loss function based on (10).
+17     Update the parameters (θf , φf ).                                      1) Basic Settings: We evaluate our CDM-JSCC on the
+18 end                                                                     Kodak dataset (24 images, each with a resolution of 512×768)
+19 ————————————————————                                                    and MS-COCO dataset (we select 2, 695 test images larger
+20 Third Stage: Finetune the whole model.                                  than 512 × 512). Our CDM-JSCC trained with η = 0.5,
+21 Load the parameters trained in the previous stages.                     primarily optimized for high perceptual quality, is referred to
+22 for each epoch do                                                       as CDM-JSCC-P. In contrast, the model trained with a lower
+23     Repeat step 15 to 16.                                               η = 0.1, aimed at minimizing MSE distortion, is denoted as
+24     Update the parameters (θg , θh , φg , φh , θf , φf ).               CDM-JSCC-D. All experiments are conducted using Pytorch.
+25 end                                                                     For the training process, we use the Adam optimizer for
+                                                                           stochastic gradient descent, starting with a learning rate of
+                                                                           1 × 10−4 and planning to reduce it after several epochs. The
+                                                                           training dataset comprises 50, 000 randomly sampled images
+                IV. S IMULATION R ESULTS                                   from the ImageNet dataset, which are randomly cropped to
+  In this section, we perform simulations to evaluate the                  256 × 256. The batch size is set to 4, with the epochs for
+performance of the proposed CDM-JSCC.                                      each training stage set to 90, 45, and 10, respectively.
+                                                                                                                                             5
+
+
+
+   2) Benchmarks: For benchmarks, we consider both deep                                 V. C ONCLUSION
+learning-based methods and traditional separation-based             In this letter, we proposed a framework of conditional
+schemes, incorporating optimization strategies for both MSE      diffusion models-based generative DJSCC system for image
+distortion and perceptual loss. The benchmarks are detailed      transmission. Moreover, we employed X -prediction with a
+as follows:                                                      few denoising steps to accelerate the decoding process. Fur-
+   • “BPG+LDPC”: This method employs BPG for source              thermore, we effectively managed the transmission bandwidth
+     coding and LDPC for channel coding, followed by             based on the estimated entropy of transmitted symbols. Be-
+     quadrature amplitude modulation (QAM).                      sides, we proposed a multi-state training strategy to ensure the
+   • “BPG+capacity”: In this approach, we use an ideal           stability of the training process. Simulation results demon-
+     capacity-achieving channel coding in conjunction with       strated that the proposed method can significantly surpass
+     BPG and QAM.                                                existing methods in terms of perceptual quality.
+   • “DeepJSCC”: As a representative learning-based method,
+     we include the classic DeepJSCC optimized for MSE                                         R EFERENCES
+     distortion [3].                                              [1] C. You, Y. Cai, Y. Liu, M. Di Renzo, T. M. Duman, A. Yener, and A. L.
+                                                                      Swindlehurst, “Next generation advanced transceiver technologies for
+   • “GAN-JSCC”: This method optimizes both MSE distor-
+                                                                      6G,” arXiv preprint arXiv:2403.16458, 2024.
+     tion and perceptual loss [10].                               [2] H. Xie, Z. Qin, and G. Y. Li, “Task-oriented multi-user semantic
+   • “CDDM”: This scheme utilizes diffusion models to de-             communications for VQA,” IEEE Wireless Commun. Lett., vol. 11,
+                                                                      no. 3, pp. 553–557, 2021.
+     noise the channel output [11].                               [3] E. Bourtsoulatze, D. Burth Kurka, and D. Gunduz, “Deep joint source-
+   • “DIFFSC”: This method applies diffusion models to en-            channel coding for wireless image transmission,” IEEE Trans. Cognit.
+     hance images initially reconstructed by DeepJSCC [14].           Comm. Netw., vol. 5, no. 3, pp. 567–579, Sep. 2019.
+                                                                  [4] H. Wu, Y. Shao, E. Ozfatura, K. Mikolajczyk, and D. Gündüz,
+   3) Considered Metrics: We evaluate the performance of              “Transformer-aided wireless image transmission with channel feed-
+our method along with benchmarks using typical metric                 back,” IEEE Trans. Wireless Commun., 2024.
+                                                                  [5] J. Ballé, D. Minnen, S. Singh, S. J. Hwang, and N. Johnston, “Varia-
+PSNR as well as perceptual metrics LPIPS [19], and Fréchet           tional image compression with a scale hyperprior,” in Proc. Int. Conf.
+Inception Distance (FID). PSNR calculates pixel-wise MSE              Learn. Represent. (ICLR), 2018.
+distortion. LPIPS measures the l2 distance between two latent     [6] J. Dai, S. Wang, K. Tan, Z. Si, X. Qin, K. Niu, and P. Zhang, “Nonlinear
+                                                                      transform source-channel coding for semantic communications,” IEEE
+embeddings extracted by a pre-trained network [19]. FID               J. Select. Areas Commun., vol. 40, no. 8, pp. 2300–2316, 2022.
+calculates the distribution of source images and reconstructed    [7] G. Zhang, P. Yang, Y. Cai, Q. Hu, and G. Yu, “From analog to digital:
+images in the feature space using the Fréchet distance [20].         Multi-order digital joint coding-modulation for semantic communica-
+                                                                      tion,” arXiv preprint arXiv:2406.05437, 2024.
+                                                                  [8] Y. Blau and T. Michaeli, “Rethinking lossy compression: The rate-
+                                                                      distortion-perception tradeoff,” in Proc. Int. Conf. Mach. Learn. (ICML),
+B. Performance Comparison                                             2019, pp. 675–685.
+                                                                  [9] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic
+   We evaluate the performance of our proposed model on the           models,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), 2020, pp.
+AWGN channel, a representative and widely adopted choice              6840–6851.
+                                                                 [10] J. Wang, S. Wang, J. Dai, Z. Si, D. Zhou, and K. Niu, “Perceptual
+in this research community. In all subsequent experiments, the        learned source-channel coding for high-fidelity image semantic trans-
+model is trained on a single SNR value and tested on the same         mission,” in Proc. IEEE Global Commun. Conf. (GLOBECOM), 2022,
+SNR.                                                                  pp. 3959–3964.
+                                                                 [11] T. Wu, Z. Chen, D. He, L. Qian, Y. Xu, M. Tao, and W. Zhang,
+   Fig. 3(a) compares CDM-JSCC with benchmarks on the                 “CDDM: Channel denoising diffusion models for wireless semantic
+Kodak dataset using an average CBR = 1/48 across various              communications,” IEEE Trans. Wireless Commun., vol. 23, no. 9, pp.
+SNRs, while Fig. 3(b) presents the results at an average              11 168–11 183, Sep. 2024.
+                                                                 [12] A. Wijesinghe, S. Zhang, S. Wanninayaka, W. Wang, and Z. Ding,
+CBR of 1/24. In addition, Fig. 3(c) shows the results on the          “Diff-GO: Diffusion goal-oriented communications to achieve ultra-high
+MS-COCO dataset at an average CBR of 1/48. All results                spectrum efficiency,” arXiv preprint arXiv:2312.02984, 2023.
+demonstrate significant advantages of our proposed CDM-          [13] E. Grassucci, S. Barbarossa, and D. Comminiello, “Generative semantic
+                                                                      communication: Diffusion models beyond bit recovery,” arXiv preprint
+JSCC over the benchmarks, with robust performance across              arXiv:2306.04321, 2023.
+various datasets, CBRs, and SNRs. Notably, our CDM-JSCC-         [14] Z. Jiang, X. Liu, G. Yang, W. Li, A. Li, and G. Wang, “DIFFSC:
+P outperforms all the benchmarks across all perceptual met-           Semantic communication framework with enhanced denoising through
+                                                                      diffusion probabilistic models,” in Proc. IEEE Int. Conf. Acoust. Speech
+rics, including LPIPS and FID. This enhancement is attributed         Signal Process. (ICASSP), 2024, pp. 13 071–13 075.
+to the proposed loss function and the powerful generative        [15] S. F. Yilmaz, X. Niu, B. Bai, W. Han, L. Deng, and D. Gündüz, “High
+diffusion models. However, it is important to note that our           perceptual quality wireless image delivery with denoising diffusion
+                                                                      models,” in IEEE Conf. Comput. Commun. Workshops. (INFOCOM
+CDM-JSCC-P shows performance degradation in the PSNR                  WKSHPS), 2024, pp. 1–5.
+metric. This is because generative model-based CDM-JSCC-P        [16] A. Li, X. Liu, G. Wang, and P. Zhang, “Domain knowledge driven se-
+tends to generate realistic and clear images and may overlook         mantic communication for image transmission over wireless channels,”
+                                                                      IEEE Wireless Commun. Lett., vol. 12, no. 1, pp. 55–59, 2022.
+pixel-wise fidelity sometimes. Despite this, our CDM-JSCC-P      [17] R. Yang and S. Mandt, “Lossy image compression with conditional
+still outperforms GAN-JSCC in the PSNR metric. Meanwhile,             diffusion models,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS),
+our CDM-JSCC-D is also competitive. Setting η = 0.1 leads             vol. 36, 2024.
+                                                                 [18] D. Han, Z. Wang, Z. Xia, Y. Han, Y. Pu, C. Ge, J. Song, S. Song,
+to a larger MSE distortion term compared to η = 0.5, thereby          B. Zheng, and G. Huang, “Demystify mamba in vision: A linear
+achieving better pixel-level fidelity measured by PSNR. As            attention perspective,” arXiv preprint arXiv:2405.16605, 2024.
+shown in Fig. 3, CDM-JSCC-D not only surpasses DeepJSCC          [19] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The
+                                                                      unreasonable effectiveness of deep features as a perceptual metric,” in
+and DIFFSC in PSNR but also offers significantly improved             Proc. IEEE Conf. Comput. Vision Pattern Recognit. (CVPR), 2018, pp.
+perceptual quality over most benchmarks. Besides, the decod-          586–595.
+ing time of CDM-JSCC is approximately 0.76s per Kodak            [20] M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter,
+                                                                      “Gans trained by a two time-scale update rule converge to a local nash
+image, showing advantages over BPG+LDPC of 4.6s and                   equilibrium,” in Proc. Adv. Neural Inf. Process. Syst. (NIPS), vol. 30,
+CDDM of 1.73s.                                                        2017.
+

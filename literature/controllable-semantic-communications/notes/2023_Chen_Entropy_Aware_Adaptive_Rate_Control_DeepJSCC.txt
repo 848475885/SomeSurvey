@@ -1,0 +1,342 @@
+                                              Deep Joint Source-Channel Coding for Wireless
+                                             Image Transmission with Entropy-Aware Adaptive
+                                                              Rate Control
+                                                  Weixuan Chen∗ , Yuhao Chen† , Qianqian Yang∗ § , Chongwen Huang∗ , Qian Wang‡ , Zhaoyang Zhang∗
+                                                    ∗
+                                                        College of Information Science and Electronic Engineering, Zhejiang University, Hangzhou 310007, China
+                                                             †
+                                                               College of Control Science and Engineering, Zhejiang University, Hangzhou 310007, China
+                                                         ‡
+                                                           College of Information Engineering, Zhejiang University of Technology, Hangzhou 310023, China
+                                                                 {12231075, csechenyh, § qianqianyang20, chongwenhuang, ning ming}@zju.edu.cn
+arXiv:2306.02825v2 [eess.IV] 14 Aug 2023
+
+
+
+
+                                                                                              wangqian18@zjut.edu.cn
+
+
+                                              Abstract—Adaptive rate control for deep joint source and       non-trainable communication channel incorporated into the
+                                           channel coding (JSCC) is considered as an effective approach      training process. Experimental results have shown that the
+                                           to transmit sufficient information in scenarios with limited      deep JSCC scheme achieves better performance than the
+                                           communication resources. We propose a deep JSCC scheme for
+                                           wireless image transmission with entropy-aware adaptive rate      separation-based digital transmission scheme. Based on the
+                                           control, using a single deep neural network to support multiple   deep JSCC scheme, several studies have been conducted to
+                                           rates and automatically adjust the rate based on the feature      further improve its performance. Kurka et al. [3] proposed
+                                           maps of the input image and their entropy, as well as the         DeepJSCC-f, which introduces the channel output feedback
+                                           channel conditions. In particular, we maximize the entropy of     to the deep JSCC scheme. This achieves variable-length
+                                           the feature maps to increase the average information carried by
+                                           each transmitted symbol during the training. We further decide    transmission and reduces the required channel bandwidth.
+                                           which feature maps should be activated based on their entropy,    Zhang et al. [4] proposed MLSC-image, a multi-level seman-
+                                           which improves the efficiency of the transmitted symbols. We      tic communication system for image transmission. It extracts
+                                           also propose a pruning module to remove less important pixels     both high-level and low-level image semantic features to
+                                           in the activated feature maps in order to further improve         improve image reconstruction performance.
+                                           transmission efficiency. The experimental results demonstrate
+                                           that our proposed scheme learns an effective rate control            However, there are still some aspects of the pioneering
+                                           strategy that reduces the required channel bandwidth while        deep JSCC scheme that could be improved. On one hand,
+                                           preserving the quality of the reconstructed images.               deep JSCC maps the pixel values of the input image to
+                                              Index Terms—Joint source and channel coding, adaptive rate
+                                           control.                                                          the complex-valued channel input symbols, treating each
+                                                                                                             symbol equally with the same channel resources. However, for
+                                                                 I. I NTRODUCTION                            different transmission purpose, the transmitted symbols may
+                                              Conventional wireless image transmission systems typically     have different importance. On the other hand, the transmission
+                                           perform source coding and channel coding of the source            rate of the deep JSCC scheme is fixed, which limits the
+                                           image separately. Source coding first compresses the source       transmission of complex image content when communication
+                                           image to remove redundant information. Then, channel coding       resources are limited. To address this limitation, the deep
+                                           adds redundant bits to the source-coded image to ensure           JSCC scheme could be made more flexible and effective
+                                           reliable wireless transmission. According to Shannon’s sep-       by dynamically adjusting the transmission rate to transmit
+                                           aration theorem [1], this structure requires the transmission     important information with limited channel bandwidth.
+                                           of infinitely long codewords to achieve theoretical optimality.      Regarding the first aspect, we believe that symbols from
+                                           However, in practical scenarios such as autonomous driving        feature maps with higher entropy are more important be-
+                                           and telemedicine, long code block lengths are difficult to        cause they have more information on average and thus may
+                                           achieve. Therefore, separation-based coding schemes may not       contribute to better image reconstruction. As for the second
+                                           be optimal for wireless transmission.                             aspect, several studies on multi-rate deep JSCC schemes have
+                                              To address this issue, deep learning techniques have been      been conducted. Kurka et al. [5] [6] studied the problem of
+                                           introduced to wireless image transmission systems to offer        adaptive bandwidth image transmission over wireless chan-
+                                           significant performance improvements. Bourtsoulatze et al.        nels. Yang et al. [7] supported multiple rates using a single
+                                           proposed the joint source and channel coding (JSCC) algo-         deep neural network that can dynamically adjust its rate based
+                                           rithm for wireless image transmission based on deep learning      on the channel signal-to-noise ratio (SNR) and the feature
+                                           [2], which is referred to as the deep JSCC scheme. In this        maps. However, these studies only considered reducing the
+                                           scheme, the authors train a deep learning model to extract        number of feature maps to be transmitted, ignoring the fact
+                                           a number of feature maps from the source image, with the          that the length of each feature map can also be reduced. In
+contrast, Zhou et al. [8] proposed a multi-bit length semantic    obtaining z2 and Mp , they are fed into the channel encoder to
+encoding scheme that can reasonably decrease the length           yield a complex-valued transmitted signal, represented as z3 .
+of transmitted information bits and minimize the overhead         z3 is passed through the communication channel and becomes
+required for the correct delivery of information. Inspired by     zˆ3 . zˆ3 contains two components: the received signal zˆ2 and the
+[8], we believe that not only some feature maps may be            received modulated pruning index matrix M̂p′ . At the receiver,
+unimportant, but even some of the pixels within an important      the channel decoder maps zˆ2 back to ẑ according to M̂p′ ,
+feature map are also unimportant.                                 from which the semantic decoder then reconstructs the image
+   In this paper, we propose an entropy-aware deep JSCC           x̂. A comprehensive illustration of our proposed deep JSCC
+scheme that can automatically adjust its rate based on the        scheme is presented in Fig. 1. Next, we will introduce each
+feature maps and their entropy, as well as the channel con-       module in detail.
+ditions. Specifically, we define the feature maps that need to
+be transmitted as the activated feature maps. We select the       B. Semantic Encoder and Decoder
+activated feature maps from all feature maps of the image and        The semantic encoder takes x as input and outputs the
+then prune them to increase the flexibility of the transmission   feature map z, while the semantic decoder reconstructs the
+rate. The main contributions of this paper are as follows:        image from ẑ. The semantic encoder consists of two compo-
+   • Entropy-Aware: We maximize the entropy of the feature        nents, S1 and S2 . The semantic encoder S1 consists of three
+maps during training to increase the average amount of infor-     convolutional layers, while semantic encoder S2 includes two
+mation carried by each transmitted symbol and determine the       ResNet blocks, two SNR adaptive modules, and one convo-
+activated feature maps based on their entropy. This benefits      lutional layer. The structure of the SNR adaptive module is
+the image reconstruction performance of the model.                identical to that in [7]. The structure of the semantic decoder
+   • Sparse Feature Maps: We prune the activated feature          is in reverse order to that of the semantic encoder. We also
+maps while maintaining their structural information. This         note that some convolutional layers in the semantic encoder
+reduces the transmission of unimportant symbols, resulting        become transpose convolutional layers for upsampling in the
+in reduced channel bandwidth usage.                               semantic decoder.
+   • Automatic Rate Adaption: The selection and pruning of
+                                                                  C. Feature Map Selection and Pruning Module
+feature maps are fully automatic. We use two policy networks
+to determine the activated feature maps and the pruning ratio        The feature map selection and pruning module selects the
+for these activated feature maps, respectively.                   activated feature maps and prunes them. Firstly, we define the
+   Our experimental results demonstrate that the proposed         dimension of z as 2C × L2 , where 2C represents the number
+method is effective in selecting the activated feature maps and   of feature maps and L2 is the length of each feature map. We
+pruning them under different channel conditions. Compared         calculate the entropy of each feature map zi as H(zi ), where
+to existing methods, our proposed method achieves a notable       i is the order index. Then, in order to increase the difference
+improvement in image reconstruction performance, with a           between the entropy values of the feature maps, we apply the
+                                                                                                   eH(zi )
+PSNR increase of approximately 0.11-0.57dB.                       softmax function H ′ (zi ) = 2C           to normalize H(zi ).
+                                                                                                        eH(zi )
+                                                                                                  P
+                                                                                                  i=1
+      II. O UR P ROPOSED D EEP JSCC S CHEME WITH                  The overall entropy matrix Hz is obtained by concatenating
+       E NTROPY-AWARE A DAPTIVE R ATE C ONTROL                    all H ′ (zi ). Then every two feature maps in z are concatenated
+                                                                  to form a concatenated feature map z ′ ∈ RC×L , since the
+A. Overall Structure                                              feature maps are input to the communication channel with
+   In this section, we propose a deep JSCC scheme that can        one half as the real part and the other half as the imaginary
+automatically adjust its rate based on the feature maps and       part. After concatenation, all C feature maps can be selected
+their entropy, as well as the channel SNR, while maintaining      as activated feature maps since this can further increase the
+high image reconstruction performance. The proposed scheme        flexibility of our transmission strategy. However, only some
+consists of several components, namely a semantic encoder, a      of the feature maps were selective in the previous method [7].
+feature map selection and pruning module, a channel encoder,         Next, we feed z and Hz into a policy network P1 . This
+                                                                                                                C×1
+a communication channel, a channel decoder, and a semantic        network outputs a binary mask M ∈ {0, 1}           that indicates
+decoder.                                                          which feature maps should be activated. P1 learns to select
+   To transmit an image x, we feed it into the semantic           the activated feature maps based on all the feature maps and
+encoder for extracting feature map z = fse (x). Then in the       their entropy, as well as the channel SNR, whose structure is
+feature map selection and pruning module, both z and its          shown in Fig. 2. As shown in Fig. 2, we first concatenate z and
+entropy Hz are provided as inputs to a policy network P1 in       Hz to construct an information matrix for the feature maps.
+order to generate a mask M , based on which the activated         We then average each row of this matrix and concatenate
+feature map z1 is selected. z1 is then input to another policy    the resulting matrix with the channel SNR. This generates
+network P2 to obtain its pruning ratio, which is applied by       a (2C + 1) × 1 matrix. The probabilities for each possible
+the feature map pruning module to prune z1 , resulting in the     selection are generated by passing this matrix into a two-
+pruned feature map z2 and the pruning index matrix Mp . After     layer multi-layer perceptron (MLP). To overcome the non-
+                               Fig. 1: The overall structure of our proposed deep JSCC scheme.
+
+
+
+
+                                                                          Fig. 3: The structure of policy network P2 .
+         Fig. 2: The structure of policy network P1 .
+
+                                                                                                   C
+differentiability problem caused by the discrete nature of the    activated feature maps as Ĉ =
+                                                                                                   P
+                                                                                                         Mi .
+sampling process, we utilize Gumbel-Softmax to sample the                                          i=1
+selection as a one-hot vector. This vector is then transformed       In the next step, we use another policy network P2 to
+into the mask M . The adaptive transmission mask has a length     determine the pruning ratio for the activated feature maps. P2
+of C, where each “1” in the mask means that the feature           takes z1 as its input and outputs a one-hot vector V of length
+map at the corresponding position in z ′ will be activated, and   T , where the T denotes the number of possible pruning ratios.
+vice versa. We then multiply the concatenated feature map z ′     Its structure is shown in Fig. 3. As shown in Fig. 3, we first
+by M to obtain the activated feature map z1 . Note that the       average each row of z1 and concatenate the resulting matrix
+inputs of P1 are z and Hz , while the activated feature maps      with the channel SNR. The concatenated matrix is then fed
+are selected from z ′ . At the receiver, feature maps that are    into the MLP, which consists of two fully connected layers
+not activated are zero-padded. We denote the total number of      and a softmax function at the end. By utilizing the maximum
+probability value, we generate the one-hot vector of length T .    pixel (CPP). If the input image has a dimension of 3×H ×W
+In this paper, we set T to 5 and define the possible pruning                              Ĉ (L̂+L′ )
+                                                                   pixels, then CPP = 2HW . Recall that Ĉ represents the
+ratios as a ∈ {0, 0.2, 0.25, 0.3, 0.35}. Once we obtain the one-   number of activated feature maps, L̂ represents the length
+hot vector V , we apply pruning to z1 based on V to obtain         of the pruned activated feature maps, and L′ represents the
+the pruned feature map z2 . The dimension of z2 is Ĉ × L̂.        number of columns of the modulated pruning index matrix
+Specifically, inspired by the commonly used l1-norm based                                                     ′
+                                                                   Mp′ . When no feature maps are pruned, L = 0. Hence, the
+pruning rule in model pruning [9], for each activated feature      value of CPP mainly depends on the number and length of
+map, we regard its pixel with smaller l1-norm (i.e., pixels with   the activated feature maps, as well as the number of pixels
+smaller absolute numerical values) as being less important.        removed from the activated feature maps.
+During the pruning process, we remove a portion of pixels
+with relatively small l1-norm in each activated feature map        G. Loss Function and Training Strategy
+according to the pruning ratio obtained from V . However, the         To train the proposed deep JSCC scheme, we incorporate
+positions of these removed pixels in the activated feature maps    three terms into our loss function L, which is defined as :
+contain important structural information of the input image.                   "                 C
+                                                                                                                         #
+Therefore, we record the position indices of the pruned pixels                          2     L̂ X           
+                                                                                                                H(zi )
+                                                                                                                       
+                                           Ĉ×L                        L = E ∥x − x̂∥2 + α          Mi − βE e              . (1)
+in a pruning index matrix Mp ∈ {0, 1}           , where the “1”                               L i=1
+indicates that the pixel at that position has been pruned. It is
+                                                                      Here, our loss function takes the expected value over
+essential to transmit Mp to the receiver so that the receiver
+                                                                   the entire training set. The first term is the mean square
+can zero-pad the pruned pixels according to Mp , thus recover
+                                                                   error between the input image and the reconstructed image,
+the structure of the activated feature maps.
+                                                                   ensuring image reconstruction performance. The second term
+D. Channel Encoder and Decoder                                     is the product of the length ratio and the number of the
+                                                                   activated feature maps. This term represents wireless channel
+   In the channel encoder, we use 64-quadrature amplitude
+                                                                   usage and helps reduce the required channel bandwidth. The
+modulation (64-QAM) to    modulate  Mp , resulting in a length
+                                                                   third term indicates the average processed entropy of z, which
+of each vector of L′ = L6 . Then, we obtain the modulated
+                            
+                                                                   increases the average amount of information carried by each
+pruning index matrix Mp′ for the activated feature maps. It has
+                                                                   transmitted symbol. It is calculated by taking the expected
+a dimension of Ĉ × L′ pixels. We input the pruned feature         value of the processed entropy of all the feature maps. Note
+map z2 and the modulated pruning index matrix Mp′ into             that here we do not normalize these entropy values. We use
+the power normalization module, which generates
+                                           ′
+                                                     a complex-    two hyperparameters α and β to balance these three terms.
+                                  Ĉ×( L̂+L  )
+valued transmitted signal z3 ∈ C         2     with unit average      To train our model, we use the Adam optimizer [10].
+power. After that, we input z3 into the noisy wireless channel     Specifically, we first train the entire model for 200 epochs
+and output zˆ3 . zˆ3 contains the received signal zˆ2 and the      with a learning rate of 5 × 10−4 . Afterward, we decrease the
+received modulated pruning index matrix M̂p′ . Finally, we         learning rate to 5 × 10−5 and continue training for another
+feed zˆ2 and M̂p′ into the channel decoder.                        200 epochs. Afterwards, we proceed to the fine-tuning phase,
+   In the channel decoder, we demodulate M̂p′ and zero-pad         where the learning rate becomes 1 × 10−5 . During this phase,
+the pruned pixels according to M̂p to recover the structure        we first freeze the semantic encoder S1 and train the model
+of the activated feature maps. Subsequently, we zero-pad the       for 100 epochs. Then, we freeze the semantic encoder S2 and
+feature maps that are not activated. The output of the channel     the policy networks, and train the model for 100 epochs.
+decoder is ẑ.
+                                                                                        III. E XPERIMENTS
+E. Communication Channel                                           A. Experimental Setup
+   The communication channel is modeled as a non-trainable            We evaluate our proposed scheme using the CIFAR-10
+layer that adds random perturbation to the transmitted sym-        dataset, which consists of 50,000 training images and 10,000
+bols. In this paper, we consider AWGN wireless channel. The        testing images. All images are 32×32 pixel RGB images. The
+output of the channel can be expressed as zˆ3 = z3 + n, where      batch size is set to 512, and the channel SNR is uniformly
+n represents the additive Gaussian noise. The channel SNR,         sampled between 0dB and 15dB for each image in every
+which determines the level of noise in the channel, is known       epoch during the training process. The hyperparameter αours
+by both the transmitter and receiver, allowing the semantic        has two distinct values: 2 × 10−4 and 1.3 × 10−3 . β is set to
+encoder, semantic decoder, P1 , and P2 to adapt to different       1×10−5 . The number of filters in the last layer of the semantic
+channel conditions.                                                encoder is 2C = 16, and the length of the corresponding
+                                                                   feature maps is L2 = 64. The feature maps in z are then
+F. Transmission Rate                                               concatenated in pairs to create selective feature map z ′ with
+   Our objective is to maintain the quality of reconstructed im-   dimension C×L = 8×128. If the feature maps are pruned, the
+age while reducing the channel bandwidth usage. We measure         binary vectors used torepresent the pruning indices comprise
+                                                                                     ′
+                                                                   128 bits. Thus, L = 128
+                                                                                              
+the transmission rate based on the wireless channel usage per                               6   = 22.
+TABLE I: The strategy comparison between the baseline [7] with αbase = 5 × 10−4 and our method with αours = 2 × 10−4 .
+                            Average number    Average feature map                Baseline                     Basline
+                 SNR(dB)                                            Rate(CPP)                  PSNR(dB)
+                            of feature maps     length ratio(%)                 Rate(CPP)                    PSNR(dB)
+                    15           7.90                74.04            0.450       0.447      33.37 (↑0.57)     32.80
+                    10           7.97               100.00            0.498       0.488      31.79 (↑0.59)     31.20
+                    5            8.00               100.00            0.500       0.499      28.60 (↑0.28)     28.32
+                    0            8.00               100.00            0.500       0.500      24.74 (↑0.21)     24.53
+
+TABLE II: The strategy comparison between the baseline [7] with αbase = 1.5×10−3 and our method with αours = 1.3×10−3 .
+                            Average number    Average feature map                Baseline                     Basline
+                  SNR(dB)                                           Rate(CPP)                  PSNR(dB)
+                            of feature maps     length ratio(%)                 Rate(CPP)                    PSNR(dB)
+                     15          4.60                73.20            0.260       0.255       30.06(↑0.11)     29.95
+                     10          5.54               100.00            0.346       0.310       29.54(↑0.65)     28.89
+                      5          7.29               100.00            0.455       0.430       27.88(↑0.40)     27.48
+                      0          7.90               100.00            0.493       0.493       24.56(↑0.11)     24.45
+
+
+
+
+                      (a) αours = 2 × 10−4                                                  (b) αours = 1.3 × 10−3
+
+Fig. 4: The comparison of image reconstruction performance between our method, the method proposed in [7], and the
+BPG+capacity method.
+
+   For comparison, we use two baseline methods: the adaptive         We compare the performance of these models and plot the
+rate control scheme proposed by Yang et al. [7] and the BPG          SNR-PSNR curves, as shown in Fig. 4. Our model outper-
+image codec combined with idealistic error-free transmission         forms the method proposed in [7] for both αours = 2 × 10−4
+based on Shannon capacity. We use peak signal-to-noise ratio         and αours = 1.3 × 10−3 . At similar CPPs, our method im-
+(PSNR) as the performance metric.                                    proves PSNR by about 0.21-0.57dB when αours is relatively
+                                                                     small. However, the PSNR improvement drops to around
+B. Experimental Results                                              0.11dB when we increase the value of αours . This is because
+   First, we analyze the number of feature maps and the              that as αours increases, the policy networks focus more on
+pruning ratios selected by our proposed method under dif-            channel bandwidth usage rather than PSNR performance,
+ferent SNRs. For comparison, we use data obtained from               thereby reducing the effectiveness of our scheme. At low
+the baseline [7], which is shown in Table. I and Table. II.          SNRs (0-10dB), our method outperforms both baseline meth-
+To ensure a fair performance comparison, we set αours in             ods. At high SNR (15dB), our method performs equivalently
+multiple attempts to maintain CPP levels similar. When the           to the BPG+capacity method when αours is small, while
+SNR is low (0-10dB), our method selects a larger number of           completely outperforming it when αours increases. Note that
+feature maps and we do not prune them in this case. This is          the BPG+capacity method is rate-fixed. Therefore, even if the
+because poor channel conditions require more feature maps            PSNR performances are similar, our method has the advantage
+to be transmitted to provide enough information for image            of rate adaptivity. Compared to the method proposed in
+reconstruction. Pruning is not worthwhile in this case because       [7], our method shows a notable improvement in image
+64-QAM has a high bit error rate (BER) at low SNRs. Our              reconstruction performance, achieving approximately 0.57dB
+method achieves approximately 0.11-0.28dB higher PSNR                for small αours and slightly lower, about 0.11dB, for larger
+compared to the baseline without pruning the feature maps.           αours . This shows that our method is more advantageous when
+This indicates that our designed entropy-aware feature map           channel resources are sufficient.
+selection module can help improve image reconstruction                  Finally, we consider two types of images in CIFAR-10
+performance. As the SNR increases to 15dB, we prune about            transmitted by our proposed scheme, as shown in Fig. 5. In
+26%-27% of the pixels in the activated feature maps.                 Fig. 5, the blue bar represents the total entropy of the activated
+   Next, we compare our proposed method with the method              feature maps, while the red curve represents the entropy of
+proposed by Yang et al. [7] and the BPG+capacity method.             the input images, both of which refer to the average. The
+                                                                  of the model with similar CPPs. The effect of the feature map
+                                                                  pruning technique is more significant at lower αours . These
+                                                                  experiments confirm that our feature map pruning technique
+                                                                  effectively improves the image reconstruction performance.
+
+                                                                                           IV. C ONCLUSION
+                                                                     In this paper, we proposed a deep JSCC scheme for wireless
+                                                                  image transmission with entropy-aware adaptive rate control.
+                                                                  During training, we maximized the entropy of the feature
+                                                                  maps to increase the amount of average information carried by
+                                                                  each transmitted symbol, and selected activated feature maps
+                                                                  based on their entropy. This helped the model to achieve better
+                                                                  image reconstruction performance. To achieve the adaptive
+Fig. 5: The comparison of transmission schemes for two types      transmission rate, we introduced two policy networks. The
+of images with different complexity in CIFAR-10.                  first generated a binary mask that selects activated feature
+                                                                  maps. Subsequently, the second policy network decided the
+                                                                  pruning ratio for the activated feature maps. We transmitted
+TABLE III: The performance comparison of the proposed             the position information of the pruned pixels over the wireless
+method with and without the feature map pruning technique.        channel to recover the structure of the activated feature
+                 Model                 Rate(CPP)    PSNR(dB)      maps at the receiver. Our experiments demonstrate that the
+      αours = 2 × 10−4 (with P2 )        0.450     33.37(↑0.18)   proposed method learns an effective rate control strategy that
+    αours = 4.5 × 10−4 (without P2 )     0.451        33.19       automatically adjusts the rate according to the feature maps
+     αours = 3.5 × 10−4 (with P2 )       0.433     33.10(↑0.16)
+    αours = 4.8 × 10−4 (without P2 )     0.433        32.94       and their entropy, as well as the channel conditions. Our
+      αours = 4 × 10−4 (with P2 )        0.406     32.65(↑0.09)   method, which benefits from the entropy-aware feature map
+    αours = 5.4 × 10−4 (without P2 )     0.405        32.56       selection and the feature map pruning, provides a promising
+     αours = 5.8 × 10−4 (with P2 )       0.356     31.77(↑0.02)   experimental result for adaptive rate control in deep JSCC.
+    αours = 7.5 × 10−4 (without P2 )     0.356        31.75
+     αours = 1.3 × 10−3 (with P2 )       0.260     30.06(↑0.02)   Moreover, it outperforms existing related studies in terms of
+    αours = 1.9 × 10−3 (without P2 )     0.260        30.04       image reconstruction performance.
+
+                                                                                              R EFERENCES
+two types of images have different complexity, with higher
+                                                                   [1] T. M. Cover, Elements of information theory. John Wiley & Sons,
+entropy representing higher complexity. For each type of               1999.
+image, we take the average of 100 images. For the simple           [2] E. Bourtsoulatze, D. B. Kurka, and D. Gündüz, “Deep joint source-
+images, our method selects an average of 4.11 feature maps             channel coding for wireless image transmission,” IEEE Transactions
+                                                                       on Cognitive Communications and Networking, vol. 5, no. 3, pp. 567–
+and prunes 28.2% pixels of them, resulting in an average CPP           579, 2019.
+of 0.229. While for the complex images, our method selects         [3] D. B. Kurka and D. Gündüz, “Deep joint source-channel coding of
+an average of 4.83 feature maps and prunes 27.9% pixels of             images with feedback,” in ICASSP 2020-2020 IEEE International
+                                                                       Conference on Acoustics, Speech and Signal Processing (ICASSP).
+them, resulting in an average CPP of 0.269. The result shows           IEEE, 2020, pp. 5235–5239.
+that our method selects fewer feature maps and therefore           [4] Z. Zhang, Q. Yang, S. He, M. Sun, and J. Chen, “Wireless transmission
+lower CPP when the image content is relatively simple, and             of images with the assistance of multi-level semantic information,”
+                                                                       in 2022 International Symposium on Wireless Communication Systems
+vice versa. It also proves that our method can automatically           (ISWCS). IEEE, 2022, pp. 1–6.
+select activated feature maps based on the entropy of the          [5] D. B. Kurka and D. Gündüz, “Successive refinement of images with
+image. In conclusion, by combining the entropy-aware feature           deep joint source-channel coding,” in 2019 IEEE 20th International
+                                                                       Workshop on Signal Processing Advances in Wireless Communications
+map selection with the feature map pruning, we achieve                 (SPAWC). IEEE, 2019, pp. 1–5.
+notable improvement in image reconstruction performance.           [6] D. B. Kurka and D. Gündüz, “Bandwidth-agile image transmission
+                                                                       with deep joint source-channel coding,” IEEE Transactions on Wireless
+                                                                       Communications, vol. 20, no. 12, pp. 8081–8095, 2021.
+C. Ablation Study                                                  [7] M. Yang and H.-S. Kim, “Deep joint source-channel coding for wireless
+   We also conduct an ablation study of the proposed scheme            image transmission with adaptive rate control,” in ICASSP 2022-
+                                                                       2022 IEEE International Conference on Acoustics, Speech and Signal
+to evaluate its effectiveness, as shown in Table. III. Specif-         Processing (ICASSP). IEEE, 2022, pp. 5193–5197.
+ically, we train several models with different αours values        [8] Q. Zhou, R. Li, Z. Zhao, Y. Xiao, and H. Zhang, “Adaptive bit rate
+to compare the performance of models with and without the              control in semantic communication with incremental knowledge-based
+                                                                       harq,” IEEE Open Journal of the Communications Society, vol. 3, pp.
+feature map pruning technique. To ensure a fair performance            1076–1089, 2022.
+comparison, we set the αours values through multiple attempts      [9] S. Han, J. Pool, J. Tran, and W. Dally, “Learning both weights
+to ensure similar CPP levels.                                          and connections for efficient neural network,” Advances in neural
+                                                                       information processing systems, vol. 28, 2015.
+   By comparing the results, we find that pruning the activated   [10] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+feature maps can improve image reconstruction performance              arXiv preprint arXiv:1412.6980, 2014.
+

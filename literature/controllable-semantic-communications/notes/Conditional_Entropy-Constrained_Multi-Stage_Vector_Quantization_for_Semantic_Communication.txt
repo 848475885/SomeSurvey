@@ -1,0 +1,432 @@
+IEEE WIRELESS COMMUNICATIONS LETTERS, VOLUME 15, 2026                                                                                                  885
+
+
+
+
+             Conditional Entropy-Constrained Multi-Stage Vector Quantization
+                              for Semantic Communication
+Junyong Shin , Graduate Student Member, IEEE, Jihun Park , Jinsung Park, and Yo-Seb Jeon , Member, IEEE
+
+   Abstract—This letter presents a conditional entropy-                            Unfortunately, conventional learnable VQ methods suffer
+constrained multi-stage vector quantization (CEC-MSVQ)                          from several inherent limitations. The most critical is their
+framework for semantic communication (SC). The proposed                         reliance on a single-stage VQ approach, which lacks flexibility
+method integrates multi-stage VQ (MSVQ) for fine-grained rate
+control and entropy-constrained VQ (ECVQ) for improved rate–
+                                                                                in adapting to different rate constraints, as a single codebook
+distortion efficiency. By modeling stage-wise quantization outputs              is typically designed for a fixed bit rate. Another drawback is
+as a Markovian sequence with conditional entropy modeling,                      that increasing the compression rate in single-stage VQ often
+CEC-MSVQ jointly trains semantic encoder–decoder networks                       requires codebooks of exponential size, which significantly
+and VQ codebooks while explicitly optimizing the rate–distortion                increases computational complexity and hinders scalability.
+objective. During inference, multi-rate transmission is supported               Moreover, codeword utilization is typically inefficient, with
+by selectively activating VQ modules. Simulation results show
+that CEC-MSVQ achieves superior task performance over                           many entries rarely used in practice—a phenomenon known
+existing VQ-based SC, confirming the effectiveness of the                       as the codebook collapse problem [7]. These limitations
+proposed conditional entropy modeling.                                          motivate the development of multi-stage vector quantiza-
+   Index Terms—Multi-stage vector quantization, entropy-                        tion (MSVQ), which decomposes the quantization process
+constrained vector quantization, digital semantic communication,                into multiple sequential stages. By successively refining
+rate control.                                                                   residual errors using smaller codebooks, MSVQ enables fine-
+                       I. I NTRODUCTION                                         grained rate control and alleviates the burden of exponentially
+     EMANTIC communication (SC) has recently been recog-                        growing complexity [8], [9], [10]. Despite these advantages,
+S    nized as a transformative direction in wireless systems,
+aiming to deliver the intended meaning of data rather than
+                                                                                MSVQ alone does not ensure rate–distortion optimality, since
+                                                                                its design criterion remains rooted in Euclidean distance
+its raw symbols. By focusing on semantic relevance, SC                          minimization and does not account for the distribution of
+can substantially reduce transmission overhead while retaining                  codewords, which is directly influences the transmission rate
+task-critical information, making it attractive for a wide range                of the VQ output.
+of applications [1]. In this context, digital SC has received                      Entropy-constrained vector quantization (ECVQ) has been
+growing attention, as it enables transmission of semantic                       regarded as one of the most celebrated VQ frameworks, as
+information over conventional digital communication infras-                     it balances distortion minimization with codeword entropy
+tructures. This is typically achieved by extracting semantic                    to approach the rate–distortion limit [11]. Recent efforts
+features through deep neural networks and encoding them into                    have sought to realize ECVQ within a learnable VQ frame-
+finite bits through quantization.                                               work [12], in which the model implicitly learns the distribution
+   Among various quantization techniques, vector quantization                   of codewords and jointly optimizes the VQ codebook together
+(VQ) has proven to be a powerful approach for compressing                       with the entire network in an end-to-end manner. However, this
+high-dimensional semantic features into compact bit-level                       approach remains limited to single-stage VQ and thus suffers
+representations [2]. A widely adopted strategy is to jointly                    from limited rate flexibility as well as the unscalable codebook
+train the encoder, decoder, and VQ codebook in an end-                          optimization. To the best of our knowledge, no existing
+to-end manner, allowing the quantizer to specialize for the                     study has investigated the integration of ECVQ into MSVQ,
+target task and better match the semantic feature distribution.                 despite their potential to enhance digital SC systems by
+This enables more efficient compression while preserving task-                  enabling flexible rate adaptation and improved rate-distortion
+relevant information, thereby improving task performance in                     performance.
+various applications such as image reconstruction [3], [4] or                      In this letter, we propose a new VQ framework for
+channel state information (CSI) compression [5], [6].                           SC, called conditional entropy-constrained multi-stage vector
+   Received 15 November 2025; accepted 10 December 2025. Date of                quantization (CEC-MSVQ), which provides a novel inte-
+publication 15 December 2025; date of current version 26 December 2025.         gration of MSVQ and ECVQ within SC. Unlike a simple
+This work was supported in part by a Grant of Korean ARPA-H Project             combination of two independent techniques, CEC-MSVQ
+through the Korea Health Industry Development Institute (KHIDI), funded by
+the Ministry of Health & Welfare, Republic of Korea, under Grant RS-2025-       models the quantization outputs of MSVQ stages as a
+25454431, and in part by the National Research Foundation of Korea (NRF)        Markovian sequence and applies conditional entropy modeling
+funded by Korean Government (MSIT) under Grant RS-2024-00453301. The            to capture the inter-stage dependencies. This enables adaptive
+associate editor coordinating the review of this article and approving it for
+publication was Y. Fu. (Corresponding author: Yo-Seb Jeon.)
+                                                                                and efficient finite-bit representation across stages, while
+   The authors are with the Department of Electrical Engineering,               preserving the hierarchical structure of MSVQ. Furthermore,
+Pohang University of Science and Technology, Pohang 37673, Gyeongbuk,           we present a joint training strategy for the semantic
+Republic of Korea (e-mail: sjyong@postech.ac.kr; jihun.park@postech.ac.kr;
+jinsung@postech.ac.kr; yoseb.jeon@postech.ac.kr).                               encoder-decoder and quantization modules, along with an
+   Digital Object Identifier 10.1109/LWC.2025.3644153                           inference strategy that allows rate-adaptive communication
+                2162-2345 
+                          c 2025 IEEE. All rights reserved, including rights for text and data mining, and training of artificial intelligence
+                       and similar technologies. Personal use is permitted, but republication/redistribution requires IEEE permission.
+                                       See https://www.ieee.org/publications/rights/index.html for more information.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:12:21 UTC from IEEE Xplore. Restrictions apply.
+886                                                                                         IEEE WIRELESS COMMUNICATIONS LETTERS, VOLUME 15, 2026
+
+
+
+under varying transmission bits. Simulation results demon-                      the quantizer operates on a residual vector, defined recursively.
+                                                                                                                   (s)
+strate that the proposed CEC-MSVQ framework achieves                            Specifically, the residual vector ri at stage s is computed as
+superior task performance compared to existing VQ-based                                                   (s)          (s−1)       (s−1)
+methods, validating its effectiveness.                                                                   ri     = ri           − rq,i      ,               (1)
+                                                                                                                         (0)                           (s−1)
+                                                                                where the initial residual is ri = zi . Each residual ri                       is
+          II. S YSTEM M ODEL AND P RELIMINARIES                                 quantized using minimum distance as
+   In this section, we present a digital SC system considered                                     (s−1)                        (s−1)
+                                                                                                 rq,i         = argmin ri               − bk 2 .         (2)
+in our work and introduce the MSVQ architecture, which is                                                       bk   ∈B(s)
+applicable to the considered system.
+                                                                                The cumulative quantized output of the i-th sub-vector after
+                                                                                stage s is given by
+A. Digital SC System                                                                                                     s−1
+                                                                                                                 (s)
+                                                                                                                                (t)
+   In this letter, we focus on a wireless image transmission                                                    zq,i =          rq,i .                     (3)
+task which is one of the representative applications in SC.                                                              t=0
+Given an input image x ∈ RC ×H ×W , the transmitter employs                     Accordingly, the residual quantization error at stage s is
+a semantic encoder network fenc (·, θ ) to extract the corre-                                                        
+                                                                                expressed as ri = zi − zq,i = zi − s−1
+                                                                                               (s)        (s)                (t)
+                                                                                                                        t=0 rq,i . Through this
+sponding semantic feature, expressed as z = fenc (x, θ ) ∈ RM ,                 multi-stage refinement, MSVQ allows for progressively finer
+where θ denotes the parameters of the semantic encoder, and                     approximations of the original sub-vectors while controlling
+C, H, W represent the number of channels, height, and width                     the complexity and bit rate at each stage.
+of the input image, respectively. To represent the semantic
+feature z with finite-bit precision, we apply a quantization
+method, resulting in a quantized feature zq ∈ RM . The
+corresponding bit sequence of zq is then transmitted to the                               III. P ROPOSED CEC-MSVQ F RAMEWORK
+receiver.1 The specific quantization scheme employed in our                        In this section, we propose CEC-MSVQ framework for digi-
+proposed framework will be detailed in the following section.                   tal SC systems. This framework introduces a novel conditional
+At the receiver side, the quantized feature zq is decoded                       entropy modeling method specifically designed for MSVQ,
+by a semantic decoder network fdec (·, φ) to reconstruct the                    enabling the effective incorporation of the ECVQ structure into
+original source sample as x̂ = fdec (zq , φ), where x̂ and                      the MSVQ structure described in Section II-B. We first present
+φ represent the final reconstructed output and the decoder                      the overall architecture of CEC-MSVQ, followed by a training
+parameter, respectively.                                                        strategy that supports efficient joint learning with a semantic
+                                                                                encoder–decoder pair. We then describe an inference strategy
+B. Multi-Stage Vector Quantization (MSVQ) in SC                                 for CEC-MSVQ tailored for enabling multi-rate digital SC.
+   The MSVQ method progressively reduces quantization error
+while maintaining a manageable codebook size. Unlike con-
+ventional single-stage VQ, which suffers from exponential                       A. A Simple Integration of ECVQ and MSVQ
+growth in complexity with increasing dimensionality, MSVQ                          ECVQ is a VQ framework that asymptotically achieves
+achieves a fine-grained approximation through a cascade of                      rate–distortion optimality [11]. ECVQ directly incorporates
+smaller VQ modules. This design enables improved quanti-                        entropy into VQ design by minimizing a joint objective of
+zation accuracy by sequentially quantizing the residuals from                   distortion and codeword entropy. In the original ECVQ, the
+previous stages, without significantly increasing computational                 Euclidean distance-based VQ criterion is modified as
+or memory requirements [8].                                                                                                    
+                                                                                         zq,i = argmin −νlog2 Pk + zi − bk 2 ,        (4)
+   To incorporate this method into the SC system, we further                                            bk ∈B
+adopt a product VQ structure [13], which is commonly
+                                                                                where Pk denotes the probability distribution over the VQ
+used in learnable VQ frameworks [2], [3], [4], [5], [6].
+                                                                                codewords [11]. The first term of the criterion in (4), known
+By decomposing the M-dimensional semantic feature into
+                                                                                as the rate bias term, shifts the quantization decision bound-
+multiple lower-dimensional subspaces, product VQ reduces
+                                                                                aries to favor high-probability codewords. As a result, the
+VQ complexity and enables more efficient codebook training.
+                                                                                quantization outputs become more concentrated on frequently
+Accordingly, the semantic feature z is divided into N sub-
+                                                                                used codewords, thereby reducing the average bit length after
+vectors of dimension D, such that M = N × D. Let zi denote
+                                                                                entropy coding. The effect of this bias is controlled by a
+the i-th sub-vector, defined as zi = [z(i−1)D+1 , . . . , ziD ],
+                                                                                hyperparameter ν, which governs the balance between rate
+where zj represents the j-th element of z. Utilizing MSVQ,
+                                                                                reduction and distortion. When ν = 0 the bias term disappears,
+each sub-vector zi is quantized through S > 1 sequential
+                                                                                and the criterion degenerates to the conventional VQ objective
+stages, each utilizing a distinct VQ codebook B (s) with
+                                                                                without rate considerations. On the other hand, a larger value
+codebook size K for stage s ∈ {1, . . . , S }.2 At each stage,
+                                                                                of ν encourages the quantizer to select codewords with higher
+   1 Although z may be affected by channel errors and robustness-aware          probability, thereby reducing the overall coding rate at the cost
+                q
+training is feasible, we assume for simplicity that a certain number of bits    of increased Euclidean distortion.
+can be transmitted reliably. This number of reliably transmitted bits can be
+adaptively adjusted according to the user’s channel condition.
+   2 Although N separate codebooks can be used to quantize the N sub-vectors    overhead. To avoid this issue, we assume that a shared codebook is used
+at each stage, this separate-codebook approach incurs excessive memory          across all sub-vectors at each stage.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:12:21 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: CONDITIONAL ENTROPY-CONSTRAINED MULTI-STAGE VECTOR QUANTIZATION                                                                                          887
+
+
+                                                                                           (s)
+                                                                                where P       (s−2)      represents the conditional probability distri-
+                                                                                           k |rq,i
+                                                                                bution over the VQ codewords at stage s conditioned on the
+                                                                                                             (s−2)
+                                                                                previous selected codeword rq,i .
+                                                                                   In practice, directly computing the codeword distribution
+                                                                                  (1)         (s)
+                                                                                Pk and P (s−2) may impose significant computational
+                                                                                                 k |rq,i
+                                                                                burden during both training and inference. To address this
+                                                                                issue, we model the codeword distribution by introducing
+                                                                                trainable parameters as done in [12]. In particular, for s = 1,
+                                                                                             (1)
+                                                                                we model Pk as
+                                                                                                                                  (1)
+                                                                                                            (1)          e −wk
+                                                                                                           Pk =                (1)
+                                                                                                                                    ,               (7)
+                                                                                                                        K     −wp
+                                                                                                                        p=1 e
+                                                                                                           (1)          (1)
+Fig. 1. An illustration of the proposed CEC-MSVQ framework for digital          where w(1) =             [w1 , . . . , wK ] is a distribution parameter
+SC systems.
+                                                                                for stage 1. Similarly, for s > 1, we model the conditional
+                                                                                             (s)                        (s−1)
+                                                                                probability P (s−1) when the codeword bl      is selected in
+   Following the same idea, a simple integration of ECVQ                                         k |bl
+and MSVQ can be implemented by modifying the Euclidean                          the (s − 1)-th stage as
+distance-based VQ criterion in (2) as follows:                                                                                          (s)
+                                                                                                                                 −wk ,l
+                                                                                                         (s)               e
+    (s−1)
+   rq,i
+                                 (s)
+          = argmin −ν (s) log2 Pk + ri
+                                          (s−1)
+                                                − bk 2 , (5)                                         P                =                            ,                (8)
+                                                                                                               (s−1)
+                                                                                                           k |bl           K           −wp,l
+                                                                                                                                              (s)
+                 bk   ∈B(s)                                                                                                 p=1 e
+
+where
+           (s)
+          Pk    denotes the probability distribution over                       where W(s) ∈ RK ×K is a conditional distribution parameter
+                                                                                                                      (s)
+the VQ codewords and ν (s) represents the correspond-                           for stage s, such that [W(s) ]k ,l = wk ,l for s > 1. This for-
+ing hyperparamter at stage s. Unfortunately, modeling                           mulation allows the model to adaptively adjust the codeword
+each stage’s codeword distribution independently using                          distribution based on the outcome of the previous stage.
+marginal distributions—without accounting for inter-stage
+dependencies—fails to capture the inherent sequential struc-
+                                                                                C. Training Strategy for CEC-MSVQ
+ture of MSVQ. In particular, the current stage’s codeword
+selection is contextually dependent on the prior quantization                      We now present our strategy to jointly train the VQ
+path; thus, ignoring this dependency may lead to suboptimal                     codebooks in the S stages, semantic encoder, and semantic
+quantization.                                                                   decoder with the distribution parameters W(s) and w(1) . Our
+                                                                                strategy consists of S + 1 steps. In the first S steps, we
+                                                                                train only the VQ codebooks, semantic encoder, and decoder
+B. Proposed CEC-MSVQ Framework                                                  without incorporating rate bias, i.e., without updating the
+   Recall that in MSVQ, each stage quantizes the residual                       associated distribution parameters. To this end, we set W(s)
+vector resulting from the previous stage. This implies that                              (1)
+                                                                                and wk to zero during these steps. Specifically, at the s-th
+the sequence of codewords across stages forms a structured                      step for s ∈ {1, . . . , S }, we jointly train the first s codebooks
+dependency. Specifically, the distribution of codewords at the                                                                  (s)
+                                                                                B (1) , . . . , B (s) using the loss function Lmsvq defined as
+current stage is influenced by the codeword outputs of the                                                              s
+preceding stages. Inspired by this, we put forth a novel inte-                                              (s)      1  (j )
+                                                                                                          Lmsvq =          Lvq ,                 (9)
+gration of the ECVQ and MSVQ structures by introducing a                                                             s
+                                                                                                                            j =1
+Markovian assumption,3 wherein the codeword distribution at
+                                                                                       (j )
+stage s depends on the codeword output from stage s − 1. This                   where Lvq is given by
+assumption balances modeling flexibility with tractability and                     (j )                    2                (j ) 2                      (j )   2
+                                                                                 Lvq = x̂(j ) − x              + sg(z) − zq             + β z − sg zq              . (10)
+therefore enables the system to learn stage-wise conditional
+distributions that capture the sequential correlations among                    Here, β is a hyperparemeter, and sg(·) denotes the stop-
+codewords.                                                                      gradient operator, which treats the input as a constant during
+                                                                                                                               (j )
+   Based on the Markovian assumption, we modify the VQ                          backpropagation [3]. Also, x̂(j ) = fdec (zq ) denotes the
+criterion in (5) as follows:                                                    data sample reconstructed from the VQ output at stage j.
+    (s−1)                                                                                         (j )
+   rq,i  =                                                                      Consequently, Lvq serves to guide the encoder, decoder, and
+   ⎧                                                                          VQ codebooks up to stage j jointly to minimize quantization
+   ⎪          (1)    (1)           2
+   ⎪
+   ⎨ argmin −ν log2 Pk + zi − bk  ,                       if s = 1,
+                                                                                error and image reconstruction error. The first S training steps
+      bk ∈B(1)
+              (s)     (s)        (s−1)                                         without rate minimization serve as an effective initialization
+   ⎪                                    − bk 2 , if s > 1,
+   ⎩ argmin
+   ⎪
+         (s)
+              −ν log2 P (s−2) + ri
+                       k |r                                                     that stabilizes the optimization and leads to more reliable
+      bk ∈B                      q,i
+
+                                                                         (6)    convergence of the final rate–distortion objective.
+                                                                                   At the last step (i.e., the (S + 1)-th step), we jointly train
+   3 While full dependency on all previous stages could be modeled, we adopt    the entire S codebooks with incorporating rate bias, i.e., with
+a first-order Markovian assumption to avoid excessive parameter growth.         updating the associated distribution parameters using the loss
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:12:21 UTC from IEEE Xplore. Restrictions apply.
+888                                                                                               IEEE WIRELESS COMMUNICATIONS LETTERS, VOLUME 15, 2026
+
+
+
+function Lcec−msvq defined as                                                         index order, provided that the average transmission overhead
+                                            S
+                                                                                     does not exceed the rate constraint. If all sub-vectors are
+                                        1           (j )
+                   Lcec−msvq =                     Lcecvq ,                    (11)   assigned an additional stage, the process is repeated until
+                                        S                                             the average overhead reaches the rate constraint. Since the
+                                            j =1
+          (j )                                                                        average transmission overhead can be directly computed from
+where Lcecvq is given by                                                              the codeword distribution, the number of VQ stages required
+                                  N
+                                    
+                                                                                      for a given rate constraint can be pre-determined offline based
+       (j )     (j )      (1 + β)                  (1)
+      Lcecvq = Lvq      −             ν (1) E log2 Pk (zi )                           on the learned codeword distribution.
+                             N
+                                         i=1                                             2) Fixed-Rate Strategy: While the variable-rate strategy
+                            j
+                                                                                     satisfies the rate constraint on average, the transmission rate
+                                                     (l)
+                        +           ν (l) E log2 P         (l−2)   (zi )   .   (12)   of each individual image may still vary because entropy
+                                                     k |rq,i
+                            l=2                                                       coding is inherently variable-rate. This variability can be
+          (1)              (l)                                                        problematic in scenarios where the transmitter must adhere to
+Here, Pk (zi ) and P         (l−2)    (zi ) denote the conditional prob-
+                          k |rq,i                                                     a strict per-sample rate constraint in the practical SC system.
+ability of the k-th codeword given zi . It is obtained by                             To address this issue, the fixed-rate strategy determines the
+normalizing the empirical codeword usage frequencies dur-                             number of VQ stages in the same way as the variable-rate
+ing training, weighted by the probabilities computed in (7)                           strategy, but by computing the actual transmission overhead
+and (8) so that the resulting values form a valid probability                         for each input image rather than the average overhead. In
+distribution. This design ensures that the distributions modeled                      addition, we introduce an exception-handling procedure for
+in (7) and (8) accurately reflect the empirical codeword usage,                       cases where even a single stage exceeds the given bit budget.
+while contributing to effective rate minimization in the overall                      In this procedure, if the bit length computed after the first
+loss formulation. Note that ν (s) is a hyperparameter defined                         VQ stage exceeds the bit budget, we iteratively replace the
+in (5). To stabilize the training and progressively improve the                       sub-vector producing the longest bit sequence with the next-
+rate-distortion trade-off, the hyperparameter ν (s) is set to be                      best codeword that minimizes the quantization criterion in (6)
+                              (s)      (s)
+gradually increased from νmin to νmax during training.                                among the remaining candidates, yielding a shorter bit length,
+              (j )
+   In (12), Lcecvq consists of the reconstruction error of x̂(j )                     until the constraint is satisfied. As the number of substitutions
+together with the distortion and rate terms induced by the                            increases, the selected codewords progressively deviate from
+corresponding VQ modules. Accordingly, (11) represents the                            those originally optimized by the VQ criterion in (6), resulting
+average loss computed over all reconstruction stages from                             in higher distortion in the feature space and consequently
+                               (j )                                                   degraded task performance.
+x̂(1) to x̂(S ) . Precisely, Lcecvq can be interpreted as the
+Lagrangian of the operational rate-distortion function, where
+the VQ codeword rate and associated distortion are jointly
+                                                                                                         IV. S IMULATION R ESULTS
+minimized [11], [12]. The last two terms in (10) correspond
+to the distortion in the latent space, while the last term in (12)                       In this section, we evaluate the performance of the proposed
+corresponds to the rate. In (10), the sum of the coefficients                         CEC-MSVQ framework for image transmission tasks using the
+                                           (j )                                       CIFAR-100 and STL-10 image datasets, whose image dimen-
+associated with the distortion from z to zq is given by (1+β).
+                                                                                      sions are (C, H, W) = (3, 32, 32) and (3, 96, 96), respectively.
+Since ν (j ) can be interpreted as the Lagrangian multiplier for
+                                                                                      The semantic encoder and decoder used in all simulations are
+the distortion at the j-th ECVQ stage, each rate term in the
+                                                                                      implemented using the CNN-based architectures4 described
+overall loss should be weighted by (1 + β)ν (j ) . Consequently,
+                                                                                      in [3]. The Adam optimizer is employed for training, with a
+this formulation ensures that the contribution of each stage-
+                                                                                      learning rate of 10−3 , a batch size of 64, and 128 training
+specific rate term is properly scaled in accordance with the
+                                                                                      epochs at each step. The semantic feature dimension is set as
+operational rate–distortion principle.
+                                                                                      M = 512 for the CIFAR-100 dataset and M = 4608 for the
+                                                                                      STL-10 dataset. Other parameters for the proposed framework
+D. Inference Strategy for CEC-MSVQ                                                    are set as follows: D = 4, K = 256, β = 0.25, S = 2,
+   A key feature of the proposed CEC-MSVQ framework                                           (s)    (s)         1 , 1 ), ∀s. A peak signal-to-noise
+                                                                                      and (νmin , νmax ) = ( 4096     32
+is that, as more stages are applied to each sub-vector, the                           ratio (PSNR) is adopted as a performance measure, defined as
+transmission rate increases incrementally while the reconstruc-                                                  2
+                                                                                      PSNR = 10 log10 ( MAX  MSE2
+                                                                                                                   ) (dB), where MAX indicates the
+tion performance improves correspondingly. This property                              maximum possible pixel value of the image (e.g., 255 for 8-bit
+enables flexible rate adjustment by dynamically activating or                         images), and MSE denotes the mean squared error between
+deactivating VQ stages for each sub-vector during inference.                          the original and reconstructed images. During the inference
+Consequently, CEC-MSVQ allows the digital SC system to                                phase, entropy coding is performed by using a Huffman coding
+support multi-rate transmission without requiring re-training                         table for each VQ codebook. This table is generated using the
+or maintaining multiple semantic encoder–decoder pairs.                               empirical codeword distributions obtained from the outputs of
+   To demonstrate this advantage, we introduce two strategies                         each trained VQ module over the entire training dataset.
+for CEC-MSVQ that determine the number of VQ stages for
+each sub-vector under a desired rate constraint.
+                                                                                         4 While we specify this particular neural network architecture for the
+   1) Variable-Rate Strategy: This strategy begins by activat-
+                                                                                      purpose of experimental evaluation, the proposed framework itself is not tied
+ing the first stage for all sub-vectors. Then, additional stages                      to any specific encoder–decoder design and can be applied to a wide range
+are sequentially activated for each sub-vector in ascending                           of SC system architectures.
+         Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:12:21 UTC from IEEE Xplore. Restrictions apply.
+SHIN et al.: CONDITIONAL ENTROPY-CONSTRAINED MULTI-STAGE VECTOR QUANTIZATION                                                                             889
+
+
+                                                                                                            TABLE I
+                                                                                       A C OMPARISON OF THE PARAMETER C OUNTS AND FLOP S
+
+
+
+
+                                                                                  Table I summarizes the overall memory and computational
+                                                                               complexity of the proposed framework and the baseline
+                                                                               methods. For the single-rate models, the reported parameter
+                                                                               counts correspond to the total parameters of three separately
+                                                                               trained encoder–decoder networks supporting the bit-overhead
+                                                                               points in Fig. 2. In contrast, CEC-MSVQ supports not only
+                                                                               those three rate points but also a wider range of arbitrary
+                                                                               rates with a single unified model and achieves competitive
+                                                                               complexity, demonstrating that its substantial performance
+Fig. 2. PNSR performances of various frameworks for digital SC systems         gains are obtained with only a modest burden.
+across different transmission bits.
+                                                                                                      V. C ONCLUSION
+                                                                                  We proposed CEC-MSVQ, a promising VQ framework
+                                                                               for digital SC that achieves both fine-grained rate adaptation
+                                                                               and improved rate-distortion performance. By modeling the
+                                                                               outputs of multi-stage quantization as a Markovian sequence
+                                                                               and applying conditional entropy modeling, the proposed
+                                                                               framework enables efficient bit allocation with low distor-
+                                                                               tion. Simulation results confirm that CEC-MSVQ outperforms
+Fig. 3.  Comparison of image reconstruction results across various VQ          existing VQ-based approaches, highlighting its potential for
+methods on the STL-10 dataset.
+                                                                               scalable and efficient SC.
+
+   Fig. 2 presents the PSNR performance of the SC frame-                                                     R EFERENCES
+works with different quantization methods: (i) a basic                          [1] X. Luo et al., “Semantic communications: Overview, open issues, and
+single-stage VQ method in [3] with entropy coding; (ii) a                           future research directions,” IEEE Wireless Commun., vol. 29, no. 1,
+conventional MSVQ method in [9] with entropy coding;                                pp. 210–219, Feb. 2022.
+(iii) an MSVQ method with a trainable importance-based                          [2] J. Shin et al., “ESC-MVQ: End-to-end semantic communication with
+                                                                                    multi-codebook vector quantization,” IEEE Trans. Wireless Commun.,
+stage selection module [10]; (iv) a single-stage ECVQ method                        early access, Sep. 10, 2025, doi: 10.1109/TWC.2025.3605838.
+in [12]; and (v) the proposed CEC-MSVQ framework. All                           [3] A. van den Oord et al., “Neural discrete representation learning,” in
+baselines are evaluated under either variable-rate or fixed-                        Proc. Adv. Neural Inf. Process. Syst., Dec. 2017, pp. 6306–6315.
+                                                                                [4] F. Baldassarre et al., “Variable rate allocation for vector-quantized
+rate transmission. For variable-rate transmission, the same                         autoencoders,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process.
+stage is applied across all image inputs, and the trans-                            (ICASSP), Jun. 2023, pp. 1–5.
+mission bits are averaged for plotting. In contrast, the                        [5] J. Shin et al., “Vector quantization for deep-learning-based CSI feedback
+                                                                                    in massive MIMO systems,” IEEE Wireless Commun. Lett., vol. 13,
+points corresponding to fixed-rate transmission indicate that                       no. 9, pp. 2382–2386, Sep. 2024.
+every image is transmitted using the specified number of                        [6] J. Shin et al., “Deep learning-based CSI feedback for Wi-Fi systems
+bits.                                                                               with temporal correlation,” IEEE Trans. Commun., early access, Aug.
+   Both Fig. 2(a) and (b) shows that the proposed CEC-                              20, 2025, doi: 10.1109/TCOMM.2025.3600202.
+                                                                                [7] Y. Takida et al., “SQ-VAE: Variational Bayes on discrete representation
+MSVQ frameworks consistently outperform the baselines. The                          with self-annealed stochastic quantization,” in Proc. Int. Conf. Mach.
+performance gap between ECVQ-based structures and the sim-                          Learn. (ICML), vol. 162, Jul. 2022, pp. 20987–21012.
+ple entropy-coded VQ baseline demonstrates the effectiveness                    [8] B.-H. Juang and A. Gray, “Multi stage vector quantization for speech
+                                                                                    coding,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process.
+of the ECVQ criterion. Unlike approaches that simply applies                        (ICASSP), May 1982, pp. 597–600.
+entropy coding, which provide limited gains, ECVQ explicitly                    [9] J. Lee et al., “Learning variable-rate CSI compression with multi-
+incorporates rate-distortion trade-offs into the quantization                       stage vector quantization,” in Proc. IEEE Int. Conf. Commun. (ICC),
+                                                                                    Jun. 2024, pp. 5123–5128.
+process, resulting in substantial improvements. Notably, the                   [10] Y. Chae et al., “Variable bitrate residual vector quantization for audio
+fixed-rate version of CEC-MSVQ, which satisfies the rate con-                       coding,” in Proc. IEEE Int. Conf. Acoust., Speech, Signal Process.
+straint for each individual image, achieves performance nearly                      (ICASSP), Apr. 2025, pp. 1–5.
+                                                                               [11] P. A. Chou et al., “Entropy-constrained vector quantization,” IEEE Trans.
+identical to that of the variable-rate version, underscoring the                    Acoust., Speech, Signal Process., vol. 37, no. 1, pp. 31–42, Jan. 1989.
+overall strength and effectiveness of the proposed framework.                  [12] J. Shin et al., “Entropy-constrained VQ-VAE for deep-learning-
+Fig. 3 visualizes the image reconstruction performance of                           based CSI feedback,” IEEE Trans. Veh. Technol., vol. 74, no. 6,
+various comparison methods. It shows that the proposed CEC-                         pp. 9870–9875, Jun. 2025.
+                                                                               [13] M. Sabin and R. Gray, “Product code vector quantizers for waveform and
+MSVQ produces the clearest reconstructed image among all                            voice coding,” IEEE Trans. Acoust., Speech, Signal Process., vol. 32,
+methods.                                                                            no. 3, pp. 474–488, Jun. 1984.
+
+        Authorized licensed use limited to: Peng Cheng Laboratory. Downloaded on June 25,2026 at 09:12:21 UTC from IEEE Xplore. Restrictions apply.
+
