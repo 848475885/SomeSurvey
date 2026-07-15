@@ -1,21 +1,52 @@
-# Meixia Tao Semantic Communications Search Notes
+# 上海交通大学陶梅霞团队：检索策略与筛选记录
 
-Scope: Meixia Tao / 陶梅霞, Shanghai Jiao Tong University, semantic communication related works from 2021 to present.
+## 范围与口径
 
-Search date: 2026-07-05.
+- 检索截止：2026-07-15；正式出版时间范围：2021-01-01 至 2026-07-15。
+- 负责人：Meixia Tao；OpenAlex author IDs：A5016127527。
+- 直接署名论文进入核心候选；团队延伸论文必须同时具备稳定合作作者和目标机构/DeepSC 归属证据。
+- 仅纳入正式同行评审技术研究论文；排除预印本、综述、教程、愿景、编者按、书章、专利、学位论文和 MDPI。
+- 正式会议版存在期刊扩展版时，仅保留期刊版；会议版记录在排除表。
 
-Main sources:
-- DBLP Meixia Tao profile, XML downloaded to notes/dblp_meixia_tao.xml.
-- Google Scholar public profile snapshot, downloaded to notes/scholar_meixia_tao.html.
-- OpenAlex author A5016127527, plus semantic / JSCC / digital semantic search queries.
-- Semantic Scholar author search snapshot, used cautiously because author disambiguation mixed abbreviated profiles.
-- arXiv, IEEE/DOI pages, and web search for latest 2025-2026 preprints.
+## 数据库与查询
 
-Inclusion:
-- Papers with Meixia Tao as author and semantic communication, semantic information theory, semantic coding, digital semantic communication, task-oriented communication, semantic JSCC, semantic NOMA/MIMO, diffusion/generative semantic communication, or semantic networking as a substantive topic.
-- Conference/arXiv precursors are retained and marked as precursor when useful for traceability.
-- MDPI/Entropy papers are retained because this is a person-wide survey, but they are explicitly marked.
+- OpenAlex 作者全集：{"A5016127527": 214}。
+- OpenAlex 扩展查询：{}。
+- 后续交叉核验：DOI/Crossref、Semantic Scholar、DBLP、IEEE Xplore、机构主页、引用与被引追踪。
+- 关键词族：semantic communication；goal-oriented communication；task-oriented communication；DeepSC；semantic JSCC；joint source-channel coding；generative/token communication；edge inference。
 
-Exclusion:
-- Ordinary wireless communications, channel estimation, ISAC, RIS, maritime/THz, federated learning, LLM inference, or AI-native air interface papers where semantic communication is absent or only indirectly related.
-- Papers where "semantic" means only computer-vision semantics or LLM semantic verification are marked boundary unless the communication-system framing is explicit.
+## 筛选流
+
+- 主题候选：52。
+- 正式技术论文纳入：28。
+- 排除或被期刊版取代：24。
+- 年份分布：2022: 2, 2023: 6, 2024: 9, 2025: 9, 2026: 2。
+
+## 饱和记录
+
+1. 作者全集检索建立主池。
+2. 团队/机构关键词扩展用于发现作者实体拆分或负责人未署名的团队论文。
+3. DOI、DBLP、Semantic Scholar 与引用/被引追踪用于补正式版本并核对版本家族。
+
+只有连续三轮扩展不再产生新的核心正式技术论文时，网页才标记“实用检索饱和”；在此之前显示为“持续核验”。
+
+## 2026-07-15 补充索引回查
+
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 2 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
+
+## 2026-07-15 补充索引回查
+
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 0 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
+
+<!-- FINAL-CENSUS-BEGIN -->
+
+## 最终复核快照（2026-07-15）
+
+- 候选池：54；核心正式技术论文：18；排除/背景/被取代记录：36。
+- 全文：18/18 份已通过 `%PDF`、页数、标题匹配与 SHA-256 校验；合法访问阻塞：无。
+- 补充轮次：Crossref: raw 100, topic 28, new formal technical 0; DBLP: raw 35, topic 35, new formal technical 0; Semantic Scholar: raw 1, topic 0, new formal technical 0, error HTTP 429。
+- 饱和判断：三轮补充数据库检索未发现需要新增的正式核心论文；与 OpenAlex 作者全集、IEEE/出版社全文核验及版本家族筛选合并后，标记为实用检索饱和。 这里的“实用饱和”不等于数学意义上的绝对全部；新上线索引仍可继续进入维护清单。
+- 数据源实际使用：OpenAlex 作者全集/关键词、Crossref、DBLP、Semantic Scholar（OA 批量与可用搜索轮次）、IEEE Xplore、DOI/出版社页面、Springer、SciOpen、ISCA Archive；Google Scholar 不做自动抓取，作为人工复核入口记录。
+
+<!-- FINAL-CENSUS-END -->
+

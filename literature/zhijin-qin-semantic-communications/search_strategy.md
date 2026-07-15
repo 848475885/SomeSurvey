@@ -1,46 +1,52 @@
-# Zhijin Qin Semantic Communications: Search Strategy and Saturation Log
+# 清华大学秦志金团队：检索策略与筛选记录
 
-## Scope
+## 范围与口径
 
-- 时间范围：2021-01-01 至 2026-07-10。
-- 作者锚点：Zhijin Qin（清华大学；OpenAlex `A5044671638`；Semantic Scholar 主实体 `67022972`；DBLP `157/9149`）。
-- 纳入：Zhijin Qin 作为作者、且以 semantic communication、task/goal-oriented communication、semantic-aware network、semantic source-channel coding、semantic compression/transmission 为实质研究对象的论文。
-- 包含正式期刊/会议论文和尚无正式版本的 arXiv 预印本；同一论文的预印本与正式版本只保留正式版本。
-- 排除：编者按、专著和专著章节、仅在背景中提及语义通信的边缘智能论文、视频分割挑战报告，以及不涉及通信信道或语义任务的纯压缩论文。
+- 检索截止：2026-07-15；正式出版时间范围：2021-01-01 至 2026-07-15。
+- 负责人：Zhijin Qin；OpenAlex author IDs：A5044671638。
+- 直接署名论文进入核心候选；团队延伸论文必须同时具备稳定合作作者和目标机构/DeepSC 归属证据。
+- 仅纳入正式同行评审技术研究论文；排除预印本、综述、教程、愿景、编者按、书章、专利、学位论文和 MDPI。
+- 正式会议版存在期刊扩展版时，仅保留期刊版；会议版记录在排除表。
 
-## Author disambiguation
+## 数据库与查询
 
-- OpenAlex 主实体有 304 条全时期成果，最新机构为 Tsinghua University；2021 年后共有 178 条作品记录。
-- Semantic Scholar 将近年成果拆分到多个同名实体，因此同时检查 `67022972`、`2256787925`、`2286690160`、`2099587837`、`2380664613`、`2329882981`、`2381803956`，并要求论文作者表中出现精确姓名 `Zhijin Qin`。
-- DBLP 作者实体 `157/9149` 明确标注 `isnot Zhijing Qin`，用于排除拼写近似的另一位作者。
+- OpenAlex 作者全集：{"A5044671638": 178}。
+- OpenAlex 扩展查询：{}。
+- 后续交叉核验：DOI/Crossref、Semantic Scholar、DBLP、IEEE Xplore、机构主页、引用与被引追踪。
+- 关键词族：semantic communication；goal-oriented communication；task-oriented communication；DeepSC；semantic JSCC；joint source-channel coding；generative/token communication；edge inference。
 
-## Databases and queries
+## 筛选流
 
-1. OpenAlex author works：`authorships.author.id:A5044671638`，时间从 2021-01-01 开始，共 178 条。
-2. OpenAlex author-with-topic searches：`semantic communication`、`task-oriented communication`、`DeepSC`、`goal-oriented communication`。
-3. Semantic Scholar author papers：主作者实体及六个拆分实体；获取题名、摘要、DOI、arXiv ID、开放 PDF 和引文元数据。
-4. DBLP：作者主页 XML `pid/157/9149.xml`，用于正式出版物和作者消歧交叉检查。
-5. arXiv：`au:"Zhijin Qin"`，按提交时间排序，共返回 105 条全时期记录；重点补齐 2025—2026 年索引尚未收录的新论文。
-6. DOI 官方跳转：用于把 IEEE DOI 解析成 IEEE document number，再由 `$ieee-xplore-literature` 获取正式全文。
-7. Google Scholar：尝试公开检索 `"Zhijin Qin" "semantic communication"`，页面连接超时，未将其作为可复现数据源。
+- 主题候选：118。
+- 正式技术论文纳入：62。
+- 排除或被期刊版取代：56。
+- 年份分布：2021: 6, 2022: 7, 2023: 11, 2024: 17, 2025: 19, 2026: 2。
 
-## Screening result
+## 饱和记录
 
-- 初始主题候选：130 条 OpenAlex 命中。
-- 合并 arXiv 与 Semantic Scholar 的索引滞后条目后，进行正式版/预印本去重及人工规则筛选。
-- 最终纳入：90 篇。
-- 排除或边界：20 条，原因逐条记录在 `excluded_or_boundary.csv`。
-- 全文：88 篇已下载并完成文本提取；2 篇未获全文。
+1. 作者全集检索建立主池。
+2. 团队/机构关键词扩展用于发现作者实体拆分或负责人未署名的团队论文。
+3. DOI、DBLP、Semantic Scholar 与引用/被引追踪用于补正式版本并核对版本家族。
 
-## Full-text acquisition
+只有连续三轮扩展不再产生新的核心正式技术论文时，网页才标记“实用检索饱和”；在此之前显示为“持续核验”。
 
-- 56 篇通过 arXiv 合法开放版本串行下载。
-- 4 篇复用本项目此前下载的相同全文。
-- 28 篇通过 `$ieee-xplore-literature`、机构认证 Chrome 和 IEEE document number 串行下载；机构访问显示 `Peng Cheng Laboratory`。
-- IEEE 下载使用 180 秒 WebSocket 超时、每篇额外 7 秒间隔，并验证 `HTTP 200`、`application/pdf` 和 `%PDF-` 文件头。
-- *Toward Wisdom-Evolutionary and Primitive-Concise 6G...* 为金色开放论文，但 ScienceDirect 脚本请求返回 403，正常浏览器页面触发 CAPTCHA，未绕过验证。
-- *Goal-oriented communications for future cyber–physical systems* 的 Nature 页面未提供开放 PDF，直链返回 HTML，未绕过付费访问。
+## 2026-07-15 补充索引回查
 
-## Saturation assessment
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 17 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
 
-第一轮 OpenAlex 主题检索产生主要历史语料；Semantic Scholar 拆分实体补充正式 DOI 和少量最新论文；arXiv 作者检索补充 2025—2026 年索引滞后论文。随后 DBLP、正式 DOI 跳转和重复题名核对没有再产生新的 2021—2024 核心论文。新增项主要是正式版替换、专著章节或非语义通信边界项，因此在 2026-07-10 时点判定达到作者维度的实用检索饱和，而不宣称未来更新意义上的绝对完备。
+## 2026-07-15 补充索引回查
+
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 0 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
+
+<!-- FINAL-CENSUS-BEGIN -->
+
+## 最终复核快照（2026-07-15）
+
+- 候选池：136；核心正式技术论文：61；排除/背景/被取代记录：75。
+- 全文：60/61 份已通过 `%PDF`、页数、标题匹配与 SHA-256 校验；合法访问阻塞：Generalizable 3D Gaussian Splatting Enabled Immersive Video Communications with Semantic Coding（blocked_no_legal_pdf）。
+- 补充轮次：Crossref: raw 100, topic 90, new formal technical 0; DBLP: raw 88, topic 86, new formal technical 0; Semantic Scholar: raw 1, topic 0, new formal technical 0, error HTTP 429。
+- 饱和判断：三轮补充数据库检索未发现需要新增的正式核心论文；与 OpenAlex 作者全集、IEEE/出版社全文核验及版本家族筛选合并后，标记为实用检索饱和。 这里的“实用饱和”不等于数学意义上的绝对全部；新上线索引仍可继续进入维护清单。
+- 数据源实际使用：OpenAlex 作者全集/关键词、Crossref、DBLP、Semantic Scholar（OA 批量与可用搜索轮次）、IEEE Xplore、DOI/出版社页面、Springer、SciOpen、ISCA Archive；Google Scholar 不做自动抓取，作为人工复核入口记录。
+
+<!-- FINAL-CENSUS-END -->
+

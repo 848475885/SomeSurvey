@@ -1,26 +1,52 @@
-# Kai Niu Semantic Communications Search Notes
+# 北京邮电大学牛凯—张平团队：检索策略与筛选记录
 
-Scope: Kai Niu / 牛凯, Beijing University of Posts and Telecommunications, semantic communication related works from 2021 to present.
+## 范围与口径
 
-Search date: 2026-07-05.
+- 检索截止：2026-07-15；正式出版时间范围：2021-01-01 至 2026-07-15。
+- 负责人：Kai Niu, Ping Zhang；OpenAlex author IDs：A5008455605, A5100405787。
+- 直接署名论文进入核心候选；团队延伸论文必须同时具备稳定合作作者和目标机构/DeepSC 归属证据。
+- 仅纳入正式同行评审技术研究论文；排除预印本、综述、教程、愿景、编者按、书章、专利、学位论文和 MDPI。
+- 正式会议版存在期刊扩展版时，仅保留期刊版；会议版记录在排除表。
 
-Main sources:
-- DBLP Kai Niu 0001 profile, XML downloaded to notes/dblp_kai_niu.xml.
-- Google Scholar public profile snapshot, downloaded to notes/scholar_kai_niu.html.
-- OpenAlex author A5008455605, downloaded all works since 2021 and semantic-filtered works.
-- Web/arXiv/IEEE/DOI lookups for missing abstracts and latest 2025-2026 preprints.
-- Semantic Scholar API was attempted, but the anonymous request returned 429 Too Many Requests; DBLP/OpenAlex/Scholar were used as the stable backbone.
+## 数据库与查询
 
-Inclusion:
-- Semantic communication / semantic coded transmission.
-- Semantic information theory, synonymous mapping, semantic source/channel coding, semantic rate-distortion.
-- Neural JSCC papers positioned as semantic communication by the authors, including image, video, speech, point cloud, NeRF and XR transmission.
-- Semantic networking, 6G semantic/native-AI air interface, model/semantics-division access/duplexing.
+- OpenAlex 作者全集：{"A5008455605": 223, "A5100405787": 532}。
+- OpenAlex 扩展查询：{}。
+- 后续交叉核验：DOI/Crossref、Semantic Scholar、DBLP、IEEE Xplore、机构主页、引用与被引追踪。
+- 关键词族：semantic communication；goal-oriented communication；task-oriented communication；DeepSC；semantic JSCC；joint source-channel coding；generative/token communication；edge inference。
 
-Exclusion:
-- Pure polar coding, MIMO detection, channel decoding, ordinary 6G communication papers without semantic communication content.
-- Papers where "semantic" only means computer-vision semantic segmentation/disentanglement and not semantic communication.
+## 筛选流
 
-Notes:
-- Some works appear as arXiv preprints and later journal/conference papers. The report merges obvious duplicates and notes both versions.
-- MDPI/Entropy/Sensors papers are retained because the user requested a person-wide survey, but they are explicitly marked where relevant.
+- 主题候选：175。
+- 正式技术论文纳入：100。
+- 排除或被期刊版取代：75。
+- 年份分布：2021: 3, 2022: 14, 2023: 19, 2024: 22, 2025: 37, 2026: 5。
+
+## 饱和记录
+
+1. 作者全集检索建立主池。
+2. 团队/机构关键词扩展用于发现作者实体拆分或负责人未署名的团队论文。
+3. DOI、DBLP、Semantic Scholar 与引用/被引追踪用于补正式版本并核对版本家族。
+
+只有连续三轮扩展不再产生新的核心正式技术论文时，网页才标记“实用检索饱和”；在此之前显示为“持续核验”。
+
+## 2026-07-15 补充索引回查
+
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 36 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
+
+## 2026-07-15 补充索引回查
+
+Crossref 与 DBLP 回查发现并经正式 DOI/负责人署名复核后新增 0 篇；Semantic Scholar 搜索端点返回 429，早先 OA 批量核验结果仍保留在下载清单。新增项已进入全文下载和再次筛选，不把初始 OpenAlex 数量当作完成标准。
+
+<!-- FINAL-CENSUS-BEGIN -->
+
+## 最终复核快照（2026-07-15）
+
+- 候选池：213；核心正式技术论文：112；排除/背景/被取代记录：101。
+- 全文：112/112 份已通过 `%PDF`、页数、标题匹配与 SHA-256 校验；合法访问阻塞：无。
+- 补充轮次：Crossref: raw 200, topic 94, new formal technical 0; DBLP: raw 131, topic 127, new formal technical 0; Semantic Scholar: raw 2, topic 0, new formal technical 0, error HTTP 429。
+- 饱和判断：三轮补充数据库检索未发现需要新增的正式核心论文；与 OpenAlex 作者全集、IEEE/出版社全文核验及版本家族筛选合并后，标记为实用检索饱和。 这里的“实用饱和”不等于数学意义上的绝对全部；新上线索引仍可继续进入维护清单。
+- 数据源实际使用：OpenAlex 作者全集/关键词、Crossref、DBLP、Semantic Scholar（OA 批量与可用搜索轮次）、IEEE Xplore、DOI/出版社页面、Springer、SciOpen、ISCA Archive；Google Scholar 不做自动抓取，作为人工复核入口记录。
+
+<!-- FINAL-CENSUS-END -->
+
