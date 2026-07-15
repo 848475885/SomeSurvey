@@ -1049,7 +1049,7 @@ def paper_article(a: dict, local: bool) -> str:
         <p><strong>数字化判断：</strong><span class='tag'>{html.escape(a.get('digitalization_class',''))}</span> {html.escape(a.get('digitalization_judgment',''))}</p>
         {evidence_list_html(a.get('digital_evidence'), '未找到量化、码本、有限星座或 bitstream 证据；不能把神经网络 bottleneck 自动当作数字链路。')}
         <h4>bit / token / channel-use / CBR 证据</h4>
-        {evidence_list_html(a.get('overhead_evidence'), '论文未以可检索文本完整报告输入尺寸、latent/token 数、每个 index 的 bit 数与总开销；本报告不在缺少形状和码本参数时伪造压缩率。可按 $R=N_s b_s/N_{src}$ 或 $\rho=n/k$ 在取得参数后推导。')}
+        {evidence_list_html(a.get('overhead_evidence'), '论文未以可检索文本完整报告输入尺寸、latent/token 数、每个 index 的 bit 数与总开销；本报告不在缺少形状和码本参数时伪造压缩率。可按 $R=N_s b_s/N_{src}$ 或 $\\rho=n/k$ 在取得参数后推导。')}
         <h3>信道处理机制：decoder 实际收到什么</h3>
         <p><strong>分类：</strong><span class='tag'>{html.escape(a.get('channel_handling_class',''))}</span> {html.escape(a.get('channel_handling_judgment',''))}</p>
         {evidence_list_html(a.get('channel_evidence'), '未能从全文文字确定噪声加在连续 latent、调制符号还是 bit/index 上；需回到系统图与信道公式确认。')}
@@ -1145,7 +1145,7 @@ def render_team(team: Team) -> None:
     )
     route_panel = f"<section class='panel' id='timeline'><h2>团队技术路线时间线</h2><div class='timeline'>{timeline}</div><h2>推荐阅读顺序</h2><ol class='reading-order'>{recommended}</ol><p class='notice'>顺序按“早期基础 → 显式数字化 → 信道/多用户系统 → 最新生成式或跨层工作”组织；引用数只用于帮助挑入口，不代表论文质量排序。</p></section>"
     base_head = f"""<!doctype html><html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>{html.escape(team.title_cn)}语义通信论文调研（2021-2026）</title><style>{CSS}</style><script>window.MathJax={{tex:{{inlineMath:[['$','$'],['\\(','\\)']]}}}};</script><script defer src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script></head><body>"""
-    intro = f"""{''.join(nav)}<main><section class='hero' id='overview'><p><a href='../'>← 返回调研主页</a></p><h1>{html.escape(team.title_cn)}语义通信论文调研</h1><p>面向具有深度学习基础、通信基础较少的读者。检索范围为 2021-01-01 至 2026-07-15；核心表仅保留正式同行评审技术研究论文，会议版若有期刊扩展版则只保留期刊版。</p><div class='chips'><span class='chip'>核心论文 {len(analyses)}</span>{chips}</div><h2>先看懂一篇通信论文处在哪</h2><div class='system-map'><div class='arrow'>原始数据/任务</div><div class='arrow'>语义/信源编码</div><div class='arrow'>信道编码</div><div class='arrow'>调制、MIMO、OFDM</div><div class='arrow'>无线信道</div><div>译码/重建/任务</div></div><p>传统系统常分别优化这些方框；语义通信论文通常合并其中若干环节。评价一篇论文时要问：发送的中间表示是什么？占多少信道资源？噪声在哪里加入？接收端恢复的是原始数据还是任务结果？</p><p>常见带宽比可写为 $\rho=n/k$，其中 $k$ 是源样本维度，$n$ 是信道使用次数。只有在相同 $\rho$、发射功率和信道模型下，方法间性能比较才公平。</p></section><section class='panel' id='screening'><h2>论文筛选与定位表</h2><div class='table-wrap'><table><thead><tr><th>年份</th><th>完整标题</th><th>出版物</th><th>通信环节</th><th>团队口径</th><th>全文</th></tr></thead><tbody>{rows}</tbody></table></div></section><section class='panel' id='glossary'><h2>通信小白术语表</h2><table>{glossary}</table></section>"""
+    intro = f"""{''.join(nav)}<main><section class='hero' id='overview'><p><a href='../'>← 返回调研主页</a></p><h1>{html.escape(team.title_cn)}语义通信论文调研</h1><p>面向具有深度学习基础、通信基础较少的读者。检索范围为 2021-01-01 至 2026-07-15；核心表仅保留正式同行评审技术研究论文，会议版若有期刊扩展版则只保留期刊版。</p><div class='chips'><span class='chip'>核心论文 {len(analyses)}</span>{chips}</div><h2>先看懂一篇通信论文处在哪</h2><div class='system-map'><div class='arrow'>原始数据/任务</div><div class='arrow'>语义/信源编码</div><div class='arrow'>信道编码</div><div class='arrow'>调制、MIMO、OFDM</div><div class='arrow'>无线信道</div><div>译码/重建/任务</div></div><p>传统系统常分别优化这些方框；语义通信论文通常合并其中若干环节。评价一篇论文时要问：发送的中间表示是什么？占多少信道资源？噪声在哪里加入？接收端恢复的是原始数据还是任务结果？</p><p>常见带宽比可写为 $\\rho=n/k$，其中 $k$ 是源样本维度，$n$ 是信道使用次数。只有在相同 $\\rho$、发射功率和信道模型下，方法间性能比较才公平。</p></section><section class='panel' id='screening'><h2>论文筛选与定位表</h2><div class='table-wrap'><table><thead><tr><th>年份</th><th>完整标题</th><th>出版物</th><th>通信环节</th><th>团队口径</th><th>全文</th></tr></thead><tbody>{rows}</tbody></table></div></section><section class='panel' id='glossary'><h2>通信小白术语表</h2><table>{glossary}</table></section>"""
     intro = intro.replace("</section><section class='panel' id='screening'>", f"</section>{route_panel}<section class='panel' id='screening'>", 1)
     ending = f"""<section class='panel' id='excluded'><h2>排除与边界记录</h2><p>这些条目在检索中出现，但因预印本、综述/愿景、MDPI、主题边界或被期刊扩展版取代而未进入核心表。</p><div class='table-wrap'><table><tr><th>年份</th><th>标题</th><th>原因</th></tr>{exclusion_rows}</table></div></section><section class='panel'><h2>方法与责任说明</h2><p>书目元数据通过 OpenAlex、DOI 和出版页面核验；逐篇技术结论以本地 PDF 页码证据为准。自动定位不到可靠证据时明确标为待人工核查，不用摘要填充“阅读全文”结论。</p><p>AI Disclosure：本报告使用 AI 辅助完成检索、全文定位、结构化提取和网页生成；所有可核验论断均保留 DOI 或 PDF 页码入口。</p></section></main></body></html>"""
     (root / "index_local.html").write_text(base_head + intro + articles_local + ending, encoding="utf-8")
@@ -1180,6 +1180,7 @@ def validate_team(team: Team) -> list[str]:
             dup_ids = [k for k, v in Counter(ids).items() if v > 1]
             if dup_ids: errors.append(f"duplicate HTML ids in {name}: {dup_ids[:3]}")
             if "MathJax" not in text: errors.append(f"MathJax missing in {name}")
+            if "\\rho=n/k" not in text: errors.append(f"bandwidth-ratio formula malformed in {name}")
     return errors
 
 
