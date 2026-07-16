@@ -986,10 +986,30 @@ def analyze_team(team: Team) -> None:
     (root / "manifest.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
 
 
-def evidence_html(label: str, item: dict) -> str:
-    if not item or not item.get("text"):
-        return f"<li><strong>{html.escape(label)}：</strong>全文自动定位未找到可靠句子，需回到 PDF 人工核查。</li>"
-    return f"<li><strong>{html.escape(label)}：</strong>{html.escape(item['text'])} <a href='#' class='page-ref'>PDF p.{item['page']}</a></li>"
+def page_citations(item: dict, pdf_link: str, local: bool) -> str:
+    pages = (item or {}).get("pages") or []
+    refs = []
+    for page in pages:
+        label = f"PDF p.{page}"
+        if local and pdf_link:
+            refs.append(f"<a class='page-ref' href='{html.escape(pdf_link)}#page={page}'>{label}</a>")
+        else:
+            refs.append(f"<span class='page-ref'>{label}</span>")
+    return " " + " ".join(refs) if refs else ""
+
+
+def synthesis_item_html(label: str, item: dict, pdf_link: str, local: bool) -> str:
+    text = (item or {}).get("text", "").strip()
+    if not text:
+        return f"<li><strong>{html.escape(label)}：</strong>尚未完成基于全文的综合判断。</li>"
+    return f"<li><strong>{html.escape(label)}：</strong>{html.escape(text)}{page_citations(item, pdf_link, local)}</li>"
+
+
+def synthesis_paragraph(item: dict, pdf_link: str, local: bool) -> str:
+    text = (item or {}).get("text", "").strip()
+    if not text:
+        return "<p class='notice'>尚未完成基于全文的综合判断。</p>"
+    return f"<p>{html.escape(text)}{page_citations(item, pdf_link, local)}</p>"
 
 
 def list_text(values: list[str] | None) -> str:
@@ -1007,7 +1027,8 @@ def evidence_list_html(items: list[dict] | None, empty: str) -> str:
 
 def paper_article(a: dict, local: bool) -> str:
     slug = slugify(a["title"])
-    ev = a.get("evidence") or {}
+    motivation = a.get("motivation") or {}
+    flow = a.get("system_flow") or {}
     source_link = f"https://doi.org/{a['doi']}" if a.get("doi") else a.get("official_url", "#")
     pdf_link = a.get("pdf", "") if local and a.get("pdf") else source_link
     link_label = "打开本地 PDF" if local and a.get("pdf") else "DOI / 出版页面"
@@ -1028,35 +1049,45 @@ def paper_article(a: dict, local: bool) -> str:
         body = f"""
         <h3>Motivation｜问题怎样一步步导出本文方法</h3>
         <ol class='story'>
-          {evidence_html('现有进展', ev.get('progress', {}))}
-          {evidence_html('仍然存在的问题', ev.get('problem', {}))}
-          <li><strong>为什么旧方法不够：</strong>在通信系统中，模型必须同时面对有限带宽、信道噪声和发送功率约束；只优化离线重建或任务 loss，不能保证相同信道使用次数下仍然可靠。</li>
-          <li><strong>为什么重要：</strong>{html.escape(a.get('reviewer_value',''))}</li>
-          {evidence_html('本文提出的方案', ev.get('proposal', {}))}
-          {evidence_html('方案起作用的机制', ev.get('mechanism', {}))}
-          {evidence_html('作者希望证明的结论', ev.get('result', {}))}
+          {synthesis_item_html('现有进展', motivation.get('progress', {}), pdf_link, local)}
+          {synthesis_item_html('仍然存在的问题', motivation.get('problem', {}), pdf_link, local)}
+          {synthesis_item_html('为什么已有方法解决不了', motivation.get('prior_limit', {}), pdf_link, local)}
+          {synthesis_item_html('为什么这个问题值得研究', motivation.get('importance', {}), pdf_link, local)}
+          {synthesis_item_html('本文怎样顺着问题提出方案', motivation.get('proposal', {}), pdf_link, local)}
+          {synthesis_item_html('方案为什么有可能起作用', motivation.get('mechanism', {}), pdf_link, local)}
+          {synthesis_item_html('作者希望证明什么', motivation.get('claim', {}), pdf_link, local)}
         </ol>
-        <h3>方法与通信系统定位</h3>
+        <h3>系统怎么工作</h3>
+        {synthesis_paragraph(a.get('method_summary', {}), pdf_link, local)}
+        <div class='facts flow'>
+          <p><strong>输入：</strong>{html.escape((flow.get('input') or {}).get('text',''))}{page_citations(flow.get('input') or {}, pdf_link, local)}</p>
+          <p><strong>发送端：</strong>{html.escape((flow.get('encoder') or {}).get('text',''))}{page_citations(flow.get('encoder') or {}, pdf_link, local)}</p>
+          <p><strong>实际发送：</strong>{html.escape((flow.get('transmitted') or {}).get('text',''))}{page_citations(flow.get('transmitted') or {}, pdf_link, local)}</p>
+          <p><strong>信道：</strong>{html.escape((flow.get('channel') or {}).get('text',''))}{page_citations(flow.get('channel') or {}, pdf_link, local)}</p>
+          <p><strong>接收端：</strong>{html.escape((flow.get('receiver') or {}).get('text',''))}{page_citations(flow.get('receiver') or {}, pdf_link, local)}</p>
+          <p><strong>输出：</strong>{html.escape((flow.get('output') or {}).get('text',''))}{page_citations(flow.get('output') or {}, pdf_link, local)}</p>
+        </div>
+        <h3>它在通信系统的哪个位置</h3>
         <p><strong>研究任务：</strong>{html.escape(a.get('task_type',''))}</p>
         <p><strong>所属环节：</strong>{html.escape(a.get('communication_layer',''))}。{html.escape(a.get('layer_explanation',''))}</p>
         <p><strong>给深度学习研究生的解释：</strong>{html.escape(a.get('beginner_explanation',''))}</p>
-        <p><strong>为什么方法可能解决开头的问题：</strong>方案把论文关注的语义表示、信道或资源约束放进同一训练/优化目标，使发送端学习的不只是数据压缩，而是“在给定无线资源和噪声下什么信息最值得发送”。</p>
-        <h4>输入—编码—信道—接收端：全文方法证据</h4>
-        {evidence_list_html(a.get('method_evidence'), '未自动定位到足够的方法句；请结合下方方法页截图与 PDF 公式人工核验。')}
-        <h4>中间语义表示是什么</h4>
-        {evidence_list_html(a.get('representation_evidence'), '论文没有用可检索文字明确报告 feature map、latent、token、index 或 bitstream 的形状。')}
-        <h3>数字化方案与实际传输开销</h3>
-        <p><strong>数字化判断：</strong><span class='tag'>{html.escape(a.get('digitalization_class',''))}</span> {html.escape(a.get('digitalization_judgment',''))}</p>
-        {evidence_list_html(a.get('digital_evidence'), '未找到量化、码本、有限星座或 bitstream 证据；不能把神经网络 bottleneck 自动当作数字链路。')}
-        <h4>bit / token / channel-use / CBR 证据</h4>
-        {evidence_list_html(a.get('overhead_evidence'), '论文未以可检索文本完整报告输入尺寸、latent/token 数、每个 index 的 bit 数与总开销；本报告不在缺少形状和码本参数时伪造压缩率。可按 $R=N_s b_s/N_{src}$ 或 $\\rho=n/k$ 在取得参数后推导。')}
-        <h3>信道处理机制：decoder 实际收到什么</h3>
-        <p><strong>分类：</strong><span class='tag'>{html.escape(a.get('channel_handling_class',''))}</span> {html.escape(a.get('channel_handling_judgment',''))}</p>
-        {evidence_list_html(a.get('channel_evidence'), '未能从全文文字确定噪声加在连续 latent、调制符号还是 bit/index 上；需回到系统图与信道公式确认。')}
-        <h3>实验设置与证据</h3>
-        <div class='facts'><p><strong>数据集：</strong>{html.escape(list_text(a.get('datasets')))}</p><p><strong>Baseline：</strong>{html.escape(list_text(a.get('baselines')))}</p><p><strong>信道/链路：</strong>{html.escape(list_text(a.get('channels')))}</p><p><strong>指标：</strong>{html.escape(list_text(a.get('metrics')))}</p><p><strong>SNR 条件：</strong>{html.escape(list_text(a.get('snr_conditions')))}</p></div>
-        <h4>主要实验结论（带全文页码）</h4>
-        {evidence_list_html(a.get('experiment_evidence'), '自动定位未找到明确的结果句；请查看下方结果页截图和 PDF 图表。')}
+        <h3>实际发送了什么，以及占多少通信资源</h3>
+        <p><strong>表示与数字化判断：</strong><span class='tag'>{html.escape(a.get('digitalization_class',''))}</span></p>
+        {synthesis_paragraph(a.get('representation_summary', {}), pdf_link, local)}
+        {synthesis_paragraph(a.get('overhead_summary', {}), pdf_link, local)}
+        <h3>信道怎样作用，接收端实际拿到什么</h3>
+        <p><strong>信道处理类别：</strong><span class='tag'>{html.escape(a.get('channel_handling_class',''))}</span></p>
+        {synthesis_paragraph(a.get('channel_summary', {}), pdf_link, local)}
+        {synthesis_paragraph(a.get('decoder_input_summary', {}), pdf_link, local)}
+        <h3>实验设置与主要结论</h3>
+        <div class='facts'>
+          <p><strong>数据集：</strong>{html.escape('、'.join(a.get('datasets') or []) or '论文未在结构化字段中明确列出')}</p>
+          <p><strong>Baseline：</strong>{html.escape('、'.join(a.get('baselines') or []) or '论文未在结构化字段中明确列出')}</p>
+          <p><strong>指标：</strong>{html.escape('、'.join(a.get('metrics') or []) or '论文未在结构化字段中明确列出')}</p>
+          <p><strong>信道：</strong>{html.escape('、'.join(a.get('channels') or a.get('channel_models') or []) or a.get('channel_handling_class',''))}</p>
+        </div>
+        {synthesis_paragraph(a.get('experiment_setup_summary', {}), pdf_link, local)}
+        {synthesis_paragraph(a.get('experiment_result_summary', {}), pdf_link, local)}
         <h3>通信审稿价值与 Codex 判断</h3>
         <p>{html.escape(a.get('reviewer_value',''))}</p>
         <p><strong>局限：</strong>{html.escape(a.get('limitations',''))}</p>
@@ -1093,7 +1124,8 @@ GLOSSARY = [
 
 def render_team(team: Team) -> None:
     root = team_root(team)
-    analysis_path = root / "notes" / "structured_analysis.jsonl"
+    synthesis_path = root / "notes" / "synthesized_analysis.jsonl"
+    analysis_path = synthesis_path if synthesis_path.exists() else root / "notes" / "structured_analysis.jsonl"
     analyses = [json.loads(line) for line in analysis_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     excluded = []
     excluded_path = root / "excluded_or_boundary.csv"
@@ -1148,8 +1180,10 @@ def render_team(team: Team) -> None:
     intro = f"""{''.join(nav)}<main><section class='hero' id='overview'><p><a href='../'>← 返回调研主页</a></p><h1>{html.escape(team.title_cn)}语义通信论文调研</h1><p>面向具有深度学习基础、通信基础较少的读者。检索范围为 2021-01-01 至 2026-07-15；核心表仅保留正式同行评审技术研究论文，会议版若有期刊扩展版则只保留期刊版。</p><div class='chips'><span class='chip'>核心论文 {len(analyses)}</span>{chips}</div><h2>先看懂一篇通信论文处在哪</h2><div class='system-map'><div class='arrow'>原始数据/任务</div><div class='arrow'>语义/信源编码</div><div class='arrow'>信道编码</div><div class='arrow'>调制、MIMO、OFDM</div><div class='arrow'>无线信道</div><div>译码/重建/任务</div></div><p>传统系统常分别优化这些方框；语义通信论文通常合并其中若干环节。评价一篇论文时要问：发送的中间表示是什么？占多少信道资源？噪声在哪里加入？接收端恢复的是原始数据还是任务结果？</p><p>常见带宽比可写为 $\\rho=n/k$，其中 $k$ 是源样本维度，$n$ 是信道使用次数。只有在相同 $\\rho$、发射功率和信道模型下，方法间性能比较才公平。</p></section><section class='panel' id='screening'><h2>论文筛选与定位表</h2><div class='table-wrap'><table><thead><tr><th>年份</th><th>完整标题</th><th>出版物</th><th>通信环节</th><th>团队口径</th><th>全文</th></tr></thead><tbody>{rows}</tbody></table></div></section><section class='panel' id='glossary'><h2>通信小白术语表</h2><table>{glossary}</table></section>"""
     intro = intro.replace("</section><section class='panel' id='screening'>", f"</section>{route_panel}<section class='panel' id='screening'>", 1)
     ending = f"""<section class='panel' id='excluded'><h2>排除与边界记录</h2><p>这些条目在检索中出现，但因预印本、综述/愿景、MDPI、主题边界或被期刊扩展版取代而未进入核心表。</p><div class='table-wrap'><table><tr><th>年份</th><th>标题</th><th>原因</th></tr>{exclusion_rows}</table></div></section><section class='panel'><h2>方法与责任说明</h2><p>书目元数据通过 OpenAlex、DOI 和出版页面核验；逐篇技术结论以本地 PDF 页码证据为准。自动定位不到可靠证据时明确标为待人工核查，不用摘要填充“阅读全文”结论。</p><p>AI Disclosure：本报告使用 AI 辅助完成检索、全文定位、结构化提取和网页生成；所有可核验论断均保留 DOI 或 PDF 页码入口。</p></section></main></body></html>"""
-    (root / "index_local.html").write_text(base_head + intro + articles_local + ending, encoding="utf-8")
-    (root / "index.html").write_text(base_head + intro + articles_public + ending, encoding="utf-8")
+    local_page = "\n".join(line.rstrip() for line in (base_head + intro + articles_local + ending).splitlines()) + "\n"
+    public_page = "\n".join(line.rstrip() for line in (base_head + intro + articles_public + ending).splitlines()) + "\n"
+    (root / "index_local.html").write_text(local_page, encoding="utf-8")
+    (root / "index.html").write_text(public_page, encoding="utf-8")
     print(f"[{team.key}] rendered {len(analyses)} papers")
 
 
@@ -1171,6 +1205,57 @@ def validate_team(team: Team) -> list[str]:
         if row.get("download_status") == "downloaded":
             path = root / row.get("pdf", "")
             if not path.exists() or not valid_pdf(path): errors.append(f"bad PDF: {row['title']}")
+    synthesis_path = root / "notes" / "synthesized_analysis.jsonl"
+    if not synthesis_path.exists():
+        errors.append("missing notes/synthesized_analysis.jsonl")
+        analyses = []
+    else:
+        analyses = [json.loads(line) for line in synthesis_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        if len(analyses) != len(rows):
+            errors.append(f"analysis count mismatch: {len(analyses)} synthesis vs {len(rows)} included")
+    banned = (
+        "IEEE TRANSACTIONS", "IEEE WIRELESS", "Abstract—", "Member, IEEE", "Fellow, IEEE",
+        "全文自动定位", "全文方法证据", "若论文", "需回到 PDF", "By introducing AI",
+    )
+    detail_fields = (
+        "method_summary", "representation_summary", "overhead_summary", "channel_summary",
+        "decoder_input_summary", "experiment_setup_summary", "experiment_result_summary",
+    )
+    motivation_fields = ("progress", "problem", "prior_limit", "importance", "proposal", "mechanism", "claim")
+    for analysis in analyses:
+        if analysis.get("analysis_status") == "blocked_missing_fulltext":
+            continue
+        title = analysis.get("title", "<untitled>")
+        if analysis.get("analysis_version") != "fulltext_synthesis_v2_2026-07-16":
+            errors.append(f"wrong synthesis version: {title}")
+        motivation = analysis.get("motivation") or {}
+        for key in motivation_fields:
+            if not ((motivation.get(key) or {}).get("text", "").strip()):
+                errors.append(f"missing motivation.{key}: {title}")
+        for key in detail_fields:
+            if not ((analysis.get(key) or {}).get("text", "").strip()):
+                errors.append(f"missing {key}: {title}")
+        visible = json.dumps({
+            "motivation": motivation,
+            "method_summary": analysis.get("method_summary"),
+            "system_flow": analysis.get("system_flow"),
+            "representation_summary": analysis.get("representation_summary"),
+            "overhead_summary": analysis.get("overhead_summary"),
+            "channel_summary": analysis.get("channel_summary"),
+            "decoder_input_summary": analysis.get("decoder_input_summary"),
+            "experiment_setup_summary": analysis.get("experiment_setup_summary"),
+            "experiment_result_summary": analysis.get("experiment_result_summary"),
+        }, ensure_ascii=False)
+        for phrase in banned:
+            if phrase.lower() in visible.lower():
+                errors.append(f"raw/old phrase {phrase!r}: {title}")
+        problem = ((motivation.get("problem") or {}).get("text", ""))
+        prior = ((motivation.get("prior_limit") or {}).get("text", ""))
+        mechanism = ((motivation.get("mechanism") or {}).get("text", ""))
+        if problem and prior and SequenceMatcher(None, problem, prior).ratio() > .72:
+            errors.append(f"problem/prior duplicate: {title}")
+        if problem and mechanism and SequenceMatcher(None, problem, mechanism).ratio() > .72:
+            errors.append(f"problem/mechanism duplicate: {title}")
     for name in ("index.html", "index_local.html"):
         page = root / name
         if not page.exists(): errors.append(f"missing {name}")
