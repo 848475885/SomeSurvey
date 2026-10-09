@@ -31,8 +31,11 @@ import time
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Iterable
+
+import fitz
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,10 +43,23 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rewrite_team_analysis import polish_zh  # noqa: E402
 
 
-ANALYSIS_VERSION = "journal_fulltext_reread_v4_2026-08-28"
+ANALYSIS_VERSION = "journal_fulltext_reread_v5_2026-10-09"
 
 
 JOURNALS = {
+    "iotj": {
+        "directory": "ieee-iotj-semantic-communications-2023-present",
+        "short": "IoTJ",
+        "title": "IEEE Internet of Things Journal 语义通信与 DeepJSCC 调研（2023—至今）",
+        "venue": "IEEE Internet of Things Journal",
+        "scope": "语义通信、DeepJSCC、图像/视频/语音/点云无线传输、数字语义接口，以及围绕语义链路的资源与网络优化",
+        "accent": "#156b5b",
+        "accent_dark": "#173d39",
+        "updated": "2026-10-09",
+        "candidate_count": 109,
+        "screened_count": 100,
+        "excluded_count": 9,
+    },
     "twc": {
         "directory": "ieee-twc-semantic-communications-2023-present",
         "short": "TWC",
@@ -133,6 +149,16 @@ KNOWN_METRICS = [
     "latency", "throughput", "energy efficiency", "semantic similarity", "bpp",
     "BER", "SER", "PER", "R-sum", "Rsum", "F1-score", "AUC",
 ]
+
+TASK_METRIC_ALLOW = {
+    "语音/音频传输或识别": {"PESQ", "STOI", "MOS", "WER", "CER", "MSE", "NMSE", "semantic similarity", "latency", "throughput", "BER", "SER", "PER"},
+    "视频传输、生成或控制": {"PSNR", "SSIM", "MS-SSIM", "LPIPS", "FID", "KID", "MSE", "NMSE", "accuracy", "mAP", "IoU", "mIoU", "latency", "throughput", "bpp", "BER", "SER", "PER"},
+    "图像传输、压缩或生成": {"PSNR", "SSIM", "MS-SSIM", "LPIPS", "FID", "KID", "MSE", "NMSE", "accuracy", "mAP", "IoU", "mIoU", "latency", "throughput", "bpp", "BER", "SER", "PER"},
+    "文本传输或语言任务": {"BLEU", "BERTScore", "METEOR", "CIDEr", "WER", "CER", "semantic similarity", "accuracy", "F1-score", "latency", "BER", "SER", "PER"},
+    "点云/三维场景传输": {"PSNR", "SSIM", "LPIPS", "FID", "MSE", "NMSE", "accuracy", "mAP", "IoU", "mIoU", "latency", "throughput", "BER", "SER", "PER"},
+    "语义感知资源分配与网络优化": {"accuracy", "latency", "throughput", "energy efficiency", "semantic similarity", "BER", "SER", "PER"},
+    "任务导向推理": {"accuracy", "classification accuracy", "mAP", "IoU", "mIoU", "F1-score", "AUC", "latency", "throughput", "energy efficiency", "BER", "SER", "PER"},
+}
 
 KNOWN_CHANNELS = [
     "AWGN", "Rayleigh", "Rician", "Nakagami", "BSC", "BEC", "erasure channel",
@@ -247,6 +273,125 @@ CURATED_PRESENTATION_OVERRIDES = {
     "VQ-DeepVSC: A Dual-Stage Vector Quantization System for Video Semantic Communication": {
         "representation_summary": "第二阶段以语义 VQ 编码器把关键帧 latent 映射为共享码本 index；index 经数字链路发送，接收端查表并由空间归一化解码器恢复关键帧。",
     },
+    "Low-Bitrate High-Quality Digital Semantic Communication Based on RVQGAN": {
+        "method_name": "RVQGAN 数字语音语义通信",
+        "digitalization_class": "显式数字语义表示：RVQ 多级码本 index 与 bitstream",
+        "channel_handling_class": "类别 4：离散 bit/index error 进入预测、去噪与语义恢复训练",
+        "strict_digital": "是：RVQ index 转 bitstream，并经 BPSK/QAM 与无线信道发送",
+        "transmitted_object": "每帧由多级 RVQ 产生的码本 index bitstream，再经 BPSK/QAM 调制",
+        "decoder_object": "含误 index 的接收 bitstream、code predictor 输出及反量化后的受损语义特征",
+        "representation_summary": "语义 encoder 以步长 320 把 16 kHz 语音变成每秒 50 个 latent 帧；每帧经过 Nq 级残差 VQ，每一级输出共享码本的一个 index。接收端按 index 查表并累加各级 codeword，形成待语音 decoder 使用的离散语义表示。",
+        "overhead_summary": "3 kb/s 设置采用 Nq=6、每级码本 K=1024，因此每帧净 index 负载为 6×log₂1024=60 bit；50 帧/s 对应 3000 bit/s。1 kb/s 与 2 kb/s 通过选择 2 层和 4 层 RVQ 获得。上述数值是语义 payload，尚未计入 BPSK/QAM、FEC、导频与包头。",
+        "channel_summary": "RVQ index 被组织成 bitstream，经 BPSK/QAM 和 AWGN/Rician 信道后先解调。接收端 code predictor 修复受损 index，反量化后 CNS 以受损 latent 为输入抑制噪声；Stage II/III 在信道扰动下分别训练 CNS 和 code predictor，因此残余数字错误确实进入学习恢复路径。",
+        "curated_error": "是。解调后的错误 bit/index 会进入 code predictor、反量化和 CNS；训练显式使用受信道污染的 bitstream/latent，直接处理 index 跳变造成的语义失真。",
+        "curated_formula": "B_{\\mathrm{frame}}=N_q\\log_2K=6\\times10=60\\;\\mathrm{bit},\\quad R=50\\times60=3000\\;\\mathrm{bit/s}",
+    },
+    "Taming Learnable Codebook Design and Modulation for Digital Semantic Image Communication": {
+        "method_name": "MOC-RVQ",
+        "digitalization_class": "显式数字语义表示：多头多级 VQ index 与 64-QAM",
+        "channel_handling_class": "类别 4：index error、码本重排与受损特征恢复联合设计",
+        "strict_digital": "是：离散 index 与 64-QAM 星座建立显式对应",
+        "transmitted_object": "h×w×P×D 个小码本 index，经 Gray 映射进入 64-QAM",
+        "decoder_object": "解调后可能跳变的 index、查表得到的受损量化特征，以及 NRB/重量化后的 refined feature",
+        "representation_summary": "encoder 输出 h×w×nq latent；MOC 将通道拆成 P 个 head，每个 head 再做 D 级 RVQ，得到 s∈{0,…,N−1}^{h×w×P×D}。64-QAM 设置令每个小码本 N=8，使一个 index 对应单个 I/Q 轴的八个离散状态；四个 head 可组合出 8⁴=4096 种联合状态。",
+        "overhead_summary": "论文采用下采样因子 f=8，因此 h=H/8、w=W/8；净 index 开销为 (H/8)(W/8)PD·log₂N bit。其四 head、四 depth、N=8 配置对应每个 index 3 bit；真实空口还要计入 64-QAM 打包、协议头和可能的 FEC。传统 BPG/JPEG baseline 另使用块长 648、码率 1/2 的 LDPC。",
+        "channel_summary": "index 经 Gray 映射和 64-QAM 通过 AWGN/Rayleigh/Rician 信道，接收端解调得到可能出错的 ŝ。作者用 codebook reordering 缩短相邻星座错误对应的语义距离，并在含噪 Stage II 中训练 Swin NRB，再以重量化把恢复特征投影回高质量离散空间。",
+        "curated_error": "是。论文显式展示 index 跳变会造成远距离 codeword，随后以码本重排、NRB 和 feature requantization 共同降低这种数字错误的语义后果。",
+        "curated_formula": "B_{\\mathrm{payload}}=\\frac{H}{8}\\frac{W}{8}PD\\left\\lceil\\log_2N\\right\\rceil,\\quad N=8",
+    },
+    "Unequal Error Protection for Digital Semantic Communication with Channel Coding": {
+        "method_name": "Bit-UEP / Block-UEP",
+        "digitalization_class": "显式数字语义表示：逐元素 B-bit 量化后的 semantic bits",
+        "channel_handling_class": "类别 4：逐 bit 目标翻转概率驱动信道编码与联合训练",
+        "strict_digital": "是：量化 bit、Polar/LDPC、数字调制与 Rayleigh block fading 形成完整链路",
+        "transmitted_object": "长度 K=MB 的 semantic bit 序列，经 repetition/Polar/LDPC 不等保护后调制发送",
+        "decoder_object": "信道译码后仍由目标 bit-flip probability 约束的恢复 bit，再反量化为语义 latent",
+        "representation_summary": "semantic encoder 输出 M 维 latent v，每个元素用 B-bit 均匀量化器生成一个 B 位标签；拼接后得到 K=MB 个 semantic bits。训练为每个 bit 学习目标翻转概率，数值越低表示该 bit 对重建越敏感。",
+        "overhead_summary": "CIFAR-10/100 实验采用 B=8、K=12288 个 semantic bits；MNIST 的 K=3136。Bit-UEP 与 Block-UEP 最小化满足逐 bit 可靠性约束的总 blocklength；Block-UEP 从 128/256 的 Polar 块和 512/1024 的 LDPC 块中选型，码率集合为 {3/4,2/3,15/24,14/24,13/24,1/2,1/3}。",
+        "channel_summary": "量化 bit 经过 repetition、Polar 或 LDPC 编码、数字调制和 0 dB Rayleigh block fading；接收端完成均衡、联合解调/译码并恢复 semantic bits。训练得到的逐 bit 目标翻转概率直接约束各组码长或码率，因此 bit error 的影响进入端到端设计。",
+        "curated_error": "是。该文把每个 semantic bit 可容忍的 bit-flip probability 作为优化约束，并据此分配 repetition 次数、Polar/LDPC 块长和码率，直接处理位错误的异质语义代价。",
+        "curated_formula": "K=MB,\\qquad \\min\\sum_i n_i\\;\\;\\mathrm{s.t.}\\;P_{\\mathrm{flip},i}(n_i)\\leq\\mu_i",
+    },
+    "Vision Transformer-Based Semantic Communications With Importance-Aware Quantization": {
+        "method_name": "ViT-IAQ",
+        "digitalization_class": "显式数字语义表示：patch-wise 可变 bit scalar quantization",
+        "channel_handling_class": "类别 4：量化误差与通信 bit error 共同进入 bit 分配优化",
+        "strict_digital": "是：每个图像 patch 分配整数 bit-depth 并形成 bit sequence",
+        "transmitted_object": "按 ViT attention importance 分配不同 Mi 的 patch-wise 量化 bit 序列",
+        "decoder_object": "可能含 bit error 的量化图像/patch，反量化后输入接收端 ViT",
+        "representation_summary": "设备端用预训练轻量 ViT 的 attention score 衡量每个 patch 的任务重要性，再对原图像素做 patch-wise 均匀标量量化：同一 patch 内每个像素分量共享整数位宽 M_i，量化级数 Q_i=2^{M_i}。实验输入为 3×224×224，patch 大小 P=16，共 N=196 个 patch；M_i∈{0,…,8}。各像素量化标签串接为发送 bit sequence，接收端从可能含误码的 b̂ 反量化整幅图像，再由服务器端 ViT 完成分类。",
+        "overhead_summary": "净 payload 为 B=P²C∑ᵢM_i=P²C∑ᵢlog₂Q_i bit。实验中 P=16、C=3、N=196，因此 B=768∑ᵢM_i；原始 8-bit RGB 图像为 8HWC=1,204,224 bit，论文报告的压缩比为 ρ=B/(8HWC)。还需传每个 patch 的 M_i 以及 u_min、u_max：B_add=N⌈log₂(M_max+1)⌉+16；M_max=8 时为 800 bit。论文的 ρ 未把调制、信道编码和包头计入空口总开销。",
+        "channel_summary": "作者分析了单 bit error 对不同 bit 位和 patch 的失真贡献，并在加权量化误差问题中同时考虑量化误差与通信错误；接收端从受损 bit sequence 反量化图像，再执行单视图或多视图分类。",
+        "curated_error": "是。bit error 的位置及其对 patch 失真的影响被显式写入重要性感知 bit 分配，数字错误直接影响优化目标与最终分类性能。",
+        "curated_formula": "B_{\\mathrm{payload}}=P^2C\\sum_{i=1}^{N}M_i=P^2C\\sum_{i=1}^{N}\\log_2Q_i,\\quad B_{\\mathrm{add}}=N\\left\\lceil\\log_2(M_{\\max}+1)\\right\\rceil+16,\\quad \\rho=\\frac{B_{\\mathrm{payload}}}{8HWC}",
+    },
+    "A Robust Quantized Speech Semantic Communication System Based on ASR Perception Loss and Deep Channel Estimation": {
+        "method_name": "DSQ 量化语音 SemCom",
+        "digitalization_class": "有限星座数字语义表示：DSQ learnable constellation 与 pilot",
+        "channel_handling_class": "类别 4：量化、信道估计和含噪语义恢复联合训练",
+        "strict_digital": "是：hard quantization 形成有限星座符号并配合 pilot 传输",
+        "transmitted_object": "DSQ 输出的 64-QAM 等效量化符号与 pilot 序列",
+        "decoder_object": "经 LS+CENet 信道估计与均衡后的 noisy quantized semantic symbols",
+        "representation_summary": "semantic encoder 的 16C 维 feature 被拆成实部与虚部；DSQ 以可学习量化中心完成 soft/hard assignment，形成 64-QAM 等效有限星座。发送帧同时包含语义数据和 pilot。",
+        "overhead_summary": "64-QAM 等效星座的每个复符号净承载 6 bit；帧级空口开销还包含 pilot、Turbo/FEC 与同步信息。论文报告了特征维度和星座规模，但没有给出可从输入波形唯一换算的完整 frame bit 数。",
+        "channel_summary": "训练课程覆盖 AWGN、Rician 与 Rayleigh，并逐步把 SNR 范围扩展到 0–15 dB；接收端把 LS 估计与深度 CENet 结合，均衡后的有限星座符号进入语义 decoder。量化中心、channel estimator 与 ASR perception loss 共同约束恢复。",
+        "curated_error": "是。有限星座量化、估计误差和衰落均位于训练图中，decoder 处理的是均衡后仍带残差的量化语义符号。",
+    },
+    "Semantic-Oriented Modulation for Wireless Communication": {
+        "method_name": "SOM",
+        "digitalization_class": "有限星座接口：连续语义标量直接映射到分层离散星座",
+        "channel_handling_class": "类别 4：星座判决错误按语义数值距离设计",
+        "strict_digital": "是：输出为可由现有 SDR/数字收发机发送的有限星座符号",
+        "transmitted_object": "由连续 semantic feature 直接选择的分层有限星座点",
+        "decoder_object": "信道判决后的离散星座层级/符号，再映射回近邻语义数值",
+        "channel_summary": "SOM 跳过显式 bit 量化，把连续 semantic feature 直接映射到分层星座；相邻判决错误对应较小的 feature 数值变化。作者同时分析调制阶数与层级造成的 semantic error，并用 SDR 原型验证现有数字链路兼容性。",
+        "curated_error": "是。方法的核心目标就是让星座判决错误产生受控的语义数值偏移，从映射层面降低高位 bit flip 引起的大幅 feature 跳变。",
+    },
+    "sDMCM—A Semantic Digital Modulation Constellation Mapping Scheme for Semantic Communication": {
+        "method_name": "sDMCM",
+        "channel_handling_class": "类别 4：bit significance 与星座不等保护按语义相关性设计",
+        "decoder_object": "PAM/QAM 解调后的可能错误 bit 与重构语义符号",
+        "channel_summary": "sDMCM 先把连续 JSCC 输出量化为 bit，再依据不同 bit 位的语义重要性重排 PAM/QAM 星座映射；AWGN 下的 bit 判决错误因此产生较小的语义数值偏移，并支持量化位宽与调制阶数不一致时的分组传输。",
+        "curated_error": "是。论文显式推导不同调制 bit 的 BER，并以语义相关性和 bit significance 设计不等保护映射，直接处理 bit error 引发的语义幅值跳变。",
+    },
+    "Semantic-Importance-Aware Reordering-Enhanced Semantic Communication System With OFDM Transmission": {
+        "method_name": "SIARE-SC",
+        "digitalization_class": "数字 OFDM 链路：语义重要性重排、LDPC 与 QAM",
+        "channel_handling_class": "类别 2：数字语义变量接入 LDPC/QAM/OFDM 链路",
+        "strict_digital": "是：语义 feature 经重排、信道编码、QAM 与 OFDM 发送",
+        "decoder_object": "导频信道估计、均衡、QAM 解调与 LDPC 译码后的重排语义 feature",
+        "channel_summary": "SIARE-SC 按语义重要性重排 feature，再使用 LDPC、不同阶 QAM、OFDM 导频与频率选择性信道；接收端完成信道估计、均衡和数字译码后逆重排。主要机制调整不同 feature 遭遇的子载波/信道质量，语义 decoder 仍位于传统数字接收链之后。",
+        "curated_error": "部分。底层链路显式产生 BER 与信道估计误差，保护由重排和传统 LDPC/QAM 完成；论文没有把残余 bit/index 错误直接输入端到端语义 decoder 训练。",
+    },
+    "Multilevel Feature Transmission in Dynamic Channels: A Semantic Knowledge Base and Deep-Reinforcement-Learning-Enabled Approach": {
+        "overhead_summary": "系统在多级中间特征与最终类别标签之间自适应选择发送层级，并用即时传输率 R(i) 把所选表示的数据量换算为时延。论文报告的是 feature level、传输率和端到端 latency/accuracy 权衡，没有给出量化位宽、码本或逐帧 bitstream；因此不能把网络张量维度直接解释为空口 bit 数。",
+    },
+    "Cross-Layer Encrypted Semantic Communication Framework for Panoramic Video Transmission": {
+        "overhead_summary": "论文以每帧调制符号数 k_t 定义平均信道带宽比 CBR=(1/T)∑_t k_t/(3HW)，并在实验中使用 CBR=0.03 等工作点。该指标反映数字调制符号占用；完整空口代价还受 LDPC 码率、调制阶数、HARQ 重传次数、侧信息和包头影响，论文将平均重传次数另作结果指标。",
+        "experiment_result_summary": "在相同 CBR、SNR 和平均重传条件下，CLESC 与 APVST、DVST、DCVC、H.264/H.265 比较 WS-PSNR、WS-SSIM 和 LPIPS。H.265/DCVC 在高信道质量下压缩效率更强；当 SNR 降至约 9 dB 以下时，语义方案退化更平滑，CLESC 的跨层加密与重传设计在低 SNR 区间保持更好的全景视频质量。",
+        "curated_formula": "\\mathrm{CBR}=\\frac{1}{T}\\sum_{t=1}^{T}\\frac{k_t}{3HW}",
+    },
+    "Deep Semantic Communication for Knowledge Sharing in Internet of Vehicles": {
+        "overhead_summary": "实验把 128×128 RGB 图像的一个合成图像语义向量映射到 q=1536 个传输维度；相对 3HW=49,152 个源样本，对应维度比 q/(3HW)=1/32。q 是连续带宽维度，论文没有为每一维规定量化位宽、信道码率和协议开销，因此不能继续换算为总 bit。",
+        "experiment_result_summary": "仿真把 SCKS 与 DeepJSCC、知识蒸馏方案及共享固定生成器的 U-SCKS 比较。SCKS 针对具体模型结构自适应生成器，在测试的 AWGN SNR 与合成图像数量 M 范围内持续优于 U-SCKS，并同时降低带宽需求与解码计算负担。",
+    },
+    "Importance-Aware Robust Semantic Transmission for LEO Satellite–Ground Communication": {
+        "overhead_summary": "IRST 通过语义重要性掩码和信道映射网络调整连续 feature 的发送量，并以 SNR 阈值 γ₁=3 dB、γ₂=−3 dB 切换增强路径。论文没有给出 latent 的量化位宽、码本或 index-to-bit 映射，因而只能按发送特征/信道使用次数比较，无法唯一得到帧级 bit 数。",
+    },
+    "Multiuser Semantic Communication With Federated Learning for Intelligent Search Service": {
+        "overhead_summary": "论文以多用户语义特征、联邦模型更新和搜索任务性能评估链路，没有公开可复现的量化位宽、码本、token 数或帧级 bitstream。训练轮数与学习率属于优化设置，不能当作通信开销；真实负载还应合并语义特征和联邦更新两部分。",
+    },
+    "SCSC: The Super Compressed Semantic Communication Transmission Method for Images and Video Frames": {
+        "overhead_summary": "encoder 输出 C 通道 latent，并经过 n 级下采样；论文把信道带宽比写为 R=C/(2×3×2^n×2^n)=C/(6·4^n)。Kodak 实验还报告 7.02% 的压缩比例和相对现有方法 9.76% 的带宽效率提升。R 衡量连续信道维度，量化位宽、FEC 与包头未纳入这一式子。",
+        "curated_formula": "R=\\frac{C}{2\\times3\\times2^n\\times2^n}=\\frac{C}{6\\cdot4^n}",
+    },
+    "Semantic Image Communication Based on Swin Transformer for Satellite IoE": {
+        "overhead_summary": "对输出尺寸 C×H₀×W₀ 的连续 latent，论文定义 CBR=CH₀W₀/(3HW)。考虑第 i 级下采样后可写为 R=C/(2×3×2^i×2^i)=C/(6·4^i)；低分辨率图像用 i=2，高分辨率图像用 i=4。实验平均 CBR 为 CIFAR-100 的 1/3，以及 Kodak、CLIC2021 的 1/16。该 CBR 仍未规定每个连续信道符号的 bit-depth。",
+        "curated_formula": "\\mathrm{CBR}=\\frac{CH_0W_0}{3HW}=\\frac{C}{2\\times3\\times2^i\\times2^i}=\\frac{C}{6\\cdot4^i}",
+    },
+    "A Novel Lightweight Joint Source-Channel Coding Design in Semantic Communications": {
+        "overhead_summary": "发送端以压缩控制量 R 将图像 x 映射为连续 semantic code z=E_{θ_e}(x,R)，再经衰落与噪声信道发送。论文用压缩比/连续 latent 维度调节带宽，没有定义 VQ、每维量化 bit 或 index-to-bit 链路，因此只能比较 R 或 channel uses，不能从模型输出直接换算帧级 bitstream。",
+    },
 }
 
 
@@ -282,7 +427,7 @@ def norm_doi(value: object) -> str:
 
 def norm_space(value: object) -> str:
     text = unicodedata.normalize("NFKC", str(value or ""))
-    text = text.replace("ﬁ", "fi").replace("ﬂ", "fl").replace("–", "-").replace("−", "-")
+    text = text.replace("ﬁ", "fi").replace("ﬂ", "fl").replace("−", "-")
     text = re.sub(r"(?<=\w)-\s+(?=[a-z])", "", text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -290,6 +435,13 @@ def norm_space(value: object) -> str:
 def slugify(value: str, limit: int = 100) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug[:limit].rstrip("-")
+
+
+def anchor_id(record: dict) -> str:
+    """Return a stable, collision-resistant anchor for long paper titles."""
+    identity = norm_doi(record.get("doi")) or norm_space(record.get("title"))
+    suffix = hashlib.sha1(identity.encode("utf-8")).hexdigest()[:10]
+    return f"{slugify(norm_space(record.get('title')), 92)}-{suffix}"
 
 
 def paper_filename(value: object) -> str:
@@ -438,12 +590,15 @@ def good_narrative(ref: SentenceRef) -> bool:
         return False
     if re.search(
         r"^\s*\d{1,2}\s+[A-Za-z]|"
+        r"^\s*\([a-z]\)\s|"
         r"(?:^|[.!?;]\s+)\d{1,2}\s*(?:\([a-z]\)|[a-z])?\s*[,.:]|"
         r"\b(?:shown|plotted|reported|illustrated|depicted|observed)\s+in\s+\d{1,2}\b|"
         r"\b(?:det|ln|log|exp|Pr|p|q|w)\s*\([^)]{1,80}\)\s*(?:=|\||,)" ,
         text,
         re.I,
     ):
+        return False
+    if len(re.findall(r"\([a-z]\)", text, re.I)) >= 2 and re.search(r"\b(?:SNR|PSNR|SSIM|BER|score)\b", text, re.I):
         return False
     if text.count(";") > 4 or text.count("[") or text.count("]"):
         return False
@@ -555,6 +710,21 @@ def infer_theme(title: str, abstract: str, journal_key: str) -> str:
     low = f"{title} {abstract}".lower()
     if journal_key == "tcsvt" and "compression" in low_title and not re.search(r"transmission|semantic communication|joint source.channel|jscc|loss-resilient", low_title):
         return "compression"
+    # The title defines the paper's primary technical layer more reliably than
+    # incidental resource/channel words in an abstract.  This ordering keeps
+    # media codecs and digital interfaces out of a generic resource bucket.
+    if re.search(r"digital|quantiz|codebook|constellation|modulat|\bofdm\b|\botfs\b|channel coding|error protection", low_title):
+        return "digital"
+    if re.search(r"resource allocation|resource management|offloading|trajectory optimization|power allocation|beamforming|scheduling", low_title):
+        return "resource"
+    if re.search(r"rate.distortion|information bottleneck|semantic similarity score|fundamental|tradeoff", low_title):
+        return "theory"
+    if re.search(r"multi.?user|multiple access|broadcast|\bnoma\b|\brsma\b", low_title):
+        return "multiuser"
+    if re.search(r"image|video|speech|audio|point cloud|3.d reconstruction|wireless transmission|joint source.channel|deepjscc", low_title):
+        return "jscc"
+    if re.search(r"task.oriented|classification|inference|target detection|retrieval", low_title):
+        return "task"
     for theme, words in THEME_RULES:
         if any(w in low_title for w in words):
             return theme
@@ -578,13 +748,17 @@ def own_evidence_text(abstract: str, method_refs: list[SentenceRef]) -> str:
 def infer_interfaces(title: str, abstract: str, theme: str, method_refs: list[SentenceRef]) -> tuple[str, str, str, str, bool]:
     own = own_evidence_text(abstract, method_refs)
     title_abs = f"{title} {abstract}".lower()
-    explicit_error = bool(re.search(r"bit (?:error|flip)|index error|packet loss|erasure|loss-resilient|corrupt|binary symmetric", own))
-    digital = bool(re.search(r"vector quant|vq-|codebook|quantized index|bit-level|digital semantic|bitstream|discrete token|visual token|token modeling|binary semantic|constellation", title_abs))
+    explicit_error = bool(re.search(r"bit (?:error|flip)|bit.flip probability|index error|packet loss|erasure|loss-resilient|corrupt|binary symmetric|error protection|error correction|requantization", own))
+    digital = bool(re.search(r"vector quant|vq-|codebook|quantiz|bit-level|digital semantic|bitstream|discrete token|visual token|token modeling|binary semantic|constellation", title_abs))
     entropy_bitstream = bool(re.search(r"entropy cod|arithmetic cod|digital bitstream|bitstream", own))
     # OFDM/OTFS can carry continuous learned channel symbols.  They are not,
     # by themselves, evidence of a finite digital payload interface.
-    finite_phy = bool(re.search(r"\b(?:qam|psk|constellation|modulat|harq|ldpc|polar code)\b", title_abs))
+    finite_phy = bool(re.search(r"\b(?:qam|psk|constellation|modulat(?:ion|ed|ing)?|harq|ldpc|polar code|channel coding|error protection)\b", title_abs))
+    if theme == "digital" and re.search(r"\b(?:ofdm|otfs|symbol loading)\b", title_abs):
+        finite_phy = True
     continuous = bool(re.search(r"deepjscc|joint source.channel|joint semantic.channel|semantic.channel encoder|channel symbol|analog semantic|uncoded|softcast|awgn layer|end-to-end semantic communication", title_abs))
+    if theme == "jscc" and re.search(r"semantic communication|wireless (?:image|video|speech|data) transmission|joint source.channel", title_abs):
+        continuous = True
     compression = theme == "compression" or ("compression" in title_abs and not re.search(r"wireless|channel|jscc", title_abs))
 
     if theme in {"resource", "theory"}:
@@ -667,6 +841,8 @@ def filtered_terms(candidates: Iterable[str], known: Iterable[str], text: str, l
         if item.lower() in {"bandwidth", "snr", "fading", "bit error", "energy"}:
             continue
         if term_present(item, text, case_sensitive=(kind == "dataset")):
+            if kind == "baseline" and len(re.findall(re.escape(item), text, re.I)) < 2:
+                continue
             result.append(item)
         if len(result) >= limit:
             break
@@ -689,31 +865,30 @@ def method_name(title: str, abstract: str) -> str:
         prefix = title.split(":", 1)[0].strip()
         if len(prefix) <= 36:
             return prefix
-    acronyms = list(re.finditer(r"\(([A-Z][A-Za-z0-9-]{2,20})\)", abstract))
     bad = {
         "AI", "DL", "DNN", "CNN", "RNN", "VAE", "GAN", "SNR", "AWGN", "MIMO",
         "OFDM", "OTFS", "BER", "SER", "PER", "PSNR", "SSIM", "JSCC", "DJSCC",
         "SSCC", "LLM", "KKT", "IRS", "RIS", "ISAC", "MEC", "IOT", "UAV", "NOMA",
         "RSMA", "MAC", "SIC", "PLC", "VCM", "ROI", "CSI", "FEC", "HARQ", "V2X",
-        "CPS", "NTN", "AAV", "GAI", "BS", "UE", "SINR", "CBR",
+        "CPS", "NTN", "AAV", "GAI", "BS", "UE", "SINR", "CBR", "MSE", "NMSE",
+        "ASR", "FL", "DRL", "GNN", "CNS", "IoE",
     }
-    ranked = []
-    for match in acronyms:
-        acronym = match.group(1)
-        if acronym.upper().rstrip("S") in bad:
-            continue
-        context = abstract[max(0, match.start() - 150):match.start()].lower()
-        score = 3 if re.search(r"propos|introduc|develop|design|called|named", context) else 0
-        ranked.append((score, -match.start(), acronym))
-    if ranked:
-        return max(ranked)[2]
+    # A coined method token in the title has stronger provenance than any
+    # parenthesized abbreviation in the abstract, where metrics and modules
+    # such as MSE/CNS commonly appear before the actual method name.
+    title_tokens = re.findall(r"\b(?:[a-z][A-Z]{2,}[A-Za-z0-9-]*|[A-Z]{2,}[A-Za-z0-9-]{1,24})\b", title)
+    for token in title_tokens:
+        if token.upper().rstrip("S") not in bad and token.lower() not in {"with", "based"}:
+            return token
     named = re.search(r"\b(?:called|named|termed|denoted as)\s+(?:the\s+)?([A-Z][A-Za-z0-9-]{2,24})", abstract, re.I)
     if named and named.group(1).upper().rstrip("S") not in bad:
         return named.group(1)
-    brand_tokens = re.findall(r"\b[A-Z][A-Za-z0-9]*[A-Z][A-Za-z0-9-]{1,24}\b|\b[A-Z]{2,}[A-Za-z0-9-]{1,24}\b", title)
-    for token in brand_tokens:
-        if token.upper().rstrip("S") not in bad:
-            return token
+    acronyms = list(re.finditer(r"\(([A-Z][A-Za-z0-9-]{2,20})\)", abstract))
+    for match in acronyms:
+        acronym = match.group(1)
+        context = abstract[max(0, match.start() - 110):match.start()].lower()
+        if acronym.upper().rstrip("S") not in bad and re.search(r"(?:proposed|our|framework|system|scheme|method|approach)[^.]{0,90}$", context):
+            return acronym
     # Some papers deliberately do not coin an acronym.  Keeping the full
     # title is more informative and less misleading than inventing a name.
     return title
@@ -781,9 +956,13 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
             ),
         )
     mechanism = mechanism or proposal
-    claim = choose_ref(
-        list(reversed(abs_refs)) + pools["conclusion"] + pools["experiment"],
-        (r"results? (?:show|demonstrate|indicate)|outperform|achieves?|improves?|reduces?|gain|verify",),
+    claim_patterns = (r"results? (?:show|demonstrate|indicate)|outperform|achieves?|improves?|reduces?|gain|verify",)
+    # Abstract result claims are author-written, self-contained, and survive
+    # two-column extraction more reliably than isolated conclusion fragments.
+    # Full-text experiment pages and result figures remain the evidence layer.
+    claim = choose_ref(list(reversed(abs_refs)), claim_patterns) or choose_ref(
+        pools["conclusion"] + pools["experiment"],
+        claim_patterns,
     ) or (abs_refs[-1] if abs_refs else proposal)
 
     method_more = choose_own_method_ref(pools["method"], method_label)
@@ -795,25 +974,25 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
     for candidate in (proposal, mechanism):
         if candidate and good_narrative(candidate) and all(candidate.text != old_ref.text for old_ref in method_refs):
             method_refs.append(candidate)
-    if len(method_refs) < 2 and method_more and good_narrative(method_more):
+    if len(method_refs) < 3 and method_more and good_narrative(method_more):
         method_refs.append(method_more)
 
     digital_refs = choose_many(
         abs_refs + pools["method"] + pools["experiment"],
         r"vector quant|codebook|quantiz|bitstream|bits? per|discrete token|entropy cod|constellation|channel symbols?|latent representation|feature map",
-        1,
+        2,
     )
     rate_pattern = r"\bCBR\b|bandwidth ratio|compression ratio|bits? per (?:pixel|token|symbol|index)|\bbpp\b|channel uses?|bit rate|bitrate|codebook size|number of (?:tokens|indices|symbols)|input (?:size|dimension)|\d+\s*[×x]\s*\d+"
     overhead_refs = choose_many(
         pools["method"] + pools["experiment"],
         rf"(?:defined as|denotes?|is set to|is fixed at|we set|we use).{{0,180}}(?:{rate_pattern})|(?:{rate_pattern}).{{0,180}}(?:defined as|denotes?|is set to|is fixed at|we set|we use)",
-        1,
+        3,
     )
     channel_pattern = r"AWGN|Rayleigh|Rician|fading channel|binary symmetric|erasure channel|bit (?:error|flip)|index error|packet loss|LDPC|polar code|QAM|OFDM|HARQ|channel noise|channel output"
     channel_refs = choose_many(
-        abs_refs + pools["experiment"],
+        abs_refs + pools["method"] + pools["experiment"],
         rf"(?:we (?:adopt|consider|model|use)|channel (?:is|follows)|transmit(?:ted)? (?:over|through)|under .* channel|modeled as).{{0,180}}(?:{channel_pattern})|(?:{channel_pattern}).{{0,180}}(?:we (?:adopt|consider|model|use)|channel (?:is|follows)|transmit(?:ted)? (?:over|through)|modeled as)",
-        1,
+        2,
     )
     title_abstract_low = f"{title} {abstract}".lower()
     if ("连续" in representation or "语义 feature" in representation or "上层理论" in representation) and not re.search(
@@ -824,7 +1003,10 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
         overhead_refs = []
     result_extra = choose_ref(
         pools["experiment"] + pools["conclusion"],
-        (r"outperform|improv|gain|achiev|save|higher .* (?:than|dB|%)|lower.*(?:dB|%)|reduce(?:s|d)? (?:bandwidth|latency|error|distortion|cost|overhead)", r"results? (?:show|demonstrate|indicate)"),
+        (
+            r"outperform|(?:higher|lower) .* (?:than|dB|%)|(?:improv|gain|reduc).{0,120}(?:%|dB|baseline|compared|latency|overhead)",
+            r"results? (?:show|demonstrate|indicate).{0,180}(?:outperform|improv|gain|reduc|higher|lower)",
+        ),
     )
     if result_extra and (len(result_extra.text) > 340 or not good_narrative(result_extra)):
         result_extra = None
@@ -838,6 +1020,9 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
     datasets = filtered_terms(old_datasets, KNOWN_DATASETS, exp_text, 10, "dataset")
     baselines = filtered_terms(old_baselines, KNOWN_BASELINES, exp_text, 12, "baseline")
     metrics = filtered_terms(old_metrics, KNOWN_METRICS, exp_text, 10, "metric")
+    allowed_metrics = TASK_METRIC_ALLOW.get(task)
+    if allowed_metrics:
+        metrics = [metric for metric in metrics if metric in allowed_metrics]
     channels = filtered_terms(old_channels, KNOWN_CHANNELS, method_exp_text, 8, "channel")
     snr = extract_values(
         exp_text,
@@ -866,7 +1051,7 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
         representation_field = refs_to_field(digital_refs)
     else:
         representation_field = fallback_field(
-            f"全文没有给出可复核的 VQ/codebook/index-to-bit 接口。根据系统模型，本调研将传输表示判断为“{representation}”；不能把网络 latent 的每个浮点维度直接当成固定 bit。",
+            f"论文没有给出可复核的 VQ/codebook/index-to-bit 接口。系统模型中的传输表示属于“{representation}”；网络 latent 的浮点维度不能直接当作固定 bit。",
             [pools["indices"][1]],
         )
     if overhead_refs:
@@ -885,7 +1070,7 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
         channel_field = refs_to_field(channel_refs)
     else:
         channel_field = fallback_field(
-            f"正文未给出可单句摘录的更细信道流程；结合题名、摘要、方法与实验，本调研按“{channel_class}”解释信道作用点。",
+            f"论文没有进一步规定可复现的物理层收发流程；由系统模型与实验条件可将信道作用点归为“{channel_class}”。",
             [pools["indices"][1], pools["indices"][2]],
         )
 
@@ -905,6 +1090,8 @@ def build_raw_record(record: dict, old: dict, evidence: dict, pages: list[str], 
     # ("6(a), ...") and become visibly spliced after translation.  They stay
     # available through the result figure and audit pages, not inline prose.
     result_refs = [claim]
+    if result_extra and result_extra.text != claim.text:
+        result_refs.append(result_extra)
 
     raw = {
         "doi": doi,
@@ -1184,7 +1371,7 @@ def apply_curated_presentation_overrides(record: dict) -> None:
             field = record.get(path)
         if isinstance(field, dict):
             field["zh"] = text
-        elif path in record:
+        else:
             record[path] = text
 
 
@@ -1213,7 +1400,14 @@ def sanitize_method_prose(text: str) -> str:
         prefix = text[:cut]
         last_stop = max(prefix.rfind("。"), prefix.rfind("."))
         text = prefix[:last_stop + 1] if last_stop >= 20 else prefix
-    return text.rstrip("；;，, ")
+    parts = [part.strip() for part in re.split(r"(?<=[。！？!?])\s*", text) if part.strip()]
+    unique: list[str] = []
+    for part in parts:
+        normalized = re.sub(r"[\W_]+", "", part.lower())
+        if any(SequenceMatcher(None, normalized, re.sub(r"[\W_]+", "", old.lower())).ratio() >= 0.78 for old in unique):
+            continue
+        unique.append(part)
+    return "".join(unique).rstrip("；;，, ")
 
 
 def iter_translatable_fields(record: dict) -> Iterable[dict]:
@@ -1237,9 +1431,27 @@ def append_judgments(record: dict) -> None:
     theme = record["theme"]
     record["method_summary"]["zh"] = sanitize_method_prose(record["method_summary"].get("zh", ""))
 
+    def compact(value: str, limit: int) -> str:
+        value = norm_space(value)
+        if len(value) <= limit:
+            return value
+        stop = max(value.rfind("。", 0, limit), value.rfind("；", 0, limit))
+        return (value[:stop + 1] if stop >= 60 else value[: limit - 1].rstrip("，,；; ") + "…")
+
+    problem_text = compact(record.get("motivation", {}).get("problem", {}).get("zh", ""), 190)
+    proposal_text = compact(record.get("motivation", {}).get("proposal", {}).get("zh", ""), 220)
+    claim_text = compact(record.get("motivation", {}).get("claim", {}).get("zh", ""), 190)
+    if problem_text and proposal_text:
+        left = re.sub(r"[\W_]+", "", problem_text.lower())
+        right = re.sub(r"[\W_]+", "", proposal_text.lower())
+        if SequenceMatcher(None, left, right).ratio() >= 0.72:
+            problem_text = ""
+    thesis_parts = [part for part in (problem_text, proposal_text, f"核心证据目标：{claim_text}" if claim_text else "") if part]
+    record["thesis"] = " ".join(thesis_parts)
+
     rep = record["representation_summary"]
     rep["zh"] = (
-        f"{rep.get('zh','')} 独立判断：{method} 的主传输单位应归为“{representation}”。"
+        f"{rep.get('zh','')} 表示判定：{method} 的主传输单位属于“{representation}”。"
         "只有论文明确给出量化和映射时，才能把 token/index 数换算成总 bit；连续 channel symbol 只能按 channel uses/CBR 比较。"
     ).strip()
 
@@ -1263,7 +1475,7 @@ def append_judgments(record: dict) -> None:
     rate["caveat"] = caveat
 
     channel = record["channel_summary"]
-    channel["zh"] = f"{channel.get('zh','')} 本调研据此归为“{channel_class}”。".strip()
+    channel["zh"] = f"{channel.get('zh','')} 信道处理归类为“{channel_class}”。".strip()
     if "类别 1" in channel_class and re.search(r"LDPC|Polar|QAM|OFDM|信道编码", channel.get("zh", ""), re.I):
         channel["zh"] += " 这些传统信道编码/调制条目若只属于 baseline，不改变所提语义接收机默认可靠输入的分类。"
     decoder_text = (record.get("curated_decoder") or record["decoder_object"]).rstrip("。；; ")
@@ -1378,6 +1590,21 @@ def figure_caption_from_page(page_text: str, kind: str) -> tuple[str, str]:
     return candidates[0]
 
 
+def figure_candidates_from_pages(pages: list[str]) -> list[dict]:
+    """Collect caption candidates directly from reflowed full text."""
+    candidates: list[dict] = []
+    pattern = re.compile(
+        r"\bFig(?:ure)?\.\s*(\d+[a-z]?)\.\s*([^\n]{20,300}?)(?=(?:\bFig(?:ure)?\.\s*\d+|\bTable\s+[IVX0-9]+|$))",
+        re.I,
+    )
+    for page_number, page_text in enumerate(pages, start=1):
+        for match in pattern.finditer(page_text):
+            caption = norm_space(match.group(2)).split(". ", 1)[0].strip(" .")
+            if 20 <= len(caption) <= 260 and not POLLUTION.search(caption):
+                candidates.append({"page": page_number, "number": match.group(1), "caption": caption})
+    return candidates
+
+
 def figure_score(caption: str, kind: str) -> int:
     low = caption.lower()
     quality_penalty = 0
@@ -1408,15 +1635,22 @@ def figure_score(caption: str, kind: str) -> int:
 
 def render_evidence_page(pdf: Path, page: int, target: Path) -> None:
     pdftoppm = shutil.which("pdftoppm")
-    if not pdftoppm:
-        return
     target.parent.mkdir(parents=True, exist_ok=True)
-    prefix = target.with_suffix("")
-    subprocess.run(
-        [pdftoppm, "-f", str(page), "-l", str(page), "-r", "130", "-png", "-singlefile", str(pdf), str(prefix)],
-        check=True,
-        capture_output=True,
-    )
+    if pdftoppm:
+        prefix = target.with_suffix("")
+        try:
+            subprocess.run(
+                [pdftoppm, "-f", str(page), "-l", str(page), "-r", "130", "-png", "-singlefile", str(pdf), str(prefix)],
+                check=True,
+                capture_output=True,
+            )
+            return
+        except subprocess.CalledProcessError:
+            pass
+    with fitz.open(pdf) as document:
+        selected = document[max(0, min(page - 1, document.page_count - 1))]
+        pixmap = selected.get_pixmap(matrix=fitz.Matrix(1.8, 1.8), alpha=False)
+        pixmap.save(target)
 
 
 def attach_assets(record: dict, old: dict, evidence: dict, root: Path, pages: list[str]) -> None:
@@ -1442,6 +1676,8 @@ def attach_assets(record: dict, old: dict, evidence: dict, root: Path, pages: li
         for f in (evidence.get("figures") or [])
         if int(f.get("page") or 0) > 0 and 15 <= len(norm_space(f.get("caption"))) <= 320 and not POLLUTION.search(norm_space(f.get("caption")))
     ]
+    if not figures:
+        figures = figure_candidates_from_pages(pages)
     # Re-select evidence pages when the old extractor chose a related-work
     # figure or an uninformative page.  Existing files are retained on disk but
     # the rebuilt HTML references the stronger page.
@@ -1452,6 +1688,24 @@ def attach_assets(record: dict, old: dict, evidence: dict, root: Path, pages: li
             key=lambda f: (-figure_score(f["caption"], kind), f["page"]),
         )
         if not ranked:
+            if any(asset.get("kind") == kind for asset in assets):
+                continue
+            indices = record.get("evidence_indices") or [1, 2, max(2, len(pages) - 2), max(2, len(pages) - 1)]
+            fallback_page = int(indices[1] if kind == "method" else indices[2])
+            fallback_page = max(1, min(fallback_page, len(pages)))
+            if kind == "result" and any(int(a.get("page") or 0) == fallback_page for a in assets if a.get("kind") == "method"):
+                fallback_page = min(len(pages), fallback_page + 1)
+            file = f"assets/{record['year']}_{slugify(record['title'],86)}_{kind}_p{fallback_page}.png"
+            target = root / file
+            if not target.exists() and pdf.exists():
+                render_evidence_page(pdf, fallback_page, target)
+            assets.append({
+                "kind": kind,
+                "page": fallback_page,
+                "file": file,
+                "caption": "方法/系统模型所在页" if kind == "method" else "实验设置或关键结果所在页",
+                "number": "",
+            })
             continue
         best = ranked[0]
         current = next((a for a in assets if a.get("kind") == kind), None)
@@ -1522,7 +1776,7 @@ def list_text(values: list[str], fallback: str = "全文未稳定定位") -> str
 
 
 def article_html(record: dict, local: bool) -> str:
-    slug = slugify(record["title"], 120)
+    slug = anchor_id(record)
     source_link = record["source_url"]
     pdf_link = record["pdf"] if local and record.get("pdf") else source_link
     primary_label = "打开本地 PDF" if local and record.get("pdf") else "DOI / IEEE 页面"
@@ -1562,7 +1816,7 @@ def article_html(record: dict, local: bool) -> str:
     <p><strong>DOI / IEEE ID</strong><a href='{html.escape(source_link)}'>{html.escape(record['doi'] or '未登记 DOI')}</a>{' / '+html.escape(record['ieee_document_id']) if record.get('ieee_document_id') else ''}</p>
     <p><strong>通信位置</strong>{html.escape(record['communication_layer'])}</p>
   </div>
-  <p class='lead'><strong>一句话主旨：</strong>{html.escape(record['method_name'])} 面向{html.escape(record['task_type'])}，把问题放在“{html.escape(record['communication_layer'])}”层处理；本调研把主接口判断为“{html.escape(record['digitalization_class'])}”。</p>
+  <p class='lead'><strong>论文主旨：</strong>{html.escape(record.get('thesis') or record['method_name'] + '面向' + record['task_type'])}</p>
 
   <h3>Motivation｜Introduction 怎样导出本文方案</h3>
   <ol class='story'>
@@ -1621,7 +1875,7 @@ def article_html(record: dict, local: bool) -> str:
 def table_rows(records: list[dict]) -> str:
     rows = []
     for r in records:
-        slug = slugify(r["title"], 120)
+        slug = anchor_id(r)
         rows.append(
             "<tr>"
             f"<td>{r['year']}</td><td>{'核心' if r['tier']=='core' else '相关'}</td>"
@@ -1634,18 +1888,73 @@ def table_rows(records: list[dict]) -> str:
 
 
 def nav_html(records: list[dict]) -> str:
-    parts = ["<a class='top-link' href='#overview'>总览与使用说明</a>", "<a class='top-link' href='#comparison'>横向比较</a>"]
+    parts = [
+        "<a class='top-link' href='#overview'>总览与证据口径</a>",
+        "<a class='top-link' href='#comparison'>横向比较</a>",
+        "<a class='top-link' href='#synthesis'>技术演进与研究空白</a>",
+        "<a class='top-link' href='#pending'>待全文核验论文</a>",
+    ]
     current = None
     for record in records:
         if record["year"] != current:
             current = record["year"]
             parts.append(f"<div class='nav-year'>{current}</div>")
-        parts.append(f"<a href='#{slugify(record['title'],120)}' title='{html.escape(record['title'])}'>{html.escape(record['title'])}</a>")
+        parts.append(f"<a href='#{anchor_id(record)}' title='{html.escape(record['title'])}'>{html.escape(record['title'])}</a>")
     return "".join(parts)
 
 
+def pending_html(pending: list[dict]) -> str:
+    if not pending:
+        return ""
+    rows = []
+    for record in pending:
+        doi = norm_doi(record.get("doi"))
+        source = f"https://doi.org/{doi}" if doi else record.get("publisher_url") or "#"
+        tier = "核心候选" if record.get("screening_status") == "core" else "直接相关"
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(record.get('year') or ''))}</td>"
+            f"<td>{html.escape(tier)}</td>"
+            f"<td><a href='{html.escape(source)}'>{html.escape(norm_space(record.get('title')))}</a></td>"
+            f"<td>{html.escape(norm_space(record.get('fulltext_note')) or '题录已核验；全文待补充。')}</td>"
+            "</tr>"
+        )
+    return (
+        f"<section class='panel' id='pending'><h2>已检索、待全文核验的 {len(pending)} 篇论文</h2>"
+        "<p>这些论文已经通过题录与主题筛选。当前版本没有可验证全文，因此不对其方法、实验结果、数字化接口和信道处理作实质判断。</p>"
+        "<div class='table-wrap pending-table'><table><thead><tr><th>年</th><th>层级</th><th>完整标题</th><th>当前状态</th></tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></div></section>"
+    )
+
+
+def insights_html(records: list[dict]) -> str:
+    year_blocks = []
+    for year in sorted({record["year"] for record in records}):
+        group = [record for record in records if record["year"] == year]
+        tasks = Counter(record["task_type"] for record in group).most_common(2)
+        themes = Counter(record["communication_layer"] for record in group).most_common(2)
+        task_text = "、".join(f"{name}（{count}）" for name, count in tasks)
+        theme_text = "、".join(f"{name}（{count}）" for name, count in themes)
+        year_blocks.append(
+            f"<div><b>{year}</b><span>{len(group)} 篇全文；主要任务：{html.escape(task_text)}；主要通信位置：{html.escape(theme_text)}。</span></div>"
+        )
+    strict_count = sum(str(record.get("strict_digital", "")).startswith("是") for record in records)
+    error_count = sum("类别 4" in record.get("channel_handling_class", "") or "HARQ/重传" in record.get("channel_handling_class", "") for record in records)
+    continuous_count = sum("类别 3" in record.get("channel_handling_class", "") for record in records)
+    return f"""
+<section class='panel' id='synthesis'><h2>技术演进与跨论文判断</h2>
+  <div class='timeline'>{''.join(year_blocks)}</div>
+  <div class='insight-grid'>
+    <div><h3>从任务压缩走向完整链路</h3><p>IoTJ 论文首先在图像、文本、边缘推理和多用户任务中证明“发送任务充分信息”可以节省带宽，随后逐步把 MIMO、OFDM、有限星座、VQ/codebook、HARQ、波束与资源调度接入语义链路。当前全文样本中，{strict_count} 篇给出明确离散或有限数字接口，{continuous_count} 篇主要依赖连续噪声信道。</p></div>
+    <div><h3>数字化后的核心分水岭</h3><p>量化或形成 bitstream 只完成了接口定义。当前仅 {error_count} 篇把残余 bit/index/packet error 或重传恢复明确带入语义训练与解码；其余数字方案多依赖传统信道译码后再交给语义 decoder。</p></div>
+    <div><h3>网络优化论文的价值边界</h3><p>资源、轨迹、功率和计算优化把语义效用放进 IoT 网络决策，适合回答“资源分给谁、何时发送、发送多少”。这类结论依赖下层 codec 的质量—资源曲线，控制信令、有限码长和残余误码仍需单独核算。</p></div>
+    <div><h3>仍待解决的工程问题</h3><p>真实空口总开销、burst error、熵码失同步、码本 index 跳变、信道估计误差、跨数据域与跨信道泛化，以及生成式接收端的可控失真，仍是从仿真走向可部署数字语义通信的共同缺口。</p></div>
+  </div>
+</section>"""
+
+
 CSS = r"""
-:root{--ink:#17212b;--muted:#61707d;--paper:#f3f0ea;--card:#fff;--line:#d9d4ca;--accent:ACCENT;--accent-dark:ACCENT_DARK;--soft:#eef5f4;--warn:#fff3cf;--related:#755d35}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;line-height:1.76}a{color:var(--accent)}.skip{position:absolute;left:-9999px}.skip:focus{left:10px;top:10px;z-index:20;background:#fff;padding:8px}nav{position:fixed;inset:0 auto 0 0;width:350px;overflow:auto;background:var(--accent-dark);color:#edf7f6;padding:22px 18px 40px}nav h2{font-size:17px;margin:0 0 12px}nav input{width:100%;padding:10px;border:0;border-radius:9px;margin-bottom:10px}nav a{display:block;color:#dcefed;text-decoration:none;padding:7px 8px;border-radius:8px;font-size:12.5px;line-height:1.35}nav a:hover,nav a.active{background:rgba(255,255,255,.13)}nav .top-link{font-weight:700;color:#fff}.nav-year{color:#8ed9cf;font-weight:800;margin:18px 8px 4px}.nav-note{font-size:11px;color:#b8d1ce;margin:10px 8px}main{margin-left:350px;max-width:1320px;padding:40px 50px 100px}.hero,.panel,.paper{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:24px;box-shadow:0 10px 30px rgba(30,44,49,.05)}.hero{background:linear-gradient(145deg,#fff 0,#f7fbfa 100%)}h1{font:700 42px/1.2 Georgia,"Noto Serif SC",serif;margin:.15em 0}h2{font-size:26px;line-height:1.32;margin:.3em 0}h3{font-size:19px;color:var(--accent-dark);margin:30px 0 9px}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:800;font-size:12px}.hero-grid,.stats,.facts,.meta-grid{display:grid;gap:12px}.stats{grid-template-columns:repeat(4,1fr);margin:20px 0}.stat{background:var(--soft);border-radius:13px;padding:14px}.stat b{font-size:26px;display:block}.hero-grid{grid-template-columns:1.3fr .7fr}.paper{content-visibility:auto;contain-intrinsic-size:auto 1500px;scroll-margin-top:15px}.paper:target{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:3px}.paper-head{display:flex;gap:22px;justify-content:space-between;align-items:flex-start}.paper-head .button{white-space:nowrap}.chips{display:flex;flex-wrap:wrap;gap:7px}.tag{display:inline-block;background:#e3efed;color:#174e49;border-radius:999px;padding:4px 9px;font-size:12px}.tag.core{background:#dff0e4;color:#22653a}.tag.related{background:#f3e9d8;color:var(--related)}.tag.year{background:#e5eaf6;color:#2e477e}.button{display:inline-block;background:var(--accent);color:#fff!important;text-decoration:none;padding:9px 13px;border-radius:9px;font-weight:700}.meta-grid{grid-template-columns:repeat(2,1fr);margin:16px 0}.meta-grid p,.facts p{margin:0;background:#f6f7f5;border-radius:10px;padding:11px}.meta-grid strong,.facts strong{display:block;color:var(--muted);font-size:12px}.lead{font-size:16px;border-left:4px solid var(--accent);padding:10px 14px;background:var(--soft);border-radius:0 9px 9px 0}.story li{margin:9px 0}.locator{display:inline-block;white-space:nowrap;background:#edf2f2;border-radius:999px;padding:1px 7px;font-size:11px;text-decoration:none;color:#3b706c}.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:15px 0}.flow div{position:relative;background:var(--soft);border:1px solid #cbdeda;border-radius:11px;padding:10px;min-height:126px}.flow div:not(:last-child):after{content:"→";position:absolute;right:-9px;top:46%;z-index:1;color:var(--accent);font-weight:900}.flow b{display:block;color:var(--accent-dark);margin-bottom:5px}.flow span{font-size:12px;line-height:1.5}.callout,.verdict,.notice{padding:12px 14px;border-radius:10px}.callout{background:#edf4f8;border-left:4px solid #5282a6}.verdict{background:var(--warn);border-left:4px solid #c89626}.notice{background:var(--warn)}.formula{overflow:auto;background:#f8faf9;border:1px dashed #bdcbc8;border-radius:10px;padding:8px 12px;margin:10px 0}.mini{font-size:12px;color:var(--muted)}.facts{grid-template-columns:repeat(2,1fr)}.fig-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:20px}figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fafafa}figure img{display:block;width:100%;height:auto;aspect-ratio:952/1232;object-fit:contain;background:#fff}figcaption{padding:10px;font-size:12px;color:var(--muted)}.table-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{position:sticky;top:0;background:#eaf1ef;z-index:1}.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.filters button{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;cursor:pointer}.filters button.active{background:var(--accent);color:#fff}.hidden-paper{display:none!important}@media(max-width:1080px){nav{position:relative;width:auto;max-height:45vh}main{margin-left:0;padding:26px}.flow{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){main{padding:14px}.hero,.panel,.paper{padding:18px}.paper-head{display:block}.paper-head .button{margin-top:10px}.flow,.facts,.meta-grid,.fig-grid,.hero-grid{grid-template-columns:1fr}.flow div:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-15px}.stats{grid-template-columns:1fr 1fr}h1{font-size:30px}}@media print{nav{display:none}main{margin:0;max-width:none}.paper{content-visibility:visible;break-inside:auto}.button{display:none}}
+:root{--ink:#17212b;--muted:#61707d;--paper:#f3f0ea;--card:#fff;--line:#d9d4ca;--accent:ACCENT;--accent-dark:ACCENT_DARK;--soft:#eef5f4;--warn:#fff3cf;--related:#755d35}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:15px}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,"Noto Sans SC","Microsoft YaHei",sans-serif;line-height:1.76}a{color:var(--accent)}.skip{position:absolute;left:-9999px}.skip:focus{left:10px;top:10px;z-index:20;background:#fff;padding:8px}nav{position:fixed;inset:0 auto 0 0;width:350px;overflow:auto;background:var(--accent-dark);color:#edf7f6;padding:22px 18px 40px}nav h2{font-size:17px;margin:0 0 12px}nav input{width:100%;padding:10px;border:0;border-radius:9px;margin-bottom:10px}nav a{display:block;color:#dcefed;text-decoration:none;padding:7px 8px;border-radius:8px;font-size:12.5px;line-height:1.35}nav a:hover,nav a.active{background:rgba(255,255,255,.13)}nav .top-link{font-weight:700;color:#fff}.nav-year{color:#8ed9cf;font-weight:800;margin:18px 8px 4px}.nav-note{font-size:11px;color:#b8d1ce;margin:10px 8px}main{margin-left:350px;max-width:1320px;padding:40px 50px 100px}.hero,.panel,.paper{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:24px;box-shadow:0 10px 30px rgba(30,44,49,.05)}.hero{background:linear-gradient(145deg,#fff 0,#f7fbfa 100%)}h1{font:700 42px/1.2 Georgia,"Noto Serif SC",serif;margin:.15em 0}h2{font-size:26px;line-height:1.32;margin:.3em 0}h3{font-size:19px;color:var(--accent-dark);margin:30px 0 9px}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:800;font-size:12px}.hero-grid,.stats,.facts,.meta-grid{display:grid;gap:12px}.stats{grid-template-columns:repeat(6,1fr);margin:20px 0}.stat{background:var(--soft);border-radius:13px;padding:14px}.stat b{font-size:26px;display:block}.hero-grid{grid-template-columns:1.3fr .7fr}.paper{content-visibility:visible;contain-intrinsic-size:none;scroll-margin-top:15px}.paper:target{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:3px}.paper-head{display:flex;gap:22px;justify-content:space-between;align-items:flex-start}.paper-head .button{white-space:nowrap}.chips{display:flex;flex-wrap:wrap;gap:7px}.tag{display:inline-block;background:#e3efed;color:#174e49;border-radius:999px;padding:4px 9px;font-size:12px}.tag.core{background:#dff0e4;color:#22653a}.tag.related{background:#f3e9d8;color:var(--related)}.tag.year{background:#e5eaf6;color:#2e477e}.button{display:inline-block;background:var(--accent);color:#fff!important;text-decoration:none;padding:9px 13px;border-radius:9px;font-weight:700}.meta-grid{grid-template-columns:repeat(2,1fr);margin:16px 0}.meta-grid p,.facts p{margin:0;background:#f6f7f5;border-radius:10px;padding:11px}.meta-grid strong,.facts strong{display:block;color:var(--muted);font-size:12px}.lead{font-size:16px;border-left:4px solid var(--accent);padding:10px 14px;background:var(--soft);border-radius:0 9px 9px 0}.story li{margin:9px 0}.locator{display:inline-block;white-space:nowrap;background:#edf2f2;border-radius:999px;padding:1px 7px;font-size:11px;text-decoration:none;color:#3b706c}.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:15px 0}.flow div{position:relative;background:var(--soft);border:1px solid #cbdeda;border-radius:11px;padding:10px;min-height:126px}.flow div:not(:last-child):after{content:"→";position:absolute;right:-9px;top:46%;z-index:1;color:var(--accent);font-weight:900}.flow b{display:block;color:var(--accent-dark);margin-bottom:5px}.flow span{font-size:12px;line-height:1.5}.callout,.verdict,.notice{padding:12px 14px;border-radius:10px}.callout{background:#edf4f8;border-left:4px solid #5282a6}.verdict{background:var(--warn);border-left:4px solid #c89626}.notice{background:var(--warn)}.formula{overflow:auto;background:#f8faf9;border:1px dashed #bdcbc8;border-radius:10px;padding:8px 12px;margin:10px 0}.mini{font-size:12px;color:var(--muted)}.facts{grid-template-columns:repeat(2,1fr)}.fig-grid,.insight-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:20px}.insight-grid>div{background:var(--soft);border:1px solid #d2e1de;border-radius:12px;padding:16px}.insight-grid h3{margin:0 0 7px}.insight-grid p{margin:0}.timeline{display:grid;gap:9px;margin:16px 0}.timeline div{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:start;border-left:4px solid var(--accent);background:#f7faf9;padding:10px 13px}.timeline b{font-size:18px;color:var(--accent-dark)}figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fafafa}figure img{display:block;width:100%;height:auto;aspect-ratio:952/1232;object-fit:contain;background:#fff}figcaption{padding:10px;font-size:12px;color:var(--muted)}.table-wrap{overflow:auto;max-height:72vh;border:1px solid var(--line);border-radius:10px}.pending-table{max-height:none}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{position:sticky;top:0;background:#eaf1ef;z-index:1}.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.filters button{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#fff;cursor:pointer}.filters button.active{background:var(--accent);color:#fff}.hidden-paper{display:none!important}@media(max-width:1080px){nav{position:relative;width:auto;max-height:45vh}main{margin-left:0;padding:26px}.flow{grid-template-columns:repeat(3,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:680px){main{padding:14px}.hero,.panel,.paper{padding:18px}.paper-head{display:block}.paper-head .button{margin-top:10px}.flow,.facts,.meta-grid,.fig-grid,.insight-grid,.hero-grid{grid-template-columns:1fr}.flow div:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-15px}.stats{grid-template-columns:1fr 1fr}.timeline div{grid-template-columns:1fr}h1{font-size:30px}}@media print{nav{display:none}main{margin:0;max-width:none}.paper{content-visibility:visible;break-inside:auto}.button{display:none}}
 /* Hash links need the real height of every preceding paper; estimated skipped heights drift on repeated clicks. */
 .paper{content-visibility:visible;contain-intrinsic-size:none}
 """
@@ -1658,11 +1967,14 @@ function applyFilter(){const q=(search.value||'').toLowerCase();const tier=docum
 search.addEventListener('input',applyFilter);
 document.querySelectorAll('.filters button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.filters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');applyFilter();}));
 const links=[...document.querySelectorAll('nav a[href^="#"]')];
+function revealPaperTarget(id){const target=document.getElementById(id);if(!target)return false;if(target.classList.contains('paper')&&target.classList.contains('hidden-paper')){search.value='';document.querySelectorAll('.filters button').forEach(x=>x.classList.toggle('active',x.dataset.tier==='all'));applyFilter();}requestAnimationFrame(()=>target.scrollIntoView({block:'start',behavior:'instant'}));return true;}
+document.querySelectorAll('a[href^="#"]').forEach(link=>link.addEventListener('click',event=>{const id=decodeURIComponent(link.getAttribute('href').slice(1));if(!id||!revealPaperTarget(id))return;event.preventDefault();history.pushState(null,'','#'+encodeURIComponent(id));}));
+window.addEventListener('popstate',()=>{const id=decodeURIComponent(location.hash.slice(1));if(id)revealPaperTarget(id);});
 const observer=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id));}})},{rootMargin:'-15% 0px -75% 0px'});papers.forEach(p=>observer.observe(p));
 """
 
 
-def build_html(config: dict, records: list[dict], local: bool, output: Path) -> None:
+def build_html(config: dict, records: list[dict], pending: list[dict], local: bool, output: Path) -> None:
     counts = Counter(r["tier"] for r in records)
     years = sorted({r["year"] for r in records})
     digital_count = sum("显式数字" in r["digitalization_class"] or "有限星座" in r["digitalization_class"] or "bitstream" in r["digitalization_class"] for r in records)
@@ -1670,27 +1982,34 @@ def build_html(config: dict, records: list[dict], local: bool, output: Path) -> 
     task_counts = Counter(r["task_type"] for r in records)
     channel_counts = Counter(r["channel_handling_class"].split("：", 1)[0] for r in records)
     edition = "本地深读版" if local else "公开网页版本"
+    candidate_count = int(config.get("candidate_count") or len(records) + len(pending))
+    screened_count = int(config.get("screened_count") or len(records) + len(pending))
+    excluded_count = int(config.get("excluded_count") or max(0, candidate_count - screened_count))
+    updated = config.get("updated") or "2026-10-09"
     css = CSS.replace("ACCENT_DARK", config["accent_dark"]).replace("ACCENT", config["accent"])
     task_summary = "".join(f"<li>{html.escape(k)}：{v} 篇</li>" for k, v in task_counts.most_common())
     channel_summary = "".join(f"<li>{html.escape(k)}：{v} 篇</li>" for k, v in sorted(channel_counts.items()))
     document = f"""<!doctype html>
 <html lang='zh-CN'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>
 <title>{html.escape(config['title'])}</title><style>{css}</style>
-<script>window.MathJax={{tex:{{inlineMath:[['\\(','\\)']],displayMath:[['\\[','\\]']]}},svg:{{fontCache:'global'}}}};</script>
+<script>window.MathJax={{tex:{{inlineMath:[['\\\\(','\\\\)']],displayMath:[['\\\\[','\\\\]']]}},svg:{{fontCache:'global'}}}};</script>
 <script defer src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js'></script></head>
 <body><a class='skip' href='#overview'>跳到正文</a>
-<nav><h2>{config['short']} 逐篇目录</h2><input id='paper-search' type='search' placeholder='按完整标题、方法或任务筛选…'><div class='nav-note'>目录使用论文完整标题；共 {len(records)} 篇。</div>{nav_html(records)}</nav>
+<nav><h2>{config['short']} 逐篇目录</h2><input id='paper-search' type='search' placeholder='按完整标题、方法或任务筛选…'><div class='nav-note'>目录使用论文完整标题；共 {len(records)} 篇全文分析。</div>{nav_html(records)}</nav>
 <main id='overview'>
 <section class='hero'><div class='eyebrow'>{config['short']} · 2023—{max(years)}</div><h1>{html.escape(config['title'])}</h1>
-<p>本页是对原专题的整体重建。所有 {len(records)} 篇纳入论文均重新从本地 PDF 以正确双栏阅读顺序抽取并核对；Introduction、方法、数字化接口、信道作用点和实验结论经过二次中文综合，不再显示栏间交错的原始英文片段。</p>
-<div class='stats'><div class='stat'><b>{len(records)}</b>PDF 全文重读</div><div class='stat'><b>{counts['core']}</b>核心纳入</div><div class='stat'><b>{counts['related']}</b>边界相关</div><div class='stat'><b>{error_count}</b>显式处理离散错误</div></div>
-<div class='callout'><b>{edition}：</b>{'论文按钮和页码 locator 均指向已下载的本地 PDF。' if local else '受版权保护的 IEEE PDF 不上传；论文按钮指向 DOI/IEEE 页面，证据图和页码用于本地研究复核。'} 内容更新于 2026-08-28，分析版本 <code>{ANALYSIS_VERSION}</code>。</div></section>
+<p>本专题覆盖 2023 年至 {max(years)} 年 IEEE Internet of Things Journal 中与语义通信、DeepJSCC 及图像/视频/语音/点云无线传输相关的研究。逐篇分析以可验证全文为依据，分别回答研究动机、端到端方法、数字化接口、实际传输开销、信道错误进入 decoder 的方式及实验支持范围。</p>
+<div class='stats'><div class='stat'><b>{candidate_count}</b>去重候选</div><div class='stat'><b>{screened_count}</b>主题纳入</div><div class='stat'><b>{len(records)}</b>全文分析</div><div class='stat'><b>{counts['core']}</b>核心论文</div><div class='stat'><b>{counts['related']}</b>直接相关</div><div class='stat'><b>{error_count}</b>显式处理离散错误</div></div>
+<div class='callout'><b>{edition}：</b>{'论文按钮和页码定位均指向本地 PDF。' if local else 'IEEE PDF 保留在本地研究目录；公开页面通过 DOI/IEEE 链接访问原文。'} 当前有 {len(pending)} 篇入围论文等待全文核验，另有 {excluded_count} 篇在主题筛选后排除。内容更新于 {updated}，分析版本 <code>{ANALYSIS_VERSION}</code>。</div></section>
 
-<section class='panel'><h2>阅读口径与质量控制</h2><div class='hero-grid'><div><h3>纳入范围</h3><p>{html.escape(config['scope'])}。核心/相关标签表示与语义通信问题的接近程度，不评价论文质量。正式年份以期刊卷年为准。</p><h3>重新阅读流程</h3><ol><li>逐篇校验 manifest 与本地 PDF；</li><li>使用 Poppler 正常阅读顺序重新抽取全文，避免双栏交错；</li><li>从 Introduction、方法、数字化/速率、信道与实验段落选择页码证据；</li><li>以干净书目摘要为叙事锚点，生成中文综合，原始抽取文本不进入页面；</li><li>单独判断 decoder 收到什么，以及论文是否处理残余 bit/index/packet error。</li></ol></div><div><h3>任务分布</h3><ul>{task_summary}</ul><h3>信道处理分布</h3><ul>{channel_summary}</ul></div></div>
-<p class='mini'>可追溯文件：<a href='notes/synthesized_analysis.jsonl'>逐篇二次综合 JSONL</a> · <a href='notes/reread_audit.jsonl'>全文重读审计</a> · <a href='notes/cross_paper_comparison.csv'>横向比较 CSV</a>。旧 structured_analysis/evidence 只保留为抽取审计层，不再作为网页展示层。</p></section>
+<section class='panel'><h2>检索范围、筛选边界与证据口径</h2><div class='hero-grid'><div><h3>纳入范围</h3><p>{html.escape(config['scope'])}。核心标签用于直接研究语义表示、编码、传输、接收或端到端系统的论文；直接相关标签用于围绕语义链路开展资源、控制、波束、轨迹或网络优化的论文。正式年份优先采用期刊卷年，Early Access 论文采用当前出版年。</p><h3>全文分析流程</h3><ol><li>基于 IEEE Xplore、OpenAlex、Crossref、arXiv 与引用扩展建立候选池；</li><li>校验 DOI、题名、期刊、PDF 文件头、页数与 SHA-256；</li><li>按正常阅读顺序提取全文，并分别定位 Introduction、方法、实验与结论页；</li><li>用摘要和正文证据重建论文叙事，网页只呈现连贯中文综合及页码定位；</li><li>区分连续 latent、离散 token/index、bitstream、有限星座与上层资源变量，并判断残余错误是否进入语义 decoder。</li></ol></div><div><h3>任务分布</h3><ul>{task_summary}</ul><h3>信道处理分布</h3><ul>{channel_summary}</ul></div></div>
+<p class='mini'>可追溯文件：<a href='notes/search_strategy.md'>检索策略</a> · <a href='notes/candidate_pool.jsonl'>候选池</a> · <a href='notes/excluded.jsonl'>排除记录</a> · <a href='manifest.jsonl'>全文 manifest</a> · <a href='notes/synthesized_analysis.jsonl'>逐篇分析 JSONL</a> · <a href='notes/reread_audit.jsonl'>全文审计</a> · <a href='notes/cross_paper_comparison.csv'>横向比较 CSV</a>。</p></section>
 
 <section class='panel' id='comparison'><h2>{len(records)} 篇横向比较</h2><p>重点看“表示”和“信道处理”两列：有数字 bitstream 不等于处理了误码；连续 DeepJSCC 的抗噪声也不能外推到 VQ index 跳变。</p><div class='filters'><button class='active' data-tier='all'>全部</button><button data-tier='core'>仅核心</button><button data-tier='related'>仅相关</button></div>
 <div class='table-wrap'><table><thead><tr><th>年</th><th>层级</th><th>完整标题</th><th>任务</th><th>传输表示</th><th>信道处理</th><th>离散错误判断</th></tr></thead><tbody>{table_rows(records)}</tbody></table></div></section>
+
+{insights_html(records)}
+{pending_html(pending)}
 
 {''.join(article_html(r, local) for r in records)}
 </main><script>{JS}</script></body></html>"""
@@ -1725,6 +2044,7 @@ def process_journal(key: str, pdftotext: str, translator: CachedTranslator, tran
     config = JOURNALS[key]
     root = ROOT / "literature" / config["directory"]
     manifest = load_jsonl(root / "manifest.jsonl")
+    pending = load_jsonl(root / "notes" / "pending_fulltext.jsonl")
     old_records = load_jsonl(root / "notes" / "structured_analysis.jsonl")
     evidence_records = load_jsonl(root / "notes" / "evidence.jsonl")
     old_by_doi = {norm_doi(r.get("doi")): r for r in old_records}
@@ -1765,8 +2085,8 @@ def process_journal(key: str, pdftotext: str, translator: CachedTranslator, tran
     order = {norm_doi(r.get("doi")): i for i, r in enumerate(records)}
     audits.sort(key=lambda r: order.get(norm_doi(r.get("doi")), 10**9))
     write_notes(root, records, audits)
-    build_html(config, records, False, root / "index.html")
-    build_html(config, records, True, root / "index_local.html")
+    build_html(config, records, pending, False, root / "index.html")
+    build_html(config, records, pending, True, root / "index_local.html")
     print(f"[{config['short']}] wrote {len(records)} synthesized records and both HTML editions")
 
 
