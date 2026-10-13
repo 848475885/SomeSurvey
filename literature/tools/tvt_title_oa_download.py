@@ -20,6 +20,22 @@ SURVEY = ROOT / "literature" / "ieee-tvt-semantic-communications-2023-present"
 NOTES = SURVEY / "notes"
 PAPERS = SURVEY / "papers"
 UA = "Digital-SemCom-Survey/1.0 (legal OA title resolver)"
+KNOWN_OA_BY_DOI = {
+    "10.1109/tvt.2024.3507919": [
+        {
+            "url": "https://ira.lib.polyu.edu.hk/bitstream/10397/115250/1/Zhan_Novel_Double_Protograph.pdf",
+            "provider": "PolyU Institutional Research Archive",
+            "match": 1.0,
+        }
+    ],
+    "10.1109/tvt.2026.3706678": [
+        {
+            "url": "https://arxiv.org/pdf/2508.08686",
+            "provider": "arXiv",
+            "match": 1.0,
+        }
+    ],
+}
 
 shared.SURVEY = SURVEY
 shared.NOTES = NOTES
@@ -103,7 +119,8 @@ def main() -> None:
         time.sleep(1.05)
         oa = openalex_candidates(session, title)
         time.sleep(0.2)
-        urls = candidate_urls(title, s2, oa)
+        urls = list(KNOWN_OA_BY_DOI.get(str(record.get("doi") or "").lower(), []))
+        urls.extend(candidate_urls(title, s2, oa))
         target = shared.target_for(record)
         attempts: list[dict] = []
         for candidate in urls:

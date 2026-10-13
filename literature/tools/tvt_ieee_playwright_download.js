@@ -17,6 +17,11 @@ const INCLUDED = path.join(NOTES, 'included.jsonl');
 const LOG = path.join(NOTES, 'ieee_playwright_manifest.jsonl');
 const PROFILE = path.join(os.homedir(), 'Documents', 'Learn Communication', '.chrome-ieee-profile');
 const CHROME = path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe');
+const DOCUMENT_DWELL_MS = 10000;
+const MIN_ITEM_GAP_MS = 15000;
+const MAX_ITEM_GAP_MS = 25000;
+const PDF_PREPARATION_WAIT_MS = 20000;
+const PDF_PREPARATION_RETRIES = 8;
 
 function readJsonl(file) {
   return fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(JSON.parse);
@@ -76,13 +81,29 @@ async function searchArnumber(page, row) {
 
 async function fetchPdf(page, arnumber) {
   const documentUrl = `https://ieeexplore.ieee.org/document/${arnumber}`;
-  const pdfUrl = `https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=${arnumber}`;
+  const stampUrl = `https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=${arnumber}&tag=1`;
+  const pdfUrl = `https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=${arnumber}&ref=`;
   await page.goto(documentUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await sleep(7000);
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
+  await sleep(DOCUMENT_DWELL_MS);
+  const meta = await page.evaluate(() => {
+    const bodyText = document.body ? document.body.innerText : '';
+    const accessMatch = bodyText.match(/Access provided by:\s*([^\n]+)/);
+    return {
+      access: accessMatch ? accessMatch[1].trim() : '',
+      title: document.title.replace(/ \| IEEE.*$/, '').trim(),
+    };
+  });
+  const pdfRoutePattern = '**/stampPDF/getPDF.jsp**';
+  await page.route(pdfRoutePattern, route => route.abort());
+  try {
+    await page.goto(stampUrl, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await sleep(5000);
+  } finally {
+    await page.unroute(pdfRoutePattern);
+  }
+  let lastResult = {};
+  for (let attempt = 1; attempt <= PDF_PREPARATION_RETRIES; attempt += 1) {
     const result = await page.evaluate(async (url) => {
-      const bodyText = document.body ? document.body.innerText : '';
-      const accessMatch = bodyText.match(/Access provided by:\s*([^\n]+)/);
       const response = await fetch(url, { credentials: 'include' });
       const type = response.headers.get('content-type') || '';
       const buffer = await response.arrayBuffer();
@@ -95,35 +116,41 @@ async function fetchPdf(page, arnumber) {
       return {
         status: response.status,
         type,
+        url: response.url,
         size: bytes.length,
         head: Array.from(bytes.slice(0, 5)).map(value => String.fromCharCode(value)).join(''),
         base64: response.status === 200 && type.toLowerCase().includes('pdf') ? btoa(binary) : '',
-        access: accessMatch ? accessMatch[1].trim() : '',
-        title: document.title.replace(/ \| IEEE.*$/, '').trim(),
       };
     }, pdfUrl);
+    lastResult = { ...result, access: meta.access, title: meta.title };
     if (result.status === 200 && result.type.toLowerCase().includes('pdf') && result.head === '%PDF-') {
-      return { ok: true, attempt, result, documentUrl, pdfUrl };
+      return { ok: true, attempt, result: lastResult, documentUrl, pdfUrl };
     }
-    if (result.status === 202) {
-      await sleep(12000);
+    if (lastResult.status === 202) {
+      await sleep(PDF_PREPARATION_WAIT_MS);
       continue;
     }
-    return { ok: false, attempt, result, documentUrl, pdfUrl };
+    return { ok: false, attempt, result: lastResult, documentUrl, pdfUrl };
   }
-  return { ok: false, attempt: 4, result: {}, documentUrl, pdfUrl };
+  return { ok: false, attempt: PDF_PREPARATION_RETRIES, result: lastResult, documentUrl, pdfUrl };
 }
 
 async function main() {
   const limitArg = process.argv.indexOf('--limit');
   const limit = limitArg >= 0 ? Number(process.argv[limitArg + 1] || 0) : 0;
+  const skipDoiArg = process.argv.indexOf('--skip-doi');
+  const skipDois = new Set(
+    skipDoiArg >= 0
+      ? String(process.argv[skipDoiArg + 1] || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
+      : [],
+  );
   fs.mkdirSync(PAPERS, { recursive: true });
   const rows = readJsonl(INCLUDED);
-  let pending = rows.filter(row => !row.pdf_valid);
+  let pending = rows.filter(row => !row.pdf_valid && !skipDois.has(String(row.doi || '').toLowerCase()));
   if (limit > 0) pending = pending.slice(0, limit);
   const context = await chromium.launchPersistentContext(PROFILE, {
     executablePath: CHROME,
-    headless: true,
+    headless: false,
     acceptDownloads: false,
     viewport: { width: 1440, height: 1000 },
     args: ['--no-first-run'],
@@ -171,6 +198,7 @@ async function main() {
             status: 'failed', title: row.title, doi: row.doi || '', arnumber,
             http_status: response.status || 0, content_type: response.type || '',
             bytes: response.size || 0, attempt: probe.attempt,
+            final_url: response.url || '',
             page_title: response.title || '', diagnostic: path.relative(SURVEY, diagnostic).replace(/\\/g, '/'),
           };
         }
@@ -179,7 +207,7 @@ async function main() {
       writeJsonl(INCLUDED, rows);
       console.log(JSON.stringify({ n: index + 1, of: pending.length, ...event }));
       if (event.status === 'failed') break;
-      await sleep(8000 + Math.floor(Math.random() * 4001));
+      await sleep(MIN_ITEM_GAP_MS + Math.floor(Math.random() * (MAX_ITEM_GAP_MS - MIN_ITEM_GAP_MS + 1)));
     }
   } finally {
     await context.close();

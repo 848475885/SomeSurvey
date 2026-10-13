@@ -111,9 +111,9 @@ def main() -> None:
     included_tiers = Counter(row.get("screening_status") for row in included)
     if len(included) != 99 or included_tiers != Counter({"core": 59, "related": 40}):
         errors.append(f"included screening counts: total={len(included)}, tiers={dict(included_tiers)}")
-    if not (len(manifest) == len(analysis) == len(audit) == 42):
+    if not (len(manifest) == len(analysis) == len(audit) == 88):
         errors.append(f"record counts: manifest={len(manifest)}, analysis={len(analysis)}, audit={len(audit)}")
-    if len(pending) != 57:
+    if len(pending) != 11:
         errors.append(f"pending count: {len(pending)}")
     if any(not row.get("pdf_exists") or not row.get("pdf_sha256") for row in audit):
         errors.append("reread audit has missing PDF/hash evidence")
