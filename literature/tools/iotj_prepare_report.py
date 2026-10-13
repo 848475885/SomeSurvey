@@ -48,6 +48,8 @@ def main() -> None:
 
     for row in rows:
         raw_path = Path(str(row.get("pdf_path") or ""))
+        if raw_path and not raw_path.is_absolute():
+            raw_path = SURVEY / raw_path
         if row.get("pdf_valid") and raw_path.exists():
             data = raw_path.read_bytes()
             if not data.startswith(b"%PDF-"):

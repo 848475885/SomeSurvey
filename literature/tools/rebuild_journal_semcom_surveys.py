@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-read and rebuild the TWC/TCCN/TCSVT semantic-communication surveys.
+"""Re-read and rebuild the journal semantic-communication surveys.
 
 The previous journal pages rendered snippets produced from ``pdftotext
 -layout``.  On IEEE two-column papers that representation interleaves both
@@ -47,6 +47,17 @@ ANALYSIS_VERSION = "journal_fulltext_reread_v5_2026-10-09"
 
 
 JOURNALS = {
+    "tvt": {
+        "directory": "ieee-tvt-semantic-communications-2023-present",
+        "short": "TVT",
+        "title": "IEEE Transactions on Vehicular Technology 语义通信与 DeepJSCC 调研（2023—至今）",
+        "venue": "IEEE Transactions on Vehicular Technology",
+        "scope": "语义通信、DeepJSCC、无线图像/视频/语音/点云传输、数字语义接口，以及车辆、UAV 与移动网络中的语义链路优化",
+        "accent": "#8a3f2b",
+        "accent_dark": "#40251f",
+        "updated": "2026-10-13",
+        "candidate_count": 103,
+    },
     "iotj": {
         "directory": "ieee-iotj-semantic-communications-2023-present",
         "short": "IoTJ",
@@ -167,10 +178,21 @@ KNOWN_CHANNELS = [
 ]
 
 
+CURATED_TASK_OVERRIDES = {
+    # The publisher abstract has a missing space in "roadsideimage", so the
+    # generic word-boundary matcher cannot see the paper's image source.
+    "Generative AI-Driven Semantic Communication Framework for NextG Wireless Network": (
+        "图像传输、压缩或生成",
+        "图像及其视觉/任务语义",
+        "重建/生成图像或视觉任务输出",
+    ),
+}
+
+
 TASK_RULES = [
     (("speech", "audio", "voice", "acoustic"), "语音/音频传输或识别", "语音波形、声学特征或说话人信息", "重建语音、识别文本或说话人任务结果"),
     (("video", "gop", "frame rate", "talking head", "streaming"), "视频传输、生成或控制", "视频帧、运动信息或时序语义", "重建/生成视频或视频任务结果"),
-    (("point cloud", "3d scene", "gaussian splatting", "nerf", "metaverse"), "点云/三维场景传输", "三维点、视图或场景语义", "三维重建、渲染或下游感知结果"),
+    (("point cloud", "3d scene", "gaussian splatting", "nerf"), "点云/三维场景传输", "三维点、视图或场景语义", "三维重建、渲染或下游感知结果"),
     (("image-text", "cross-modal", "multimodal", "multi-modal"), "多模态检索与任务通信", "图像、文本或其他模态的任务特征", "跨模态检索、匹配或联合推理结果"),
     (("text", "sentence", "language", "translation", "token communication"), "文本传输或语言任务", "句子、token 序列或语言语义", "恢复文本、翻译结果或语言任务输出"),
     (("image", "visual", "face", "retinal", "underwater"), "图像传输、压缩或生成", "图像及其视觉/任务语义", "重建/生成图像或视觉任务输出"),
@@ -427,7 +449,7 @@ def norm_doi(value: object) -> str:
 
 def norm_space(value: object) -> str:
     text = unicodedata.normalize("NFKC", str(value or ""))
-    text = text.replace("ﬁ", "fi").replace("ﬂ", "fl").replace("−", "-")
+    text = text.replace("ﬁ", "fi").replace("ﬂ", "fl").replace("−", "-").replace("�", " ")
     text = re.sub(r"(?<=\w)-\s+(?=[a-z])", "", text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -689,12 +711,27 @@ def infer_task(title: str, abstract: str) -> tuple[str, str, str]:
     low_title = title.lower()
     low = f"{title} {abstract}".lower()
 
+    if title in CURATED_TASK_OVERRIDES:
+        return CURATED_TASK_OVERRIDES[title]
+
     def contains(text: str, keyword: str) -> bool:
         # Substring matching made "text" match "context" and "face" match
         # "interface", which mislabeled several image/resource papers.
         if re.fullmatch(r"[a-z0-9 -]+", keyword):
             return bool(re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", text))
         return keyword in text
+
+    # Resolve modality-specific titles before the generic token/text rule.
+    # For example, TokenComSR transmits image tokens for super-resolution;
+    # the word "Token" describes the interface rather than a language task.
+    if any(contains(low_title, word) for word in (
+        "image", "visual", "face", "retinal", "underwater", "super-resolution",
+    )):
+        return (
+            "图像传输、压缩或生成",
+            "图像及其视觉/任务语义",
+            "重建/生成图像或视觉任务输出",
+        )
 
     for words, label, inp, out in TASK_RULES:
         if any(contains(low_title, w) for w in words):
@@ -1927,7 +1964,7 @@ def pending_html(pending: list[dict]) -> str:
     )
 
 
-def insights_html(records: list[dict]) -> str:
+def insights_html(config: dict, records: list[dict]) -> str:
     year_blocks = []
     for year in sorted({record["year"] for record in records}):
         group = [record for record in records if record["year"] == year]
@@ -1945,9 +1982,9 @@ def insights_html(records: list[dict]) -> str:
 <section class='panel' id='synthesis'><h2>技术演进与跨论文判断</h2>
   <div class='timeline'>{''.join(year_blocks)}</div>
   <div class='insight-grid'>
-    <div><h3>从任务压缩走向完整链路</h3><p>IoTJ 论文首先在图像、文本、边缘推理和多用户任务中证明“发送任务充分信息”可以节省带宽，随后逐步把 MIMO、OFDM、有限星座、VQ/codebook、HARQ、波束与资源调度接入语义链路。当前全文样本中，{strict_count} 篇给出明确离散或有限数字接口，{continuous_count} 篇主要依赖连续噪声信道。</p></div>
+    <div><h3>从任务压缩走向完整链路</h3><p>{html.escape(config['short'])} 论文首先在图像、文本、边缘推理和多用户任务中证明“发送任务充分信息”可以节省带宽，随后逐步把 MIMO、OFDM、有限星座、VQ/codebook、HARQ、波束与资源调度接入语义链路。当前全文样本中，{strict_count} 篇给出明确离散或有限数字接口，{continuous_count} 篇主要依赖连续噪声信道。</p></div>
     <div><h3>数字化后的核心分水岭</h3><p>量化或形成 bitstream 只完成了接口定义。当前仅 {error_count} 篇把残余 bit/index/packet error 或重传恢复明确带入语义训练与解码；其余数字方案多依赖传统信道译码后再交给语义 decoder。</p></div>
-    <div><h3>网络优化论文的价值边界</h3><p>资源、轨迹、功率和计算优化把语义效用放进 IoT 网络决策，适合回答“资源分给谁、何时发送、发送多少”。这类结论依赖下层 codec 的质量—资源曲线，控制信令、有限码长和残余误码仍需单独核算。</p></div>
+    <div><h3>网络优化论文的价值边界</h3><p>资源、轨迹、功率和计算优化把语义效用放进无线网络决策，适合回答“资源分给谁、何时发送、发送多少”。这类结论依赖下层 codec 的质量—资源曲线，控制信令、有限码长和残余误码仍需单独核算。</p></div>
     <div><h3>仍待解决的工程问题</h3><p>真实空口总开销、burst error、熵码失同步、码本 index 跳变、信道估计误差、跨数据域与跨信道泛化，以及生成式接收端的可控失真，仍是从仿真走向可部署数字语义通信的共同缺口。</p></div>
   </div>
 </section>"""
@@ -1978,7 +2015,11 @@ def build_html(config: dict, records: list[dict], pending: list[dict], local: bo
     counts = Counter(r["tier"] for r in records)
     years = sorted({r["year"] for r in records})
     digital_count = sum("显式数字" in r["digitalization_class"] or "有限星座" in r["digitalization_class"] or "bitstream" in r["digitalization_class"] for r in records)
-    error_count = sum("类别 4" in r["channel_handling_class"] for r in records)
+    error_count = sum(
+        "类别 4" in r["channel_handling_class"]
+        or "HARQ/重传" in r["channel_handling_class"]
+        for r in records
+    )
     task_counts = Counter(r["task_type"] for r in records)
     channel_counts = Counter(r["channel_handling_class"].split("：", 1)[0] for r in records)
     edition = "本地深读版" if local else "公开网页版本"
@@ -1998,7 +2039,7 @@ def build_html(config: dict, records: list[dict], pending: list[dict], local: bo
 <nav><h2>{config['short']} 逐篇目录</h2><input id='paper-search' type='search' placeholder='按完整标题、方法或任务筛选…'><div class='nav-note'>目录使用论文完整标题；共 {len(records)} 篇全文分析。</div>{nav_html(records)}</nav>
 <main id='overview'>
 <section class='hero'><div class='eyebrow'>{config['short']} · 2023—{max(years)}</div><h1>{html.escape(config['title'])}</h1>
-<p>本专题覆盖 2023 年至 {max(years)} 年 IEEE Internet of Things Journal 中与语义通信、DeepJSCC 及图像/视频/语音/点云无线传输相关的研究。逐篇分析以可验证全文为依据，分别回答研究动机、端到端方法、数字化接口、实际传输开销、信道错误进入 decoder 的方式及实验支持范围。</p>
+<p>本专题覆盖 2023 年至 {max(years)} 年 {html.escape(config['venue'])} 中与语义通信、DeepJSCC 及图像/视频/语音/点云无线传输相关的研究。逐篇分析以可验证全文为依据，分别回答研究动机、端到端方法、数字化接口、实际传输开销、信道错误进入 decoder 的方式及实验支持范围。</p>
 <div class='stats'><div class='stat'><b>{candidate_count}</b>去重候选</div><div class='stat'><b>{screened_count}</b>主题纳入</div><div class='stat'><b>{len(records)}</b>全文分析</div><div class='stat'><b>{counts['core']}</b>核心论文</div><div class='stat'><b>{counts['related']}</b>直接相关</div><div class='stat'><b>{error_count}</b>显式处理离散错误</div></div>
 <div class='callout'><b>{edition}：</b>{'论文按钮和页码定位均指向本地 PDF。' if local else 'IEEE PDF 保留在本地研究目录；公开页面通过 DOI/IEEE 链接访问原文。'} 当前有 {len(pending)} 篇入围论文等待全文核验，另有 {excluded_count} 篇在主题筛选后排除。内容更新于 {updated}，分析版本 <code>{ANALYSIS_VERSION}</code>。</div></section>
 
@@ -2008,7 +2049,7 @@ def build_html(config: dict, records: list[dict], pending: list[dict], local: bo
 <section class='panel' id='comparison'><h2>{len(records)} 篇横向比较</h2><p>重点看“表示”和“信道处理”两列：有数字 bitstream 不等于处理了误码；连续 DeepJSCC 的抗噪声也不能外推到 VQ index 跳变。</p><div class='filters'><button class='active' data-tier='all'>全部</button><button data-tier='core'>仅核心</button><button data-tier='related'>仅相关</button></div>
 <div class='table-wrap'><table><thead><tr><th>年</th><th>层级</th><th>完整标题</th><th>任务</th><th>传输表示</th><th>信道处理</th><th>离散错误判断</th></tr></thead><tbody>{table_rows(records)}</tbody></table></div></section>
 
-{insights_html(records)}
+{insights_html(config, records)}
 {pending_html(pending)}
 
 {''.join(article_html(r, local) for r in records)}
@@ -2078,9 +2119,15 @@ def process_journal(key: str, pdftotext: str, translator: CachedTranslator, tran
             raise RuntimeError(f"Translation cache is missing {len(set(missing))} texts; rerun without --no-translate")
         translator.translate_records(records)
     for index, record in enumerate(records):
+        bibliographic = {
+            key: record.get(key)
+            for key in ("title", "authors", "venue", "doi", "volume", "issue", "pages", "source_url", "pdf")
+        }
         apply_curated_presentation_overrides(record)
         append_judgments(record)
-        records[index] = polish_record_strings(record)
+        polished = polish_record_strings(record)
+        polished.update(bibliographic)
+        records[index] = polished
     records.sort(key=lambda r: (r["year"], r["title"].lower()))
     order = {norm_doi(r.get("doi")): i for i, r in enumerate(records)}
     audits.sort(key=lambda r: order.get(norm_doi(r.get("doi")), 10**9))
